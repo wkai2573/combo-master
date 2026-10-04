@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { SPEED_LABEL, usePlayback, type Speed } from '../usePlayback';
+import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { CardFace, InspectContext, InspectPanel } from '../components/CardFace';
 import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
 import { Modal } from '../components/Modal';
@@ -110,6 +111,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
     <InspectContext.Provider value={setInspect}>
       <div className="battle">
         <div className="topbar">
+          <span className="ver" title={VERSION_TITLE}>連擊大師 {VERSION_SHORT}</span>
           <b>第 {v.turn} 回合</b>
           <span className="phase">{v.phase}</span>
           <span className="muted">先攻：{v.first === me ? '你' : '對手'}</span>

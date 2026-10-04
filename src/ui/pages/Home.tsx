@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { APP_BUILT_AT, VERSION_LABEL, VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { Modal } from '../components/Modal';
 import type { LobbyMode } from './Lobby';
 
@@ -8,8 +9,11 @@ export function Home({ go }: { go: (r: Route) => void }) {
   const [rules, setRules] = useState(false);
   return (
     <div className="page home">
-      <h1>連擊大師</h1>
+      <h1>
+        連擊大師 <span className="ver" title={VERSION_TITLE}>{VERSION_SHORT}</span>
+      </h1>
       <div className="muted">以連擊值接力出招的 1v1 卡牌對戰</div>
+      <div className="muted verline" title={VERSION_TITLE}>{VERSION_LABEL}　建置於 {APP_BUILT_AT}</div>
       <div className="menu">
         <button className="primary" onClick={() => go('host')}>建立房間（與朋友對戰）</button>
         <button onClick={() => go('join')}>加入房間</button>

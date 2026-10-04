@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { characterFill } from '../src/data/characterFill';
 import type { CardData, CharacterData, ClassName, EquipSlot } from '../src/data/types';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -70,16 +71,20 @@ for (const r of sheet('角色')) {
   const cls = str(r['職業']);
   if (!cls) continue;
   const name = str(r['角色名']);
-  characters.push({
-    id: name || `${cls}（待補）`,
-    name: name || `${cls}（待補）`,
-    cls: toClass(cls),
-    hp: num(r['生命值']),
-    expReq: num(r['經驗需求']),
-    text: str(r['效果']),
-    awakenText: str(r['覺醒效果']),
-    pending: !name,
-  });
+  if (name) {
+    characters.push({
+      id: name, name, cls: toClass(cls), hp: num(r['生命值']), expReq: num(r['經驗需求']),
+      text: str(r['效果']), awakenText: str(r['覺醒效果']), pending: false,
+    });
+    continue;
+  }
+  // xlsx 該列是空的：有補資料就用補的，否則標為待補
+  const fill = characterFill[toClass(cls)];
+  characters.push(
+    fill
+      ? { id: fill.name, name: fill.name, cls: toClass(cls), hp: fill.hp, expReq: fill.expReq, text: fill.text, awakenText: fill.awakenText, pending: false }
+      : { id: `${cls}（待補）`, name: `${cls}（待補）`, cls: toClass(cls), hp: 0, expReq: 0, text: '', awakenText: '', pending: true },
+  );
 }
 
 // 資料檢查

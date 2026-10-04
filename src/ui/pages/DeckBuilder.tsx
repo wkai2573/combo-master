@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { ALL_CARDS, ALL_CHARACTERS, getCard, getCharacter } from '../../data/cards';
+import { ALL_CHARACTERS, getCard, getCharacter, PLAYABLE_CARDS } from '../../data/cards';
+import { isCardEnabled } from '../../data/enabledCards';
 import { presetDeck } from '../../data/presetDecks';
 import type { CardData, CardKind } from '../../data/types';
 import { deleteDeck, exportDeck, importDeck, listDecks, saveDeck, type DeckEntry } from '../../deck/storage';
@@ -40,13 +41,25 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
 
   const pool = useMemo(() => {
     const q = query.trim();
-    return ALL_CARDS.filter((c) => c.cls === '共用' || c.cls === char.cls)
+    return PLAYABLE_CARDS.filter((c) => c.cls === '共用' || c.cls === char.cls)
       .filter((c) => kind === 'all' || c.kind === kind)
       .filter((c) => combo === 0 || (c.kind === 'move' && c.combo === combo))
       .filter((c) => scope === 'all' || (scope === 'common' ? c.cls === '共用' : c.cls !== '共用'))
       .filter((c) => !q || c.name.includes(q) || c.text.includes(q) || c.traits.some((t) => t.includes(q)))
       .sort(byOrder);
   }, [char.cls, kind, combo, scope, query]);
+
+  // 目前開放的卡裡沒有的類型／專用卡，就不顯示對應的篩選選項
+  const kindsAvailable = useMemo(
+    () => new Set(PLAYABLE_CARDS.filter((c) => c.cls === '共用' || c.cls === char.cls).map((c) => c.kind)),
+    [char.cls],
+  );
+  const hasClassCards = useMemo(() => PLAYABLE_CARDS.some((c) => c.cls === char.cls), [char.cls]);
+  // 舊存檔的牌組可能含已停用的效果卡
+  const disabledInDeck = useMemo(
+    () => [...new Set(cards.filter((id) => !isCardEnabled(getCard(id))))],
+    [cards],
+  );
 
   const deckLines = useMemo(
     () => [...counts.keys()].map(getCard).sort(byOrder),
@@ -138,21 +151,25 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
         <div className="builder">
           <div className="panel">
             <div className="row" style={{ marginBottom: 10 }}>
-              <select value={kind} onChange={(e) => setKind(e.target.value as 'all' | CardKind)}>
-                <option value="all">全部類型</option>
-                <option value="move">招式</option>
-                <option value="equip">裝備</option>
-                <option value="buff">增益</option>
-              </select>
+              {kindsAvailable.size > 1 && (
+                <select value={kind} onChange={(e) => setKind(e.target.value as 'all' | CardKind)}>
+                  <option value="all">全部類型</option>
+                  {kindsAvailable.has('move') && <option value="move">招式</option>}
+                  {kindsAvailable.has('equip') && <option value="equip">裝備</option>}
+                  {kindsAvailable.has('buff') && <option value="buff">增益</option>}
+                </select>
+              )}
               <select value={combo} onChange={(e) => setCombo(Number(e.target.value))}>
                 <option value={0}>全部連擊值</option>
                 {Array.from({ length: 9 }, (_, i) => <option key={i + 1} value={i + 1}>連擊值 {i + 1}</option>)}
               </select>
-              <select value={scope} onChange={(e) => setScope(e.target.value as 'all' | 'class' | 'common')}>
-                <option value="all">專用＋共用</option>
-                <option value="class">只看{char.cls}專用</option>
-                <option value="common">只看共用</option>
-              </select>
+              {hasClassCards && (
+                <select value={scope} onChange={(e) => setScope(e.target.value as 'all' | 'class' | 'common')}>
+                  <option value="all">專用＋共用</option>
+                  <option value="class">只看{char.cls}專用</option>
+                  <option value="common">只看共用</option>
+                </select>
+              )}
               <input placeholder="搜尋名稱／效果／特徵" value={query} onChange={(e) => setQuery(e.target.value)} />
               <span className="muted">{pool.length} 張（點卡片加入牌組）</span>
             </div>
@@ -202,6 +219,12 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
                 {check.ok ? <span className="ok">✔ 可用於對戰</span> : <span style={{ color: 'var(--bad)' }}>不可用於對戰</span>}
               </div>
               {!check.ok && <div className="errors">{check.errors.map((e) => <div key={e}>・{e}</div>)}</div>}
+              {disabledInDeck.length > 0 && (
+                <div className="row" style={{ marginTop: 6 }}>
+                  <span className="muted">含 {disabledInDeck.length} 種已停用的效果卡</span>
+                  <button onClick={() => setCards((cur) => cur.filter((id) => !disabledInDeck.includes(id)))}>移除停用的卡</button>
+                </div>
+              )}
               {msg && <div className="muted" style={{ marginTop: 4 }}>{msg}</div>}
 
               <div className="zonelabel" style={{ marginTop: 10 }}>連擊值分佈（招式）</div>

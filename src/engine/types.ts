@@ -38,6 +38,8 @@ export interface TurnFlags {
   pursuitMinus: [number, number];
   pursuitSuccess: [number, number];
   rabbitUsed: [boolean, boolean];
+  /** 遊俠「瞄準」本回合已使用的次數 */
+  aimUsed: [number, number];
   burstDraw3: [boolean, boolean];
   alchemy: [boolean, boolean];
   sniper: [boolean, boolean];

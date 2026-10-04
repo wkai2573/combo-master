@@ -1,4 +1,5 @@
 import { ALL_CARDS, ALL_CHARACTERS } from '../data/cards';
+import { isCardEnabled } from '../data/enabledCards';
 
 export const MAX_COPIES = 4;
 
@@ -7,7 +8,7 @@ export interface DeckCheck {
   errors: string[];
 }
 
-/** 驗證牌組：角色可用、張數＝生命值、同名≤4、卡片職業合法 */
+/** 驗證牌組：角色可用、張數＝生命值、同名≤4、卡片職業合法、卡片目前開放 */
 export function validateDeck(charId: string, cards: string[]): DeckCheck {
   const errors: string[] = [];
   const ch = ALL_CHARACTERS.find((c) => c.id === charId);
@@ -24,6 +25,10 @@ export function validateDeck(charId: string, cards: string[]): DeckCheck {
     const card = ALL_CARDS.find((c) => c.id === id);
     if (!card) {
       errors.push(`未知的卡片：${id}`);
+      continue;
+    }
+    if (!isCardEnabled(card)) {
+      errors.push(`【${id}】目前停用（效果卡暫時移除）`);
       continue;
     }
     if (n > MAX_COPIES) errors.push(`【${id}】最多 ${MAX_COPIES} 張（目前 ${n} 張）`);

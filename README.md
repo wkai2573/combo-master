@@ -6,7 +6,13 @@
 
 https://wkai2573.github.io/combo-master/
 
+分頁標題、首頁與對戰畫面都會顯示版本（例如 `v0.2.0`；首頁另有 commit 代碼與建置時間，`+` 表示有未提交的變更），用來確認看到的是不是新版。版本號在 `package.json`，每次更新時調整。
+
 推送到 `main` 後，GitHub Actions 會自動跑測試、建置並部署到 GitHub Pages（設定在 `.github/workflows/deploy.yml`）。
+
+## 戰鬥流程圖
+
+`docs/戰鬥流程圖.html` 是可互動的回合與戰鬥流程圖（用瀏覽器直接開，可縮放、追蹤路徑）。它由 [Archify](https://github.com/tt-a1i/archify) 產生，來源在 `docs/戰鬥流程圖.source.json`；規則改了之後，用 Claude Code 的 `archify` 技能依這份來源修改並重新產生即可。
 
 ## 指令
 
@@ -15,9 +21,14 @@ npm install
 npm run dev        # 開發伺服器（預設 http://localhost:5173）
 npm test           # 單元測試（規則、卡片效果、牌組驗證）
 npm run sim 40     # 機器人壓測：每種角色組合各打 40 局，檢查卡死與例外
+npm run presets    # 列出各角色預設牌組的連擊值分佈與平均攻守
 npm run data       # 修改 docs/連擊大師.xlsx 後，重新產生 src/data/generated/*.json
 npm run build      # 型別檢查＋打包
 ```
+
+## 效果卡（目前停用）
+
+為了先把基本對戰調順，**所有效果卡暫時停用**，只用 36 張花色招式；效果程式碼和測試都保留。要逐張加回來，見 `docs/規則詮釋.md` 第三節的流程（核心是 `src/data/enabledCards.ts` 的 `ENABLED_EFFECT_CARDS`）。
 
 ## 與朋友連線
 

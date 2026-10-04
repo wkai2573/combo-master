@@ -30,14 +30,14 @@
     "pending": false
   },
   {
-    "id": "弓箭手（待補）",
-    "name": "弓箭手（待補）",
+    "id": "遊俠",
+    "name": "遊俠",
     "cls": "弓箭手",
-    "hp": 0,
-    "expReq": 0,
-    "text": "",
-    "awakenText": "",
-    "pending": true
+    "hp": 50,
+    "expReq": 8,
+    "text": "瞄準：每回合1次，追擊判定翻牌前，可先看牌組頂1張；不想要的話，將它放到牌組底，改用新的牌組頂做判定。",
+    "awakenText": "瞄準每回合可使用2次。",
+    "pending": false
   },
   {
     "id": "法師",

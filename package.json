@@ -1,7 +1,7 @@
 {
   "name": "combo-master-tcg",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "data": "tsx scripts/build-data.ts",
-    "sim": "tsx scripts/simulate.ts"
+    "sim": "tsx scripts/simulate.ts",
+    "presets": "tsx scripts/preset-report.ts"
   },
   "dependencies": {
     "peerjs": "1.5.5",

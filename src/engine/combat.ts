@@ -222,7 +222,36 @@ function* pursuitStep(g: GameCtx, p: PlayerId): Gen {
     return;
   }
   for (let i = 0; i < count && deck.length > 0; i++) {
+    yield* aim(g, p);
     yield* afterJudge(g, p, deck[0]);
+  }
+}
+
+/**
+ * 遊俠・瞄準：追擊判定翻牌前，先看牌組頂 1 張；不想要就放到牌組底，改看下一張。
+ * 每回合 1 次（覺醒 2 次）。牌組只剩 1 張時換不到別張，不詢問。
+ */
+function* aim(g: GameCtx, p: PlayerId): Gen {
+  if (g.state.players[p].charId !== '遊俠') return;
+  const limit = awakened(g, p) ? 2 : 1;
+  const deck = Z(g, p, 'deck');
+  while (g.state.flags.aimUsed[p] < limit && deck.length >= 2) {
+    const top = deck[0];
+    const hit = !scripts[top.id]?.pursuitFail && !inRange(g, p, top, false);
+    const keys = yield* ask(g, {
+      player: p,
+      title: `【瞄準】牌組頂是【${data(top).name}】（連擊值 ${data(top).combo}），以目前範圍會判定${hit ? '成功' : '失敗'}。（剩 ${limit - g.state.flags.aimUsed[p]} 次）`,
+      min: 1, max: 1,
+      options: [
+        { ...cardOpt(top, `就用這張`), key: 'keep' },
+        { key: 'swap', label: '放到牌組底，改看下一張' },
+      ],
+    });
+    if (keys[0] === 'keep') return;
+    g.state.flags.aimUsed[p]++;
+    move(g, top, 'deck', 'bottom');
+    log(g, `【瞄準】${pname(g, p)} 將牌組頂的牌放到牌組底`);
+    mark(g, `【瞄準】${pname(g, p)} 將牌組頂的牌放到牌組底，改判定下一張`, { type: 'info' });
   }
 }
 
