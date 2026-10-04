@@ -17,7 +17,7 @@ export const characterText: Record<string, { text: string; awakenText: string }>
     awakenText: '（追加）計算攻擊時，若我方手牌超過 3 張，總攻擊 +3。',
   },
   遊俠: {
-    text: '【瞄準】每回合 1 次。追擊判定翻牌前，可先看牌組頂 1 張；不想用就放到牌組底，改用新的牌組頂判定。',
+    text: '擁有【瞄準】。',
     awakenText: '（取代）【瞄準】每回合可用 2 次。',
   },
   法師: {

@@ -1,3 +1,4 @@
+import { KeywordText } from './KeywordText';
 import { useEffect, useRef } from 'react';
 import { getCard, getCharacter } from '../../data/cards';
 import type { CardView, GameView, PlayerView } from '../../engine/view';
@@ -44,7 +45,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit }: Boa
         {pv.passed && <span className="pill">已收招</span>}
       </div>
       <div className="muted" style={{ fontSize: 12 }}>
-        效果：{ch.text}　<span style={{ color: awake ? 'var(--accent)' : undefined }}>覺醒：{ch.awakenText}</span>
+        效果：<KeywordText text={ch.text} />　<span style={{ color: awake ? 'var(--accent)' : undefined }}>覺醒：<KeywordText text={ch.awakenText} /></span>
       </div>
 
       {(pv.gear.length > 0 || pv.buff.length > 0) && (

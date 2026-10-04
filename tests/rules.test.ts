@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { totalAtk, totalDef } from '../src/engine/combat';
 import { draw, Z } from '../src/engine/ops';
+import { endOfTurnEffects } from '../src/engine/scripts';
 import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
 
 const labels = (g: ReturnType<typeof scenario>) => g.pending!.options.map((o) => o.label);
@@ -209,9 +210,9 @@ describe('卡片效果', () => {
     expect(g.state.log.join('\n')).toContain('回復 1');
   });
 
-  it('力量爆破：作為最上方招式時攻擊力 -6', () => {
+  it('力量爆破：[頂] 我方總攻擊 -5', () => {
     const g = scenario({ p0: { hand: ['力量爆破'] }, p1: { hand: [] } });
-    expect(Z(g, 1, 'rage')).toHaveLength(6);
+    expect(Z(g, 1, 'rage')).toHaveLength(atkOf('力量爆破') - 5);
   });
 
   it('煉金印記：此回合每打出 1 張招式回復 1', () => {
@@ -288,10 +289,58 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(totalDef(g, 1)).toBe(defOf('黑桃1') + defOf('黑桃3') + 2);
   });
 
-  it('戒備打擊作為追擊卡時會計算防禦力', () => {
+  it('戒備打擊（劍士）：[頂] 總防禦 +2，只有在最上方時才算', () => {
     const g = scenario();
-    setZones(g, 0, { combat: ['黑桃1'], pursuit: ['戒備打擊'] });
+    setZones(g, 0, { combat: ['黑桃1', '戒備打擊'] });
+    expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('戒備打擊') + 2);
+    setZones(g, 0, { combat: ['戒備打擊', '黑桃1'] });
     expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('戒備打擊'));
+  });
+
+  it('魅影射擊（弓箭手）：[追] 作為追擊卡時防禦力也計入總防禦', () => {
+    const g = scenario();
+    setZones(g, 0, { combat: ['黑桃1'], pursuit: ['魅影射擊'] });
+    expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('魅影射擊'));
+    setZones(g, 0, { combat: ['黑桃1'], pursuit: ['黑桃2'] });
+    expect(totalDef(g, 0)).toBe(defOf('黑桃1'));
+  });
+
+  it('伏擊（盜賊）：[起] 作為起手出招時，此回合總攻擊 +2；不是起手就沒有', () => {
+    const g = scenario({ chars: ['刺客', '勇者'], p0: { hand: ['伏擊', '黑桃3'] }, p1: { hand: ['黑桃5'] } });
+    expect(g.pending!.options.map((o) => o.label)).toContain('伏擊');
+    pick(g, '伏擊');
+    expect(g.state.flags.atkBonus[0]).toBe(2);
+    expect(totalAtk(g, 0)).toBe(atkOf('伏擊') + 2);
+
+    const g2 = scenario({ first: 1, chars: ['勇者', '刺客'], p0: { hand: ['伏擊'] }, p1: { hand: ['黑桃5'] } });
+    pick(g2, '伏擊'); // 玩家1 先攻只有一張牌、自動起手；玩家0 後攻反擊，不是起手
+    expect(g2.state.flags.atkBonus[0]).toBe(0);
+  });
+
+  it('低價買進（商人）：[經] 回合結束時可用 1 張手牌與它交換；覆蓋中或選擇不換就不動', () => {
+    const run = (answers: string[][], setup: Parameters<typeof scenario>[0]) => {
+      const g = scenario(setup);
+      const it = endOfTurnEffects(g);
+      let r = it.next();
+      for (const a of answers) {
+        if (r.done) break;
+        r = it.next(a.map((k) => (k.startsWith('#') ? 'c' + Z(g, 0, 'hand').find((c) => c.id === k.slice(1))!.uid : k)));
+      }
+      return { g, done: !!r.done, first: r };
+    };
+    const base = { chars: ['商人', '勇者'] as [string, string], p0: { hand: ['黑桃2', '黑桃3'], exp: ['低價買進'] } };
+
+    const swapped = run([['yes'], ['#黑桃3']], base);
+    expect(swapped.done).toBe(true);
+    expect(names(swapped.g, 0, 'hand').sort()).toEqual(['低價買進', '黑桃2'].sort());
+    expect(names(swapped.g, 0, 'exp')).toEqual(['黑桃3']);
+
+    const declined = run([['no']], base);
+    expect(names(declined.g, 0, 'hand').sort()).toEqual(['黑桃2', '黑桃3']);
+    expect(names(declined.g, 0, 'exp')).toEqual(['低價買進']);
+
+    const covered = run([], { ...base, p0: { hand: ['黑桃2', '黑桃3'], exp: ['~低價買進'] } });
+    expect(covered.first.done).toBe(true); // 覆蓋中不能發動，不會詢問
   });
 });
 

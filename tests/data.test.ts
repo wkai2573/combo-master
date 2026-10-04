@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CARDS, ALL_CHARACTERS, getCard, PLAYABLE_CARDS } from '../src/data/cards';
-import { ENABLED_EFFECT_CARDS, isVanilla } from '../src/data/enabledCards';
+import { ENABLED_EFFECT_CARDS, isCardEnabled, isVanilla } from '../src/data/enabledCards';
 import { presetDeck, PRESET_CHARACTER_IDS } from '../src/data/presetDecks';
 import { validateDeck } from '../src/deck/validate';
 
 describe('卡表資料', () => {
   it('卡片數量符合 docs', () => {
-    expect(ALL_CARDS.filter((c) => c.kind === 'move')).toHaveLength(63);
+    expect(ALL_CARDS.filter((c) => c.kind === 'move')).toHaveLength(66) // 63 張 − 2 張被卡表同名新版取代 + 5 張卡表新增;
     expect(ALL_CARDS.filter((c) => c.kind === 'equip')).toHaveLength(3);
     expect(ALL_CARDS.filter((c) => c.kind === 'buff')).toHaveLength(2);
   });
@@ -31,10 +31,17 @@ describe('卡表資料', () => {
     expect([...PRESET_CHARACTER_IDS].sort()).toEqual(ALL_CHARACTERS.map((c) => c.id).sort());
   });
 
-  it('效果卡目前全部停用：卡池只剩 36 張花色招式', () => {
-    expect(PLAYABLE_CARDS).toHaveLength(36);
-    expect(PLAYABLE_CARDS.every((c) => isVanilla(c))).toBe(true);
-    expect(ENABLED_EFFECT_CARDS).toEqual([]);
+  it('效果卡逐張開放：卡池＝36 張花色招式＋各職業 1 張新卡', () => {
+    expect(PLAYABLE_CARDS).toHaveLength(36 + ENABLED_EFFECT_CARDS.length);
+    expect(ENABLED_EFFECT_CARDS.map((id) => getCard(id).cls).sort()).toEqual(['劍士', '商人', '法師', '盜賊', '弓箭手'].sort());
+    expect(PLAYABLE_CARDS.filter((c) => !isVanilla(c)).map((c) => c.id).sort()).toEqual([...ENABLED_EFFECT_CARDS].sort());
+  });
+
+  it('卡表同名的新卡取代 xlsx 舊卡', () => {
+    expect(getCard('戒備打擊').cls).toBe('劍士');
+    expect(getCard('戒備打擊').text).toContain('總防禦 +2');
+    expect(getCard('力量爆破').atk).toBe(10);
+    expect(ALL_CARDS.filter((c) => c.name === '戒備打擊')).toHaveLength(1);
   });
 
   it('特殊招式都有職業歸屬或共用', () => {
@@ -57,9 +64,9 @@ describe('預設牌組', () => {
     for (let n = 1; n <= 9; n++) expect(combos.has(n), `缺少連擊值 ${n}`).toBe(true);
   });
 
-  it.each(PRESET_CHARACTER_IDS)('%s 的預設牌組只含花色招式、每個連擊值至少 3 張', (id) => {
+  it.each(PRESET_CHARACTER_IDS)('%s 的預設牌組只含開放的卡、每個連擊值至少 3 張', (id) => {
     const cards = presetDeck(id).map(getCard);
-    expect(cards.every((c) => isVanilla(c))).toBe(true);
+    expect(cards.every((c) => isCardEnabled(c))).toBe(true);
     for (let n = 1; n <= 9; n++) expect(cards.filter((c) => c.combo === n).length, `連擊值 ${n}`).toBeGreaterThanOrEqual(3);
   });
 

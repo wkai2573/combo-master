@@ -5,7 +5,8 @@
  * 輸出 src/data/cardTable.json：
  *   overrides  既有卡（xlsx）被改過的數值（攻、守、連擊、經驗需求、持續回合）
  *   chars      角色被改過的生命值、覺醒經驗
- *   added      表上新增的卡
+ *   added      表上新增的卡（卡表上標「新」的卡；若與 xlsx 的卡同名，就整張取代那張卡）
+ *   keywords   關鍵字區塊（名稱、分類、說明）；卡上用【名稱】或 [標籤] 引用，遊戲裡滑過就顯示說明
  * 文字（效果描述）不在這裡套用：新描述要先由 Claude 跟你確認用語，再寫進程式。
  */
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -13,7 +14,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import baseCards from '../src/data/generated/cards.json';
 import baseChars from '../src/data/generated/characters.json';
+import { scripts } from '../src/engine/scripts';
 import type { CardData, CharacterData } from '../src/data/types';
+
+const implemented = scripts as Record<string, unknown>;
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const out = resolve(root, 'src', 'data', 'cardTable.json');
@@ -33,7 +37,7 @@ const added: CardData[] = [];
 const notes: string[] = [];
 
 for (const d of readDocs('cards').sort((a, b) => a.order - b.order)) {
-  const base = byName.get(d.name);
+  const base = d.custom ? undefined : byName.get(d.name);
   if (base) {
     const o: Record<string, number> = {};
     for (const k of NUM_KEYS) if (d[k] !== undefined && d[k] !== (base as any)[k]) o[k] = d[k];
@@ -47,7 +51,7 @@ for (const d of readDocs('cards').sort((a, b) => a.order - b.order)) {
     if (d.slot) c.slot = d.slot;
     if (d.duration !== undefined) c.duration = d.duration;
     added.push(c);
-    if (c.text) notes.push(`新卡有效果文字，需先確認用語並實作效果：${c.name}`);
+    if (c.text && !(c.id in implemented)) notes.push(`新卡有效果文字，需先確認用語並實作效果：${c.name}`);
   }
 }
 
@@ -62,6 +66,11 @@ for (const d of readDocs('chars')) {
   if (Object.keys(o).length) chars[d.name] = o;
 }
 
-writeFileSync(out, JSON.stringify({ overrides, chars, added }, null, 2) + '\n');
-console.log(`已寫入 ${out}：既有卡改動 ${Object.keys(overrides).length} 張、角色改動 ${Object.keys(chars).length} 位、新增 ${added.length} 張`);
+const keywords = readDocs('keywords')
+  .sort((a, b) => a.order - b.order)
+  .map((d) => ({ name: d.name as string, group: d.cls as string, desc: d.desc as string }));
+for (const d of readDocs('keywords')) if (d.textPending) notes.push(`關鍵字說明待確認用語：${d.name}`);
+
+writeFileSync(out, JSON.stringify({ overrides, chars, added, keywords }, null, 2) + '\n');
+console.log(`已寫入 ${out}：既有卡改動 ${Object.keys(overrides).length} 張、角色改動 ${Object.keys(chars).length} 位、新增 ${added.length} 張、關鍵字 ${keywords.length} 個`);
 for (const n of notes) console.log('注意：' + n);

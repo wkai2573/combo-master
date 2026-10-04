@@ -4,8 +4,9 @@ import { Battle } from './pages/Battle';
 import { DeckBuilder } from './pages/DeckBuilder';
 import { Home, type Route } from './pages/Home';
 import { Lobby, type LobbyMode } from './pages/Lobby';
+import { KeywordTooltip } from './components/KeywordText';
 
-export function App() {
+function Routes() {
   const [route, setRoute] = useState<Route>('home');
   const [session, setSession] = useState<Session | null>(null);
 
@@ -25,4 +26,13 @@ export function App() {
     return <Lobby mode={route as LobbyMode} onStart={setSession} onBack={() => setRoute('home')} />;
   }
   return <Home go={setRoute} />;
+}
+
+export function App() {
+  return (
+    <>
+      <Routes />
+      <KeywordTooltip />
+    </>
+  );
 }

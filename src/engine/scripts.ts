@@ -1,6 +1,6 @@
 import { isTrap } from '../data/cards';
 import {
-  awakened, chooseCards, data, discard, Z, log, move, optionalPay, order, pname,
+  awakened, chooseCards, confirm, data, discard, Z, log, mark, move, optionalPay, order, pname,
   recover, toExp, type Gen, type GameCtx,
 } from './ops';
 import type { CardInst, PlayerId } from './types';
@@ -45,7 +45,19 @@ export const scripts: Record<string, CardScript> = {
       if (x > 0) recover(g, p, x);
     },
   },
-  戒備打擊: { pursuitDef: true },
+  // 戒備打擊（劍士）：[頂] 我方總防禦 +2
+  戒備打擊: { defMod: 2 },
+  // 魅影射擊（弓箭手）：[追] 作為追擊卡時防禦力也計入總防禦
+  魅影射擊: { pursuitDef: true },
+  // 伏擊（盜賊）：[起] 此回合我方總攻擊 +2
+  伏擊: {
+    *onOpen(g, p) {
+      g.state.flags.atkBonus[p] += 2;
+      log(g, '【伏擊】此回合總攻擊 +2');
+    },
+  },
+  // 低價買進（商人）：[經] 回合結束時的交換由 endOfTurnEffects 處理
+  低價買進: {},
   快速治療: {
     *onPlay(g, p, card) {
       if (yield* optionalPay(g, p, card, { cover: 3 })) recover(g, p, 3);
@@ -64,7 +76,8 @@ export const scripts: Record<string, CardScript> = {
     },
   },
   精準追擊: { pursuitMode: 'precise' },
-  力量爆破: { atkMod: -6, pursuitFail: true },
+  // 力量爆破（法師）：[頂] 我方總攻擊 -5
+  力量爆破: { atkMod: -5 },
   '3連擊': { comboAlt: [6, 8] },
   '777': {
     noOpen: true,
@@ -150,3 +163,24 @@ export const scripts: Record<string, CardScript> = {
   },
   不變應萬變: { keepOrder: true },
 };
+
+/**
+ * 回合結束時的 [經] 效果：低價買進（可用 1 張手牌與經驗區中正面的低價買進交換）。
+ * 先攻方先處理；只處理回合結束當下已在經驗區的卡。
+ */
+export function* endOfTurnEffects(g: GameCtx): Gen {
+  for (const p of order(g)) {
+    const cards = Z(g, p, 'exp').filter((c) => c.id === '低價買進' && !c.covered);
+    for (const card of cards) {
+      if (card.zone !== 'exp' || card.covered || Z(g, p, 'hand').length === 0) continue;
+      const ok = yield* confirm(g, p, '【低價買進】回合結束：要用 1 張手牌與經驗區的【低價買進】交換嗎？');
+      if (!ok) continue;
+      const [give] = yield* chooseCards(g, p, '【低價買進】選擇要換出的手牌', Z(g, p, 'hand'), 1, 1);
+      if (!give) continue;
+      move(g, card, 'hand');
+      toExp(g, give);
+      log(g, `${pname(g, p)} 以【${data(give).name}】與經驗區的【低價買進】交換`);
+      mark(g, `${pname(g, p)} 以【${data(give).name}】與【低價買進】交換`, { type: 'info' });
+    }
+  }
+}

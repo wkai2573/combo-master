@@ -40,6 +40,8 @@ export interface TurnFlags {
   rabbitUsed: [boolean, boolean];
   /** 遊俠「瞄準」本回合已使用的次數 */
   aimUsed: [number, number];
+  /** 本回合卡片給的總攻擊加成（伏擊） */
+  atkBonus: [number, number];
   burstDraw3: [boolean, boolean];
   alchemy: [boolean, boolean];
   sniper: [boolean, boolean];

@@ -1,3 +1,4 @@
+import { KeywordText } from '../components/KeywordText';
 import { useMemo, useState } from 'react';
 import { getCharacter } from '../../data/cards';
 import { playableDecks, type DeckEntry } from '../../deck/storage';
@@ -42,8 +43,8 @@ export function Lobby({ mode, onStart, onBack }: { mode: LobbyMode; onStart: (s:
         {ch && (
           <div className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>
             <div>{ch.cls}・生命值 {ch.hp}・覺醒需要經驗 {ch.expReq}</div>
-            <div>效果：{ch.text}</div>
-            <div>覺醒：{ch.awakenText}</div>
+            <div>效果：<KeywordText text={ch.text} /></div>
+            <div>覺醒：<KeywordText text={ch.awakenText} /></div>
           </div>
         )}
         {mode === 'practice' && (

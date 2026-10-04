@@ -5,7 +5,7 @@ import { presetDeck } from '../../data/presetDecks';
 import type { CardData, CardKind } from '../../data/types';
 import { deleteDeck, exportDeck, importDeck, listDecks, saveDeck, type DeckEntry } from '../../deck/storage';
 import { MAX_COPIES, validateDeck } from '../../deck/validate';
-import { CardFace, InspectContext, InspectPanel } from '../components/CardFace';
+import { CardFace, InspectContext, InspectPanel, PinContext } from '../components/CardFace';
 import { Modal } from '../components/Modal';
 
 const KIND_ORDER: Record<CardKind, number> = { move: 0, equip: 1, buff: 2 };
@@ -21,6 +21,7 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
   const [version, setVersion] = useState(0);
   const [msg, setMsg] = useState('');
   const [inspect, setInspect] = useState<string | null>(null);
+  const [pinned, setPinned] = useState<string | null>(null);
   const [kind, setKind] = useState<'all' | CardKind>('all');
   const [combo, setCombo] = useState(0);
   const [scope, setScope] = useState<'all' | 'class' | 'common'>('all');
@@ -133,6 +134,7 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
 
   return (
     <InspectContext.Provider value={setInspect}>
+      <PinContext.Provider value={(id) => setPinned((p) => (p === id ? null : id))}>
       <div className="page">
         <div className="row" style={{ marginBottom: 10 }}>
           <button onClick={onBack}>← 返回</button>
@@ -191,7 +193,7 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
           </div>
 
           <div className="deckcol">
-            <InspectPanel id={inspect} />
+            <InspectPanel id={pinned ?? inspect} pinned={pinned !== null} onUnpin={() => setPinned(null)} />
             <div className="panel">
               <div className="row" style={{ marginBottom: 8 }}>
                 <select value={deckId ?? ''} onChange={(e) => { const d = saved.find((x) => x.id === e.target.value); if (d) load(d); }}>
@@ -276,6 +278,7 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
           </Modal>
         )}
       </div>
+      </PinContext.Provider>
     </InspectContext.Provider>
   );
 }

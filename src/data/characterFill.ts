@@ -10,7 +10,7 @@ export const characterFill: Partial<Record<ClassName, { name: string; hp: number
     hp: 50,
     expReq: 8,
     // 瞄準：把追擊變成可控的判定。看得到牌頂，就能挑對自己有利的牌來翻。
-    text: '【瞄準】每回合 1 次。追擊判定翻牌前，可先看牌組頂 1 張；不想用就放到牌組底，改用新的牌組頂判定。',
+    text: '擁有【瞄準】。',
     awakenText: '（取代）【瞄準】每回合可用 2 次。',
   },
 };

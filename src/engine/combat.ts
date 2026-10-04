@@ -128,6 +128,7 @@ export function totalAtk(g: GameCtx, p: PlayerId): number {
     base += Math.max(0, data(c).atk + mod);
   });
   for (const c of Z(g, p, 'pursuit')) base += data(c).atk;
+  base += g.state.flags.atkBonus[p];
 
   const awake = awakened(g, p);
   let bonus = 0;

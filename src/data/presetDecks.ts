@@ -26,7 +26,15 @@ const profiles: Record<string, { style: string; score: (c: CardData) => number }
  * 流程：先在 enabledCards.ts 啟用新卡，再到這裡填上它放進哪個角色的預設牌組；
  * 沒啟用的卡會被忽略，其餘的格子仍由花色招式補滿。
  */
-export const PRESET_EXTRAS: Record<string, Record<string, number>> = {};
+export const PRESET_EXTRAS: Record<string, Record<string, number>> = {
+  勇者: { 戒備打擊: 2 },
+  後人: { 戒備打擊: 2 },
+  刺客: { 伏擊: 2 },
+  先人: { 伏擊: 2 },
+  商人: { 低價買進: 2 },
+  法師: { 力量爆破: 2 },
+  遊俠: { 魅影射擊: 2 },
+};
 
 const COPY_CAP = 3;
 const COMBO_CAP = 7;

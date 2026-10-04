@@ -1,8 +1,8 @@
 import { FLOW_CHART_URL } from '../flowChart';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { SPEED_LABEL, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
-import { CardFace, InspectContext, InspectPanel } from '../components/CardFace';
+import { CardFace, InspectContext, InspectPanel, PinContext } from '../components/CardFace';
 import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
 import { Modal } from '../components/Modal';
 import { StepTracker } from '../components/StepTracker';
@@ -16,6 +16,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const st = useSyncExternalStore(session.subscribe, session.getState);
   const [selected, setSelected] = useState<string[]>([]);
   const [inspect, setInspect] = useState<string | null>(null);
+  const [pinned, setPinned] = useState<string | null>(null);
+  const togglePin = useCallback((id: string) => setPinned((p) => (p === id ? null : id)), []);
   const [zone, setZone] = useState<{ p: PlayerId; z: ZoneKey } | null>(null);
   const [copied, setCopied] = useState(false);
   const [speed, setSpeedState] = useState<Speed>(() => {
@@ -45,6 +47,13 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         : final,
     [final, cur],
   );
+
+  // Esc 取消固定的說明
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setPinned(null);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // 每次收到新狀態或換影格，就清掉上一個提示的選擇
   useEffect(() => setSelected([]), [final, cur?.n]);
@@ -111,6 +120,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
 
   return (
     <InspectContext.Provider value={setInspect}>
+      <PinContext.Provider value={togglePin}>
       <div className="battle">
         <div className="topbar">
           <span className="ver" title={VERSION_TITLE}>連擊大師 {VERSION_SHORT}</span>
@@ -148,7 +158,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
             )}
           </div>
           <div className="side">
-            <InspectPanel id={inspect} />
+            <InspectPanel id={pinned ?? inspect} pinned={pinned !== null} onUnpin={() => setPinned(null)} />
             <LogPanel lines={v.log} />
           </div>
         </div>
@@ -180,6 +190,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           </Modal>
         )}
       </div>
+      </PinContext.Provider>
     </InspectContext.Provider>
   );
 }

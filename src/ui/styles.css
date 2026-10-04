@@ -267,3 +267,25 @@ h1, h2, h3 { margin: 0 0 8px; }
 .steps .hint { color: var(--text); margin-left: auto; min-width: 0; }
 .steps .hint .who { color: var(--accent); font-weight: 700; }
 @media (prefers-reduced-motion: no-preference) { .steps .st { transition: background-color .2s, color .2s; } }
+
+.card.inspectable { cursor: zoom-in; }
+.kw { text-decoration: underline dotted; text-underline-offset: 2px; color: var(--accent); cursor: help; }
+.kw:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
+.kwtip {
+  position: fixed; z-index: 100; max-width: 290px; padding: 8px 10px; pointer-events: none;
+  background: #0f1219; border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 6px 18px #000b;
+  font-size: 12px; line-height: 1.5; color: #dfe5f6; display: grid; gap: 6px;
+}
+.kwtip b { color: var(--accent); margin-right: 6px; }
+.kwtip .g { color: var(--muted); font-size: 11px; }
+.inspect .bigart {
+  height: 112px; margin-bottom: 8px; border-radius: 10px; overflow: hidden; color: var(--cc, #999);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cc, #666) 38%, #12151c), #12151c);
+  border: 1px solid color-mix(in srgb, var(--cc, #666) 55%, #000);
+}
+.inspect .bigart .art { height: 100%; background: none; border: 0; }
+.inspect .bigart svg { display: block; width: 100%; height: 100%; }
+.inspect .pinbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; padding: 3px 8px; font-size: 12px; color: #1b1405; background: var(--accent); border-radius: 6px; font-weight: 700; }
+.inspect .pinbar button { padding: 0 8px; font-size: 12px; background: #fff3; border-color: #1b140555; color: #1b1405; }
+.inspect .kwlist { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 12px; line-height: 1.55; color: var(--muted); display: grid; gap: 4px; }
+.inspect .kwlist b { color: var(--accent); }
