@@ -2,6 +2,12 @@
 
 以連擊值接力出招的 1v1 TCG（網頁版）。規則見 `docs/連擊大師.md`，實作時的規則解讀見 `docs/規則詮釋.md`。
 
+## 線上玩
+
+https://wkai2573.github.io/combo-master/
+
+推送到 `main` 後，GitHub Actions 會自動跑測試、建置並部署到 GitHub Pages（設定在 `.github/workflows/deploy.yml`）。
+
 ## 指令
 
 ```
@@ -19,7 +25,7 @@ npm run build      # 型別檢查＋打包
 2. 另一人按「加入房間」，輸入房號。
 3. 房主的瀏覽器執行遊戲規則，對方只傳送選擇、接收畫面。
 
-兩人必須能連到公開的 PeerJS broker；要讓朋友從外網連進來，需要把 `npm run build` 的 `dist/` 放到任何靜態網站空間。
+兩人必須能連到公開的 PeerJS broker。兩人各自開上面的線上網址即可對戰；本機 `npm run dev` 只有同一台電腦或同網段能連。
 
 ## 結構
 
