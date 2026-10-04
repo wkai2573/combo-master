@@ -1,19 +1,38 @@
 import cardsJson from './generated/cards.json';
 import charsJson from './generated/characters.json';
+import { characterText } from './characterText';
 import { classMap } from './classMap';
+import tableJson from './cardTable.json';
 import { isCardEnabled } from './enabledCards';
 import type { CardData, CharacterData } from './types';
 
-/** xlsx 職業欄為「共用」的卡，若在 classMap 有提案歸屬則採用 */
-export const ALL_CARDS: CardData[] = (cardsJson as CardData[]).map((c) => ({
-  ...c,
-  cls: c.cls === '共用' && classMap[c.id] ? classMap[c.id] : c.cls,
-}));
+const table = tableJson as {
+  overrides: Record<string, Partial<CardData>>;
+  chars: Record<string, Partial<CharacterData>>;
+  added: CardData[];
+};
+
+/**
+ * xlsx 職業欄為「共用」的卡，若在 classMap 有提案歸屬則採用；
+ * 再套上卡表網頁同步來的數值（cardTable.json，由 npm run table 產生），最後接上卡表新增的卡。
+ */
+export const ALL_CARDS: CardData[] = [
+  ...(cardsJson as CardData[]).map((c) => ({
+    ...c,
+    cls: c.cls === '共用' && classMap[c.id] ? classMap[c.id] : c.cls,
+    ...table.overrides[c.id],
+  })),
+  ...table.added,
+];
 
 /** 目前開放使用的卡（組牌卡池與牌組驗證以此為準；引擎仍能處理全部卡片） */
 export const PLAYABLE_CARDS: CardData[] = ALL_CARDS.filter(isCardEnabled);
 
-export const ALL_CHARACTERS: CharacterData[] = charsJson as CharacterData[];
+export const ALL_CHARACTERS: CharacterData[] = (charsJson as CharacterData[]).map((c) => ({
+  ...c,
+  ...table.chars[c.name],
+  ...characterText[c.name],
+}));
 
 const cardMap = new Map(ALL_CARDS.map((c) => [c.id, c]));
 const charMap = new Map(ALL_CHARACTERS.map((c) => [c.id, c]));

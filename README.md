@@ -12,7 +12,7 @@ https://wkai2573.github.io/combo-master/
 
 ## 戰鬥流程圖
 
-`docs/戰鬥流程圖.html` 是可互動的回合與戰鬥流程圖（用瀏覽器直接開，可縮放、追蹤路徑）。它由 [Archify](https://github.com/tt-a1i/archify) 產生，來源在 `docs/戰鬥流程圖.source.json`；規則改了之後，用 Claude Code 的 `archify` 技能依這份來源修改並重新產生即可。
+`public/battle-flow.html` 是可互動的回合與戰鬥流程圖（可縮放、追蹤路徑），會隨網站一起部署；遊戲首頁、規則說明和對戰畫面上方的「流程圖」都能開啟（新分頁）。它由 [Archify](https://github.com/tt-a1i/archify) 產生，來源在 `docs/戰鬥流程圖.source.json`；規則改了之後，用 Claude Code 的 `archify` 技能依這份來源修改並重新產生即可。
 
 ## 指令
 
@@ -25,6 +25,14 @@ npm run presets    # 列出各角色預設牌組的連擊值分佈與平均攻�
 npm run data       # 修改 docs/連擊大師.xlsx 後，重新產生 src/data/generated/*.json
 npm run build      # 型別檢查＋打包
 ```
+
+## 卡表網頁與數值同步
+
+卡片、角色的數值在「連擊大師卡表」網頁（Claude 的 Artifact，只有擁有者能開）上調整，可以新增卡片。調完請 Claude 同步：Claude 用 `ArtifactData` 把資料讀成 JSON，再執行 `npm run table -- <資料夾>`，產生 `src/data/cardTable.json`（既有卡的數值覆蓋、角色數值、新增的卡）。`src/data/cards.ts` 會把它疊在 xlsx 產生的資料上，所以重跑 `npm run data` 不會洗掉。
+
+卡表頁面標題旁有頁面版本（例如 `v1.2`），下方顯示「遊戲已同步到 vX.Y.Z」，那是每次同步後由 Claude 寫進資料庫的 `meta/sync`；頁面上「尚未同步的改動」就是還沒進遊戲的數值。
+
+效果文字不會自動套用：新描述要先由 Claude 跟你確認用語（格式「時機｜條件→效果」），確認後才寫進程式與實作效果。
 
 ## 效果卡（目前停用）
 

@@ -25,6 +25,11 @@ button {
   font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line);
   border-radius: 6px; padding: 6px 12px; cursor: pointer;
 }
+a.btnlink {
+  font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px 12px; text-decoration: none; text-align: center; display: inline-block;
+}
+a.btnlink:hover { border-color: var(--accent); }
 button:hover:not(:disabled) { border-color: var(--accent); }
 button:disabled { opacity: 0.4; cursor: not-allowed; }
 button.primary { background: var(--accent); color: #1b1405; border-color: var(--accent); font-weight: 700; }
@@ -48,7 +53,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .topbar .ver { font-size: 12px; letter-spacing: 0; vertical-align: baseline; }
 .verline { font-size: 12px; margin-top: 4px; cursor: help; }
 .home .menu { display: grid; gap: 10px; max-width: 320px; margin: 28px auto 0; }
-.home .menu button { padding: 12px; font-size: 16px; }
+.home .menu button, .home .menu a.btnlink { padding: 12px; font-size: 16px; }
 
 /* ───────── 卡片 ───────── */
 .card {
@@ -245,3 +250,20 @@ h1, h2, h3 { margin: 0 0 8px; }
   .side { display: none; }
   .builder { grid-template-columns: 1fr; }
 }
+
+.steps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 6px 12px; background: var(--panel); border-bottom: 1px solid var(--line); font-size: 13px; }
+.steps ol { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; list-style: none; margin: 0; padding: 0; }
+.steps .grp { display: flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 8px; border: 1px solid transparent; color: var(--muted); }
+.steps .grp + .grp::before { content: '→'; margin-right: 6px; margin-left: -12px; color: var(--line); }
+.steps .grp.multi { border-color: var(--line); }
+.steps .grp.multi.now { border-color: var(--accent); }
+.steps .glabel { font-size: 11px; letter-spacing: 2px; opacity: 0.8; }
+.steps .subs { display: inline-flex; align-items: center; gap: 2px; }
+.steps .arr { font-style: normal; opacity: 0.5; margin: 0 2px; }
+.steps .st { padding: 1px 8px; border-radius: 6px; }
+.steps .done { color: var(--good); }
+.steps .done.grp, .steps .done.st { opacity: 0.75; }
+.steps .st.now, .steps .grp:not(.multi).now .st { background: var(--accent); color: #1b1405; font-weight: 700; box-shadow: 0 0 0 3px rgba(240, 185, 58, 0.25); }
+.steps .hint { color: var(--text); margin-left: auto; min-width: 0; }
+.steps .hint .who { color: var(--accent); font-weight: 700; }
+@media (prefers-reduced-motion: no-preference) { .steps .st { transition: background-color .2s, color .2s; } }

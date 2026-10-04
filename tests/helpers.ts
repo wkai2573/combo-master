@@ -1,3 +1,4 @@
+import { getCard } from '../src/data/cards';
 import { Game } from '../src/engine/game';
 import { newCard, Z, data, type GameCtx } from '../src/engine/ops';
 import type { DeckSpec, PlayerId, ZoneName } from '../src/engine/types';
@@ -69,3 +70,7 @@ export function pass(g: Game): void {
 }
 
 export const title = (g: Game) => g.pending?.title ?? '(無提示)';
+
+/** 卡片攻擊／防禦（直接讀卡表，數值調整時測試不用跟著改） */
+export const atkOf = (id: string) => getCard(id).atk;
+export const defOf = (id: string) => getCard(id).def;

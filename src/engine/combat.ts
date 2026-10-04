@@ -117,6 +117,9 @@ function* responseWindows(g: GameCtx, active: PlayerId, played: CardInst, combo:
 
 // ───────────────────────── 總攻擊／總防禦 ─────────────────────────
 
+/** 刺客「追擊判定成功」加成的總上限 */
+export const ASSASSIN_CAP = 5;
+
 export function totalAtk(g: GameCtx, p: PlayerId): number {
   const zone = Z(g, p, 'combat');
   let base = 0;
@@ -133,7 +136,7 @@ export function totalAtk(g: GameCtx, p: PlayerId): number {
       if (base >= (awake ? 10 : 15)) bonus += 3;
       break;
     case '刺客':
-      bonus += (awake ? 4 : 2) * g.state.flags.pursuitSuccess[p];
+      bonus += Math.min(ASSASSIN_CAP, (awake ? 2 : 1) * g.state.flags.pursuitSuccess[p]);
       break;
     case '商人':
       if (awake && Z(g, p, 'hand').length > 3) bonus += 3;

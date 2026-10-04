@@ -1,9 +1,11 @@
+import { FLOW_CHART_URL } from '../flowChart';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { SPEED_LABEL, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { CardFace, InspectContext, InspectPanel } from '../components/CardFace';
 import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
 import { Modal } from '../components/Modal';
+import { StepTracker } from '../components/StepTracker';
 import { PromptPanel } from '../components/PromptPanel';
 import type { Session } from '../../net/session';
 import type { PlayerId } from '../../engine/types';
@@ -117,11 +119,13 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           <span className="muted">先攻：{v.first === me ? '你' : '對手'}</span>
           <span className="spacer" />
           {st.message && <span style={{ color: 'var(--bad)' }}>{st.message}</span>}
+          <a className="btnlink" href={FLOW_CHART_URL} target="_blank" rel="noreferrer" title="在新分頁開啟戰鬥流程圖">流程圖</a>
           <select value={speed} onChange={(e) => setSpeed(e.target.value as Speed)} title="動畫速度">
             {(Object.keys(SPEED_LABEL) as Speed[]).map((s) => <option key={s} value={s}>{SPEED_LABEL[s]}</option>)}
           </select>
           <button className="danger" onClick={leave}>離開</button>
         </div>
+        <StepTracker phase={v.phase} waitingFor={v.waitingFor} me={me} />
         {!st.opponentOnline && v.winner === null && (
           <div className="banner">
             對手連線不穩或已離線{st.forfeitIn !== null ? `，${st.forfeitIn} 秒後將判你獲勝` : '…'}

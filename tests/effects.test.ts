@@ -298,16 +298,24 @@ describe('裝備與增益、角色', () => {
     expect(Z(g, 0, 'hand')).toHaveLength(2);
   });
 
-  it('刺客：追擊判定成功時攻擊 +2（覺醒 +4）', () => {
+  it('刺客：每次追擊判定成功攻擊 +1（覺醒 +2），合計最多 +5', () => {
     const g = scenario({ chars: ['刺客', '勇者'] });
+    const base = atkOf('黑桃1');
     g.state.flags.pursuitSuccess[0] = 2;
     setCombat(g);
-    expect(attack(g)).toBe(6 + 2 * 2);
+    expect(attack(g)).toBe(base + 2);
+    g.state.flags.pursuitSuccess[0] = 7; // 超過上限
+    expect(attack(g)).toBe(base + 5);
+    setZones(g, 0, { combat: ['黑桃1'], exp: Array(8).fill('黑桃1') }); // 覺醒
+    g.state.flags.pursuitSuccess[0] = 2;
+    expect(attack(g)).toBe(base + 4);
+    g.state.flags.pursuitSuccess[0] = 4;
+    expect(attack(g)).toBe(base + 5);
   });
 });
 
 import { totalAtk } from '../src/engine/combat';
-import { setZones } from './helpers';
+import { atkOf, setZones } from './helpers';
 function setCombat(g: Game) {
   setZones(g, 0, { combat: ['黑桃1'] });
 }

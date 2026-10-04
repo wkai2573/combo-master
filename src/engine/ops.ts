@@ -205,11 +205,11 @@ export function recover(g: GameCtx, p: PlayerId, n: number): number {
   return done;
 }
 
-/** 抽牌（商人：看牌組上方 2 張選 1 張，另一張放回底部） */
+/** 抽牌（商人：只有「抽 1 張」時，改為看牌組上方 2 張選 1 張，另一張放回底部） */
 export function* draw(g: GameCtx, p: PlayerId, n: number): Gen<CardInst[]> {
   const drawn: CardInst[] = [];
   const deck = Z(g, p, 'deck');
-  const isMerchant = P(g, p).charId === '商人';
+  const isMerchant = P(g, p).charId === '商人' && n === 1;
   for (let i = 0; i < n && deck.length > 0; i++) {
     if (isMerchant && deck.length >= 2) {
       const top2 = deck.slice(0, 2);

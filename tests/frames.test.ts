@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { frameFor } from '../src/engine/view';
-import { pick, scenario } from './helpers';
+import { atkOf, defOf, pick, scenario } from './helpers';
 
 const types = (g: ReturnType<typeof scenario>, viewer: 0 | 1 = 0) => g.drainFrames().map((f) => frameFor(f, viewer));
 
@@ -28,13 +28,15 @@ describe('動畫影格', () => {
       hasInOrder(t, ['play', 'pass', 'pass', 'phase', 'flip', 'flipResult', 'flip', 'flipResult', 'calc', 'damage', 'return']),
     ).toBe(true);
 
-    // 傷害算式的數字與實際扣血一致（與 rules.test 的情境相同：玩家0 受 9、玩家1 受 7）
+    // 傷害算式的數字與實際扣血一致（與 rules.test 的情境相同；玩家1 是刺客，追擊成功 +1）
+    const d0 = atkOf('黑桃9') + atkOf('黑桃1') + 1 - defOf('黑桃5');
+    const d1 = atkOf('黑桃5') + atkOf('黑桃1') - defOf('黑桃9');
     const calc = frames.find((f) => f.fx.type === 'calc')!.fx;
-    expect(calc.type === 'calc' && calc.dmg).toEqual([9, 7]);
+    expect(calc.type === 'calc' && calc.dmg).toEqual([d0, d1]);
     const dmg = frames.find((f) => f.fx.type === 'damage')!.view;
-    expect(dmg.players[0].rage).toHaveLength(9);
+    expect(dmg.players[0].rage).toHaveLength(d0);
     // 對手的怒氣區內容對我方是隱藏的，但張數看得到
-    expect(dmg.players[1].rage).toHaveLength(7);
+    expect(dmg.players[1].rage).toHaveLength(d1);
     expect(dmg.players[1].rage.every((c) => c.id === null)).toBe(true);
   });
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { APP_BUILT_AT, VERSION_LABEL, VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { Modal } from '../components/Modal';
+import { FLOW_CHART_URL } from '../flowChart';
 import type { LobbyMode } from './Lobby';
 
 export type Route = 'home' | 'decks' | LobbyMode;
@@ -20,6 +21,7 @@ export function Home({ go }: { go: (r: Route) => void }) {
         <button onClick={() => go('practice')}>單機練習（對戰機器人）</button>
         <button onClick={() => go('decks')}>組牌</button>
         <button onClick={() => setRules(true)}>規則說明</button>
+        <a className="btnlink" href={FLOW_CHART_URL} target="_blank" rel="noreferrer">戰鬥流程圖</a>
       </div>
       {rules && (
         <Modal onClose={() => setRules(false)}>
@@ -34,7 +36,10 @@ export function Home({ go }: { go: (r: Route) => void }) {
               <li>招式打完會依序放進各自的經驗區。經驗區張數 ≥ 角色需求時進入<b>覺醒</b>。</li>
               <li>把滑鼠移到卡片上，右側會顯示完整說明。</li>
             </ul>
-            <div style={{ marginTop: 12 }}><button onClick={() => setRules(false)}>關閉</button></div>
+            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+              <button onClick={() => setRules(false)}>關閉</button>
+              <a className="btnlink" href={FLOW_CHART_URL} target="_blank" rel="noreferrer">看戰鬥流程圖</a>
+            </div>
           </div>
         </Modal>
       )}
