@@ -157,6 +157,9 @@ export function pay(g: GameCtx, p: PlayerId, cost: Cost, exclude?: CardInst): vo
   if (cost.rage) discardRage(g, p, cost.rage);
 }
 
+/** 由 scripts.ts 掛上：處理剛被覆蓋的經驗卡的「被覆蓋時」效果（避免 ops 與 scripts 互相引用） */
+export const hooks: { onCovered?: (g: GameCtx) => Gen } = {};
+
 /** 可選的費用發動：付得起才詢問，同意就扣費並回傳 true */
 export function* optionalPay(
   g: GameCtx, p: PlayerId, card: CardInst, cost: Cost, exclude?: CardInst,
@@ -166,6 +169,7 @@ export function* optionalPay(
   if (!ok) return false;
   pay(g, p, cost, exclude);
   log(g, `${pname(g, p)} 發動【${data(card).name}】（${costText(cost)}）`);
+  if (hooks.onCovered) yield* hooks.onCovered(g);
   return true;
 }
 
@@ -177,6 +181,7 @@ export function cover(g: GameCtx, p: PlayerId, n: number, exclude?: CardInst): n
     if (done >= n) break;
     if (!c.covered && c !== exclude) {
       c.covered = true;
+      g.state.flags.coveredQ.push(c.uid);
       done++;
     }
   }

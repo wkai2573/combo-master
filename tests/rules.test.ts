@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { totalAtk, totalDef } from '../src/engine/combat';
-import { draw, Z } from '../src/engine/ops';
-import { endOfTurnEffects } from '../src/engine/scripts';
+import { pursuitCount, totalAtk, totalDef } from '../src/engine/combat';
+import { draw, optionalPay, Z } from '../src/engine/ops';
+import { scripts } from '../src/engine/scripts';
 import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
 
 const labels = (g: ReturnType<typeof scenario>) => g.pending!.options.map((o) => o.label);
@@ -297,13 +297,6 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('戒備打擊'));
   });
 
-  it('魅影射擊（弓箭手）：[追] 作為追擊卡時防禦力也計入總防禦', () => {
-    const g = scenario();
-    setZones(g, 0, { combat: ['黑桃1'], pursuit: ['魅影射擊'] });
-    expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('魅影射擊'));
-    setZones(g, 0, { combat: ['黑桃1'], pursuit: ['黑桃2'] });
-    expect(totalDef(g, 0)).toBe(defOf('黑桃1'));
-  });
 
   it('伏擊（盜賊）：[起] 作為起手出招時，此回合總攻擊 +2；不是起手就沒有', () => {
     const g = scenario({ chars: ['刺客', '勇者'], p0: { hand: ['伏擊', '黑桃3'] }, p1: { hand: ['黑桃5'] } });
@@ -317,30 +310,100 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(g2.state.flags.atkBonus[0]).toBe(0);
   });
 
-  it('低價買進（商人）：[經] 回合結束時可用 1 張手牌與它交換；覆蓋中或選擇不換就不動', () => {
-    const run = (answers: string[][], setup: Parameters<typeof scenario>[0]) => {
-      const g = scenario(setup);
-      const it = endOfTurnEffects(g);
+  it('魅影射擊（弓箭手）：[追] 成為追擊卡時，我方總防禦 +4', () => {
+    const g = scenario();
+    setZones(g, 0, { combat: ['黑桃1'], pursuit: ['魅影射擊'] });
+    expect(totalDef(g, 0)).toBe(defOf('黑桃1') + 4);
+    setZones(g, 0, { combat: ['黑桃1'], pursuit: ['黑桃2'] });
+    expect(totalDef(g, 0)).toBe(defOf('黑桃1'));
+  });
+
+  it('地雷陷阱（弓箭手）：[追] 成為追擊卡時，我方總攻擊 +3（含卡本身的攻擊）', () => {
+    const g = scenario({ chars: ['遊俠', '勇者'] });
+    setZones(g, 0, { combat: ['黑桃1'], pursuit: ['地雷陷阱'] });
+    expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('地雷陷阱') + 3);
+  });
+
+  it('二刀連擊（盜賊）：[頂] 戰鬥區只有此卡時追擊 +1', () => {
+    const g = scenario();
+    setZones(g, 0, { combat: ['二刀連擊'] });
+    expect(pursuitCount(g, 0)).toBe(2);
+    setZones(g, 0, { combat: ['黑桃1', '二刀連擊'] });
+    expect(pursuitCount(g, 0)).toBe(1);
+    setZones(g, 0, { combat: ['黑桃1'] });
+    expect(pursuitCount(g, 0)).toBe(1);
+  });
+
+  it('高價賣出（商人）：[發_蓋1] 蓋 1 張經驗，抽 1', () => {
+    const g = scenario({
+      chars: ['勇者', '刺客'],
+      p0: { hand: ['高價賣出'], exp: ['黑桃1', '黑桃2'], deck: ['黑桃7', ...Array(20).fill('黑桃1')] },
+    });
+    pick(g, '發動'); // 手上只有 1 張，自動起手並詢問是否發動
+    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(1);
+    expect(names(g, 0, 'hand')).toContain('黑桃7');
+  });
+
+  it('電弧（法師）：[發] 抽X，再放 X 張手牌到牌組底，X＝對方戰鬥區招式數', () => {
+    const g = scenario({
+      first: 1,
+      chars: ['法師', '勇者'],
+      p0: { hand: ['電弧', '黑桃2'], deck: ['黑桃7', ...Array(20).fill('黑桃1')] },
+      p1: { hand: ['黑桃5'] },
+    });
+    pick(g, '電弧'); // 玩家1 先攻只有 1 張，自動起手；對方戰鬥區有 1 張 → X = 1
+    expect(g.pending!.title).toContain('電弧');
+    pick(g, '黑桃2');
+    expect(names(g, 0, 'hand')).toContain('黑桃7');
+    expect(Z(g, 0, 'deck').at(-1)!.id).toBe('黑桃2');
+  });
+
+  it('復仇之嚎（劍士）：[經_怒5] 對方給予的傷害 > 我方給予的傷害時，怒氣區上方 1 張加入手牌', () => {
+    const run = (taken: number, dealt: number, answer: string[]) => {
+      const g = scenario({ p0: { exp: ['復仇之嚎'], rage: Array(8).fill('黑桃1') } });
+      const card = Z(g, 0, 'exp')[0];
+      const it = scripts['復仇之嚎'].afterDamageExp!(g, 0, card, { taken, dealt });
       let r = it.next();
-      for (const a of answers) {
-        if (r.done) break;
-        r = it.next(a.map((k) => (k.startsWith('#') ? 'c' + Z(g, 0, 'hand').find((c) => c.id === k.slice(1))!.uid : k)));
-      }
-      return { g, done: !!r.done, first: r };
+      if (!r.done) r = it.next(answer);
+      return { g, done: !!r.done };
     };
-    const base = { chars: ['商人', '勇者'] as [string, string], p0: { hand: ['黑桃2', '黑桃3'], exp: ['低價買進'] } };
+    const hit = run(5, 2, ['yes']);
+    expect(hit.done).toBe(true);
+    expect(Z(hit.g, 0, 'rage')).toHaveLength(8 - 5 - 1);
+    expect(names(hit.g, 0, 'hand')).toHaveLength(Z(hit.g, 0, 'hand').length);
+    expect(Z(hit.g, 0, 'hand').length).toBeGreaterThanOrEqual(1);
 
-    const swapped = run([['yes'], ['#黑桃3']], base);
-    expect(swapped.done).toBe(true);
-    expect(names(swapped.g, 0, 'hand').sort()).toEqual(['低價買進', '黑桃2'].sort());
-    expect(names(swapped.g, 0, 'exp')).toEqual(['黑桃3']);
+    const declined = run(5, 2, ['no']);
+    expect(Z(declined.g, 0, 'rage')).toHaveLength(8);
 
-    const declined = run([['no']], base);
-    expect(names(declined.g, 0, 'hand').sort()).toEqual(['黑桃2', '黑桃3']);
-    expect(names(declined.g, 0, 'exp')).toEqual(['低價買進']);
+    const notEnough = run(2, 2, ['yes']); // 對方傷害沒有比較大：不會詢問
+    expect(Z(notEnough.g, 0, 'rage')).toHaveLength(8);
+  });
 
-    const covered = run([], { ...base, p0: { hand: ['黑桃2', '黑桃3'], exp: ['~低價買進'] } });
-    expect(covered.first.done).toBe(true); // 覆蓋中不能發動，不會詢問
+  it('低價買進（商人）：[經] 此卡被覆蓋時，可把經驗區 1 張未覆蓋的卡加入手牌', () => {
+    const setup = () => scenario({
+      chars: ['商人', '勇者'],
+      p0: { hand: ['黑桃2', '黑桃5'], exp: ['低價買進', '黑桃3', '黑桃4'] },
+    });
+    const g = setup();
+    const dummy = Z(g, 0, 'hand')[0];
+    const it = optionalPay(g, 0, dummy, { cover: 1 });
+    it.next(); // 是否發動
+    it.next(['yes']); // 蓋 1：最前面的低價買進被覆蓋 → 詢問是否發動
+    expect(Z(g, 0, 'exp')[0].covered).toBe(true);
+    it.next(['yes']); // 選擇要拿的卡
+    const pick3 = Z(g, 0, 'exp').find((c) => c.id === '黑桃3')!;
+    const end = it.next([`c${pick3.uid}`]);
+    expect(end.done).toBe(true);
+    expect(names(g, 0, 'hand')).toContain('黑桃3');
+    expect(Z(g, 0, 'exp').map((c) => c.id)).toEqual(['低價買進', '黑桃4']);
+
+    const g2 = setup();
+    const it2 = optionalPay(g2, 0, Z(g2, 0, 'hand')[0], { cover: 1 });
+    it2.next();
+    it2.next(['yes']);
+    expect(it2.next(['no']).done).toBe(true); // 選擇不發動
+    expect(names(g2, 0, 'hand')).toEqual(['黑桃2', '黑桃5']);
   });
 });
 

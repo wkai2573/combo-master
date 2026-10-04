@@ -42,6 +42,8 @@ export interface TurnFlags {
   aimUsed: [number, number];
   /** 本回合卡片給的總攻擊加成（伏擊） */
   atkBonus: [number, number];
+  /** 剛被覆蓋、等著處理「被覆蓋時」效果的經驗卡 uid（低價買進） */
+  coveredQ: number[];
   burstDraw3: [boolean, boolean];
   alchemy: [boolean, boolean];
   sniper: [boolean, boolean];

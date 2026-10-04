@@ -6,7 +6,7 @@ import { validateDeck } from '../src/deck/validate';
 
 describe('卡表資料', () => {
   it('卡片數量符合 docs', () => {
-    expect(ALL_CARDS.filter((c) => c.kind === 'move')).toHaveLength(66) // 63 張 − 2 張被卡表同名新版取代 + 5 張卡表新增;
+    expect(ALL_CARDS.filter((c) => c.kind === 'move')).toHaveLength(71) // 63 張 − 2 張被卡表同名新版取代 + 10 張卡表新增;
     expect(ALL_CARDS.filter((c) => c.kind === 'equip')).toHaveLength(3);
     expect(ALL_CARDS.filter((c) => c.kind === 'buff')).toHaveLength(2);
   });
@@ -31,9 +31,9 @@ describe('卡表資料', () => {
     expect([...PRESET_CHARACTER_IDS].sort()).toEqual(ALL_CHARACTERS.map((c) => c.id).sort());
   });
 
-  it('效果卡逐張開放：卡池＝36 張花色招式＋各職業 1 張新卡', () => {
+  it('效果卡逐張開放：卡池＝36 張花色招式＋各職業 2 張新卡', () => {
     expect(PLAYABLE_CARDS).toHaveLength(36 + ENABLED_EFFECT_CARDS.length);
-    expect(ENABLED_EFFECT_CARDS.map((id) => getCard(id).cls).sort()).toEqual(['劍士', '商人', '法師', '盜賊', '弓箭手'].sort());
+    expect(ENABLED_EFFECT_CARDS.map((id) => getCard(id).cls).sort()).toEqual(['劍士', '劍士', '商人', '商人', '法師', '法師', '盜賊', '盜賊', '弓箭手', '弓箭手'].sort());
     expect(PLAYABLE_CARDS.filter((c) => !isVanilla(c)).map((c) => c.id).sort()).toEqual([...ENABLED_EFFECT_CARDS].sort());
   });
 

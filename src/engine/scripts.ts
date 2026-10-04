@@ -1,9 +1,9 @@
 import { isTrap } from '../data/cards';
 import {
-  awakened, chooseCards, confirm, data, discard, Z, log, mark, move, optionalPay, order, pname,
+  awakened, chooseCards, confirm, data, discard, draw, hooks, Z, log, move, optionalPay, order, pname,
   recover, toExp, type Gen, type GameCtx,
 } from './ops';
-import type { CardInst, PlayerId } from './types';
+import { other, type CardInst, type PlayerId } from './types';
 
 /**
  * 每張卡的效果。引擎在對應時機呼叫這些 hook。
@@ -32,6 +32,14 @@ export interface CardScript {
   onPlay?: (g: GameCtx, p: PlayerId, card: CardInst) => Gen;
   /** [追] 成為追擊卡時 */
   onPursuitCard?: (g: GameCtx, p: PlayerId, card: CardInst) => Gen;
+  /** [追] 成為追擊卡時，我方總防禦 +N */
+  pursuitDefBonus?: number;
+  /** [追] 成為追擊卡時，我方總攻擊 +N */
+  pursuitAtkBonus?: number;
+  /** [頂] 戰鬥區只有此卡時，追擊 +N */
+  soloPursuitPlus?: number;
+  /** [經] 以正面存在經驗區時，傷害計算後的反應 */
+  afterDamageExp?: (g: GameCtx, p: PlayerId, card: CardInst, info: { dealt: number; taken: number }) => Gen;
   /** [頂] 傷害計算後 */
   afterDamage?: (g: GameCtx, p: PlayerId, card: CardInst, info: { dealt: number; taken: number }) => Gen;
 }
@@ -48,7 +56,7 @@ export const scripts: Record<string, CardScript> = {
   // 戒備打擊（劍士）：[頂] 我方總防禦 +2
   戒備打擊: { defMod: 2 },
   // 魅影射擊（弓箭手）：[追] 作為追擊卡時防禦力也計入總防禦
-  魅影射擊: { pursuitDef: true },
+  魅影射擊: { pursuitDefBonus: 4 },
   // 伏擊（盜賊）：[起] 此回合我方總攻擊 +2
   伏擊: {
     *onOpen(g, p) {
@@ -56,8 +64,40 @@ export const scripts: Record<string, CardScript> = {
       log(g, '【伏擊】此回合總攻擊 +2');
     },
   },
-  // 低價買進（商人）：[經] 回合結束時的交換由 endOfTurnEffects 處理
+  // 低價買進（商人）：[經] 此卡被覆蓋時，可把經驗區 1 張未覆蓋的卡加入手牌（見 resolveCovered）
   低價買進: {},
+  // 高價賣出（商人）：[發_蓋1] 抽 1
+  高價賣出: {
+    *onPlay(g, p, card) {
+      if (yield* optionalPay(g, p, card, { cover: 1 })) yield* draw(g, p, 1);
+    },
+  },
+  // 地雷陷阱（弓箭手）：[追] 我方總攻擊 +3
+  地雷陷阱: { pursuitAtkBonus: 3 },
+  // 復仇之嚎（劍士）：[經_怒5] 傷害計算後，若對方給予的傷害 > 我方給予的傷害，將怒氣區上方 1 張卡加入手牌
+  復仇之嚎: {
+    *afterDamageExp(g, p, card, { dealt, taken }) {
+      if (taken <= dealt) return;
+      if (!(yield* optionalPay(g, p, card, { rage: 5 }))) return;
+      const top = Z(g, p, 'rage')[0];
+      if (!top) return;
+      move(g, top, 'hand');
+      log(g, `【復仇之嚎】${pname(g, p)} 將怒氣區上方 1 張卡加入手牌`);
+    },
+  },
+  // 二刀連擊（盜賊）：[頂] 戰鬥區只有此卡時，追擊 +1
+  二刀連擊: { soloPursuitPlus: 1 },
+  // 電弧（法師）：[發] 抽X，再將 X 張手牌放到牌組底。X = 對方戰鬥區的招式數量
+  電弧: {
+    *onPlay(g, p) {
+      const x = Z(g, other(p), 'combat').length;
+      if (x === 0) return;
+      yield* draw(g, p, x);
+      const put = yield* chooseCards(g, p, `【電弧】選擇 ${x} 張手牌放到牌組底`, Z(g, p, 'hand'), x, x);
+      for (const c of put) move(g, c, 'deck', 'bottom');
+      log(g, `【電弧】${pname(g, p)} 抽 ${x}，並將 ${put.length} 張手牌放到牌組底`);
+    },
+  },
   快速治療: {
     *onPlay(g, p, card) {
       if (yield* optionalPay(g, p, card, { cover: 3 })) recover(g, p, 3);
@@ -165,22 +205,24 @@ export const scripts: Record<string, CardScript> = {
 };
 
 /**
- * 回合結束時的 [經] 效果：低價買進（可用 1 張手牌與經驗區中正面的低價買進交換）。
- * 先攻方先處理；只處理回合結束當下已在經驗區的卡。
+ * 剛被覆蓋的經驗卡的「被覆蓋時」效果：低價買進（可把經驗區 1 張未覆蓋的卡加入手牌）。
+ * 由 ops.optionalPay（蓋X）與黑暗詛咒在覆蓋之後呼叫。
  */
-export function* endOfTurnEffects(g: GameCtx): Gen {
-  for (const p of order(g)) {
-    const cards = Z(g, p, 'exp').filter((c) => c.id === '低價買進' && !c.covered);
-    for (const card of cards) {
-      if (card.zone !== 'exp' || card.covered || Z(g, p, 'hand').length === 0) continue;
-      const ok = yield* confirm(g, p, '【低價買進】回合結束：要用 1 張手牌與經驗區的【低價買進】交換嗎？');
-      if (!ok) continue;
-      const [give] = yield* chooseCards(g, p, '【低價買進】選擇要換出的手牌', Z(g, p, 'hand'), 1, 1);
-      if (!give) continue;
-      move(g, card, 'hand');
-      toExp(g, give);
-      log(g, `${pname(g, p)} 以【${data(give).name}】與經驗區的【低價買進】交換`);
-      mark(g, `${pname(g, p)} 以【${data(give).name}】與【低價買進】交換`, { type: 'info' });
+export function* resolveCovered(g: GameCtx): Gen {
+  const q = g.state.flags.coveredQ;
+  while (q.length > 0) {
+    const uid = q.shift()!;
+    for (const p of [0, 1] as PlayerId[]) {
+      const card = Z(g, p, 'exp').find((c) => c.uid === uid);
+      if (!card || !card.covered || card.id !== '低價買進') continue;
+      const pool = Z(g, p, 'exp').filter((c) => !c.covered);
+      if (pool.length === 0) continue;
+      if (!(yield* confirm(g, p, '【低價買進】此卡被覆蓋：要把經驗區 1 張未覆蓋的卡加入手牌嗎？'))) continue;
+      const [pick] = yield* chooseCards(g, p, '【低價買進】選擇經驗區 1 張未覆蓋的卡加入手牌', pool, 1, 1);
+      if (!pick) continue;
+      move(g, pick, 'hand');
+      log(g, `【低價買進】${pname(g, p)} 將經驗【${data(pick).name}】加入手牌`);
     }
   }
 }
+hooks.onCovered = resolveCovered;

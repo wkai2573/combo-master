@@ -69,6 +69,7 @@ export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: bool
     const front = Z(g, p, 'exp').find((c) => !c.covered);
     if (front) {
       front.covered = true;
+      g.state.flags.coveredQ.push(front.uid);
       log(g, `【黑暗詛咒】${pname(g, p)} 的經驗【${data(front).name}】被覆蓋`);
     }
   }
@@ -127,7 +128,7 @@ export function totalAtk(g: GameCtx, p: PlayerId): number {
     const mod = i === zone.length - 1 ? scripts[c.id]?.atkMod ?? 0 : 0;
     base += Math.max(0, data(c).atk + mod);
   });
-  for (const c of Z(g, p, 'pursuit')) base += data(c).atk;
+  for (const c of Z(g, p, 'pursuit')) base += data(c).atk + (scripts[c.id]?.pursuitAtkBonus ?? 0);
   base += g.state.flags.atkBonus[p];
 
   const awake = awakened(g, p);
@@ -158,6 +159,7 @@ export function totalDef(g: GameCtx, p: PlayerId): number {
   });
   const rearGuard = g.state.players[p].charId === '後人';
   for (const c of Z(g, p, 'pursuit')) {
+    total += scripts[c.id]?.pursuitDefBonus ?? 0;
     if (scripts[c.id]?.pursuitDef || (rearGuard && awakened(g, p) && !isFirst(g, p))) total += data(c).def;
   }
   if (rearGuard && !isFirst(g, p)) total += 2;
@@ -170,6 +172,9 @@ export function pursuitCount(g: GameCtx, p: PlayerId): number {
   const f = g.state.flags;
   let n = 1 + f.pursuitPlus[p] - f.pursuitMinus[p];
   if (g.state.players[p].charId === '先人' && awakened(g, p) && isFirst(g, p)) n += 1;
+  // [頂] 戰鬥區只有這張卡時追擊 +N（二刀連擊）
+  const combat = Z(g, p, 'combat');
+  if (combat.length === 1) n += scripts[combat[0].id]?.soloPursuitPlus ?? 0;
   return Math.max(0, n);
 }
 
@@ -322,6 +327,14 @@ export function* damageStep(g: GameCtx): Gen {
       if (sc?.keepOrder && dmg[other(p)] > dmg[p]) {
         g.state.flags.noSwap = true;
         log(g, `【${data(top).name}】此回合結束時不交換先後攻`);
+      }
+    }
+    // 經驗區中正面的 [經] 卡：傷害計算後的反應（復仇之嚎）
+    for (const p of order(g)) {
+      for (const card of [...Z(g, p, 'exp')]) {
+        if (card.covered || card.zone !== 'exp') continue;
+        const sc = scripts[card.id];
+        if (sc?.afterDamageExp) yield* sc.afterDamageExp(g, p, card, { dealt: dmg[other(p)], taken: dmg[p] });
       }
     }
   });

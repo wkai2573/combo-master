@@ -1,6 +1,6 @@
 import { getCharacter } from '../data/cards';
 import { combatPhase } from './combat';
-import { endOfTurnEffects } from './scripts';
+import './scripts';
 import {
   ask, awakened, canPay, cardOpt, chooseCards, data, draw, drawPlain, GameOver, log, mark, move, newCard, optionalPay,
   order, pname, recover, toExp, Z, type Gen,
@@ -18,7 +18,7 @@ const ZONES: ZoneName[] = ['deck', 'hand', 'discard', 'rage', 'exp', 'combat', '
 function emptyFlags(): TurnFlags {
   return {
     played: [0, 0], opened: false, pursuitPlus: [0, 0], pursuitMinus: [0, 0], pursuitSuccess: [0, 0],
-    rabbitUsed: [false, false], aimUsed: [0, 0], atkBonus: [0, 0], burstDraw3: [false, false], alchemy: [false, false], sniper: [false, false],
+    rabbitUsed: [false, false], aimUsed: [0, 0], atkBonus: [0, 0], coveredQ: [], burstDraw3: [false, false], alchemy: [false, false], sniper: [false, false],
     damageTaken: [0, 0], noSwap: false,
   };
 }
@@ -124,7 +124,6 @@ export class Game {
       yield* buffPhase(g);
 
       s.phase = '回合結束';
-      yield* endOfTurnEffects(g);
       if (s.flags.noSwap) {
         log(g, '先攻與後攻不交換');
       } else {
