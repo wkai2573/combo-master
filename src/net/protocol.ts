@@ -1,4 +1,4 @@
-import type { GameView } from '../engine/view';
+import type { Frame, GameView } from '../engine/view';
 
 export interface DeckPayload {
   charId: string;
@@ -13,7 +13,8 @@ export type ClientMsg =
 
 /** 房主 → 訪客 */
 export type HostMsg =
-  | { t: 'view'; view: GameView }
+  /** view＝最新狀態；frames＝自上次以來要依序播放的動畫影格 */
+  | { t: 'view'; view: GameView; frames: Frame[] }
   | { t: 'reject'; reason: string }
   | { t: 'pong' };
 

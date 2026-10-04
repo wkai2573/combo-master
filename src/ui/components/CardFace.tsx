@@ -25,6 +25,8 @@ export interface CardFaceProps {
   dim?: boolean;
   /** 追擊卡（戰鬥區內以金框標示） */
   pursuit?: boolean;
+  /** 剛打出的牌：短暫發光 */
+  fresh?: boolean;
   counters?: number;
   badge?: string | number;
   onClick?: () => void;
@@ -36,10 +38,11 @@ export function kindLabel(c: CardData): string {
   return c.traits.join('・') || '招式';
 }
 
-export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, counters, badge, onClick }: CardFaceProps) {
+export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, fresh, counters, badge, onClick }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const cls = ['card', size];
   if (pursuit) cls.push('pursuit');
+  if (fresh) cls.push('fresh');
   if (selected) cls.push('selected');
   if (glow) cls.push('glow');
   if (dim) cls.push('dim');

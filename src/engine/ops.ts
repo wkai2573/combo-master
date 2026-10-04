@@ -4,6 +4,7 @@ import type { Rng } from './rng';
 import {
   other,
   type CardInst,
+  type FrameFx,
   type GameState,
   type Opt,
   type PlayerId,
@@ -16,6 +17,20 @@ export interface GameCtx {
   state: GameState;
   rng: Rng;
   nextUid: number;
+  /** 錄製一個動畫影格（未開啟 animate 時為空操作） */
+  frame?: (caption: string, fx: FrameFx) => void;
+}
+
+/** 在關鍵時刻錄下目前桌面狀態與一句說明，介面會依序播放 */
+export function mark(g: GameCtx, caption: string, fx: FrameFx): void {
+  g.frame?.(caption, fx);
+}
+
+/** 執行 fn 後若紀錄有新增，就補一個影格顯示最後一行（用來呈現卡片效果的結果） */
+export function* markIfLogged(g: GameCtx, fn: () => Gen): Gen {
+  const before = g.state.log.length;
+  yield* fn();
+  if (g.state.log.length > before) mark(g, g.state.log[g.state.log.length - 1], { type: 'info' });
 }
 
 /** 勝負已定時用來中斷 generator */

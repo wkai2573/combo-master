@@ -1,6 +1,6 @@
 import { totalAtk, totalDef } from './combat';
 import type { Game } from './game';
-import type { CardInst, GameState, PlayerId, Request, Phase, ZoneName } from './types';
+import type { CardInst, FrameFx, GameState, PlayerId, Request, Phase, ZoneName } from './types';
 
 /** 玩家看到的卡：id 為 null 表示看不到內容（對手的手牌、怒氣、覆蓋的經驗） */
 export interface CardView {
@@ -43,6 +43,29 @@ export interface GameView {
   waitingFor: PlayerId | null;
 }
 
+/** 一個動畫影格（某位玩家視角） */
+export interface Frame {
+  view: GameView;
+  /** 此影格時紀錄的長度，介面據此顯示「到這一步為止」的紀錄 */
+  logLen: number;
+  caption: string;
+  fx: FrameFx;
+  ms: number;
+}
+
+/** 引擎錄下的影格：同時含雙方視角 */
+export interface RawFrame {
+  views: [GameView, GameView];
+  logLen: number;
+  caption: string;
+  fx: FrameFx;
+  ms: number;
+}
+
+export const frameFor = (f: RawFrame, viewer: PlayerId): Frame => ({
+  view: f.views[viewer], logLen: f.logLen, caption: f.caption, fx: f.fx, ms: f.ms,
+});
+
 const hide = (c: CardInst): CardView => ({ uid: c.uid, id: null, covered: c.covered, counters: c.counters });
 const show = (c: CardInst): CardView => ({ uid: c.uid, id: c.id, covered: c.covered, counters: c.counters });
 
@@ -69,7 +92,8 @@ function playerView(game: Game, p: PlayerId, viewer: PlayerId): PlayerView {
   };
 }
 
-export function viewFor(game: Game, viewer: PlayerId): GameView {
+/** withLog=false 時不複製紀錄（動畫影格用，紀錄改用 logLen 截取） */
+export function viewFor(game: Game, viewer: PlayerId, withLog = true): GameView {
   const s = game.state;
   const pending = game.pending;
   return {
@@ -78,7 +102,7 @@ export function viewFor(game: Game, viewer: PlayerId): GameView {
     first: s.first,
     turn: s.turn,
     phase: s.phase,
-    log: s.log.slice(),
+    log: withLog ? s.log.slice() : [],
     winner: s.winner,
     winReason: s.winReason,
     prompt: pending && pending.player === viewer ? pending : null,

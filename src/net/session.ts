@@ -3,7 +3,7 @@ import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
 import { Game } from '../engine/game';
 import { Rng } from '../engine/rng';
-import { viewFor, type GameView } from '../engine/view';
+import { frameFor, viewFor, type Frame, type GameView } from '../engine/view';
 import type { PlayerId } from '../engine/types';
 import {
   FORFEIT_AFTER_S, OFFLINE_AFTER_MS, PING_EVERY_MS, peerIdOf, randomRoomCode,
@@ -21,6 +21,8 @@ export interface SessionState {
   opponentOnline: boolean;
   /** 對手離線後，剩餘幾秒判負 */
   forfeitIn: number | null;
+  /** 最新一批要播放的動畫影格（id 每次遞增，介面據此判斷是否有新的一批） */
+  batch: { id: number; frames: Frame[] };
 }
 
 export interface Session {
@@ -35,7 +37,12 @@ abstract class Base implements Session {
   abstract readonly me: PlayerId;
   protected s: SessionState = {
     status: 'connecting', view: null, message: '', opponentOnline: true, forfeitIn: null,
+    batch: { id: 0, frames: [] },
   };
+  private batchId = 0;
+  protected nextBatch(frames: Frame[]) {
+    return { id: ++this.batchId, frames };
+  }
   private subs = new Set<() => void>();
   getState = () => this.s;
   subscribe = (cb: () => void) => {
@@ -61,7 +68,7 @@ export class LocalSession extends Base {
 
   constructor(mine: DeckPayload, theirs: DeckPayload) {
     super();
-    this.game = new Game({ decks: [mine, theirs] });
+    this.game = new Game({ decks: [mine, theirs], animate: true });
     this.sync();
   }
 
@@ -78,14 +85,17 @@ export class LocalSession extends Base {
 
   private sync() {
     const g = this.game;
-    this.set({ status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '' });
+    const frames = g.drainFrames().map((f) => frameFor(f, 0));
+    this.set({
+      status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '', batch: this.nextBatch(frames),
+    });
     clearTimeout(this.timer);
     if (!g.over && g.pending?.player === 1) {
       this.timer = setTimeout(() => {
         if (this.closed || !g.pending || g.pending.player !== 1) return;
         g.submit(1, botChoice(g.pending, this.rng));
         this.sync();
-      }, 700);
+      }, 900);
     }
   }
 
@@ -161,7 +171,7 @@ export class HostSession extends Base {
         conn.send({ t: 'reject', reason: `牌組不合法：${check.errors[0]}` } satisfies HostMsg);
         return;
       }
-      this.game = new Game({ decks: [this.deck, msg.deck] });
+      this.game = new Game({ decks: [this.deck, msg.deck], animate: true });
       this.pushViews();
       return;
     }
@@ -169,7 +179,9 @@ export class HostSession extends Base {
       try {
         this.game.submit(1, msg.keys);
       } catch (e) {
+        // 多半是訪客的畫面過期：告知原因，並直接補送最新狀態
         conn.send({ t: 'reject', reason: (e as Error).message } satisfies HostMsg);
+        conn.send({ t: 'view', view: viewFor(this.game, 1), frames: [] } satisfies HostMsg);
         return;
       }
       this.pushViews();
@@ -179,8 +191,14 @@ export class HostSession extends Base {
   private pushViews() {
     const g = this.game;
     if (!g) return;
-    this.set({ status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '' });
-    if (this.conn?.open) this.conn.send({ t: 'view', view: viewFor(g, 1) } satisfies HostMsg);
+    const raw = g.drainFrames();
+    this.set({
+      status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '',
+      batch: this.nextBatch(raw.map((f) => frameFor(f, 0))),
+    });
+    if (this.conn?.open) {
+      this.conn.send({ t: 'view', view: viewFor(g, 1), frames: raw.map((f) => frameFor(f, 1)) } satisfies HostMsg);
+    }
   }
 
   /** 每秒檢查訪客是否仍有回應；離線後倒數判負 */
@@ -269,7 +287,8 @@ export class GuestSession extends Base {
   }
 
   private connect(code: string) {
-    const conn = this.peer.connect(peerIdOf(code), { reliable: true, serialization: 'json' });
+    // 使用預設的二進位序列化：PeerJS 會自動把大訊息（動畫影格可能超過 16KB）分塊傳送
+    const conn = this.peer.connect(peerIdOf(code), { reliable: true });
     this.conn = conn;
     conn.on('open', () => {
       clearTimeout(this.connectTimer);
@@ -288,6 +307,7 @@ export class GuestSession extends Base {
       if (msg.t === 'view') {
         this.set({
           status: msg.view.winner !== null ? 'over' : 'playing', view: msg.view, message: '', opponentOnline: true,
+          batch: this.nextBatch(msg.frames ?? []),
         });
       } else if (msg.t === 'reject') {
         this.set({ message: msg.reason, ...(this.s.view ? {} : { status: 'error' as const }) });

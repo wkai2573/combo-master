@@ -1,4 +1,5 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { SPEED_LABEL, usePlayback, type Speed } from '../usePlayback';
 import { CardFace, InspectContext, InspectPanel } from '../components/CardFace';
 import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
 import { Modal } from '../components/Modal';
@@ -14,10 +15,36 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const [inspect, setInspect] = useState<string | null>(null);
   const [zone, setZone] = useState<{ p: PlayerId; z: ZoneKey } | null>(null);
   const [copied, setCopied] = useState(false);
-  const v = st.view;
+  const [speed, setSpeedState] = useState<Speed>(() => {
+    try {
+      const s = localStorage.getItem('lianji.speed');
+      return s === 'fast' || s === 'off' ? s : 'normal';
+    } catch {
+      return 'normal';
+    }
+  });
+  const setSpeed = (s: Speed) => {
+    setSpeedState(s);
+    try {
+      localStorage.setItem('lianji.speed', s);
+    } catch {
+      // 無法儲存偏好：忽略
+    }
+  };
 
-  // 每次收到新狀態就清掉上一個提示的選擇
-  useEffect(() => setSelected([]), [v]);
+  const final = st.view;
+  const { cur, skip } = usePlayback(st.batch, speed);
+  // 播放動畫時顯示影格當下的桌面；播完才顯示最新的真實狀態與提示
+  const v = useMemo(
+    () =>
+      final && cur
+        ? { ...cur.frame.view, log: final.log.slice(0, cur.frame.logLen), prompt: null, waitingFor: null }
+        : final,
+    [final, cur],
+  );
+
+  // 每次收到新狀態或換影格，就清掉上一個提示的選擇
+  useEffect(() => setSelected([]), [final, cur?.n]);
 
   const leave = () => {
     session.leave();
@@ -74,6 +101,10 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
 
   const zoneCards = zone ? v.players[zone.p][zone.z] : [];
   const result = v.winner === null ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
+  const fx = cur?.frame.fx;
+  const fxKey = cur?.n ?? 0;
+  const dmgFx = fx?.type === 'damage' ? fx.dmg : null;
+  const hitOf = (p: PlayerId) => (dmgFx && dmgFx[p] > 0 ? { amount: dmgFx[p], key: fxKey } : undefined);
 
   return (
     <InspectContext.Provider value={setInspect}>
@@ -84,6 +115,9 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           <span className="muted">先攻：{v.first === me ? '你' : '對手'}</span>
           <span className="spacer" />
           {st.message && <span style={{ color: 'var(--bad)' }}>{st.message}</span>}
+          <select value={speed} onChange={(e) => setSpeed(e.target.value as Speed)} title="動畫速度">
+            {(Object.keys(SPEED_LABEL) as Speed[]).map((s) => <option key={s} value={s}>{SPEED_LABEL[s]}</option>)}
+          </select>
           <button className="danger" onClick={leave}>離開</button>
         </div>
         {!st.opponentOnline && v.winner === null && (
@@ -92,11 +126,16 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           </div>
         )}
         <div className="main">
-          <div className="board">
-            <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z) => setZone({ p, z })} />
-            <CombatArea v={v} />
-            <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z) => setZone({ p, z })} />
-            {prompt ? (
+          <div className={`board${cur ? ' playing' : ''}`}>
+            <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z) => setZone({ p, z })} hit={hitOf(opp)} />
+            <CombatArea v={v} fx={fx} caption={cur?.frame.caption} fxKey={fxKey} />
+            <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z) => setZone({ p, z })} hit={hitOf(me)} />
+            {cur ? (
+              <div className="prompt wait">
+                <span>動畫播放中…</span>
+                <div className="btns"><button onClick={skip}>跳過動畫</button></div>
+              </div>
+            ) : prompt ? (
               <PromptPanel prompt={prompt} selected={selected} onPick={toggle} onSubmit={(k) => session.submit(k)} />
             ) : (
               <div className="prompt wait">{waitingOpp ? '等待對手操作…' : v.winner !== null ? '遊戲結束' : '處理中…'}</div>

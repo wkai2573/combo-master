@@ -1,6 +1,6 @@
 import { isTrap } from '../data/cards';
 import {
-  ask, awakened, canPay, cardOpt, chooseCards, data, discard, draw, isFirst, log, move, optionalPay,
+  ask, awakened, canPay, cardOpt, chooseCards, data, discard, draw, isFirst, log, mark, markIfLogged, move, optionalPay,
   order, pay, pname, takeDamage, topOfZone, Z, type GameCtx, type Gen,
 } from './ops';
 import { scripts } from './scripts';
@@ -27,11 +27,16 @@ export function playables(g: GameCtx, p: PlayerId, opening: boolean): CardInst[]
   if (isFirst(g, p)) {
     cands.push(...Z(g, p, 'exp').filter((c) => !c.covered && c.id === '先祖圖騰'));
   }
-  const used = new Set(Z(g, p, 'combat').map((c) => data(c).combo));
+  // 戰鬥區已有「重複連擊值」（同值 2 張）時，就不能再打出同連擊值的卡
+  const copies = new Map<number, number>();
+  for (const c of Z(g, p, 'combat')) copies.set(data(c).combo, (copies.get(data(c).combo) ?? 0) + 1);
   return cands.filter(
-    (c) => !(opening && scripts[c.id]?.noOpen) && inRange(g, p, c, true) && !used.has(data(c).combo),
+    (c) => !(opening && scripts[c.id]?.noOpen) && inRange(g, p, c, true) && (copies.get(data(c).combo) ?? 0) < MAX_SAME_COMBO,
   );
 }
+
+/** 同一連擊值在自己的戰鬥區最多 2 張（第 1 次重複可以，已重複就不能再出） */
+const MAX_SAME_COMBO = 2;
 
 // ───────────────────────── 出招 ─────────────────────────
 
@@ -44,6 +49,9 @@ export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: bool
   move(g, card, 'combat', 'top');
   f.played[p]++;
   log(g, `${pname(g, p)} ${opening ? '起手' : '出招'}【${data(card).name}】${fromExp ? '（自經驗區）' : ''}`);
+  const cd = data(card);
+  mark(g, `${pname(g, p)} ${opening ? '起手' : '出招'}【${cd.name}】　攻${cd.atk}　連擊${cd.combo}　守${cd.def}`,
+    { type: 'play', player: p, uid: card.uid });
 
   const sc = scripts[card.id];
   if (f.alchemy[p]) {
@@ -64,10 +72,11 @@ export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: bool
       log(g, `【黑暗詛咒】${pname(g, p)} 的經驗【${data(front).name}】被覆蓋`);
     }
   }
-  if (opening && sc?.onOpen) yield* sc.onOpen(g, p, card);
-  if (sc?.onPlay) yield* sc.onPlay(g, p, card);
-
-  yield* responseWindows(g, p, card, combo);
+  yield* markIfLogged(g, function* (): Gen {
+    if (opening && sc?.onOpen) yield* sc.onOpen(g, p, card);
+    if (sc?.onPlay) yield* sc.onPlay(g, p, card);
+    yield* responseWindows(g, p, card, combo);
+  });
   checkWin(g);
 }
 
@@ -164,6 +173,8 @@ function* becomePursuitCard(g: GameCtx, p: PlayerId, card: CardInst): Gen {
   move(g, card, 'pursuit');
   g.state.flags.pursuitSuccess[p]++;
   log(g, `追擊成功：【${data(card).name}】成為追擊卡`);
+  mark(g, `追擊成功！【${data(card).name}】成為追擊卡（攻擊 +${data(card).atk}）`,
+    { type: 'flipResult', player: p, cardId: card.id, ok: true });
   const sc = scripts[card.id];
   if (sc?.onPursuitCard) yield* sc.onPursuitCard(g, p, card);
 }
@@ -171,6 +182,8 @@ function* becomePursuitCard(g: GameCtx, p: PlayerId, card: CardInst): Gen {
 /** 對 card 做追擊判定。回傳是否成功。 */
 function* judge(g: GameCtx, p: PlayerId, card: CardInst): Gen<boolean> {
   log(g, `${pname(g, p)} 追擊判定：翻開【${data(card).name}】（連擊值 ${data(card).combo}）`);
+  mark(g, `${pname(g, p)} 追擊判定：翻開【${data(card).name}】（連擊值 ${data(card).combo}）`,
+    { type: 'flip', player: p, cardId: card.id });
   const topSc = scripts[topOfZone(g, p)?.id ?? ''];
 
   if (topSc?.pursuitMode === 'trapSwap' && isTrap(data(card))) {
@@ -192,6 +205,8 @@ function* judge(g: GameCtx, p: PlayerId, card: CardInst): Gen<boolean> {
   }
   log(g, '追擊判定失敗，該卡加入手中');
   move(g, card, 'hand');
+  mark(g, `追擊失敗：【${data(card).name}】的連擊值 ${data(card).combo} 在範圍內，回到手中`,
+    { type: 'flipResult', player: p, cardId: card.id, ok: false });
   return false;
 }
 
@@ -225,6 +240,7 @@ function* afterJudge(g: GameCtx, p: PlayerId, card: CardInst): Gen {
 
 export function* pursuitPhase(g: GameCtx): Gen {
   g.state.phase = '追擊';
+  mark(g, '追擊階段：雙方翻開牌組頂的牌做追擊判定', { type: 'phase' });
   // 追擊階段開始時：誘餌圖騰
   for (const p of order(g)) {
     const totem = Z(g, p, 'exp').find((c) => !c.covered && c.id === '誘餌圖騰');
@@ -250,20 +266,32 @@ export function* damageStep(g: GameCtx): Gen {
     dmg[p] = Math.max(0, totalAtk(g, other(p)) - totalDef(g, p));
   }
   log(g, `傷害計算：玩家A受到 ${dmg[0]}、玩家B受到 ${dmg[1]}`);
+  const atk: [number, number] = [totalAtk(g, 0), totalAtk(g, 1)];
+  const def: [number, number] = [totalDef(g, 0), totalDef(g, 1)];
+  mark(g, '攻守拼招：對方總攻擊 − 我方總防禦 ＝ 傷害', { type: 'calc', atk, def, dmg });
   for (const p of order(g)) {
     g.state.flags.damageTaken[p] = dmg[p];
     takeDamage(g, p, dmg[p]);
   }
-  for (const p of order(g)) {
-    const top = topOfZone(g, p);
-    if (!top) continue;
-    const sc = scripts[top.id];
-    if (sc?.afterDamage) yield* sc.afterDamage(g, p, top, { dealt: dmg[other(p)], taken: dmg[p] });
-    if (sc?.keepOrder && dmg[other(p)] > dmg[p]) {
-      g.state.flags.noSwap = true;
-      log(g, `【${data(top).name}】此回合結束時不交換先後攻`);
+  mark(
+    g,
+    dmg[0] + dmg[1] === 0
+      ? '雙方都沒有受到傷害'
+      : [0, 1].filter((p) => dmg[p] > 0).map((p) => `${pname(g, p as PlayerId)} 受到 ${dmg[p]} 傷害（牌組放入怒氣區）`).join('　'),
+    { type: 'damage', dmg },
+  );
+  yield* markIfLogged(g, function* (): Gen {
+    for (const p of order(g)) {
+      const top = topOfZone(g, p);
+      if (!top) continue;
+      const sc = scripts[top.id];
+      if (sc?.afterDamage) yield* sc.afterDamage(g, p, top, { dealt: dmg[other(p)], taken: dmg[p] });
+      if (sc?.keepOrder && dmg[other(p)] > dmg[p]) {
+        g.state.flags.noSwap = true;
+        log(g, `【${data(top).name}】此回合結束時不交換先後攻`);
+      }
     }
-  }
+  });
   checkWin(g);
 }
 
@@ -273,6 +301,7 @@ export function returnStep(g: GameCtx): void {
     // 戰鬥區由最底到最頂，最後是追擊卡
     for (const c of [...Z(g, p, 'combat'), ...Z(g, p, 'pursuit')]) move(g, c, 'exp');
   }
+  mark(g, '招式與追擊卡依序放入經驗區', { type: 'return' });
 }
 
 // ───────────────────────── 戰鬥階段 ─────────────────────────
@@ -286,6 +315,7 @@ export function* combatPhase(g: GameCtx): Gen {
   if (opening.length === 0) {
     const hand = Z(g, first, 'hand').map((c) => data(c).name).join('、') || '（無）';
     log(g, `${pname(g, first)} 沒有可出的招式，展示手牌：${hand}`);
+    mark(g, `${pname(g, first)} 沒有可出的招式，展示手牌`, { type: 'info' });
   } else {
     const [c] = yield* chooseCards(g, first, '起手步驟：選擇 1 張招式出招', opening, 1, 1);
     yield* playMove(g, first, c, true);
@@ -317,7 +347,9 @@ export function* combatPhase(g: GameCtx): Gen {
     } else {
       s.passed[cur] = true;
       log(g, `${pname(g, cur)} 收招`);
-      if (firstAction && cur === second) {
+      const direct = firstAction && cur === second;
+      mark(g, `${pname(g, cur)} 收招${direct ? '，直接進入傷害計算' : ''}`, { type: 'pass', player: cur });
+      if (direct) {
         straightToDamage = true;
         break;
       }

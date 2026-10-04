@@ -82,11 +82,34 @@ export interface DeckSpec {
   cards: string[];
 }
 
+/** 動畫影格附帶的演出資訊，介面依此決定要播什麼特效 */
+export type FrameFx =
+  | { type: 'phase' }
+  | { type: 'info' }
+  | { type: 'draw' }
+  | { type: 'play'; player: PlayerId; uid: number }
+  | { type: 'pass'; player: PlayerId }
+  /** 追擊判定翻開了一張牌（牌還在原處，尚未判定結果） */
+  | { type: 'flip'; player: PlayerId; cardId: string }
+  | { type: 'flipResult'; player: PlayerId; cardId: string; ok: boolean }
+  /** 傷害計算：atk／def／dmg 皆以玩家編號為索引（dmg[p]＝玩家 p 要受到的傷害） */
+  | { type: 'calc'; atk: [number, number]; def: [number, number]; dmg: [number, number] }
+  | { type: 'damage'; dmg: [number, number] }
+  | { type: 'return' };
+
+/** 各種影格停留的毫秒數（標準速度） */
+export const FRAME_MS: Record<FrameFx['type'], number> = {
+  phase: 750, info: 800, draw: 550, play: 1000, pass: 800,
+  flip: 1250, flipResult: 1150, calc: 2000, damage: 1500, return: 1000,
+};
+
 export interface GameSetup {
   decks: [DeckSpec, DeckSpec];
   seed?: number;
   /** 指定先攻（預設隨機） */
   first?: PlayerId;
+  /** 錄製動畫影格（介面用；壓測與測試不需要） */
+  animate?: boolean;
   /** 測試用：不洗牌 */
   noShuffle?: boolean;
   /** 測試用：設置完成（抽完起始手牌）後、第一個提示前，可改寫各區域 */

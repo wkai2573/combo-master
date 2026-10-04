@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { getCard, getCharacter } from '../../data/cards';
 import type { CardView, GameView, PlayerView } from '../../engine/view';
-import type { PlayerId, Request } from '../../engine/types';
+import type { FrameFx, PlayerId, Request } from '../../engine/types';
 import { CardFace } from './CardFace';
 
 export type ZoneKey = 'discard' | 'rage' | 'exp';
@@ -13,9 +13,11 @@ interface BoardProps {
   selected: string[];
   onPick: (key: string) => void;
   onZone: (p: PlayerId, z: ZoneKey) => void;
+  /** 這位玩家剛受到傷害：震動並浮出傷害數字（key 變動時重播） */
+  hit?: { amount: number; key: number };
 }
 
-export function PlayerBoard({ v, p, prompt, selected, onPick, onZone }: BoardProps) {
+export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit }: BoardProps) {
   const pv = v.players[p];
   const mine = p === v.me;
   const ch = getCharacter(pv.charId);
@@ -24,7 +26,8 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone }: BoardPro
   const name = p === 0 ? '玩家A' : '玩家B';
 
   return (
-    <div className={`pboard${v.first === p ? ' turn' : ''}`}>
+    <div className={`pboard${v.first === p ? ' turn' : ''}${hit ? ' hit' : ''}`}>
+      {hit && <span className="dmgpop" key={hit.key}>−{hit.amount}</span>}
       <div className="phead">
         <span className="charname" title={`${ch.text}\n覺醒：${ch.awakenText}`}>
           {ch.name}
@@ -98,21 +101,24 @@ const sumOf = (cards: CardView[], key: 'atk' | 'def') =>
   cards.reduce((n, c) => n + (c.id ? getCard(c.id)[key] : 0), 0);
 
 /** 一方的戰鬥區：卡片往下疊（最新的在最下面且完整顯示），上面幾張只露出「攻／連擊／守」 */
-function StackColumn({ pv, label }: { pv: PlayerView; label: string }) {
+function StackColumn({ pv, label, mine, fx }: { pv: PlayerView; label: string; mine: boolean; fx?: FrameFx }) {
   const cards = [...pv.combat, ...pv.pursuit];
   const rawAtk = sumOf(pv.combat, 'atk') + sumOf(pv.pursuit, 'atk');
   const rawDef = sumOf(pv.combat, 'def');
   const diff = (shown: number, raw: number) => (shown === raw ? '' : `（含效果 ${shown > raw ? '+' : ''}${shown - raw}）`);
   return (
-    <div className="col">
+    <div className={`col ${mine ? 'mine' : 'opp'}`}>
       <h4>{label}</h4>
       <div className="vstack">
         {cards.map((c, i) => (
-          <CardFace key={c.uid} id={c.id} size="md" pursuit={i >= pv.combat.length} />
+          <CardFace
+            key={c.uid} id={c.id} size="md" pursuit={i >= pv.combat.length}
+            fresh={fx?.type === 'play' && fx.uid === c.uid}
+          />
         ))}
         {cards.length === 0 && <span className="empty">（尚未出招）</span>}
       </div>
-      <div className="sumbox">
+      <div className={`sumbox${fx?.type === 'calc' ? ' pulse' : ''}`}>
         <div>總攻 <b className="atk">{pv.atk}</b> ／ 總防 <b className="def">{pv.def}</b></div>
         {(pv.atk !== rawAtk || pv.def !== rawDef) && (
           <div className="note">卡面合計 {rawAtk} ／ {rawDef}{diff(pv.atk, rawAtk)}</div>
@@ -123,17 +129,61 @@ function StackColumn({ pv, label }: { pv: PlayerView; label: string }) {
   );
 }
 
-export function CombatArea({ v }: { v: GameView }) {
+/** 疊在某一方戰鬥區上的特效：追擊翻牌、判定結果、收招 */
+function ColumnFx({ fx, fxKey, player }: { fx?: FrameFx; fxKey: number; player: PlayerId }) {
+  if (!fx || !('player' in fx) || fx.player !== player) return null;
+  if (fx.type === 'flip') {
+    return (
+      <div className="flipcard" key={`f${fxKey}`}>
+        <div className="fliplabel">追擊判定</div>
+        <CardFace id={fx.cardId} size="md" />
+      </div>
+    );
+  }
+  if (fx.type === 'flipResult') {
+    return <div className={`resultpop ${fx.ok ? 'ok' : 'fail'}`} key={`r${fxKey}`}>{fx.ok ? '追擊成功！' : '追擊失敗'}</div>;
+  }
+  if (fx.type === 'pass') return <div className="resultpop pass" key={`p${fxKey}`}>收招</div>;
+  return null;
+}
+
+export function CombatArea({ v, fx, caption, fxKey }: {
+  v: GameView; fx?: FrameFx; caption?: string; fxKey: number;
+}) {
   const opp: PlayerId = v.me === 0 ? 1 : 0;
+  const calc = fx?.type === 'calc' ? fx : null;
+  const dmgLine = (n: number) => <b className={`dm${n === 0 ? ' zero' : ''}`}>{n}</b>;
   return (
     <div className="combatarea">
+      <div className="caption" key={`c${fxKey}`}>{caption ?? ' '}</div>
       <div className="cols">
-        <StackColumn pv={v.players[opp]} label="對方" />
-        <div className="mid">
-          <div className="range">{rangeText(v)}</div>
-          <div className="muted" style={{ fontSize: 12 }}>對方傷害 ＝ 我方總攻 − 對方總防</div>
+        <div className="colwrap">
+          <StackColumn pv={v.players[opp]} label="對方" mine={false} fx={fx} />
+          <ColumnFx fx={fx} fxKey={fxKey} player={opp} />
         </div>
-        <StackColumn pv={v.players[v.me]} label="我方" />
+        <div className="mid">
+          {calc ? (
+            <div className="calc" key={`calc${fxKey}`}>
+              <div className="eq">
+                <span className="who">對方 → 我方</span>
+                攻 <b className="atk">{calc.atk[opp]}</b> − 守 <b className="def">{calc.def[v.me]}</b> ＝ {dmgLine(calc.dmg[v.me])}
+              </div>
+              <div className="eq">
+                <span className="who">我方 → 對方</span>
+                攻 <b className="atk">{calc.atk[v.me]}</b> − 守 <b className="def">{calc.def[opp]}</b> ＝ {dmgLine(calc.dmg[opp])}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="range">{rangeText(v)}</div>
+              <div className="muted" style={{ fontSize: 12 }}>傷害 ＝ 對方總攻 − 我方總防</div>
+            </>
+          )}
+        </div>
+        <div className="colwrap">
+          <StackColumn pv={v.players[v.me]} label="我方" mine fx={fx} />
+          <ColumnFx fx={fx} fxKey={fxKey} player={v.me} />
+        </div>
       </div>
     </div>
   );

@@ -26,6 +26,8 @@ export interface Scenario {
   p0?: Zones;
   p1?: Zones;
   seed?: number;
+  /** 錄製動畫影格 */
+  animate?: boolean;
 }
 
 const FILLER = Array.from({ length: 20 }, () => '黑桃1');
@@ -38,7 +40,7 @@ export function scenario(s: Scenario = {}): Game {
     { charId: b, cards: presetDeck(b) },
   ];
   return new Game({
-    decks, first: s.first ?? 0, seed: s.seed ?? 1,
+    decks, first: s.first ?? 0, seed: s.seed ?? 1, animate: s.animate,
     afterSetup: (g) => {
       if (s.p0) setZones(g, 0, { deck: FILLER, ...s.p0 });
       if (s.p1) setZones(g, 1, { deck: FILLER, ...s.p1 });

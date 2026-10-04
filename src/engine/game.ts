@@ -1,14 +1,15 @@
 import { getCharacter } from '../data/cards';
 import { combatPhase } from './combat';
 import {
-  ask, awakened, canPay, cardOpt, chooseCards, data, draw, drawPlain, GameOver, log, move, newCard, optionalPay,
+  ask, awakened, canPay, cardOpt, chooseCards, data, draw, drawPlain, GameOver, log, mark, move, newCard, optionalPay,
   order, pname, recover, toExp, Z, type Gen,
 } from './ops';
 import { Rng } from './rng';
 import { checkWin } from './win';
+import { viewFor, type RawFrame } from './view';
 import {
-  other, type CardInst, type GameSetup, type GameState, type PlayerId, type PlayerState, type Request,
-  type TurnFlags, type ZoneName,
+  FRAME_MS, other, type CardInst, type FrameFx, type GameSetup, type GameState, type PlayerId, type PlayerState,
+  type Request, type TurnFlags, type ZoneName,
 } from './types';
 
 const ZONES: ZoneName[] = ['deck', 'hand', 'discard', 'rage', 'exp', 'combat', 'pursuit', 'gear', 'buff'];
@@ -34,6 +35,22 @@ export class Game {
   /** 目前等待回應的提示；遊戲結束時為 null */
   pending: Request | null = null;
   private it: Generator<Request, void, string[]>;
+  private frames: RawFrame[] = [];
+
+  /** 取出並清空自上次以來錄下的動畫影格 */
+  drainFrames(): RawFrame[] {
+    const out = this.frames;
+    this.frames = [];
+    return out;
+  }
+
+  frame = (caption: string, fx: FrameFx): void => {
+    if (!this.setup.animate) return;
+    this.frames.push({
+      views: [viewFor(this, 0, false), viewFor(this, 1, false)],
+      logLen: this.state.log.length, caption, fx, ms: FRAME_MS[fx.type],
+    });
+  };
 
   constructor(private setup: GameSetup) {
     this.rng = new Rng(setup.seed);
@@ -98,6 +115,7 @@ export class Game {
 
       s.phase = '重置';
       // 橫置狀態的卡改為重置狀態：目前沒有卡片使用橫置，保留階段供日後擴充
+      mark(g, `第 ${s.turn} 回合・戰鬥階段（先攻：${pname(g, s.first)}）`, { type: 'phase' });
 
       yield* combatPhase(g);
       yield* drawPhase(g);
@@ -110,6 +128,7 @@ export class Game {
       } else {
         s.first = other(s.first);
       }
+      mark(g, s.flags.noSwap ? '回合結束：先攻與後攻不交換' : '回合結束：交換先攻與後攻', { type: 'phase' });
       checkWin(g);
     }
   }
@@ -144,6 +163,7 @@ function* drawPhase(g: Game): Gen {
       }
     }
   }
+  mark(g, '抽牌階段：雙方各抽 1 張', { type: 'draw' });
   checkWin(g);
 }
 
@@ -168,12 +188,14 @@ function* burstPhase(g: Game): Gen {
     toExp(g, card);
     log(g, `${pname(g, p)} 爆發：將【${data(card).name}】放入經驗區`);
     yield* draw(g, p, g.state.flags.burstDraw3[p] ? 3 : 1);
+    mark(g, `${pname(g, p)} 爆發：1 張手牌放入經驗區，抽 ${g.state.flags.burstDraw3[p] ? 3 : 1}`, { type: 'info' });
   }
   checkWin(g);
 }
 
 function* buffPhase(g: Game): Gen {
   g.state.phase = '增益';
+  const logBefore = g.state.log.length;
   // 增益階段開始時：月光劍、增益指示物與效果
   for (const p of order(g)) {
     const sword = Z(g, p, 'gear').find((c) => c.id === '月光劍');
@@ -194,6 +216,7 @@ function* buffPhase(g: Game): Gen {
       }
     }
   }
+  if (g.state.log.length > logBefore) mark(g, g.state.log[g.state.log.length - 1], { type: 'info' });
   // 回合 1 次：打出 1 張裝備或增益
   for (const p of order(g)) {
     const exp = Z(g, p, 'exp').length;
@@ -214,6 +237,7 @@ function* buffPhase(g: Game): Gen {
     const card = options.find((c) => `c${c.uid}` === keys[0])!;
     move(g, card, data(card).kind === 'equip' ? 'gear' : 'buff');
     log(g, `${pname(g, p)} 打出${data(card).kind === 'equip' ? '裝備' : '增益'}【${data(card).name}】`);
+    mark(g, g.state.log[g.state.log.length - 1], { type: 'info' });
   }
   checkWin(g);
 }
