@@ -1,0 +1,877 @@
+[
+  {
+    "id": "黑桃1",
+    "name": "黑桃1",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 6,
+    "def": 4,
+    "combo": 1,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "黑桃2",
+    "name": "黑桃2",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 5,
+    "def": 5,
+    "combo": 2,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "黑桃3",
+    "name": "黑桃3",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 4,
+    "def": 6,
+    "combo": 3,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "黑桃4",
+    "name": "黑桃4",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 6,
+    "def": 4,
+    "combo": 4,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "黑桃5",
+    "name": "黑桃5",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 6,
+    "def": 4,
+    "combo": 5,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "黑桃6",
+    "name": "黑桃6",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 3,
+    "def": 7,
+    "combo": 6,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "黑桃7",
+    "name": "黑桃7",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 7,
+    "def": 3,
+    "combo": 7,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "黑桃8",
+    "name": "黑桃8",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 5,
+    "def": 5,
+    "combo": 8,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "黑桃9",
+    "name": "黑桃9",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 5,
+    "def": 5,
+    "combo": 9,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "紅心1",
+    "name": "紅心1",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 5,
+    "def": 5,
+    "combo": 1,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "紅心2",
+    "name": "紅心2",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 6,
+    "def": 4,
+    "combo": 2,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "紅心3",
+    "name": "紅心3",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 4,
+    "def": 6,
+    "combo": 3,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "紅心4",
+    "name": "紅心4",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 5,
+    "def": 5,
+    "combo": 4,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "紅心5",
+    "name": "紅心5",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 7,
+    "def": 3,
+    "combo": 5,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "紅心6",
+    "name": "紅心6",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 4,
+    "def": 6,
+    "combo": 6,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "紅心7",
+    "name": "紅心7",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 8,
+    "def": 2,
+    "combo": 7,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "紅心8",
+    "name": "紅心8",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 4,
+    "def": 6,
+    "combo": 8,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "紅心9",
+    "name": "紅心9",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 2,
+    "def": 8,
+    "combo": 9,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "梅花1",
+    "name": "梅花1",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 6,
+    "def": 4,
+    "combo": 1,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "梅花2",
+    "name": "梅花2",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 5,
+    "def": 5,
+    "combo": 2,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "梅花3",
+    "name": "梅花3",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 9,
+    "def": 1,
+    "combo": 3,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "梅花4",
+    "name": "梅花4",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 4,
+    "def": 6,
+    "combo": 4,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "梅花5",
+    "name": "梅花5",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 6,
+    "def": 4,
+    "combo": 5,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "梅花6",
+    "name": "梅花6",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 6,
+    "def": 4,
+    "combo": 6,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "梅花7",
+    "name": "梅花7",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 4,
+    "def": 6,
+    "combo": 7,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "梅花8",
+    "name": "梅花8",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 9,
+    "def": 1,
+    "combo": 8,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "梅花9",
+    "name": "梅花9",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 7,
+    "def": 3,
+    "combo": 9,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "方塊1",
+    "name": "方塊1",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 5,
+    "def": 5,
+    "combo": 1,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "方塊2",
+    "name": "方塊2",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 9,
+    "def": 1,
+    "combo": 2,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "方塊3",
+    "name": "方塊3",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 4,
+    "def": 6,
+    "combo": 3,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "方塊4",
+    "name": "方塊4",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 8,
+    "def": 2,
+    "combo": 4,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "方塊5",
+    "name": "方塊5",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 7,
+    "def": 3,
+    "combo": 5,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "方塊6",
+    "name": "方塊6",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 6,
+    "def": 4,
+    "combo": 6,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "方塊7",
+    "name": "方塊7",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 8,
+    "def": 2,
+    "combo": 7,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "方塊8",
+    "name": "方塊8",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 2,
+    "def": 8,
+    "combo": 8,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "方塊9",
+    "name": "方塊9",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [],
+    "atk": 6,
+    "def": 4,
+    "combo": 9,
+    "expReq": 0,
+    "text": ""
+  },
+  {
+    "id": "吸血打擊",
+    "name": "吸血打擊",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "攻擊"
+    ],
+    "atk": 5,
+    "def": 4,
+    "combo": 5,
+    "expReq": 0,
+    "text": "[頂]：傷害計算時，回復X。X=此次戰鬥對對手造成的傷害/3(無條件捨去)。"
+  },
+  {
+    "id": "戒備打擊",
+    "name": "戒備打擊",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "攻擊"
+    ],
+    "atk": 5,
+    "def": 5,
+    "combo": 5,
+    "expReq": 0,
+    "text": "[追]：此卡會計算防禦力。"
+  },
+  {
+    "id": "快速治療",
+    "name": "快速治療",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "法術"
+    ],
+    "atk": 0,
+    "def": 8,
+    "combo": 9,
+    "expReq": 0,
+    "text": "[發_蓋3]：回復3。"
+  },
+  {
+    "id": "布局",
+    "name": "布局",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "變化"
+    ],
+    "atk": 4,
+    "def": 6,
+    "combo": 6,
+    "expReq": 0,
+    "text": "[發_蓋2]：捨棄1張手牌，選擇我方棄牌區1張卡放到牌組頂。"
+  },
+  {
+    "id": "精準追擊",
+    "name": "精準追擊",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "變化"
+    ],
+    "atk": 6,
+    "def": 3,
+    "combo": 4,
+    "expReq": 0,
+    "text": "[頂]：我方追擊改為：抽X，選擇手牌X張卡作為追擊判定。X=你的追擊數。"
+  },
+  {
+    "id": "力量爆破",
+    "name": "力量爆破",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "法術"
+    ],
+    "atk": 12,
+    "def": 0,
+    "combo": 9,
+    "expReq": 0,
+    "text": "[頂]：此卡攻擊力-6。\n[追]：此卡追擊判定失敗。"
+  },
+  {
+    "id": "3連擊",
+    "name": "3連擊",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "攻擊"
+    ],
+    "atk": 6,
+    "def": 3,
+    "combo": 7,
+    "expReq": 0,
+    "text": "[頂]：我方出招時，此卡連擊值可視為6或8。"
+  },
+  {
+    "id": "777",
+    "name": "777",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "法術"
+    ],
+    "atk": 7,
+    "def": 7,
+    "combo": 7,
+    "expReq": 0,
+    "text": "此卡不能在起手階段打出。\n[發]：展示雙方牌頂1張卡，若連擊值不相同則此卡捨棄。"
+  },
+  {
+    "id": "式不過3",
+    "name": "式不過3",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "變化"
+    ],
+    "atk": 8,
+    "def": 1,
+    "combo": 3,
+    "expReq": 0,
+    "text": "[經]：當對手在回合中打出第4張招式時，你可以捨棄此卡與1張手牌，若如此作則將該招式捨棄。\n(對手效會先處理。)"
+  },
+  {
+    "id": "必殺一擊",
+    "name": "必殺一擊",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "攻擊"
+    ],
+    "atk": 9,
+    "def": 0,
+    "combo": 5,
+    "expReq": 0,
+    "text": "[覺_發_怒10]：此回合追擊+1。"
+  },
+  {
+    "id": "黑暗詛咒",
+    "name": "黑暗詛咒",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "詛咒"
+    ],
+    "atk": 4,
+    "def": 5,
+    "combo": 2,
+    "expReq": 0,
+    "text": "[頂]：對手招式獲得以下效果『[發]：覆蓋我方1張經驗』。"
+  },
+  {
+    "id": "降級詛咒",
+    "name": "降級詛咒",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "詛咒"
+    ],
+    "atk": 4,
+    "def": 5,
+    "combo": 3,
+    "expReq": 0,
+    "text": "[發_蓋2_怒5]：雙方捨棄1張經驗。"
+  },
+  {
+    "id": "煉金印記",
+    "name": "煉金印記",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "印記"
+    ],
+    "atk": 5,
+    "def": 3,
+    "combo": 1,
+    "expReq": 0,
+    "text": "[起]：此回合你每打出1張招式時，回復1。"
+  },
+  {
+    "id": "狙擊印記",
+    "name": "狙擊印記",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "印記"
+    ],
+    "atk": 5,
+    "def": 3,
+    "combo": 1,
+    "expReq": 0,
+    "text": "[起]：此回合你每打出1張持有[發]的招式時，抽1張怒氣卡，之後捨棄1張手牌。"
+  },
+  {
+    "id": "誘餌圖騰",
+    "name": "誘餌圖騰",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "圖騰"
+    ],
+    "atk": 0,
+    "def": 7,
+    "combo": 4,
+    "expReq": 0,
+    "text": "追擊階段開始時[經]：可以捨棄此卡並覆蓋3經驗，若如此作則對手此回合追擊-1，"
+  },
+  {
+    "id": "先祖圖騰",
+    "name": "先祖圖騰",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "圖騰"
+    ],
+    "atk": 4,
+    "def": 3,
+    "combo": 4,
+    "expReq": 0,
+    "text": "[頂]：此卡防禦+2。\n[經]：若你為先手，此卡可以作為出招打出。"
+  },
+  {
+    "id": "陷阱3",
+    "name": "陷阱3",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "陷阱"
+    ],
+    "atk": 2,
+    "def": 0,
+    "combo": 3,
+    "expReq": 0,
+    "text": "[經_蓋1]：當對手出招的連擊值為3時，將此卡放於戰鬥區底。"
+  },
+  {
+    "id": "陷阱4",
+    "name": "陷阱4",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "陷阱"
+    ],
+    "atk": 1,
+    "def": 1,
+    "combo": 4,
+    "expReq": 0,
+    "text": "[經_蓋1]：當對手出招的連擊值為4時，將此卡放於戰鬥區底。"
+  },
+  {
+    "id": "陷阱5",
+    "name": "陷阱5",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "陷阱"
+    ],
+    "atk": 2,
+    "def": 0,
+    "combo": 5,
+    "expReq": 0,
+    "text": "[經_蓋1]：當對手出招的連擊值為5時，將此卡放於戰鬥區底。"
+  },
+  {
+    "id": "陷阱6",
+    "name": "陷阱6",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "陷阱"
+    ],
+    "atk": 1,
+    "def": 1,
+    "combo": 6,
+    "expReq": 0,
+    "text": "[經_蓋1]：當對手出招的連擊值為6時，將此卡放於戰鬥區底。"
+  },
+  {
+    "id": "陷阱7",
+    "name": "陷阱7",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "陷阱"
+    ],
+    "atk": 2,
+    "def": 0,
+    "combo": 7,
+    "expReq": 0,
+    "text": "[經_蓋1]：當對手出招的連擊值為7時，將此卡放於戰鬥區底。"
+  },
+  {
+    "id": "陷阱投擲",
+    "name": "陷阱投擲",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "陷阱"
+    ],
+    "atk": 5,
+    "def": 4,
+    "combo": 1,
+    "expReq": 0,
+    "text": "[發]：將手中1張特徵持有\"陷阱\"的卡放置於經驗區。"
+  },
+  {
+    "id": "陷阱回收",
+    "name": "陷阱回收",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "陷阱"
+    ],
+    "atk": 4,
+    "def": 5,
+    "combo": 3,
+    "expReq": 0,
+    "text": "[發_怒4]：將我方棄牌區1張特徵持有\"陷阱\"的卡加入手中。"
+  },
+  {
+    "id": "驚嚇陷阱",
+    "name": "驚嚇陷阱",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "陷阱"
+    ],
+    "atk": 7,
+    "def": 3,
+    "combo": 6,
+    "expReq": 0,
+    "text": "[追]：經驗區1張卡加入手中，這之後將手中1張特徵持有\"陷阱\"的卡放置於經驗區。"
+  },
+  {
+    "id": "陷阱變換",
+    "name": "陷阱變換",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "陷阱"
+    ],
+    "atk": 6,
+    "def": 3,
+    "combo": 6,
+    "expReq": 0,
+    "text": "[頂]：追擊時翻開的卡若特徵持有\"陷阱\"則將該卡放置於經驗區，然後選擇經驗區1張特徵持有\"陷阱\"的卡作為追擊卡打出。"
+  },
+  {
+    "id": "陷阱窟",
+    "name": "陷阱窟",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "陷阱"
+    ],
+    "atk": 3,
+    "def": 6,
+    "combo": 9,
+    "expReq": 0,
+    "text": "[起_怒10]：將經驗區特徵持有\"陷阱\"且攻擊力在2以下的卡全部置於戰鬥區底下。"
+  },
+  {
+    "id": "不變應萬變",
+    "name": "不變應萬變",
+    "kind": "move",
+    "cls": "共用",
+    "traits": [
+      "變化"
+    ],
+    "atk": 4,
+    "def": 5,
+    "combo": 5,
+    "expReq": 0,
+    "text": "[頂]：傷害計算步驟中對手受到的傷害＞我方受到的傷害時，此回合結束時不會交換先攻與後攻。"
+  },
+  {
+    "id": "金手鐲",
+    "name": "金手鐲",
+    "kind": "equip",
+    "cls": "共用",
+    "traits": [],
+    "atk": 0,
+    "def": 0,
+    "combo": 0,
+    "expReq": 3,
+    "slot": "飾品",
+    "text": "爆發階段開始時[蓋2]：此回合我方爆發改為『抽3』。"
+  },
+  {
+    "id": "月光劍",
+    "name": "月光劍",
+    "kind": "equip",
+    "cls": "共用",
+    "traits": [],
+    "atk": 0,
+    "def": 0,
+    "combo": 0,
+    "expReq": 6,
+    "slot": "武器",
+    "text": "增益階段開始時：打開我方1張覆蓋的經驗卡。"
+  },
+  {
+    "id": "兔腳項鍊",
+    "name": "兔腳項鍊",
+    "kind": "equip",
+    "cls": "共用",
+    "traits": [],
+    "atk": 0,
+    "def": 0,
+    "combo": 0,
+    "expReq": 4,
+    "slot": "飾品",
+    "text": "[蓋2](回合1次)當我方追擊判定失敗時，額外翻1張卡做追擊判定。"
+  },
+  {
+    "id": "慢速治癒",
+    "name": "慢速治癒",
+    "kind": "buff",
+    "cls": "共用",
+    "traits": [],
+    "atk": 0,
+    "def": 0,
+    "combo": 0,
+    "expReq": 7,
+    "duration": 4,
+    "text": "增益階段開始時：回復2。"
+  },
+  {
+    "id": "替身",
+    "name": "替身",
+    "kind": "buff",
+    "cls": "共用",
+    "traits": [],
+    "atk": 0,
+    "def": 0,
+    "combo": 0,
+    "expReq": 10,
+    "duration": 2,
+    "text": "每次將要受到1傷害時，捨棄我方1張覆蓋的經驗代替。"
+  }
+]

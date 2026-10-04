@@ -1,0 +1,72 @@
+[
+  {
+    "id": "勇者",
+    "name": "勇者",
+    "cls": "劍士",
+    "hp": 50,
+    "expReq": 8,
+    "text": "總和攻擊15以上時，攻擊+3",
+    "awakenText": "總和攻擊條件改為10。",
+    "pending": false
+  },
+  {
+    "id": "刺客",
+    "name": "刺客",
+    "cls": "盜賊",
+    "hp": 50,
+    "expReq": 8,
+    "text": "判定成功時，攻擊+2",
+    "awakenText": "判定成功時，攻擊值+4",
+    "pending": false
+  },
+  {
+    "id": "商人",
+    "name": "商人",
+    "cls": "商人",
+    "hp": 50,
+    "expReq": 8,
+    "text": "抽牌時看牌組上方2張牌選1張加手牌，另一張放回底部",
+    "awakenText": "計算攻擊時手牌超過3張，攻擊值+3",
+    "pending": false
+  },
+  {
+    "id": "弓箭手（待補）",
+    "name": "弓箭手（待補）",
+    "cls": "弓箭手",
+    "hp": 0,
+    "expReq": 0,
+    "text": "",
+    "awakenText": "",
+    "pending": true
+  },
+  {
+    "id": "法師",
+    "name": "法師",
+    "cls": "法師",
+    "hp": 50,
+    "expReq": 8,
+    "text": "起始手牌額外抽3張。",
+    "awakenText": "抽牌階段時額外抽怒氣區1張卡。",
+    "pending": false
+  },
+  {
+    "id": "先人",
+    "name": "先人",
+    "cls": "盜賊",
+    "hp": 50,
+    "expReq": 8,
+    "text": "先攻的回合中，我方攻擊+X。X=我方出招張數-1。",
+    "awakenText": "先攻的回合中，我方追擊+1。",
+    "pending": false
+  },
+  {
+    "id": "後人",
+    "name": "後人",
+    "cls": "劍士",
+    "hp": 50,
+    "expReq": 8,
+    "text": "後攻的回合中，我方總防禦值+2。",
+    "awakenText": "後攻的回合中，我方總防禦值會計算追擊卡的防禦值。",
+    "pending": false
+  }
+]
