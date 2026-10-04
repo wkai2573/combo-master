@@ -53,25 +53,39 @@ h1, h2, h3 { margin: 0 0 8px; }
   border: 2px solid var(--cc, #666); background: linear-gradient(160deg, #262d42, #181c29);
   overflow: hidden; user-select: none;
 }
-.card.md { width: 112px; height: 156px; padding: 5px; font-size: 11px; }
-.card.sm { width: 76px; height: 104px; padding: 3px; font-size: 10px; }
-.card .nm { font-weight: 700; font-size: 1.15em; line-height: 1.15; }
-.card .tag { color: var(--cc, #999); font-size: 0.85em; }
-.card .art {
-  height: 40px; margin: 3px 0 0; border-radius: 5px; overflow: hidden; color: var(--cc, #999);
-  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cc, #666) 38%, #12151c), #12151c);
-  border: 1px solid #0006;
+/* 版面（由上到下）：攻／連擊／守 → 卡圖 → 效果 → 卡名 */
+.card { border-radius: 12px 12px 8px 8px; }
+.card.md { width: 112px; height: 156px; font-size: 11px; }
+.card.sm { width: 76px; height: 106px; font-size: 10px; }
+.card .hd {
+  flex: none; display: flex; align-items: center; justify-content: space-between; gap: 2px;
+  height: 24px; padding: 0 6px; font-weight: 800; font-size: 1.15em;
+  background: color-mix(in srgb, var(--cc, #666) 30%, #10131c); border-bottom: 1px solid #0007;
 }
+.card.sm .hd { height: 18px; padding: 0 4px; }
+.card .hd .a { color: #ff8f78; }
+.card .hd .d { color: #7dbcff; }
+.card .hd .c {
+  min-width: 38px; text-align: center; padding: 0 5px; line-height: 1.3; color: #fff;
+  background: var(--combo); border: 2px solid #12151c; border-radius: 50%;
+}
+.card.sm .hd .c { min-width: 28px; line-height: 1.1; }
+.card .hd .g { color: #cfd6ea; font-weight: 700; font-size: 0.85em; }
+.card .art {
+  flex: none; height: 50px; overflow: hidden; color: var(--cc, #999);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cc, #666) 38%, #12151c), #12151c);
+  border-bottom: 1px solid #0007;
+}
+.card.sm .art { height: 34px; }
 .card .art svg { display: block; width: 100%; height: 100%; }
-.card.sm .art { height: 28px; margin-top: 2px; }
-.card .stats { display: flex; gap: 3px; margin: 3px 0; }
-.card .stat { flex: 1; text-align: center; border-radius: 4px; font-weight: 700; padding: 1px 0; color: #fff; }
-.card .stat.atk { background: var(--atk); }
-.card .stat.def { background: var(--def); }
-.card .stat.combo { background: var(--combo); }
-.card .stat.gray { background: #555; }
-.card .tx { font-size: 0.88em; color: #cfd6ea; overflow: hidden; line-height: 1.25; flex: 1; }
-.card.sm .tx { display: none; }
+.card .ef { flex: 1; min-height: 0; padding: 3px 5px; overflow: hidden; background: #151926; font-size: 0.86em; line-height: 1.25; color: #cfd6ea; }
+.card .ef .tg { color: var(--cc, #999); font-weight: 700; }
+.card.sm .ef { display: none; }
+.card .nm {
+  flex: none; padding: 2px 4px; text-align: center; font-weight: 800; font-size: 1.12em; line-height: 1.3;
+  background: color-mix(in srgb, var(--cc, #666) 24%, #10131c); border-top: 1px solid #0007; white-space: nowrap; overflow: hidden;
+}
+.card.pursuit { outline: 2px solid var(--accent); outline-offset: -2px; }
 .card.back { background: repeating-linear-gradient(45deg, #2a3350, #2a3350 6px, #222a42 6px, #222a42 12px); align-items: center; justify-content: center; color: var(--muted); }
 .card.covered { filter: grayscale(0.8) brightness(0.7); }
 .card.covered::after { content: '覆蓋'; position: absolute; right: 3px; top: 3px; background: #000a; padding: 0 4px; border-radius: 3px; font-size: 9px; }
@@ -86,9 +100,14 @@ h1, h2, h3 { margin: 0 0 8px; }
 .card .ctr { position: absolute; left: 3px; bottom: 3px; background: #0009; border-radius: 8px; padding: 0 5px; font-size: 10px; }
 .cardrow { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; }
 .cardrow.scroll { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
-.stack { display: flex; align-items: flex-end; }
-.stack .card + .card { margin-left: -34px; }
-.stack .card.sm + .card.sm { margin-left: -44px; }
+/* 戰鬥區：卡片往下疊，下方的卡蓋住上一張的身體，只露出「攻／連擊／守」那一條 */
+.vstack { display: flex; flex-direction: column; align-items: center; min-height: 160px; }
+.vstack .card + .card { margin-top: -128px; box-shadow: 0 -3px 6px #000a; }
+.vstack .empty { margin: auto; color: var(--muted); }
+.sumbox { text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; min-width: 112px; }
+.sumbox b { font-size: 20px; }
+.sumbox .atk { color: #ff8f78; } .sumbox .def { color: #7dbcff; }
+.sumbox .note { font-size: 11px; color: var(--muted); }
 
 /* ───────── 戰鬥畫面 ───────── */
 .battle { display: grid; grid-template-rows: auto 1fr; height: 100%; }
@@ -115,12 +134,12 @@ h1, h2, h3 { margin: 0 0 8px; }
 .pill.awake { color: #1b1405; background: var(--accent); border-color: var(--accent); font-weight: 700; }
 .zonelabel { color: var(--muted); font-size: 11px; margin-bottom: 2px; }
 
-.combatarea { display: grid; gap: 6px; background: #0e1118; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 10px; }
-.lane { display: flex; align-items: center; gap: 12px; min-height: 112px; }
-.lane .meta { width: 86px; flex: none; font-size: 12px; color: var(--muted); }
-.lane .meta b.atk { color: var(--atk); } .lane .meta b.def { color: var(--def); }
-.range { text-align: center; color: var(--combo); font-weight: 700; }
-.pursuit-mark { color: var(--accent); font-size: 11px; align-self: center; writing-mode: vertical-rl; }
+.combatarea { background: #0e1118; border: 1px dashed var(--line); border-radius: 10px; padding: 10px; }
+.combatarea .cols { display: flex; justify-content: center; align-items: flex-start; gap: 56px; }
+.combatarea .col { display: grid; gap: 8px; justify-items: center; }
+.combatarea .col h4 { margin: 0; font-size: 15px; }
+.combatarea .mid { align-self: center; text-align: center; max-width: 150px; }
+.range { color: var(--combo); font-weight: 700; line-height: 1.5; }
 
 .prompt {
   position: sticky; bottom: 0; z-index: 5; box-shadow: 0 -8px 16px #000a;

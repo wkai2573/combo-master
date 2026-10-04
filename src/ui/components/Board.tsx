@@ -94,29 +94,31 @@ function rangeText(v: GameView): string {
   return `範圍內：連擊值 ${Math.min(a, b)} ~ ${Math.max(a, b)}`;
 }
 
-function Lane({ pv, label }: { pv: PlayerView; label: string }) {
-  const cards: CardView[] = pv.combat;
+const sumOf = (cards: CardView[], key: 'atk' | 'def') =>
+  cards.reduce((n, c) => n + (c.id ? getCard(c.id)[key] : 0), 0);
+
+/** 一方的戰鬥區：卡片往下疊（最新的在最下面且完整顯示），上面幾張只露出「攻／連擊／守」 */
+function StackColumn({ pv, label }: { pv: PlayerView; label: string }) {
+  const cards = [...pv.combat, ...pv.pursuit];
+  const rawAtk = sumOf(pv.combat, 'atk') + sumOf(pv.pursuit, 'atk');
+  const rawDef = sumOf(pv.combat, 'def');
+  const diff = (shown: number, raw: number) => (shown === raw ? '' : `（含效果 ${shown > raw ? '+' : ''}${shown - raw}）`);
   return (
-    <div className="lane">
-      <div className="meta">
-        <div>{label}</div>
-        <div>總攻 <b className="atk">{pv.atk}</b></div>
-        <div>總防 <b className="def">{pv.def}</b></div>
-      </div>
-      <div className="stack">
+    <div className="col">
+      <h4>{label}</h4>
+      <div className="vstack">
         {cards.map((c, i) => (
-          <CardFace key={c.uid} id={c.id} size={i === cards.length - 1 ? 'md' : 'sm'} />
+          <CardFace key={c.uid} id={c.id} size="md" pursuit={i >= pv.combat.length} />
         ))}
-        {cards.length === 0 && <span className="muted">（尚未出招）</span>}
+        {cards.length === 0 && <span className="empty">（尚未出招）</span>}
       </div>
-      {pv.pursuit.length > 0 && (
-        <>
-          <span className="pursuit-mark">追擊</span>
-          <div className="stack">
-            {pv.pursuit.map((c) => <CardFace key={c.uid} id={c.id} size="sm" />)}
-          </div>
-        </>
-      )}
+      <div className="sumbox">
+        <div>總攻 <b className="atk">{pv.atk}</b> ／ 總防 <b className="def">{pv.def}</b></div>
+        {(pv.atk !== rawAtk || pv.def !== rawDef) && (
+          <div className="note">卡面合計 {rawAtk} ／ {rawDef}{diff(pv.atk, rawAtk)}</div>
+        )}
+        {pv.pursuit.length > 0 && <div className="note">金框為追擊卡</div>}
+      </div>
     </div>
   );
 }
@@ -125,9 +127,14 @@ export function CombatArea({ v }: { v: GameView }) {
   const opp: PlayerId = v.me === 0 ? 1 : 0;
   return (
     <div className="combatarea">
-      <Lane pv={v.players[opp]} label="對手戰鬥區" />
-      <div className="range">{rangeText(v)}</div>
-      <Lane pv={v.players[v.me]} label="我方戰鬥區" />
+      <div className="cols">
+        <StackColumn pv={v.players[opp]} label="對方" />
+        <div className="mid">
+          <div className="range">{rangeText(v)}</div>
+          <div className="muted" style={{ fontSize: 12 }}>對方傷害 ＝ 我方總攻 − 對方總防</div>
+        </div>
+        <StackColumn pv={v.players[v.me]} label="我方" />
+      </div>
     </div>
   );
 }

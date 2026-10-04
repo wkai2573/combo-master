@@ -23,6 +23,8 @@ export interface CardFaceProps {
   selected?: boolean;
   glow?: boolean;
   dim?: boolean;
+  /** 追擊卡（戰鬥區內以金框標示） */
+  pursuit?: boolean;
   counters?: number;
   badge?: string | number;
   onClick?: () => void;
@@ -34,9 +36,10 @@ export function kindLabel(c: CardData): string {
   return c.traits.join('・') || '招式';
 }
 
-export function CardFace({ id, covered, size = 'md', selected, glow, dim, counters, badge, onClick }: CardFaceProps) {
+export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, counters, badge, onClick }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const cls = ['card', size];
+  if (pursuit) cls.push('pursuit');
   if (selected) cls.push('selected');
   if (glow) cls.push('glow');
   if (dim) cls.push('dim');
@@ -56,23 +59,27 @@ export function CardFace({ id, covered, size = 'md', selected, glow, dim, counte
       onMouseEnter={() => inspect(id)}
       title={`${c.name}\n${c.text}`}
     >
-      <div className="nm">{c.name}</div>
-      <div className="tag">{c.cls}・{kindLabel(c)}</div>
-      <CardArt id={id} />
-      <div className="stats">
+      <div className="hd">
         {isMove ? (
           <>
-            <span className="stat atk">{c.atk}</span>
-            <span className="stat def">{c.def}</span>
-            <span className="stat combo">{c.combo}</span>
+            <span className="a">攻{c.atk}</span>
+            <span className="c" title="連擊值">{c.combo}</span>
+            <span className="d">守{c.def}</span>
           </>
         ) : (
-          <span className="stat gray">
-            {c.kind === 'buff' ? `持續${c.duration ?? '-'}` : '裝備'}・經驗{c.expReq}
-          </span>
+          <>
+            <span className="g">{c.kind === 'buff' ? '增益' : c.slot}</span>
+            <span className="c" title="經驗需求">需{c.expReq}</span>
+            <span className="g">{c.kind === 'buff' ? `持續${c.duration ?? '-'}` : '裝備'}</span>
+          </>
         )}
       </div>
-      <div className="tx">{c.text}</div>
+      <CardArt id={id} />
+      <div className="ef">
+        <span className="tg">{c.cls}・{kindLabel(c)}　</span>
+        {c.text}
+      </div>
+      <div className="nm">{c.name}</div>
       {counters ? <span className="ctr">⏳{counters}</span> : null}
       {badge !== undefined ? <span className="badge">{badge}</span> : null}
     </div>
