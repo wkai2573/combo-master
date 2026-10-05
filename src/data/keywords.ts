@@ -14,15 +14,28 @@ const SHOWN = KEYWORDS.filter((k) => k.group !== '書寫規範');
 const byName = new Map(SHOWN.map((k) => [k.name, k]));
 const norm = (s: string) => s.replace(/\d+/g, 'X');
 
+/**
+ * 帶有可變部分的名稱要用樣式比對：「OO升級X」（OO＝2 字的技能名、X＝數字）、「(回合X次)」。
+ * 「Ex卡-卡名」只是命名規則的說明，不比對。
+ */
+const isSpecial = (name: string) => !name.includes('卡名') && (name.includes('OO') || /X(?!$)/.test(name));
+const specials: Array<[RegExp, string, Keyword]> = SHOWN.filter((k) => isSpecial(k.name)).map((k) => {
+  const src = k.name
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/OO/g, '[\\u4e00-\\u9fa5]{2}')
+    .replace(/X/g, '(?:\\d+|X)');
+  return [new RegExp('^' + src + '$'), src, k];
+});
+
 /** 兩個字以上的名稱直接出現在文字中也算引用（名稱末尾的 X 不算，例如「回復X」比對「回復」） */
-const plain: Array<[string, Keyword]> = SHOWN.flatMap((k) =>
+const plain: Array<[string, Keyword]> = SHOWN.filter((k) => !isSpecial(k.name) && !k.name.includes('卡名')).flatMap((k) =>
   k.name.split('／').map((n): [string, Keyword] => [n.replace(/X$/, ''), k]),
 )
   .filter(([base]) => [...base].length >= 2)
   .sort((a, b) => b[0].length - a[0].length);
 const plainMap = new Map(plain);
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const pattern = new RegExp(['\\[[^\\]]+\\]', '【[^】]+】', ...plain.map(([b]) => esc(b))].join('|'), 'g');
+const pattern = new RegExp(['\\[[^\\]]+\\]', '【[^】]+】', ...specials.map(([, src]) => src), ...plain.map(([b]) => esc(b))].join('|'), 'g');
 
 export interface Segment {
   text: string;
@@ -50,7 +63,7 @@ export function segmentsOf(text: string): Segment[] {
       const k = byName.get(tok.slice(1, -1));
       kws = k ? [k] : [];
     } else {
-      const k = plainMap.get(tok);
+      const k = plainMap.get(tok) ?? specials.find(([re]) => re.test(tok))?.[2];
       kws = k ? [k] : [];
     }
     push(tok, kws);

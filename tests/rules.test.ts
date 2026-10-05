@@ -210,9 +210,9 @@ describe('卡片效果', () => {
     expect(g.state.log.join('\n')).toContain('回復 1');
   });
 
-  it('力量爆破：[頂] 我方總攻擊 -5', () => {
+  it('力量爆破：[頂] 我方總攻擊 -3', () => {
     const g = scenario({ p0: { hand: ['力量爆破'] }, p1: { hand: [] } });
-    expect(Z(g, 1, 'rage')).toHaveLength(atkOf('力量爆破') - 5);
+    expect(Z(g, 1, 'rage')).toHaveLength(atkOf('力量爆破') - 3);
   });
 
   it('煉金印記：此回合每打出 1 張招式回復 1', () => {
@@ -226,34 +226,6 @@ describe('卡片效果', () => {
     expect(g.state.log.filter((l) => l.includes('【煉金印記】回復 1'))).toHaveLength(1);
   });
 
-  it('商人抽牌：看牌組上方 2 張選 1 張，另一張放回底部', () => {
-    const g = scenario({
-      chars: ['商人', '勇者'],
-      p0: { hand: ['黑桃5'], deck: ['黑桃2', '黑桃3', ...Array(20).fill('黑桃1')] },
-      p1: { hand: [] },
-    });
-    // 商人（先攻）的抽牌階段
-    expect(g.pending!.title).toContain('商人');
-    pick(g, '黑桃3');
-    expect(names(g, 0, 'hand')).toContain('黑桃3');
-    expect(Z(g, 0, 'deck').at(-1)!.id).toBe('黑桃2');
-  });
-});
-
-describe('商人抽牌只在「一次抽 1 張」時觸發', () => {
-  it('一次抽 3 張：不詢問，直接抽牌組上方 3 張', () => {
-    const g = scenario({ chars: ['商人', '勇者'], p0: { hand: [], deck: ['黑桃2', '黑桃3', '黑桃4', ...Array(20).fill('黑桃1')] } });
-    g.pending = null;
-    const it = draw(g, 0, 3);
-    expect(it.next().done).toBe(true);
-    expect(names(g, 0, 'hand')).toEqual(['黑桃2', '黑桃3', '黑桃4']);
-  });
-
-  it('一次抽 1 張：看 2 張選 1 張', () => {
-    const g = scenario({ chars: ['商人', '勇者'], p0: { hand: [], deck: ['黑桃2', '黑桃3', ...Array(20).fill('黑桃1')] } });
-    g.pending = null;
-    expect(draw(g, 0, 1).next().done).toBe(false);
-  });
 });
 
 describe('角色效果（總攻擊／總防禦）', () => {
@@ -334,16 +306,6 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(pursuitCount(g, 0)).toBe(1);
   });
 
-  it('高價賣出（商人）：[發_蓋1] 蓋 1 張經驗，抽 1', () => {
-    const g = scenario({
-      chars: ['勇者', '刺客'],
-      p0: { hand: ['高價賣出'], exp: ['黑桃1', '黑桃2'], deck: ['黑桃7', ...Array(20).fill('黑桃1')] },
-    });
-    pick(g, '發動'); // 手上只有 1 張，自動起手並詢問是否發動
-    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(1);
-    expect(names(g, 0, 'hand')).toContain('黑桃7');
-  });
-
   it('電弧（法師）：[發] 抽X，再放 X 張手牌到牌組底，X＝對方戰鬥區招式數', () => {
     const g = scenario({
       first: 1,
@@ -358,53 +320,6 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(Z(g, 0, 'deck').at(-1)!.id).toBe('黑桃2');
   });
 
-  it('復仇之嚎（劍士）：[經_怒5] 對方給予的傷害 > 我方給予的傷害時，怒氣區上方 1 張加入手牌', () => {
-    const run = (taken: number, dealt: number, answer: string[]) => {
-      const g = scenario({ p0: { exp: ['復仇之嚎'], rage: Array(8).fill('黑桃1') } });
-      const card = Z(g, 0, 'exp')[0];
-      const it = scripts['復仇之嚎'].afterDamageExp!(g, 0, card, { taken, dealt });
-      let r = it.next();
-      if (!r.done) r = it.next(answer);
-      return { g, done: !!r.done };
-    };
-    const hit = run(5, 2, ['yes']);
-    expect(hit.done).toBe(true);
-    expect(Z(hit.g, 0, 'rage')).toHaveLength(8 - 5 - 1);
-    expect(names(hit.g, 0, 'hand')).toHaveLength(Z(hit.g, 0, 'hand').length);
-    expect(Z(hit.g, 0, 'hand').length).toBeGreaterThanOrEqual(1);
-
-    const declined = run(5, 2, ['no']);
-    expect(Z(declined.g, 0, 'rage')).toHaveLength(8);
-
-    const notEnough = run(2, 2, ['yes']); // 對方傷害沒有比較大：不會詢問
-    expect(Z(notEnough.g, 0, 'rage')).toHaveLength(8);
-  });
-
-  it('低價買進（商人）：[經] 此卡被覆蓋時，可把經驗區 1 張未覆蓋的卡加入手牌', () => {
-    const setup = () => scenario({
-      chars: ['商人', '勇者'],
-      p0: { hand: ['黑桃2', '黑桃5'], exp: ['低價買進', '黑桃3', '黑桃4'] },
-    });
-    const g = setup();
-    const dummy = Z(g, 0, 'hand')[0];
-    const it = optionalPay(g, 0, dummy, { cover: 1 });
-    it.next(); // 是否發動
-    it.next(['yes']); // 蓋 1：最前面的低價買進被覆蓋 → 詢問是否發動
-    expect(Z(g, 0, 'exp')[0].covered).toBe(true);
-    it.next(['yes']); // 選擇要拿的卡
-    const pick3 = Z(g, 0, 'exp').find((c) => c.id === '黑桃3')!;
-    const end = it.next([`c${pick3.uid}`]);
-    expect(end.done).toBe(true);
-    expect(names(g, 0, 'hand')).toContain('黑桃3');
-    expect(Z(g, 0, 'exp').map((c) => c.id)).toEqual(['低價買進', '黑桃4']);
-
-    const g2 = setup();
-    const it2 = optionalPay(g2, 0, Z(g2, 0, 'hand')[0], { cover: 1 });
-    it2.next();
-    it2.next(['yes']);
-    expect(it2.next(['no']).done).toBe(true); // 選擇不發動
-    expect(names(g2, 0, 'hand')).toEqual(['黑桃2', '黑桃5']);
-  });
 });
 
 describe('提示驗證', () => {

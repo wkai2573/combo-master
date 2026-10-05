@@ -5,14 +5,15 @@ import { presetDeck, PRESET_CHARACTER_IDS } from '../src/data/presetDecks';
 import { validateDeck } from '../src/deck/validate';
 
 describe('卡表資料', () => {
-  it('卡片數量符合 docs', () => {
-    expect(ALL_CARDS.filter((c) => c.kind === 'move')).toHaveLength(71) // 63 張 − 2 張被卡表同名新版取代 + 10 張卡表新增;
-    expect(ALL_CARDS.filter((c) => c.kind === 'equip')).toHaveLength(3);
+  it('卡片數量：36 張花色招式；裝備／增益含 xlsx 原有與卡表新增', () => {
+    expect(ALL_CARDS.filter((c) => isVanilla(c))).toHaveLength(36);
+    expect(ALL_CARDS.filter((c) => c.kind === 'equip').length).toBeGreaterThanOrEqual(3);
     expect(ALL_CARDS.filter((c) => c.kind === 'buff')).toHaveLength(2);
+    expect(new Set(ALL_CARDS.map((c) => c.id)).size).toBe(ALL_CARDS.length); // 卡名不重複
   });
 
   it('招式連擊值在 1~9', () => {
-    for (const c of ALL_CARDS.filter((c) => c.kind === 'move')) {
+    for (const c of ALL_CARDS.filter((c) => c.kind === 'move' && !c.id.startsWith('Ex卡-'))) {
       expect(c.combo, c.id).toBeGreaterThanOrEqual(1);
       expect(c.combo, c.id).toBeLessThanOrEqual(9);
     }
@@ -31,17 +32,25 @@ describe('卡表資料', () => {
     expect([...PRESET_CHARACTER_IDS].sort()).toEqual(ALL_CHARACTERS.map((c) => c.id).sort());
   });
 
-  it('效果卡逐張開放：卡池＝36 張花色招式＋各職業 2 張新卡', () => {
+  it('效果卡逐張開放：卡池＝36 張花色招式＋已開放的效果卡', () => {
     expect(PLAYABLE_CARDS).toHaveLength(36 + ENABLED_EFFECT_CARDS.length);
-    expect(ENABLED_EFFECT_CARDS.map((id) => getCard(id).cls).sort()).toEqual(['劍士', '劍士', '商人', '商人', '法師', '法師', '盜賊', '盜賊', '弓箭手', '弓箭手'].sort());
+    for (const id of ENABLED_EFFECT_CARDS) expect(ALL_CARDS.some((c) => c.id === id), id).toBe(true);
     expect(PLAYABLE_CARDS.filter((c) => !isVanilla(c)).map((c) => c.id).sort()).toEqual([...ENABLED_EFFECT_CARDS].sort());
+    // 每個職業都有開放的新卡
+    const classes = new Set(ENABLED_EFFECT_CARDS.map((id) => getCard(id).cls));
+    for (const cls of ['劍士', '盜賊', '商人', '法師', '弓箭手']) expect(classes.has(cls as never), cls).toBe(true);
+  });
+
+  it('Ex 卡不能放進牌組', () => {
+    expect(PLAYABLE_CARDS.some((c) => c.id.startsWith('Ex卡-'))).toBe(false);
   });
 
   it('卡表同名的新卡取代 xlsx 舊卡', () => {
     expect(getCard('戒備打擊').cls).toBe('劍士');
     expect(getCard('戒備打擊').text).toContain('總防禦 +2');
-    expect(getCard('力量爆破').atk).toBe(10);
+    expect(getCard('力量爆破').text).toContain('總攻擊 −3');
     expect(ALL_CARDS.filter((c) => c.name === '戒備打擊')).toHaveLength(1);
+    expect(getCard('狙擊印記').cls).toBe('弓箭手');
   });
 
   it('特殊招式都有職業歸屬或共用', () => {

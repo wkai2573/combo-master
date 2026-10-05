@@ -1,9 +1,10 @@
 import { isTrap } from '../data/cards';
+import { isVanilla } from '../data/enabledCards';
 import {
   ask, awakened, canPay, cardOpt, chooseCards, data, discard, draw, isFirst, log, mark, markIfLogged, move, optionalPay,
-  order, pay, pname, takeDamage, topOfZone, Z, type GameCtx, type Gen,
+  newCard, order, pay, pname, takeDamage, topOfZone, Z, type GameCtx, type Gen,
 } from './ops';
-import { scripts } from './scripts';
+import { onPassEffects, scripts } from './scripts';
 import { checkWin } from './win';
 import { other, type CardInst, type PlayerId } from './types';
 
@@ -121,6 +122,11 @@ function* responseWindows(g: GameCtx, active: PlayerId, played: CardInst, combo:
 /** 刺客「追擊判定成功」加成的總上限 */
 export const ASSASSIN_CAP = 5;
 
+/** 我方戰鬥區白板卡（無特徵、無效果的招式）數量 */
+function vanillaCount(g: GameCtx, p: PlayerId): number {
+  return Z(g, p, 'combat').filter((c) => isVanilla(data(c))).length;
+}
+
 export function totalAtk(g: GameCtx, p: PlayerId): number {
   const zone = Z(g, p, 'combat');
   let base = 0;
@@ -130,6 +136,11 @@ export function totalAtk(g: GameCtx, p: PlayerId): number {
   });
   for (const c of Z(g, p, 'pursuit')) base += data(c).atk + (scripts[c.id]?.pursuitAtkBonus ?? 0);
   base += g.state.flags.atkBonus[p];
+  // [頂] 依場面加成的總攻擊（盾擊）
+  const topCard = zone[zone.length - 1];
+  base += scripts[topCard?.id ?? '']?.topAtkBonus?.(g, p) ?? 0;
+  base += g.state.flags.vanillaBoost[p] * vanillaCount(g, p);
+  base = Math.max(0, base);
 
   const awake = awakened(g, p);
   let bonus = 0;
@@ -139,9 +150,6 @@ export function totalAtk(g: GameCtx, p: PlayerId): number {
       break;
     case '刺客':
       bonus += Math.min(ASSASSIN_CAP, (awake ? 2 : 1) * g.state.flags.pursuitSuccess[p]);
-      break;
-    case '商人':
-      if (awake && Z(g, p, 'hand').length > 3) bonus += 3;
       break;
     case '先人':
       if (isFirst(g, p)) bonus += Math.max(0, g.state.flags.played[p] - 1);
@@ -163,6 +171,7 @@ export function totalDef(g: GameCtx, p: PlayerId): number {
     if (scripts[c.id]?.pursuitDef || (rearGuard && awakened(g, p) && !isFirst(g, p))) total += data(c).def;
   }
   if (rearGuard && !isFirst(g, p)) total += 2;
+  total += g.state.flags.vanillaBoost[p] * vanillaCount(g, p);
   return total;
 }
 
@@ -230,26 +239,60 @@ function* pursuitStep(g: GameCtx, p: PlayerId): Gen {
     for (const c of picks) yield* afterJudge(g, p, c);
     return;
   }
-  for (let i = 0; i < count && deck.length > 0; i++) {
+  // 追擊+N 可能在追擊中途增加（二連矢），所以每次重新計算張數
+  for (let i = 0; i < pursuitCount(g, p) && deck.length > 0; i++) {
     yield* aim(g, p);
     yield* afterJudge(g, p, deck[0]);
   }
 }
 
+/** 【瞄準】可使用次數：遊俠 1（覺醒 +1）、瞄準器 +1；每個瞄準每回合 1 次 */
+export function aimLimit(g: GameCtx, p: PlayerId): number {
+  let n = 0;
+  if (g.state.players[p].charId === '遊俠') n += awakened(g, p) ? 2 : 1;
+  if (Z(g, p, 'gear').some((c) => c.id === '瞄準器')) n++;
+  return n;
+}
+
 /**
- * 遊俠・瞄準：追擊判定翻牌前，先看牌組頂 1 張；不想要就放到牌組底，改看下一張。
- * 每回合 1 次（覺醒 2 次）。牌組只剩 1 張時換不到別張，不詢問。
+ * 【瞄準】追擊判定翻牌前使用。
+ * LV1：看牌組頂 1 張，選擇放到牌組頂（就用這張）或牌組底（改看下一張）。
+ * LV2（狙擊印記使本回合升級）：抽 1，然後選擇手中 1 張卡放到牌組頂或底。
  */
 function* aim(g: GameCtx, p: PlayerId): Gen {
-  if (g.state.players[p].charId !== '遊俠') return;
-  const limit = awakened(g, p) ? 2 : 1;
+  const limit = aimLimit(g, p);
+  if (limit === 0) return;
   const deck = Z(g, p, 'deck');
-  while (g.state.flags.aimUsed[p] < limit && deck.length >= 2) {
+  while (g.state.flags.aimUsed[p] < limit && deck.length >= 1) {
+    const left = limit - g.state.flags.aimUsed[p];
+    const level = 1 + g.state.flags.aimUp[p];
+    if (level >= 2) {
+      const [use] = yield* ask(g, {
+        player: p,
+        title: `【瞄準 LV${level}】要使用嗎？抽 1，再選手中 1 張卡放到牌組頂或底。（剩 ${left} 次）`,
+        min: 1, max: 1,
+        options: [{ key: 'use', label: '使用' }, { key: 'skip', label: '不使用' }],
+      });
+      if (use !== 'use') return;
+      g.state.flags.aimUsed[p]++;
+      yield* draw(g, p, 1);
+      const [put] = yield* chooseCards(g, p, '【瞄準】選擇手中 1 張卡放到牌組頂或底', Z(g, p, 'hand'), 1, 1);
+      if (!put) return;
+      const [where] = yield* ask(g, {
+        player: p, title: `【瞄準】【${data(put).name}】要放到哪裡？`, min: 1, max: 1,
+        options: [{ key: 'top', label: '牌組頂（這次就翻它）' }, { key: 'bottom', label: '牌組底' }],
+      });
+      move(g, put, 'deck', where === 'top' ? 'top' : 'bottom');
+      log(g, `【瞄準】${pname(g, p)} 抽 1，並將 1 張手牌放到牌組${where === 'top' ? '頂' : '底'}`);
+      mark(g, g.state.log[g.state.log.length - 1], { type: 'info' });
+      continue;
+    }
+    if (deck.length < 2) return;
     const top = deck[0];
     const hit = !scripts[top.id]?.pursuitFail && !inRange(g, p, top, false);
     const keys = yield* ask(g, {
       player: p,
-      title: `【瞄準】牌組頂是【${data(top).name}】（連擊值 ${data(top).combo}），以目前範圍會判定${hit ? '成功' : '失敗'}。（剩 ${limit - g.state.flags.aimUsed[p]} 次）`,
+      title: `【瞄準】牌組頂是【${data(top).name}】（連擊值 ${data(top).combo}），以目前範圍會判定${hit ? '成功' : '失敗'}。（剩 ${left} 次）`,
       min: 1, max: 1,
       options: [
         { ...cardOpt(top, `就用這張`), key: 'keep' },
@@ -267,11 +310,11 @@ function* aim(g: GameCtx, p: PlayerId): Gen {
 function* afterJudge(g: GameCtx, p: PlayerId, card: CardInst): Gen {
   const ok = yield* judge(g, p, card);
   if (ok || g.state.flags.rabbitUsed[p]) return;
-  const rabbit = Z(g, p, 'gear').find((c) => c.id === '兔腳項鍊');
+  const rabbit = Z(g, p, 'gear').find((c) => c.id === '兔腳項鍊' || c.id === '幸運兔腳');
   const deck = Z(g, p, 'deck');
   if (rabbit && deck.length > 0 && (yield* optionalPay(g, p, rabbit, { cover: 2 }))) {
     g.state.flags.rabbitUsed[p] = true;
-    log(g, '【兔腳項鍊】額外翻 1 張卡做追擊判定');
+    log(g, `【${data(rabbit).name}】額外翻 1 張卡做追擊判定`);
     yield* judge(g, p, deck[0]);
   }
 }
@@ -347,6 +390,16 @@ export function returnStep(g: GameCtx): void {
     // 戰鬥區由最底到最頂，最後是追擊卡
     for (const c of [...Z(g, p, 'combat'), ...Z(g, p, 'pursuit')]) move(g, c, 'exp');
   }
+  // 塗毒：歸還時，把 [Ex卡-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
+  const f = g.state.flags;
+  for (const owner of f.poisonQ) {
+    const mine = f.played[owner];
+    const theirs = f.played[other(owner)];
+    const target = mine < theirs ? owner : other(owner);
+    newCard(g, 'Ex卡-中毒', target, 'exp');
+    log(g, `【塗毒】[Ex卡-中毒]移入${pname(g, target)}的經驗區`);
+  }
+  f.poisonQ = [];
   mark(g, '招式與追擊卡依序放入經驗區', { type: 'return' });
 }
 
@@ -395,6 +448,7 @@ export function* combatPhase(g: GameCtx): Gen {
       log(g, `${pname(g, cur)} 收招`);
       const direct = firstAction && cur === second;
       mark(g, `${pname(g, cur)} 收招${direct ? '，直接進入傷害計算' : ''}`, { type: 'pass', player: cur });
+      yield* markIfLogged(g, () => onPassEffects(g, cur));
       if (direct) {
         straightToDamage = true;
         break;

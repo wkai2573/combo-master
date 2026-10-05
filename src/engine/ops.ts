@@ -75,6 +75,8 @@ export function move(g: GameCtx, card: CardInst, to: ZoneName, pos: 'top' | 'bot
   const from = Z(g, card.owner, card.zone);
   const i = from.indexOf(card);
   if (i >= 0) from.splice(i, 1);
+  // Ex 卡（臨時額外卡）離開經驗區時移除遊戲
+  if (card.id.startsWith('Ex卡-') && card.zone === 'exp' && to !== 'exp') return;
   card.zone = to;
   card.covered = false;
   const dest = Z(g, card.owner, to);
@@ -92,6 +94,18 @@ export function move(g: GameCtx, card: CardInst, to: ZoneName, pos: 'top' | 'bot
 }
 
 export const discard = (g: GameCtx, card: CardInst) => move(g, card, 'discard');
+
+/** 直擊X：把牌組上方 X 張卡移入棄牌區（不經過防禦與替身）。回傳實際張數 */
+export function directHit(g: GameCtx, p: PlayerId, n: number): number {
+  const deck = Z(g, p, 'deck');
+  let done = 0;
+  while (done < n && deck.length > 0) {
+    discard(g, deck[0]);
+    done++;
+  }
+  if (done > 0) log(g, `${pname(g, p)} 受到直擊 ${done}（牌組上方放入棄牌區）`);
+  return done;
+}
 
 export function toExp(g: GameCtx, card: CardInst) {
   move(g, card, 'exp');
@@ -210,25 +224,14 @@ export function recover(g: GameCtx, p: PlayerId, n: number): number {
   return done;
 }
 
-/** 抽牌（商人：只有「抽 1 張」時，改為看牌組上方 2 張選 1 張，另一張放回底部） */
+/** 抽牌 */
 export function* draw(g: GameCtx, p: PlayerId, n: number): Gen<CardInst[]> {
   const drawn: CardInst[] = [];
   const deck = Z(g, p, 'deck');
-  const isMerchant = P(g, p).charId === '商人' && n === 1;
   for (let i = 0; i < n && deck.length > 0; i++) {
-    if (isMerchant && deck.length >= 2) {
-      const top2 = deck.slice(0, 2);
-      const [pick] = yield* chooseCards(g, p, '【商人】選擇 1 張加入手牌，另一張放回牌組底', top2, 1, 1);
-      for (const c of top2) {
-        if (c === pick) move(g, c, 'hand');
-        else move(g, c, 'deck', 'bottom');
-      }
-      drawn.push(pick);
-    } else {
-      const c = deck[0];
-      move(g, c, 'hand');
-      drawn.push(c);
-    }
+    const c = deck[0];
+    move(g, c, 'hand');
+    drawn.push(c);
   }
   log(g, `${pname(g, p)} 抽 ${drawn.length}`);
   return drawn;

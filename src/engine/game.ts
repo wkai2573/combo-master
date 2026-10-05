@@ -1,9 +1,9 @@
 import { getCharacter } from '../data/cards';
 import { combatPhase } from './combat';
-import './scripts';
+import { merchantAfterBurst, turnStartEffects } from './scripts';
 import {
   ask, awakened, canPay, cardOpt, chooseCards, data, draw, drawPlain, GameOver, log, mark, move, newCard, optionalPay,
-  order, pname, recover, toExp, Z, type Gen,
+  markIfLogged, order, pname, recover, toExp, Z, type Gen,
 } from './ops';
 import { Rng } from './rng';
 import { checkWin } from './win';
@@ -18,7 +18,7 @@ const ZONES: ZoneName[] = ['deck', 'hand', 'discard', 'rage', 'exp', 'combat', '
 function emptyFlags(): TurnFlags {
   return {
     played: [0, 0], opened: false, pursuitPlus: [0, 0], pursuitMinus: [0, 0], pursuitSuccess: [0, 0],
-    rabbitUsed: [false, false], aimUsed: [0, 0], atkBonus: [0, 0], coveredQ: [], burstDraw3: [false, false], alchemy: [false, false], sniper: [false, false],
+    rabbitUsed: [false, false], aimUsed: [0, 0], atkBonus: [0, 0], coveredQ: [], aimUp: [0, 0], vanillaBoost: [0, 0], poisonQ: [], burstDraw3: [false, false], alchemy: [false, false], sniper: [false, false],
     damageTaken: [0, 0], noSwap: false,
   };
 }
@@ -116,6 +116,9 @@ export class Game {
 
       s.phase = '重置';
       // 橫置狀態的卡改為重置狀態：目前沒有卡片使用橫置，保留階段供日後擴充
+      // 回合開始時的效果：家族相片、凡骨的意志、中毒
+      yield* markIfLogged(g, () => turnStartEffects(g));
+      checkWin(g);
       mark(g, `第 ${s.turn} 回合・戰鬥階段（先攻：${pname(g, s.first)}）`, { type: 'phase' });
 
       yield* combatPhase(g);
@@ -144,7 +147,7 @@ export class Game {
     s.first = this.setup.first ?? (this.rng.int(2) as PlayerId);
     log(this, `先攻：${pname(this, s.first)}`);
     for (const p of [0, 1] as PlayerId[]) {
-      const extra = getCharacter(decks[p].charId).id === '法師' ? 3 : 0;
+      const extra = getCharacter(decks[p].charId).id === '法師' ? 2 : 0;
       drawPlain(this, p, 5 + extra);
     }
   }
@@ -157,11 +160,8 @@ function* drawPhase(g: Game): Gen {
   for (const p of order(g)) {
     yield* draw(g, p, 1);
     if (g.state.players[p].charId === '法師' && awakened(g, p)) {
-      const rage = Z(g, p, 'rage');
-      if (rage.length > 0) {
-        move(g, rage[0], 'hand');
-        log(g, `【法師】${pname(g, p)} 額外抽怒氣區 1 張卡`);
-      }
+      yield* draw(g, p, 1);
+      log(g, `【法師】${pname(g, p)} 抽牌階段額外抽 1`);
     }
   }
   mark(g, '抽牌階段：雙方各抽 1 張', { type: 'draw' });
@@ -181,15 +181,22 @@ function* burstPhase(g: Game): Gen {
     const hand = Z(g, p, 'hand');
     if (hand.length === 0) continue;
     const keys = yield* ask(g, {
-      player: p, title: '爆發階段：可選擇 1 張手牌放入經驗區，然後抽牌', min: 0, max: 1,
+      player: p, title: '爆發階段：可選擇 1 張手牌放入經驗區，然後抽 2', min: 0, max: 1,
       options: hand.map((c) => cardOpt(c)),
     });
     if (keys.length === 0) continue;
     const card = hand.find((c) => `c${c.uid}` === keys[0])!;
     toExp(g, card);
     log(g, `${pname(g, p)} 爆發：將【${data(card).name}】放入經驗區`);
-    yield* draw(g, p, g.state.flags.burstDraw3[p] ? 3 : 1);
-    mark(g, `${pname(g, p)} 爆發：1 張手牌放入經驗區，抽 ${g.state.flags.burstDraw3[p] ? 3 : 1}`, { type: 'info' });
+    const n = g.state.flags.burstDraw3[p] ? 3 : 2;
+    yield* draw(g, p, n);
+    mark(g, `${pname(g, p)} 爆發：1 張手牌放入經驗區，抽 ${n}`, { type: 'info' });
+    if (Z(g, p, 'gear').some((c) => c.id === '招財貓')) {
+      yield* draw(g, p, 1);
+      log(g, `【招財貓】${pname(g, p)} 爆發時額外抽 1`);
+      mark(g, g.state.log[g.state.log.length - 1], { type: 'info' });
+    }
+    yield* markIfLogged(g, () => merchantAfterBurst(g, p));
   }
   checkWin(g);
 }

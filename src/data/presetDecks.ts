@@ -16,7 +16,7 @@ const profiles: Record<string, { style: string; score: (c: CardData) => number }
   後人: { style: '高防禦：優先挑防禦力高的牌，搭配後攻 +2 防禦', score: (c) => c.def },
   刺客: { style: '集中在中段連擊（4~6）：範圍較窄，追擊較容易成功', score: (c) => c.atk * 0.5 + (c.combo >= 4 && c.combo <= 6 ? 3 : 0) },
   先人: { style: '集中在兩端連擊（1、2、8、9）：範圍寬，容易連續出招', score: (c) => c.atk * 0.5 + ([1, 2, 8, 9].includes(c.combo) ? 3 : 0) },
-  商人: { style: '攻守均衡：挑選攻、守接近的牌，搭配抽牌時二選一', score: (c) => -Math.abs(c.atk - c.def) },
+  商人: { style: '攻守均衡：挑選攻、守接近的牌，搭配爆發後調整經驗順序', score: (c) => -Math.abs(c.atk - c.def) },
   法師: { style: '集中在高連擊值（7~9），攻擊略高', score: (c) => c.atk * 0.5 + (c.combo >= 7 ? 3 : 0) },
   遊俠: { style: '集中在中高連擊（5~7），搭配瞄準挑追擊牌', score: (c) => c.atk * 0.5 + (c.combo >= 5 && c.combo <= 7 ? 3 : 0) },
 };
@@ -27,13 +27,13 @@ const profiles: Record<string, { style: string; score: (c: CardData) => number }
  * 沒啟用的卡會被忽略，其餘的格子仍由花色招式補滿。
  */
 export const PRESET_EXTRAS: Record<string, Record<string, number>> = {
-  勇者: { 戒備打擊: 2, 復仇之嚎: 2 },
-  後人: { 戒備打擊: 2, 復仇之嚎: 2 },
-  刺客: { 伏擊: 2, 二刀連擊: 2 },
-  先人: { 伏擊: 2, 二刀連擊: 2 },
-  商人: { 低價買進: 2, 高價賣出: 2 },
-  法師: { 力量爆破: 2, 電弧: 2 },
-  遊俠: { 魅影射擊: 2, 地雷陷阱: 2 },
+  勇者: { 戒備打擊: 2, 復仇之嚎: 2, 盾擊: 2 },
+  後人: { 戒備打擊: 2, 復仇之嚎: 2, 盾擊: 2 },
+  刺客: { 伏擊: 2, 二刀連擊: 2, 順手牽羊: 2 },
+  先人: { 伏擊: 2, 二刀連擊: 2, 順手牽羊: 2 },
+  商人: { 低價買進: 2, 高價賣出: 2, 交涉: 2, 即時停損: 2 },
+  法師: { 力量爆破: 2, 電弧: 2, 火球: 2, 冰霜護甲: 2 },
+  遊俠: { 魅影射擊: 2, 地雷陷阱: 2, 二連矢: 2, 狙擊印記: 2 },
 };
 
 const COPY_CAP = 3;

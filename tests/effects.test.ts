@@ -79,14 +79,15 @@ describe('追擊相關', () => {
     expect(names(g, 0, 'exp')).toContain('陷阱7');
   });
 
-  it('力量爆破不再有「追擊判定失敗」：連擊值 9 在 2~4 範圍外，追擊成功', () => {
+  it('力量爆破作為追擊卡時判定失敗', () => {
     const g = scenario({
       p0: { hand: ['黑桃2'], deck: ['力量爆破', ...filler] },
       p1: { hand: ['黑桃4'] },
     });
     pick(g, '黑桃4');
-    expect(g.state.flags.pursuitSuccess[0]).toBe(1);
-    expect(names(g, 0, 'exp')).toContain('力量爆破'); // 追擊卡在歸還步驟放進經驗區
+    // 力量爆破連擊值 9 本來在 2~4 範圍外會成功，但 [追] 效果使其失敗
+    expect(g.state.flags.pursuitSuccess[0]).toBe(0);
+    expect(names(g, 0, 'hand')).toContain('力量爆破');
   });
 });
 
@@ -195,19 +196,6 @@ describe('出招效果', () => {
     expect(names(cave, 0, 'exp')).toEqual(['黑桃1']);
   });
 
-  it('狙擊印記：之後打出持有[發]的招式時，抽 1 張怒氣卡再捨棄 1 張手牌', () => {
-    const g = scenario({
-      p0: { hand: ['狙擊印記', '快速治療', '黑桃2'], rage: ['黑桃1'] },
-      p1: { hand: ['黑桃9'] },
-    });
-    pick(g, '狙擊印記');
-    pick(g, '黑桃9');
-    pick(g, '快速治療');
-    expect(g.pending!.title).toContain('狙擊印記');
-    pick(g, '黑桃1');
-    expect(names(g, 0, 'discard')).toContain('黑桃1');
-  });
-
   it('不變應萬變：對手受到傷害較多時回合結束不交換先後攻', () => {
     const g = scenario({ p0: { hand: ['不變應萬變'] }, p1: { hand: [] } });
     expect(g.state.flags.noSwap).toBe(true);
@@ -280,21 +268,20 @@ describe('裝備與增益、角色', () => {
     expect(names(ok, 0, 'gear')).toEqual(['月光劍']);
   });
 
-  it('法師：起始手牌額外抽 3（共 8 張）', () => {
+  it('法師：起始手牌 7 張（一般角色 5 張）', () => {
     const g = scenario({ chars: ['法師', '勇者'] });
-    // 起始 8 張；第一個提示為起手出招，手牌尚未減少
-    expect(Z(g, 0, 'hand')).toHaveLength(8);
+    expect(Z(g, 0, 'hand')).toHaveLength(7);
     expect(Z(g, 1, 'hand')).toHaveLength(5);
   });
 
-  it('法師覺醒：抽牌階段額外抽怒氣區 1 張', () => {
+  it('法師覺醒：抽牌階段額外抽 1（牌組）', () => {
     const g = scenario({
       chars: ['法師', '勇者'],
       p0: { hand: ['黑桃5'], exp: many('黑桃1', 8), rage: ['黑桃2'] },
       p1: { hand: [] },
     });
-    expect(names(g, 0, 'hand')).toContain('黑桃2');
-    expect(Z(g, 0, 'hand')).toHaveLength(2);
+    expect(Z(g, 0, 'hand')).toHaveLength(2); // 抽牌階段正常抽 1，加上覺醒額外抽 1
+    expect(Z(g, 0, 'rage')).toHaveLength(1);
   });
 
   it('刺客：每次追擊判定成功攻擊 +1（覺醒 +2），合計最多 +5', () => {

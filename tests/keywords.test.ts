@@ -11,8 +11,10 @@ describe('關鍵字', () => {
   });
 
   it('【名稱】引用角色技能；不存在的名稱不當關鍵字', () => {
-    expect(names('擁有【瞄準】。')).toEqual(['瞄準']);
-    expect(names('擁有【不存在】。')).toEqual([]);
+    expect(names('獲得【瞄準】。')).toEqual(['瞄準']);
+    expect(names('獲得【不存在】。')).toEqual([]);
+    expect(names('此回合我方的瞄準升級1。')).toContain('OO升級X');
+    expect(names('(回合1次)當我方追擊判定失敗時')).toContain('(回合X次)');
   });
 
   it('切片還原成原文，關鍵字片段帶有說明', () => {
@@ -28,7 +30,7 @@ describe('關鍵字', () => {
 
   it('遊俠只寫【瞄準】，完整說明在關鍵字區塊', () => {
     const archer = ALL_CHARACTERS.find((c) => c.name === '遊俠')!;
-    expect(archer.text).toBe('擁有【瞄準】。');
+    expect(archer.text).toBe('獲得【瞄準】。');
     expect(KEYWORDS.find((k) => k.name === '瞄準')!.desc).toContain('牌組頂');
   });
 
@@ -37,6 +39,7 @@ describe('關鍵字', () => {
     const texts = [...PLAYABLE_CARDS.map((c) => c.text), ...ALL_CHARACTERS.flatMap((c) => [c.text, c.awakenText])];
     for (const t of texts) {
       for (const m of t.matchAll(/\[([^\]]+)\]/g)) {
+        if (m[1].startsWith('Ex卡-')) continue; // Ex 卡的卡名
         for (const part of m[1].split('_')) {
           expect(defined.has(part.replace(/\d+/g, 'X')), `關鍵字「${part}」（出自：${t}）沒有定義`).toBe(true);
         }

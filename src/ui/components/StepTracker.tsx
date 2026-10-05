@@ -24,7 +24,7 @@ const GROUPS: Group[] = [
     ],
   },
   { label: '抽牌', steps: [{ phase: '抽牌', hint: '各抽 1 張' }] },
-  { label: '爆發', steps: [{ phase: '爆發', hint: '可把手牌放進經驗區，再抽 1 張' }] },
+  { label: '爆發', steps: [{ phase: '爆發', hint: '可把手牌放進經驗區，再抽 2 張' }] },
   { label: '增益', steps: [{ phase: '增益', hint: '可打出 1 張裝備或增益' }] },
   { label: '回合結束', steps: [{ phase: '回合結束', hint: '交換先後攻，進入下一回合' }] },
 ];

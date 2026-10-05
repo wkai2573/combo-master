@@ -44,6 +44,12 @@ export interface TurnFlags {
   atkBonus: [number, number];
   /** 剛被覆蓋、等著處理「被覆蓋時」效果的經驗卡 uid（低價買進） */
   coveredQ: number[];
+  /** 本回合瞄準的升級次數（狙擊印記） */
+  aimUp: [number, number];
+  /** 凡骨的意志：本回合生效次數（總攻擊／總防禦各 + 戰鬥區白板卡數量 × 次數） */
+  vanillaBoost: [number, number];
+  /** 塗毒：歸還時要放出 [Ex卡-中毒] 的出招方 */
+  poisonQ: PlayerId[];
   burstDraw3: [boolean, boolean];
   alchemy: [boolean, boolean];
   sniper: [boolean, boolean];
