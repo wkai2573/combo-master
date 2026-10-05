@@ -3,9 +3,9 @@
  *   npm run table -- <資料夾>
  * 資料夾放 Claude 用 ArtifactData 讀出的 cards/、chars/ 兩個子資料夾（每張卡一個 JSON）。
  * 輸出 src/data/cardTable.json：
- *   overrides  既有卡（xlsx）被改過的數值（攻、守、連擊、經驗需求、持續回合）、卡名、類型與部位
+ *   overrides  既有卡（xlsx）被改過的數值（攻、守、連擊、經驗需求、持續回合）、卡名、類型、部位、職業與特徵
  *              以 id（改名前的卡名）為鍵；改名只改畫面上的卡名，id 不變
- *   chars      角色被改過的生命值、覺醒經驗
+ *   chars      角色被改過的名稱、職業、生命值、覺醒經驗（同樣以 id 為鍵）
  *   added      表上新增的卡（卡表上標「新」的卡；若與 xlsx 的卡同名，就整張取代那張卡）
  *   keywords   關鍵字區塊（名稱、分類、說明）；卡上用【名稱】或 [標籤] 引用，遊戲裡滑過就顯示說明
  * 文字（效果描述）不在這裡套用：新描述要先由 Claude 跟你確認用語，再寫進程式。
@@ -44,8 +44,13 @@ for (const d of readDocs('cards').sort((a, b) => a.order - b.order)) {
   if (id !== d.name) notes.push(`卡名已改：【${id}】顯示為【${d.name}】（內部 id 不變）`);
   if (base) {
     const o: Record<string, unknown> = {};
-    for (const k of NUM_KEYS) if (d[k] !== undefined && d[k] !== (base as any)[k]) o[k] = d[k];
+    for (const k of NUM_KEYS) if (d[k] != null && d[k] !== (base as any)[k]) o[k] = d[k];
     if (d.name !== base.name) o.name = d.name;
+    if (d.cls && d.cls !== base.cls) o.cls = d.cls;
+    if (d.traits && JSON.stringify(d.traits) !== JSON.stringify(base.traits)) {
+      o.traits = d.traits;
+      notes.push(`特徵已改：${id}（${base.traits.join('、') || '無'} → ${d.traits.join('、') || '無'}），有特徵就不再算白板卡`);
+    }
     if (d.kind !== undefined && d.kind !== base.kind) {
       o.kind = d.kind;
       if (d.kind !== 'move') Object.assign(o, { atk: 0, def: 0, combo: 0 });
@@ -68,15 +73,25 @@ for (const d of readDocs('cards').sort((a, b) => a.order - b.order)) {
   }
 }
 
-const chars: Record<string, { hp?: number; expReq?: number }> = {};
+// 角色也一樣：id（程式裡的 charId）固定為改名前的名字，只改畫面顯示的名稱
+const chars: Record<string, { name?: string; cls?: string; hp?: number; expReq?: number }> = {};
 const charBase = new Map((baseChars as CharacterData[]).map((c) => [c.name, c]));
 for (const d of readDocs('chars')) {
-  const b = charBase.get(d.name);
+  const id: string = d.base?.name ?? d.name;
+  const b = charBase.get(id);
   if (!b) continue;
-  const o: { hp?: number; expReq?: number } = {};
+  const o: { name?: string; cls?: string; hp?: number; expReq?: number } = {};
+  if (d.name !== b.name) {
+    o.name = d.name;
+    notes.push(`角色名稱已改：【${id}】顯示為【${d.name}】（內部 id 不變）`);
+  }
+  if (d.cls && d.cls !== b.cls) {
+    o.cls = d.cls;
+    notes.push(`角色職業已改：${id}（${b.cls} → ${d.cls}），能用的專用卡會跟著變，確認預設牌組`);
+  }
   if (d.hp !== b.hp) o.hp = d.hp;
   if (d.expReq !== b.expReq) o.expReq = d.expReq;
-  if (Object.keys(o).length) chars[d.name] = o;
+  if (Object.keys(o).length) chars[id] = o;
 }
 
 const keywords = readDocs('keywords')

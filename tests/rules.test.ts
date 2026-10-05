@@ -52,24 +52,6 @@ describe('出招與範圍內', () => {
     expect(g.state.log).toContain('玩家B（刺客） 收招');
     expect(names(g, 1, 'hand')).toContain('梅花5');
   });
-
-  it('777 不能在起手步驟打出', () => {
-    const g = scenario({ p0: { hand: ['777', '黑桃1', '黑桃2'] }, p1: { hand: ['黑桃9'] } });
-    expect(labels(g)).toEqual(['黑桃1', '黑桃2']);
-  });
-
-  it('先手可從經驗區打出先祖圖騰', () => {
-    const g = scenario({ p0: { hand: ['黑桃2', '黑桃3'], exp: ['先祖圖騰'] } });
-    expect(labels(g)).toContain('先祖圖騰');
-    const g2 = scenario({
-      first: 1,
-      p0: { hand: ['黑桃2'], exp: ['先祖圖騰'] },
-      p1: { hand: ['黑桃4', '黑桃5'] },
-    });
-    pick(g2, '黑桃4');
-    // 玩家0 為後攻，不能從經驗區打出先祖圖騰
-    expect(labels(g2)).not.toContain('先祖圖騰');
-  });
 });
 
 describe('戰鬥流程與傷害', () => {
@@ -162,70 +144,10 @@ describe('同時歸零的勝負', () => {
 });
 
 describe('卡片效果', () => {
-  it('式不過3：對手打出第 4 張招式時可捨棄該招式', () => {
-    const g = scenario({
-      p0: { hand: ['黑桃1', '黑桃2', '黑桃3', '黑桃4'] },
-      p1: { hand: ['黑桃9', '黑桃8', '黑桃7', '方塊1'], exp: ['式不過3'] },
-    });
-    pick(g, '黑桃1'); pick(g, '黑桃9');
-    pick(g, '黑桃2'); pick(g, '黑桃8');
-    pick(g, '黑桃3'); pick(g, '黑桃7');
-    pick(g, '黑桃4');
-    expect(g.pending!.title).toContain('是否發動');
-    pick(g, '式不過3');
-    expect(names(g, 0, 'discard')).toContain('黑桃4');
-    expect(names(g, 1, 'discard')).toEqual(expect.arrayContaining(['式不過3', '方塊1']));
-  });
-
-  it('陷阱N：對手出招連擊值為 N 時，蓋 1 經驗並把陷阱放到戰鬥區底', () => {
-    const g = scenario({
-      p0: { hand: ['黑桃3', '黑桃1'] },
-      p1: { hand: ['黑桃9'], exp: ['陷阱3', '黑桃2'] },
-    });
-    pick(g, '黑桃3');
-    expect(g.pending!.title).toContain('是否發動');
-    pick(g, '陷阱3');
-    // 陷阱 3 攻 2 防 0；之後 p1 範圍變成 3~3 沒牌可出 → 直接傷害 → 歸還進經驗區
-    expect(names(g, 1, 'exp')).toEqual(['黑桃2', '陷阱3']);
-    expect(Z(g, 1, 'exp')[0].covered).toBe(true);
-    expect(Z(g, 1, 'rage')).toHaveLength(4); // 黑桃3 攻擊 4
-  });
-
-  it('替身：每 1 傷害捨棄 1 張覆蓋的經驗代替', () => {
-    const g = scenario({
-      p0: { hand: ['黑桃9'] },
-      p1: { buff: ['替身'], exp: ['~黑桃2', '~黑桃3', '黑桃4'] },
-    });
-    expect(Z(g, 1, 'rage')).toHaveLength(atkOf('黑桃9') - 2); // 傷害 - 2 張替身
-    expect(names(g, 1, 'discard')).toEqual(['黑桃2', '黑桃3']);
-    expect(names(g, 1, 'exp')).toContain('黑桃4');
-  });
-
-  it('吸血打擊：傷害計算後回復 傷害/3（無條件捨去）', () => {
-    const g = scenario({
-      p0: { hand: ['吸血打擊'], rage: ['黑桃1'] },
-      p1: { hand: [] },
-    });
-    expect(Z(g, 0, 'rage')).toHaveLength(0);
-    expect(g.state.log.join('\n')).toContain('回復 1');
-  });
-
   it('力量爆破：[頂] 我方總攻擊 -3', () => {
     const g = scenario({ p0: { hand: ['力量爆破'] }, p1: { hand: [] } });
     expect(Z(g, 1, 'rage')).toHaveLength(atkOf('力量爆破') - 3);
   });
-
-  it('煉金印記：此回合每打出 1 張招式回復 1', () => {
-    const g = scenario({
-      p0: { hand: ['煉金印記', '黑桃2'], rage: ['黑桃1', '黑桃1'] },
-      p1: { hand: ['黑桃9'] },
-    });
-    pick(g, '煉金印記');
-    pick(g, '黑桃9');
-    pick(g, '黑桃2');
-    expect(g.state.log.filter((l) => l.includes('【煉金印記】回復 1'))).toHaveLength(1);
-  });
-
 });
 
 describe('角色效果（總攻擊／總防禦）', () => {

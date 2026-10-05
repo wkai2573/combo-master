@@ -20,9 +20,9 @@ const keyOf = (g: Game, p: 0 | 1, zone: Parameters<typeof Z>[2], id: string, nth
   `c${Z(g, p, zone).filter((c) => c.id === id)[nth].uid}`;
 
 describe('爆發階段：抽 2', () => {
-  it('把 1 張手牌放入經驗區後抽 2；招財貓再多抽 1', () => {
+  it('把 1 張手牌放入經驗區後抽 2；招財貓可以蓋 2 再多抽 1', () => {
     const base = (gear: string[]) =>
-      scenario({ p0: { hand: ['黑桃5'], gear }, p1: { hand: [] } });
+      scenario({ p0: { hand: ['黑桃5'], gear, exp: ['黑桃1', '黑桃2'] }, p1: { hand: [] } });
     const g = base([]);
     expect(g.pending!.title).toContain('爆發');
     const hand = Z(g, 0, 'hand');
@@ -32,7 +32,16 @@ describe('爆發階段：抽 2', () => {
 
     const cat = base(['招財貓']);
     pick(cat, names(cat, 0, 'hand')[0]);
+    expect(cat.pending!.title).toContain('招財貓'); // [蓋2]：是否發動
+    pick(cat, '發動');
     expect(Z(cat, 0, 'hand')).toHaveLength(3);
+    expect(Z(cat, 0, 'exp').filter((c) => c.covered)).toHaveLength(2);
+
+    const skip = base(['招財貓']);
+    pick(skip, names(skip, 0, 'hand')[0]);
+    pick(skip, '不發動'); // 不發動就不蓋、不多抽
+    expect(Z(skip, 0, 'hand')).toHaveLength(2);
+    expect(Z(skip, 0, 'exp').filter((c) => c.covered)).toHaveLength(0);
   });
 });
 
@@ -118,11 +127,11 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'rage')).toHaveLength(2);
   });
 
-  it('高價賣出：[經] 被覆蓋時抽 2', () => {
+  it('高價賣出：[經] 被覆蓋時抽 1', () => {
     const g = scenario({ p0: { hand: ['黑桃2', '黑桃5'], exp: ['高價賣出', '黑桃3'] } });
     const before = Z(g, 0, 'hand').length;
     drive(optionalPay(g, 0, Z(g, 0, 'hand')[0], { cover: 1 }), [['yes']]);
-    expect(Z(g, 0, 'hand')).toHaveLength(before + 2);
+    expect(Z(g, 0, 'hand')).toHaveLength(before + 1);
   });
 
   it('復仇之嚎：[經_怒3]', () => {
@@ -185,10 +194,10 @@ describe('新卡（第二批）', () => {
     expect(totalAtk(g, 0)).toBe(atkOf('盾擊') + atkOf('黑桃1'));
   });
 
-  it('即時停損：[發_蓋2] 起手打出後雙方立即收招，沒有反擊步驟也不做追擊判定', () => {
+  it('即時停損：[發_蓋4] 起手打出後雙方立即收招，沒有反擊步驟也不做追擊判定', () => {
     const g = scenario({
       chars: ['商人', '勇者'],
-      p0: { hand: ['即時停損', '黑桃2'], exp: ['黑桃3', '黑桃4'] },
+      p0: { hand: ['即時停損', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5', '黑桃6'] },
       p1: { hand: ['黑桃5', '黑桃9'] },
     });
     pick(g, '即時停損');
@@ -216,8 +225,8 @@ describe('新卡（第二批）', () => {
   });
 
   it('凡骨的意志：回合開始時強制蓋 1，總攻擊與總防禦各加戰鬥區白板卡數量', () => {
-    const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['凡骨的意志', '黑桃3'] } });
-    expect(drive(turnStartEffects(g), []).done).toBe(true);
+    // scenario 開局時已經跑過第一回合的回合開始效果
+    const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['黑桃3', '凡骨的意志'] } });
     expect(g.state.flags.vanillaBoost[0]).toBe(1);
     expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃3']);
     const ids = ['黑桃1', '黑桃2', '伏擊'];
@@ -227,15 +236,33 @@ describe('新卡（第二批）', () => {
     expect(totalDef(g, 0)).toBe(ids.reduce((n, id) => n + defOf(id), 0) + 2);
   });
 
+  it('凡骨的意志：蓋是照順序蓋，最前面就是自己時會蓋到自己；效果照常發動，之後被蓋住就無效', () => {
+    const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['凡骨的意志', '黑桃3'] } });
+    expect(g.state.flags.vanillaBoost[0]).toBe(1);
+    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['凡骨的意志']);
+    expect(g.state.log.join('\n')).toContain('蓋到自己');
+    // 再跑一次回合開始效果（當作下個回合）：它已經被蓋住，不能再發動，也不會去蓋黑桃3
+    expect(drive(turnStartEffects(g), []).done).toBe(true);
+    expect(g.state.flags.vanillaBoost[0]).toBe(1);
+    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['凡骨的意志']);
+  });
+
+  it('凡骨的意志：它是唯一的正面經驗卡時，蓋 1 就是蓋自己，仍會生效', () => {
+    const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['凡骨的意志'] } });
+    expect(drive(turnStartEffects(g), []).done).toBe(true);
+    expect(g.state.flags.vanillaBoost[0]).toBe(1);
+    expect(Z(g, 0, 'exp')[0].covered).toBe(true);
+  });
+
   it('卸除鎧甲：[起_蓋2] 把對方 1 張裝備或增益送入棄牌區', () => {
     const g = scenario({
       chars: ['刺客', '勇者'],
       p0: { hand: ['卸除鎧甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5'] },
-      p1: { hand: [], gear: ['月光劍'] },
+      p1: { hand: [], gear: ['瞄準器'] },
     });
     pick(g, '卸除鎧甲');
     pick(g, '發動'); // 對方只有 1 張裝備，自動選它
-    expect(names(g, 1, 'discard')).toContain('月光劍');
+    expect(names(g, 1, 'discard')).toContain('瞄準器');
     expect(Z(g, 1, 'gear')).toHaveLength(0);
   });
 
@@ -248,6 +275,50 @@ describe('新卡（第二批）', () => {
     pick(g, '火球');
     pick(g, '發動');
     expect(Z(g, 1, 'discard')).toHaveLength(2);
+  });
+
+  it('Explosion!：[起_蓋8] 對方直擊 5，我方收招（對方仍可反擊），並跳過我方這回合的抽牌階段', () => {
+    const g = scenario({
+      chars: ['法師', '勇者'],
+      p0: { hand: ['Explosion!', '黑桃2'], exp: Array(8).fill('黑桃3') },
+      p1: { hand: ['黑桃5'] },
+    });
+    pick(g, 'Explosion!');
+    pick(g, '發動');
+    expect(Z(g, 1, 'discard')).toHaveLength(5);
+    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(8);
+    expect(g.state.passed).toEqual([true, false]);
+    // 對方還能反擊：輪到玩家1 選擇出招或收招
+    expect(g.pending!.player).toBe(1);
+    expect(g.pending!.options.map((o) => o.label)).toContain('黑桃5');
+    pick(g, '黑桃5'); // 玩家1 手上沒牌了自動收招 → 雙方都已收招，進入追擊、傷害，然後是抽牌階段
+    expect(g.state.log.join('\n')).toContain('玩家A（法師） 跳過抽牌階段');
+    expect(g.state.phase).toBe('爆發');
+    expect(Z(g, 0, 'hand').map((c) => c.id)).toEqual(['黑桃2']); // 沒有抽牌
+    expect(Z(g, 1, 'hand')).toHaveLength(1); // 玩家1 照常抽 1
+  });
+
+  it('Explosion!：正面經驗不足 8 張不能發動；選擇不發動就沒有任何效果', () => {
+    const few = scenario({
+      chars: ['法師', '勇者'],
+      p0: { hand: ['Explosion!', '黑桃2'], exp: Array(7).fill('黑桃3') },
+      p1: { hand: ['黑桃5'] },
+    });
+    pick(few, 'Explosion!');
+    expect(few.pending!.title).not.toContain('Explosion!'); // 付不起，不詢問
+    expect(few.state.passed).toEqual([false, false]);
+    expect(Z(few, 1, 'discard')).toHaveLength(0);
+
+    const no = scenario({
+      chars: ['法師', '勇者'],
+      p0: { hand: ['Explosion!', '黑桃2'], exp: Array(8).fill('黑桃3') },
+      p1: { hand: ['黑桃5'] },
+    });
+    pick(no, 'Explosion!');
+    pick(no, '不發動');
+    expect(no.state.flags.skipDraw).toEqual([false, false]);
+    expect(Z(no, 0, 'exp').filter((c) => c.covered)).toHaveLength(0);
+    expect(Z(no, 1, 'discard')).toHaveLength(0);
   });
 
   it('塗毒：歸還時 [Ex卡-中毒] 移入出招卡較少的一方，相同時落入對方；離開經驗區就移除遊戲', () => {
@@ -304,7 +375,7 @@ describe('新卡（第二批）', () => {
   it('幸運兔腳：[蓋2] 追擊判定失敗時額外翻 1 張', () => {
     const g = scenario({
       p0: { hand: ['黑桃1'] },
-      p1: { hand: ['黑桃9'], gear: ['幸運兔腳'], exp: ['黑桃2', '黑桃3'], deck: ['黑桃5', '月光劍', ...filler] },
+      p1: { hand: ['黑桃9'], gear: ['幸運兔腳'], exp: ['黑桃2', '黑桃3'], deck: ['黑桃5', '瞄準器', ...filler] },
     });
     pick(g, '黑桃9');
     pick(g, '發動');

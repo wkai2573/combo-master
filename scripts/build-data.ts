@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { characterFill } from '../src/data/characterFill';
-import type { CardData, CharacterData, ClassName, EquipSlot } from '../src/data/types';
+import type { CardData, CharacterData, ClassName } from '../src/data/types';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const xlsxPath = resolve(root, 'docs', '連擊大師.xlsx');
@@ -40,31 +40,8 @@ for (const r of sheet('招式')) {
   });
 }
 
-for (const r of sheet('招式_效果')) {
-  const name = str(r['卡名']);
-  if (!name) continue;
-  cards.push({
-    id: name, name, kind: 'move', cls: toClass(r['職業']),
-    traits: str(r['特徵']).split(/[,，、/]/).map((s) => s.trim()).filter(Boolean),
-    atk: num(r['攻擊']), def: num(r['防禦']), combo: num(r['連擊值']),
-    expReq: 0, text: str(r['效果']),
-  });
-}
-
-for (const r of sheet('裝備／增益')) {
-  const name = str(r['卡名']);
-  if (!name) continue;
-  const part = str(r['裝備部位/增益']);
-  const isBuff = part === '增益';
-  const dur = num(r['持續時間']);
-  cards.push({
-    id: name, name, kind: isBuff ? 'buff' : 'equip', cls: toClass(r['職業']), traits: [],
-    atk: 0, def: 0, combo: 0, expReq: num(r['經驗需求']),
-    slot: isBuff ? undefined : (part as EquipSlot),
-    duration: isBuff ? dur : undefined,
-    text: str(r['效果']),
-  });
-}
+// xlsx 的「招式_效果」「裝備／增益」兩張工作表是舊的效果卡，已經不用：效果卡全部改由卡表網頁維護（cardTable.json）。
+// 這裡只匯入 36 張花色招式與角色。
 
 const characters: CharacterData[] = [];
 for (const r of sheet('角色')) {
@@ -99,6 +76,5 @@ mkdirSync(outDir, { recursive: true });
 writeFileSync(resolve(outDir, 'cards.json'), JSON.stringify(cards, null, 2) + '\n');
 writeFileSync(resolve(outDir, 'characters.json'), JSON.stringify(characters, null, 2) + '\n');
 
-const count = (k: string) => cards.filter((c) => c.kind === k).length;
-console.log(`卡片 ${cards.length} 張（招式 ${count('move')}、裝備 ${count('equip')}、增益 ${count('buff')}）`);
+console.log(`花色招式 ${cards.length} 張`);
 console.log(`角色 ${characters.length} 位（待補 ${characters.filter((c) => c.pending).length}）`);

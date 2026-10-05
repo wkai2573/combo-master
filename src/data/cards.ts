@@ -1,7 +1,6 @@
 import cardsJson from './generated/cards.json';
 import charsJson from './generated/characters.json';
 import { characterText } from './characterText';
-import { classMap } from './classMap';
 import { EX_CARDS } from './exCards';
 import tableJson from './cardTable.json';
 import { isCardEnabled } from './enabledCards';
@@ -14,14 +13,13 @@ const table = tableJson as {
 };
 
 /**
- * xlsx 職業欄為「共用」的卡，若在 classMap 有提案歸屬則採用；
- * 再套上卡表網頁同步來的數值（cardTable.json，由 npm run table 產生），最後接上卡表新增的卡。
+ * 36 張花色招式來自 xlsx，套上卡表網頁同步來的數值（cardTable.json，由 npm run table 產生）；
+ * 其餘的卡（各職業的新卡、裝備）全部是卡表新增的。
  */
 const addedIds = new Set(table.added.map((c) => c.id));
 export const ALL_CARDS: CardData[] = [
   ...(cardsJson as CardData[]).filter((c) => !addedIds.has(c.id)).map((c) => ({
     ...c,
-    cls: c.cls === '共用' && classMap[c.id] ? classMap[c.id] : c.cls,
     ...table.overrides[c.id],
   })),
   ...table.added,
@@ -52,4 +50,3 @@ export function getCharacter(id: string): CharacterData {
   return c;
 }
 
-export const isTrap = (c: CardData) => c.traits.includes('陷阱');

@@ -95,7 +95,7 @@ export function move(g: GameCtx, card: CardInst, to: ZoneName, pos: 'top' | 'bot
 
 export const discard = (g: GameCtx, card: CardInst) => move(g, card, 'discard');
 
-/** 直擊X：把牌組上方 X 張卡移入棄牌區（不經過防禦與替身）。回傳實際張數 */
+/** 直擊X：把牌組上方 X 張卡移入棄牌區（不經過防禦）。回傳實際張數 */
 export function directHit(g: GameCtx, p: PlayerId, n: number): number {
   const deck = Z(g, p, 'deck');
   let done = 0;
@@ -156,18 +156,19 @@ export interface Cost {
 export const costText = (c: Cost) =>
   [c.cover ? `蓋${c.cover}` : '', c.rage ? `怒${c.rage}` : ''].filter(Boolean).join('、');
 
-export function faceUpExp(g: GameCtx, p: PlayerId, exclude?: CardInst): CardInst[] {
-  return Z(g, p, 'exp').filter((c) => !c.covered && c !== exclude);
+/** 蓋X 的對象：經驗區正面的卡。不分是不是正在發動效果的那張，一律照順序從最前面開始 */
+export function faceUpExp(g: GameCtx, p: PlayerId): CardInst[] {
+  return Z(g, p, 'exp').filter((c) => !c.covered);
 }
 
-export function canPay(g: GameCtx, p: PlayerId, cost: Cost, exclude?: CardInst): boolean {
-  if (cost.cover && faceUpExp(g, p, exclude).length < cost.cover) return false;
+export function canPay(g: GameCtx, p: PlayerId, cost: Cost): boolean {
+  if (cost.cover && faceUpExp(g, p).length < cost.cover) return false;
   if (cost.rage && Z(g, p, 'rage').length < cost.rage) return false;
   return true;
 }
 
-export function pay(g: GameCtx, p: PlayerId, cost: Cost, exclude?: CardInst): void {
-  if (cost.cover) cover(g, p, cost.cover, exclude);
+export function pay(g: GameCtx, p: PlayerId, cost: Cost): void {
+  if (cost.cover) cover(g, p, cost.cover);
   if (cost.rage) discardRage(g, p, cost.rage);
 }
 
@@ -175,13 +176,11 @@ export function pay(g: GameCtx, p: PlayerId, cost: Cost, exclude?: CardInst): vo
 export const hooks: { onCovered?: (g: GameCtx) => Gen } = {};
 
 /** 可選的費用發動：付得起才詢問，同意就扣費並回傳 true */
-export function* optionalPay(
-  g: GameCtx, p: PlayerId, card: CardInst, cost: Cost, exclude?: CardInst,
-): Gen<boolean> {
-  if (!canPay(g, p, cost, exclude)) return false;
+export function* optionalPay(g: GameCtx, p: PlayerId, card: CardInst, cost: Cost): Gen<boolean> {
+  if (!canPay(g, p, cost)) return false;
   const ok = yield* confirm(g, p, `是否發動【${data(card).name}】？（${costText(cost)}）`);
   if (!ok) return false;
-  pay(g, p, cost, exclude);
+  pay(g, p, cost);
   log(g, `${pname(g, p)} 發動【${data(card).name}】（${costText(cost)}）`);
   if (hooks.onCovered) yield* hooks.onCovered(g);
   return true;
@@ -189,11 +188,11 @@ export function* optionalPay(
 
 // ───────────────────────── 區域操作 ─────────────────────────
 
-export function cover(g: GameCtx, p: PlayerId, n: number, exclude?: CardInst): number {
+export function cover(g: GameCtx, p: PlayerId, n: number): number {
   let done = 0;
   for (const c of Z(g, p, 'exp')) {
     if (done >= n) break;
-    if (!c.covered && c !== exclude) {
+    if (!c.covered) {
       c.covered = true;
       g.state.flags.coveredQ.push(c.uid);
       done++;
@@ -249,31 +248,17 @@ export function drawPlain(g: GameCtx, p: PlayerId, n: number): CardInst[] {
   return out;
 }
 
-/**
- * 受到 n 點傷害：從牌組上方放入怒氣區。
- * 替身：每 1 傷害，捨棄 1 張覆蓋中的經驗代替。
- * 回傳實際放入怒氣區的張數。
- */
+/** 受到 n 點傷害：從牌組上方放入怒氣區。回傳實際放入怒氣區的張數。 */
 export function takeDamage(g: GameCtx, p: PlayerId, n: number): number {
   let moved = 0;
   const deck = Z(g, p, 'deck');
   for (let i = 0; i < n; i++) {
-    const sub = Z(g, p, 'buff').find((b) => b.id === '替身');
-    const covered = Z(g, p, 'exp').find((c) => c.covered);
-    if (sub && covered) {
-      discard(g, covered);
-      log(g, `【替身】${pname(g, p)} 捨棄 1 張覆蓋的經驗代替受到傷害`);
-      continue;
-    }
     if (deck.length === 0) break;
     move(g, deck[0], 'rage', 'top');
     moved++;
   }
   return moved;
 }
-
-/** 本卡的連擊值選項（3連擊 可視為 6 或 8）由 scripts 提供，這裡僅取印刷值 */
-export const comboOf = (c: CardInst) => data(c).combo;
 
 export function topOfZone(g: GameCtx, p: PlayerId): CardInst | undefined {
   const z = Z(g, p, 'combat');

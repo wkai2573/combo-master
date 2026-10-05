@@ -5,10 +5,9 @@ import { presetDeck, PRESET_CHARACTER_IDS } from '../src/data/presetDecks';
 import { validateDeck } from '../src/deck/validate';
 
 describe('卡表資料', () => {
-  it('卡片數量：36 張花色招式；裝備／增益含 xlsx 原有與卡表新增', () => {
+  it('卡片數量：36 張花色招式（xlsx）；其餘都是卡表新增的新卡與裝備', () => {
     expect(ALL_CARDS.filter((c) => isVanilla(c))).toHaveLength(36);
-    expect(ALL_CARDS.filter((c) => c.kind === 'equip').length).toBeGreaterThanOrEqual(3);
-    expect(ALL_CARDS.filter((c) => c.kind === 'buff')).toHaveLength(2);
+    expect(ALL_CARDS.filter((c) => c.kind === 'equip').length).toBeGreaterThanOrEqual(5);
     expect(new Set(ALL_CARDS.map((c) => c.id)).size).toBe(ALL_CARDS.length); // 卡名不重複
   });
 
@@ -45,18 +44,17 @@ describe('卡表資料', () => {
     expect(PLAYABLE_CARDS.some((c) => c.id.startsWith('Ex卡-'))).toBe(false);
   });
 
-  it('卡表同名的新卡取代 xlsx 舊卡', () => {
+  it('卡表新卡的職業與文字', () => {
     expect(getCard('戒備打擊').cls).toBe('劍士');
     expect(getCard('戒備打擊').text).toContain('總防禦 +2');
     expect(getCard('力量爆破').text).toContain('總攻擊 −3');
-    expect(ALL_CARDS.filter((c) => c.name === '戒備打擊')).toHaveLength(1);
     expect(getCard('狙擊印記').cls).toBe('弓箭手');
+    expect(getCard('黑桃1').cls).toBe('共用');
   });
 
-  it('特殊招式都有職業歸屬或共用', () => {
-    expect(getCard('陷阱3').cls).toBe('盜賊');
-    expect(getCard('快速治療').cls).toBe('共用');
-    expect(getCard('黑桃1').cls).toBe('共用');
+  it('每張卡都有職業', () => {
+    const classes = ['共用', '劍士', '盜賊', '商人', '弓箭手', '法師'];
+    for (const c of ALL_CARDS) expect(classes, c.id).toContain(c.cls);
   });
 });
 
@@ -85,11 +83,17 @@ describe('預設牌組', () => {
     expect(validateDeck('勇者', [...deck.slice(0, 45), ...Array(5).fill('黑桃1')]).errors.join()).toContain('最多 4');
   });
 
-  it('停用的效果卡不能放進牌組（即使職業符合）', () => {
-    const deck = presetDeck('刺客');
-    const r = validateDeck('刺客', [...deck.slice(0, 49), '陷阱3']);
-    expect(r.ok).toBe(false);
-    expect(r.errors.join()).toContain('停用');
-    expect(validateDeck('商人', [...presetDeck('商人').slice(0, 49), '快速治療']).ok).toBe(false);
+  it('不在開放清單的效果卡不能放進牌組（即使職業符合）', () => {
+    const deck = presetDeck('法師');
+    expect(validateDeck('法師', [...deck.slice(0, 49), '電弧']).ok).toBe(true); // 開放中
+    const i = ENABLED_EFFECT_CARDS.indexOf('電弧');
+    ENABLED_EFFECT_CARDS.splice(i, 1); // 暫時關掉
+    try {
+      const r = validateDeck('法師', [...deck.slice(0, 49), '電弧']);
+      expect(r.ok).toBe(false);
+      expect(r.errors.join()).toContain('停用');
+    } finally {
+      ENABLED_EFFECT_CARDS.splice(i, 0, '電弧');
+    }
   });
 });

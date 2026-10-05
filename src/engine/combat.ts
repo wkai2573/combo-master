@@ -1,8 +1,7 @@
-import { isTrap } from '../data/cards';
 import { isVanilla } from '../data/enabledCards';
 import {
-  ask, awakened, canPay, cardOpt, chooseCards, data, discard, draw, isFirst, log, mark, markIfLogged, move, optionalPay,
-  newCard, order, pay, pname, takeDamage, topOfZone, Z, type GameCtx, type Gen,
+  ask, awakened, cardOpt, chooseCards, data, draw, isFirst, log, mark, markIfLogged, move, optionalPay,
+  newCard, order, pname, takeDamage, Z, type GameCtx, type Gen,
 } from './ops';
 import { onPassEffects, scripts } from './scripts';
 import { checkWin } from './win';
@@ -10,30 +9,24 @@ import { other, type CardInst, type PlayerId } from './types';
 
 // ───────────────────────── 範圍內／可出招判定 ─────────────────────────
 
-/** 該卡是否在 p 的「範圍內」。forPlay：出招時（3連擊 可視為 6 或 8） */
-export function inRange(g: GameCtx, p: PlayerId, c: CardInst, forPlay: boolean): boolean {
+/** 該卡是否在 p 的「範圍內」：雙方戰鬥區最後一張招式的連擊值（含）之間 */
+export function inRange(g: GameCtx, p: PlayerId, c: CardInst): boolean {
   const mine = Z(g, p, 'combat');
   const opp = Z(g, other(p), 'combat');
   if (mine.length === 0 || opp.length === 0) return true;
-  const mTop = mine[mine.length - 1];
-  const oVal = data(opp[opp.length - 1]).combo;
-  const mVals = [data(mTop).combo, ...(forPlay ? scripts[mTop.id]?.comboAlt ?? [] : [])];
+  const m = data(mine[mine.length - 1]).combo;
+  const o = data(opp[opp.length - 1]).combo;
   const v = data(c).combo;
-  return mVals.some((m) => v >= Math.min(m, oVal) && v <= Math.max(m, oVal));
+  return v >= Math.min(m, o) && v <= Math.max(m, o);
 }
 
-/** p 目前可以打出的招式（手牌；先手時含經驗區的先祖圖騰） */
-export function playables(g: GameCtx, p: PlayerId, opening: boolean): CardInst[] {
+/** p 目前可以打出的招式（手牌） */
+export function playables(g: GameCtx, p: PlayerId): CardInst[] {
   const cands = Z(g, p, 'hand').filter((c) => data(c).kind === 'move');
-  if (isFirst(g, p)) {
-    cands.push(...Z(g, p, 'exp').filter((c) => !c.covered && c.id === '先祖圖騰'));
-  }
   // 戰鬥區已有「重複連擊值」（同值 2 張）時，就不能再打出同連擊值的卡
   const copies = new Map<number, number>();
   for (const c of Z(g, p, 'combat')) copies.set(data(c).combo, (copies.get(data(c).combo) ?? 0) + 1);
-  return cands.filter(
-    (c) => !(opening && scripts[c.id]?.noOpen) && inRange(g, p, c, true) && (copies.get(data(c).combo) ?? 0) < MAX_SAME_COMBO,
-  );
+  return cands.filter((c) => inRange(g, p, c) && (copies.get(data(c).combo) ?? 0) < MAX_SAME_COMBO);
 }
 
 /** 同一連擊值在自己的戰鬥區最多 2 張（第 1 次重複可以，已重複就不能再出） */
@@ -42,79 +35,19 @@ const MAX_SAME_COMBO = 2;
 // ───────────────────────── 出招 ─────────────────────────
 
 export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: boolean): Gen {
-  const f = g.state.flags;
-  const opp = other(p);
-  const oppTop = topOfZone(g, opp);
-  const combo = data(card).combo;
-  const fromExp = card.zone === 'exp';
   move(g, card, 'combat', 'top');
-  f.played[p]++;
-  log(g, `${pname(g, p)} ${opening ? '起手' : '出招'}【${data(card).name}】${fromExp ? '（自經驗區）' : ''}`);
+  g.state.flags.played[p]++;
+  log(g, `${pname(g, p)} ${opening ? '起手' : '出招'}【${data(card).name}】`);
   const cd = data(card);
   mark(g, `${pname(g, p)} ${opening ? '起手' : '出招'}【${cd.name}】　攻${cd.atk}　連擊${cd.combo}　守${cd.def}`,
     { type: 'play', player: p, uid: card.uid });
 
   const sc = scripts[card.id];
-  if (f.alchemy[p]) {
-    const rage = Z(g, p, 'rage');
-    if (rage.length > 0) move(g, rage[0], 'deck', 'top');
-    log(g, '【煉金印記】回復 1');
-  }
-  if (f.sniper[p] && sc?.onPlay) {
-    const rage = Z(g, p, 'rage');
-    if (rage.length > 0) move(g, rage[0], 'hand');
-    const [d] = yield* chooseCards(g, p, '【狙擊印記】捨棄 1 張手牌', Z(g, p, 'hand'), 1, 1);
-    if (d) discard(g, d);
-  }
-  if (oppTop?.id === '黑暗詛咒') {
-    const front = Z(g, p, 'exp').find((c) => !c.covered);
-    if (front) {
-      front.covered = true;
-      g.state.flags.coveredQ.push(front.uid);
-      log(g, `【黑暗詛咒】${pname(g, p)} 的經驗【${data(front).name}】被覆蓋`);
-    }
-  }
   yield* markIfLogged(g, function* (): Gen {
     if (opening && sc?.onOpen) yield* sc.onOpen(g, p, card);
     if (sc?.onPlay) yield* sc.onPlay(g, p, card);
-    yield* responseWindows(g, p, card, combo);
   });
   checkWin(g);
-}
-
-/** 對手出招時，另一方可插入發動的 [經] 效果（對手的 [發] 已先處理） */
-function* responseWindows(g: GameCtx, active: PlayerId, played: CardInst, combo: number): Gen {
-  const q = other(active);
-  for (let guard = 0; guard < 20; guard++) {
-    const cands: CardInst[] = [];
-    for (const c of Z(g, q, 'exp')) {
-      if (c.covered) continue;
-      const m = /^陷阱([3-7])$/.exec(c.id);
-      if (m && Number(m[1]) === combo && canPay(g, q, { cover: 1 }, c)) cands.push(c);
-      if (c.id === '式不過3' && g.state.flags.played[active] === 4 && played.zone === 'combat' &&
-          Z(g, q, 'hand').length >= 1) cands.push(c);
-    }
-    if (cands.length === 0) return;
-    const keys = yield* ask(g, {
-      player: q,
-      title: `對手打出【${data(played).name}】，是否發動經驗區的效果？`,
-      min: 0, max: 1,
-      options: cands.map((c) => cardOpt(c)),
-    });
-    if (keys.length === 0) return;
-    const c = cands.find((x) => `c${x.uid}` === keys[0])!;
-    if (c.id === '式不過3') {
-      const [h] = yield* chooseCards(g, q, '【式不過3】捨棄 1 張手牌', Z(g, q, 'hand'), 1, 1);
-      discard(g, c);
-      discard(g, h);
-      discard(g, played);
-      log(g, `【式不過3】${pname(g, q)} 捨棄了對手的【${data(played).name}】`);
-      return;
-    }
-    pay(g, q, { cover: 1 }, c);
-    move(g, c, 'combat', 'bottom');
-    log(g, `【${data(c).name}】${pname(g, q)} 將其置於戰鬥區底`);
-  }
 }
 
 // ───────────────────────── 總攻擊／總防禦 ─────────────────────────
@@ -168,7 +101,7 @@ export function totalDef(g: GameCtx, p: PlayerId): number {
   const rearGuard = g.state.players[p].charId === '後人';
   for (const c of Z(g, p, 'pursuit')) {
     total += scripts[c.id]?.pursuitDefBonus ?? 0;
-    if (scripts[c.id]?.pursuitDef || (rearGuard && awakened(g, p) && !isFirst(g, p))) total += data(c).def;
+    if (rearGuard && awakened(g, p) && !isFirst(g, p)) total += data(c).def;
   }
   if (rearGuard && !isFirst(g, p)) total += 2;
   total += g.state.flags.vanillaBoost[p] * vanillaCount(g, p);
@@ -179,7 +112,7 @@ export function totalDef(g: GameCtx, p: PlayerId): number {
 
 export function pursuitCount(g: GameCtx, p: PlayerId): number {
   const f = g.state.flags;
-  let n = 1 + f.pursuitPlus[p] - f.pursuitMinus[p];
+  let n = 1 + f.pursuitPlus[p];
   if (g.state.players[p].charId === '先人' && awakened(g, p) && isFirst(g, p)) n += 1;
   // [頂] 戰鬥區只有這張卡時追擊 +N（二刀連擊）
   const combat = Z(g, p, 'combat');
@@ -202,21 +135,8 @@ function* judge(g: GameCtx, p: PlayerId, card: CardInst): Gen<boolean> {
   log(g, `${pname(g, p)} 追擊判定：翻開【${data(card).name}】（連擊值 ${data(card).combo}）`);
   mark(g, `${pname(g, p)} 追擊判定：翻開【${data(card).name}】（連擊值 ${data(card).combo}）`,
     { type: 'flip', player: p, cardId: card.id });
-  const topSc = scripts[topOfZone(g, p)?.id ?? ''];
 
-  if (topSc?.pursuitMode === 'trapSwap' && isTrap(data(card))) {
-    move(g, card, 'exp');
-    const [t] = yield* chooseCards(
-      g, p, '【陷阱變換】選擇經驗區 1 張陷阱作為追擊卡', Z(g, p, 'exp').filter((c) => isTrap(data(c))), 1, 1,
-    );
-    if (t) {
-      yield* becomePursuitCard(g, p, t);
-      return true;
-    }
-    return false;
-  }
-
-  const success = !scripts[card.id]?.pursuitFail && !inRange(g, p, card, false);
+  const success = !scripts[card.id]?.pursuitFail && !inRange(g, p, card);
   if (success) {
     yield* becomePursuitCard(g, p, card);
     return true;
@@ -229,16 +149,7 @@ function* judge(g: GameCtx, p: PlayerId, card: CardInst): Gen<boolean> {
 }
 
 function* pursuitStep(g: GameCtx, p: PlayerId): Gen {
-  const count = pursuitCount(g, p);
   const deck = Z(g, p, 'deck');
-  const topSc = scripts[topOfZone(g, p)?.id ?? ''];
-
-  if (topSc?.pursuitMode === 'precise' && count > 0) {
-    yield* draw(g, p, count);
-    const picks = yield* chooseCards(g, p, `【精準追擊】選擇手牌 ${count} 張作為追擊判定`, Z(g, p, 'hand'), count, count);
-    for (const c of picks) yield* afterJudge(g, p, c);
-    return;
-  }
   // 追擊+N 可能在追擊中途增加（二連矢），所以每次重新計算張數
   for (let i = 0; i < pursuitCount(g, p) && deck.length > 0; i++) {
     yield* aim(g, p);
@@ -289,7 +200,7 @@ function* aim(g: GameCtx, p: PlayerId): Gen {
     }
     if (deck.length < 2) return;
     const top = deck[0];
-    const hit = !scripts[top.id]?.pursuitFail && !inRange(g, p, top, false);
+    const hit = !scripts[top.id]?.pursuitFail && !inRange(g, p, top);
     const keys = yield* ask(g, {
       player: p,
       title: `【瞄準】牌組頂是【${data(top).name}】（連擊值 ${data(top).combo}），以目前範圍會判定${hit ? '成功' : '失敗'}。（剩 ${left} 次）`,
@@ -310,7 +221,7 @@ function* aim(g: GameCtx, p: PlayerId): Gen {
 function* afterJudge(g: GameCtx, p: PlayerId, card: CardInst): Gen {
   const ok = yield* judge(g, p, card);
   if (ok || g.state.flags.rabbitUsed[p]) return;
-  const rabbit = Z(g, p, 'gear').find((c) => c.id === '兔腳項鍊' || c.id === '幸運兔腳');
+  const rabbit = Z(g, p, 'gear').find((c) => c.id === '幸運兔腳');
   const deck = Z(g, p, 'deck');
   if (rabbit && deck.length > 0 && (yield* optionalPay(g, p, rabbit, { cover: 2 }))) {
     g.state.flags.rabbitUsed[p] = true;
@@ -322,18 +233,6 @@ function* afterJudge(g: GameCtx, p: PlayerId, card: CardInst): Gen {
 export function* pursuitPhase(g: GameCtx): Gen {
   g.state.phase = '追擊';
   mark(g, '追擊階段：雙方翻開牌組頂的牌做追擊判定', { type: 'phase' });
-  // 追擊階段開始時：誘餌圖騰
-  for (const p of order(g)) {
-    const totem = Z(g, p, 'exp').find((c) => !c.covered && c.id === '誘餌圖騰');
-    if (totem && canPay(g, p, { cover: 3 }, totem)) {
-      const ok = yield* optionalPay(g, p, totem, { cover: 3 }, totem);
-      if (ok) {
-        discard(g, totem);
-        g.state.flags.pursuitMinus[other(p)]++;
-        log(g, `【誘餌圖騰】${pname(g, other(p))} 此回合追擊-1`);
-      }
-    }
-  }
   for (const p of order(g)) yield* pursuitStep(g, p);
   checkWin(g);
 }
@@ -362,16 +261,6 @@ export function* damageStep(g: GameCtx): Gen {
     { type: 'damage', dmg },
   );
   yield* markIfLogged(g, function* (): Gen {
-    for (const p of order(g)) {
-      const top = topOfZone(g, p);
-      if (!top) continue;
-      const sc = scripts[top.id];
-      if (sc?.afterDamage) yield* sc.afterDamage(g, p, top, { dealt: dmg[other(p)], taken: dmg[p] });
-      if (sc?.keepOrder && dmg[other(p)] > dmg[p]) {
-        g.state.flags.noSwap = true;
-        log(g, `【${data(top).name}】此回合結束時不交換先後攻`);
-      }
-    }
     // 經驗區中正面的 [經] 卡：傷害計算後的反應（復仇之嚎）
     for (const p of order(g)) {
       for (const card of [...Z(g, p, 'exp')]) {
@@ -410,7 +299,7 @@ export function* combatPhase(g: GameCtx): Gen {
   const [first, second] = order(g);
 
   s.phase = '起手';
-  const opening = playables(g, first, true);
+  const opening = playables(g, first);
   if (opening.length === 0) {
     const hand = Z(g, first, 'hand').map((c) => data(c).name).join('、') || '（無）';
     log(g, `${pname(g, first)} 沒有可出的招式，展示手牌：${hand}`);
@@ -431,7 +320,7 @@ export function* combatPhase(g: GameCtx): Gen {
       cur = other(cur);
       continue;
     }
-    const options = playables(g, cur, false);
+    const options = playables(g, cur);
     let playedCard: CardInst | undefined;
     if (options.length > 0) {
       const keys = yield* ask(g, {

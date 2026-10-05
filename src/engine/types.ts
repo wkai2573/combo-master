@@ -35,7 +35,6 @@ export interface TurnFlags {
   played: [number, number];
   opened: boolean;
   pursuitPlus: [number, number];
-  pursuitMinus: [number, number];
   pursuitSuccess: [number, number];
   rabbitUsed: [boolean, boolean];
   /** 遊俠「瞄準」本回合已使用的次數 */
@@ -50,11 +49,9 @@ export interface TurnFlags {
   vanillaBoost: [number, number];
   /** 塗毒：歸還時要放出 [Ex卡-中毒] 的出招方 */
   poisonQ: PlayerId[];
-  burstDraw3: [boolean, boolean];
-  alchemy: [boolean, boolean];
-  sniper: [boolean, boolean];
+  /** Explosion!：跳過我方這回合之後的抽牌階段 */
+  skipDraw: [boolean, boolean];
   damageTaken: [number, number];
-  noSwap: boolean;
 }
 
 export type Phase =

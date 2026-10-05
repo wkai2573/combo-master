@@ -1,31 +1,20 @@
-import { isTrap } from '../data/cards';
 import {
   ask, awakened, canPay, chooseCards, confirm, data, directHit, discard, draw, hooks, isFirst, Z, log, move,
-  optionalPay, order, pay, pname, recover, toExp, type Gen, type GameCtx,
+  optionalPay, order, pay, pname, recover, type Gen, type GameCtx,
 } from './ops';
 import { other, type CardInst, type PlayerId } from './types';
 
 /**
  * 每張卡的效果。引擎在對應時機呼叫這些 hook。
- * 卡片顯示的效果文字來自 xlsx，這裡只負責行為。
+ * 卡片顯示的效果文字來自卡表網頁（cardTable.json），這裡只負責行為。
  */
 export interface CardScript {
   /** [頂] 作為最上方招式時的攻擊力修正 */
   atkMod?: number;
   /** [頂] 作為最上方招式時的防禦力修正 */
   defMod?: number;
-  /** 不能在起手步驟打出 */
-  noOpen?: boolean;
-  /** [追] 作為追擊卡時會計算防禦力 */
-  pursuitDef?: boolean;
   /** [追] 此卡追擊判定失敗 */
   pursuitFail?: boolean;
-  /** [頂] 我方出招時，此卡連擊值可視為這些值 */
-  comboAlt?: number[];
-  /** [頂] 改變追擊判定的方式 */
-  pursuitMode?: 'precise' | 'trapSwap';
-  /** [頂] 傷害較高時回合結束不交換先後攻 */
-  keepOrder?: boolean;
   /** [起] 作為起手出招時 */
   onOpen?: (g: GameCtx, p: PlayerId, card: CardInst) => Gen;
   /** [發] 打出時 */
@@ -44,19 +33,9 @@ export interface CardScript {
   soloPursuitPlus?: number;
   /** [經] 以正面存在經驗區時，傷害計算後的反應 */
   afterDamageExp?: (g: GameCtx, p: PlayerId, card: CardInst, info: { dealt: number; taken: number }) => Gen;
-  /** [頂] 傷害計算後 */
-  afterDamage?: (g: GameCtx, p: PlayerId, card: CardInst, info: { dealt: number; taken: number }) => Gen;
 }
 
-const traps = (cards: CardInst[]) => cards.filter((c) => isTrap(data(c)));
-
 export const scripts: Record<string, CardScript> = {
-  吸血打擊: {
-    *afterDamage(g, p, _card, { dealt }) {
-      const x = Math.floor(dealt / 3);
-      if (x > 0) recover(g, p, x);
-    },
-  },
   // 戒備打擊（劍士）：[頂] 我方總防禦 +2
   戒備打擊: { defMod: 2 },
   // 魅影射擊（弓箭手）：[追] 作為追擊卡時防禦力也計入總防禦
@@ -74,10 +53,10 @@ export const scripts: Record<string, CardScript> = {
       recover(g, p, 3);
     },
   },
-  // 高價賣出（商人）：[經] 此卡被覆蓋時，抽 2
+  // 高價賣出（商人）：[經] 此卡被覆蓋時，抽 1
   高價賣出: {
     *onCovered(g, p) {
-      yield* draw(g, p, 2);
+      yield* draw(g, p, 1);
     },
   },
   // 地雷陷阱（弓箭手）：[追] 我方總攻擊 +3
@@ -131,10 +110,10 @@ export const scripts: Record<string, CardScript> = {
   },
   // 盾擊（劍士）：[頂] 我方總攻擊 +X。X = 我方戰鬥區防禦力 ≧ 4 的卡片張數
   盾擊: { topAtkBonus: (g, p) => Z(g, p, 'combat').filter((c) => data(c).def >= 4).length },
-  // 即時停損（商人）：[發_蓋2] 此卡打出後雙方立即收招
+  // 即時停損（商人）：[發_蓋4] 此卡打出後雙方立即收招
   即時停損: {
     *onPlay(g, p, card) {
-      if (!(yield* optionalPay(g, p, card, { cover: 2 }))) return;
+      if (!(yield* optionalPay(g, p, card, { cover: 4 }))) return;
       g.state.passed = [true, true];
       log(g, '【即時停損】雙方立即收招');
     },
@@ -188,64 +167,16 @@ export const scripts: Record<string, CardScript> = {
       log(g, `【電弧】${pname(g, p)} 抽 ${x}，並將 ${put.length} 張手牌放到牌組底`);
     },
   },
-  快速治療: {
-    *onPlay(g, p, card) {
-      if (yield* optionalPay(g, p, card, { cover: 3 })) recover(g, p, 3);
-    },
-  },
-  布局: {
-    *onPlay(g, p, card) {
-      if (!(yield* optionalPay(g, p, card, { cover: 2 }))) return;
-      const [d] = yield* chooseCards(g, p, '【布局】捨棄 1 張手牌', Z(g, p, 'hand'), 1, 1);
-      if (d) discard(g, d);
-      const [back] = yield* chooseCards(g, p, '【布局】選擇棄牌區 1 張卡放到牌組頂', Z(g, p, 'discard'), 1, 1);
-      if (back) {
-        move(g, back, 'deck', 'top');
-        log(g, `${pname(g, p)} 將【${data(back).name}】放到牌組頂`);
-      }
-    },
-  },
-  精準追擊: { pursuitMode: 'precise' },
   // 力量爆破（法師）：[頂] 我方總攻擊 -3；[追] 此卡追擊判定失敗
   力量爆破: { atkMod: -3, pursuitFail: true },
-  '3連擊': { comboAlt: [6, 8] },
-  '777': {
-    noOpen: true,
-    *onPlay(g, p, card) {
-      const a = Z(g, p, 'deck')[0];
-      const b = Z(g, p === 0 ? 1 : 0, 'deck')[0];
-      log(g, `【777】展示牌頂：${a ? data(a).name : '（無）'} / ${b ? data(b).name : '（無）'}`);
-      if (!a || !b || data(a).combo !== data(b).combo) {
-        log(g, '【777】連擊值不相同，捨棄此卡');
-        discard(g, card);
-      }
-    },
-  },
-  必殺一擊: {
-    *onPlay(g, p, card) {
-      if (!awakened(g, p)) return;
-      if (yield* optionalPay(g, p, card, { rage: 10 })) {
-        g.state.flags.pursuitPlus[p]++;
-        log(g, '【必殺一擊】此回合追擊+1');
-      }
-    },
-  },
-  降級詛咒: {
-    *onPlay(g, p, card) {
-      if (!(yield* optionalPay(g, p, card, { cover: 2, rage: 5 }))) return;
-      for (const q of order(g)) {
-        const [c] = yield* chooseCards(g, q, '【降級詛咒】捨棄 1 張經驗', Z(g, q, 'exp'), 1, 1);
-        if (c) {
-          discard(g, c);
-          log(g, `${pname(g, q)} 捨棄經驗【${data(c).name}】`);
-        }
-      }
-    },
-  },
-  煉金印記: {
-    *onOpen(g, p) {
-      g.state.flags.alchemy[p] = true;
-      log(g, '【煉金印記】此回合每打出 1 張招式時回復 1');
+  // Explosion!（法師）：[起_蓋8] 對方直擊 5，然後我方收招，並跳過我方下個抽牌階段
+  'Explosion!': {
+    *onOpen(g, p, card) {
+      if (!(yield* optionalPay(g, p, card, { cover: 8 }))) return;
+      directHit(g, other(p), 5);
+      g.state.passed[p] = true;
+      g.state.flags.skipDraw[p] = true;
+      log(g, `【Explosion!】${pname(g, p)} 收招，並跳過這回合的抽牌階段`);
     },
   },
   // 狙擊印記（弓箭手）：[起] 此回合我方的瞄準升級 1
@@ -255,49 +186,11 @@ export const scripts: Record<string, CardScript> = {
       log(g, '【狙擊印記】此回合瞄準升級 1');
     },
   },
-  先祖圖騰: { defMod: 2 },
-  陷阱投擲: {
-    *onPlay(g, p) {
-      const [c] = yield* chooseCards(g, p, '【陷阱投擲】選擇手中 1 張陷阱放置於經驗區', traps(Z(g, p, 'hand')), 1, 1);
-      if (c) {
-        toExp(g, c);
-        log(g, `${pname(g, p)} 將【${data(c).name}】放置於經驗區`);
-      }
-    },
-  },
-  陷阱回收: {
-    *onPlay(g, p, card) {
-      const pool = traps(Z(g, p, 'discard'));
-      if (pool.length === 0) return;
-      if (!(yield* optionalPay(g, p, card, { rage: 4 }))) return;
-      const [c] = yield* chooseCards(g, p, '【陷阱回收】選擇棄牌區 1 張陷阱加入手中', pool, 1, 1);
-      if (c) move(g, c, 'hand');
-    },
-  },
-  驚嚇陷阱: {
-    *onPursuitCard(g, p) {
-      const [e] = yield* chooseCards(g, p, '【驚嚇陷阱】選擇經驗區 1 張卡加入手中', Z(g, p, 'exp'), 1, 1);
-      if (e) move(g, e, 'hand');
-      const [t] = yield* chooseCards(g, p, '【驚嚇陷阱】選擇手中 1 張陷阱放置於經驗區', traps(Z(g, p, 'hand')), 1, 1);
-      if (t) toExp(g, t);
-    },
-  },
-  陷阱變換: { pursuitMode: 'trapSwap' },
-  陷阱窟: {
-    *onOpen(g, p, card) {
-      const targets = traps(Z(g, p, 'exp')).filter((c) => data(c).atk <= 2);
-      if (targets.length === 0) return;
-      if (!(yield* optionalPay(g, p, card, { rage: 10 }))) return;
-      for (const c of targets) move(g, c, 'combat', 'bottom');
-      log(g, `【陷阱窟】${targets.length} 張陷阱置於戰鬥區底`);
-    },
-  },
-  不變應萬變: { keepOrder: true },
 };
 
 /** 蓋 X 張經驗（付費用）後處理「被覆蓋時」效果 */
-function* payCover(g: GameCtx, p: PlayerId, x: number, exclude?: CardInst): Gen {
-  pay(g, p, { cover: x }, exclude);
+function* payCover(g: GameCtx, p: PlayerId, x: number): Gen {
+  pay(g, p, { cover: x });
   yield* resolveCovered(g);
 }
 
@@ -316,8 +209,8 @@ function* chooseX(g: GameCtx, p: PlayerId, card: CardInst, max: number, label: s
 }
 
 /**
- * 剛被覆蓋的經驗卡的「被覆蓋時」效果（低價買進：回復 3、高價賣出：抽 2）。
- * 由 ops.optionalPay（蓋X）、黑暗詛咒與本檔的蓋 X 效果在覆蓋之後呼叫。
+ * 剛被覆蓋的經驗卡的「被覆蓋時」效果（低價買進：回復 3、高價賣出：抽 1）。
+ * 由 ops.optionalPay（蓋X）與本檔的蓋 X 效果在覆蓋之後呼叫。
  */
 export function* resolveCovered(g: GameCtx): Gen {
   const q = g.state.flags.coveredQ;
@@ -349,10 +242,12 @@ export function* turnStartEffects(g: GameCtx): Gen {
       if (yield* optionalPay(g, p, photo, { cover: 1, rage: 3 })) recover(g, p, 1);
     }
     for (const card of Z(g, p, 'exp').filter((c) => c.id === '凡骨的意志' && !c.covered)) {
-      if (card.covered || !canPay(g, p, { cover: 1 }, card)) continue;
-      yield* payCover(g, p, 1, card);
+      // 前面的費用（例如家族相片）已經把它蓋住，就無效
+      if (card.covered || !canPay(g, p, { cover: 1 })) continue;
+      // 蓋的是最前面的正面卡，不分是不是它自己；蓋到自己時效果仍照付費後發動，但之後它被蓋住就無效
+      yield* payCover(g, p, 1);
       f.vanillaBoost[p]++;
-      log(g, `【凡骨的意志】${pname(g, p)} 強制蓋 1，此回合總攻擊與總防禦各加上戰鬥區白板卡的數量`);
+      log(g, `【凡骨的意志】${pname(g, p)} 強制蓋 1${card.covered ? '（蓋到自己，之後無效）' : ''}，此回合總攻擊與總防禦各加上戰鬥區白板卡的數量`);
     }
     if (!isFirst(g, p)) {
       const poisons = Z(g, p, 'exp').filter((x) => x.id === 'Ex卡-中毒' && !x.covered).length;

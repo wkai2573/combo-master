@@ -2,8 +2,8 @@ import { getCharacter } from '../data/cards';
 import { combatPhase } from './combat';
 import { merchantAfterBurst, turnStartEffects } from './scripts';
 import {
-  ask, awakened, canPay, cardOpt, chooseCards, data, draw, drawPlain, GameOver, log, mark, move, newCard, optionalPay,
-  markIfLogged, order, pname, recover, toExp, Z, type Gen,
+  ask, awakened, cardOpt, data, draw, drawPlain, GameOver, log, mark, move, newCard,
+  markIfLogged, optionalPay, order, pname, toExp, Z, type Gen,
 } from './ops';
 import { Rng } from './rng';
 import { checkWin } from './win';
@@ -17,9 +17,9 @@ const ZONES: ZoneName[] = ['deck', 'hand', 'discard', 'rage', 'exp', 'combat', '
 
 function emptyFlags(): TurnFlags {
   return {
-    played: [0, 0], opened: false, pursuitPlus: [0, 0], pursuitMinus: [0, 0], pursuitSuccess: [0, 0],
-    rabbitUsed: [false, false], aimUsed: [0, 0], atkBonus: [0, 0], coveredQ: [], aimUp: [0, 0], vanillaBoost: [0, 0], poisonQ: [], burstDraw3: [false, false], alchemy: [false, false], sniper: [false, false],
-    damageTaken: [0, 0], noSwap: false,
+    played: [0, 0], opened: false, pursuitPlus: [0, 0], pursuitSuccess: [0, 0],
+    rabbitUsed: [false, false], aimUsed: [0, 0], atkBonus: [0, 0], coveredQ: [], aimUp: [0, 0], vanillaBoost: [0, 0], poisonQ: [],
+    skipDraw: [false, false], damageTaken: [0, 0],
   };
 }
 
@@ -127,12 +127,8 @@ export class Game {
       yield* buffPhase(g);
 
       s.phase = '回合結束';
-      if (s.flags.noSwap) {
-        log(g, '先攻與後攻不交換');
-      } else {
-        s.first = other(s.first);
-      }
-      mark(g, s.flags.noSwap ? '回合結束：先攻與後攻不交換' : '回合結束：交換先攻與後攻', { type: 'phase' });
+      s.first = other(s.first);
+      mark(g, '回合結束：交換先攻與後攻', { type: 'phase' });
       checkWin(g);
     }
   }
@@ -157,26 +153,26 @@ export class Game {
 
 function* drawPhase(g: Game): Gen {
   g.state.phase = '抽牌';
+  const skipped: PlayerId[] = [];
   for (const p of order(g)) {
+    // Explosion!：跳過抽牌階段（連法師覺醒的額外抽牌一起跳過）
+    if (g.state.flags.skipDraw[p]) {
+      skipped.push(p);
+      log(g, `【Explosion!】${pname(g, p)} 跳過抽牌階段`);
+      continue;
+    }
     yield* draw(g, p, 1);
     if (g.state.players[p].charId === '法師' && awakened(g, p)) {
       yield* draw(g, p, 1);
       log(g, `【法師】${pname(g, p)} 抽牌階段額外抽 1`);
     }
   }
-  mark(g, '抽牌階段：雙方各抽 1 張', { type: 'draw' });
+  mark(g, skipped.length ? `抽牌階段：${skipped.map((p) => pname(g, p)).join('、')} 跳過` : '抽牌階段：雙方各抽 1 張', { type: 'draw' });
   checkWin(g);
 }
 
 function* burstPhase(g: Game): Gen {
   g.state.phase = '爆發';
-  // 爆發階段開始時：金手鐲
-  for (const p of order(g)) {
-    const bracelet = Z(g, p, 'gear').find((c) => c.id === '金手鐲');
-    if (bracelet && canPay(g, p, { cover: 2 }) && (yield* optionalPay(g, p, bracelet, { cover: 2 }))) {
-      g.state.flags.burstDraw3[p] = true;
-    }
-  }
   for (const p of order(g)) {
     const hand = Z(g, p, 'hand');
     if (hand.length === 0) continue;
@@ -188,10 +184,11 @@ function* burstPhase(g: Game): Gen {
     const card = hand.find((c) => `c${c.uid}` === keys[0])!;
     toExp(g, card);
     log(g, `${pname(g, p)} 爆發：將【${data(card).name}】放入經驗區`);
-    const n = g.state.flags.burstDraw3[p] ? 3 : 2;
-    yield* draw(g, p, n);
-    mark(g, `${pname(g, p)} 爆發：1 張手牌放入經驗區，抽 ${n}`, { type: 'info' });
-    if (Z(g, p, 'gear').some((c) => c.id === '招財貓')) {
+    yield* draw(g, p, 2);
+    mark(g, `${pname(g, p)} 爆發：1 張手牌放入經驗區，抽 2`, { type: 'info' });
+    // 招財貓：[蓋2] 爆發時，額外抽 1
+    const cat = Z(g, p, 'gear').find((c) => c.id === '招財貓');
+    if (cat && (yield* optionalPay(g, p, cat, { cover: 2 }))) {
       yield* draw(g, p, 1);
       log(g, `【招財貓】${pname(g, p)} 爆發時額外抽 1`);
       mark(g, g.state.log[g.state.log.length - 1], { type: 'info' });
@@ -204,20 +201,10 @@ function* burstPhase(g: Game): Gen {
 function* buffPhase(g: Game): Gen {
   g.state.phase = '增益';
   const logBefore = g.state.log.length;
-  // 增益階段開始時：月光劍、增益指示物與效果
+  // 增益階段開始時：增益的持續時間指示物（目前沒有增益卡有效果，只負責到期放入經驗區）
   for (const p of order(g)) {
-    const sword = Z(g, p, 'gear').find((c) => c.id === '月光劍');
-    if (sword) {
-      const covered = Z(g, p, 'exp').filter((c) => c.covered);
-      const [c] = yield* chooseCards(g, p, '【月光劍】打開 1 張覆蓋的經驗卡', covered, 1, 1);
-      if (c) {
-        c.covered = false;
-        log(g, `【月光劍】${pname(g, p)} 打開經驗【${data(c).name}】`);
-      }
-    }
     for (const b of [...Z(g, p, 'buff')]) {
       b.counters++;
-      if (b.id === '慢速治癒') recover(g, p, 2);
       if (b.counters >= (data(b).duration ?? Infinity)) {
         log(g, `增益【${data(b).name}】持續時間結束，放入經驗區`);
         toExp(g, b);
