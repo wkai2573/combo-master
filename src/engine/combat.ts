@@ -424,7 +424,8 @@ export function* combatPhase(g: GameCtx): Gen {
   s.phase = '反擊';
   let cur: PlayerId = second;
   let firstAction = true;
-  let straightToDamage = false;
+  // 起手時雙方就被迫收招（即時停損）：沒有進入反擊步驟，不做追擊判定，直接傷害計算
+  let straightToDamage = s.passed[0] && s.passed[1];
   for (let guard = 0; guard < 200 && !(s.passed[0] && s.passed[1]); guard++) {
     if (s.passed[cur]) {
       cur = other(cur);

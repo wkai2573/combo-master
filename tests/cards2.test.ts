@@ -185,7 +185,7 @@ describe('新卡（第二批）', () => {
     expect(totalAtk(g, 0)).toBe(atkOf('盾擊') + atkOf('黑桃1'));
   });
 
-  it('即時停損：[發_蓋2] 打出後雙方立即收招', () => {
+  it('即時停損：[發_蓋2] 起手打出後雙方立即收招，沒有反擊步驟也不做追擊判定', () => {
     const g = scenario({
       chars: ['商人', '勇者'],
       p0: { hand: ['即時停損', '黑桃2'], exp: ['黑桃3', '黑桃4'] },
@@ -196,6 +196,8 @@ describe('新卡（第二批）', () => {
     const log = g.state.log.join('\n');
     expect(log).toContain('雙方立即收招');
     expect(log).not.toContain('玩家B（勇者） 出招');
+    expect(log).not.toContain('追擊判定');
+    expect(log).toContain('傷害計算');
   });
 
   it('二連矢：[追] 追擊 +1（追擊中途多翻 1 張）', () => {

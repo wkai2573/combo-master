@@ -17,9 +17,9 @@ const table = tableJson as {
  * xlsx 職業欄為「共用」的卡，若在 classMap 有提案歸屬則採用；
  * 再套上卡表網頁同步來的數值（cardTable.json，由 npm run table 產生），最後接上卡表新增的卡。
  */
-const addedNames = new Set(table.added.map((c) => c.name));
+const addedIds = new Set(table.added.map((c) => c.id));
 export const ALL_CARDS: CardData[] = [
-  ...(cardsJson as CardData[]).filter((c) => !addedNames.has(c.name)).map((c) => ({
+  ...(cardsJson as CardData[]).filter((c) => !addedIds.has(c.id)).map((c) => ({
     ...c,
     cls: c.cls === '共用' && classMap[c.id] ? classMap[c.id] : c.cls,
     ...table.overrides[c.id],

@@ -75,9 +75,9 @@ export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursui
       <div className="hd">
         {isMove ? (
           <>
-            <span className="a">攻{c.atk}</span>
+            <span className="a" title="攻擊力">{c.atk}</span>
             <span className="c" title="連擊值">{c.combo}</span>
-            <span className="d">守{c.def}</span>
+            <span className="d" title="防禦力">{c.def}</span>
           </>
         ) : (
           <>

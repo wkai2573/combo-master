@@ -3,7 +3,8 @@
  *   npm run table -- <資料夾>
  * 資料夾放 Claude 用 ArtifactData 讀出的 cards/、chars/ 兩個子資料夾（每張卡一個 JSON）。
  * 輸出 src/data/cardTable.json：
- *   overrides  既有卡（xlsx）被改過的數值（攻、守、連擊、經驗需求、持續回合）
+ *   overrides  既有卡（xlsx）被改過的數值（攻、守、連擊、經驗需求、持續回合）、卡名、類型與部位
+ *              以 id（改名前的卡名）為鍵；改名只改畫面上的卡名，id 不變
  *   chars      角色被改過的生命值、覺醒經驗
  *   added      表上新增的卡（卡表上標「新」的卡；若與 xlsx 的卡同名，就整張取代那張卡）
  *   keywords   關鍵字區塊（名稱、分類、說明）；卡上用【名稱】或 [標籤] 引用，遊戲裡滑過就顯示說明
@@ -37,19 +38,31 @@ const added: CardData[] = [];
 const notes: string[] = [];
 
 for (const d of readDocs('cards').sort((a, b) => a.order - b.order)) {
-  const base = d.custom ? undefined : byName.get(d.name);
+  // 卡名可以在卡表上改。遊戲內部的 id（程式、啟用清單、牌組都靠它）固定用改名前的名字（base.name），畫面顯示 d.name
+  const id: string = d.base?.name ?? d.name;
+  const base = d.custom ? undefined : byName.get(id);
+  if (id !== d.name) notes.push(`卡名已改：【${id}】顯示為【${d.name}】（內部 id 不變）`);
   if (base) {
-    const o: Record<string, number> = {};
+    const o: Record<string, unknown> = {};
     for (const k of NUM_KEYS) if (d[k] !== undefined && d[k] !== (base as any)[k]) o[k] = d[k];
-    if (Object.keys(o).length) overrides[d.name] = o;
+    if (d.name !== base.name) o.name = d.name;
+    if (d.kind !== undefined && d.kind !== base.kind) {
+      o.kind = d.kind;
+      if (d.kind !== 'move') Object.assign(o, { atk: 0, def: 0, combo: 0 });
+      notes.push(`類型已改：${id}（${base.kind} → ${d.kind}），確認引擎與效果是否要跟著調整`);
+    }
+    if (d.slot && d.slot !== base.slot) o.slot = d.slot;
+    if (Object.keys(o).length) overrides[id] = o;
     if (d.text !== base.text) notes.push(`文字不同（未套用，待確認用語）：${d.name}`);
   } else {
+    // 非招式（裝備、增益）沒有攻、守、連擊；類型從招式改過來時，舊的數字不帶進遊戲
+    const mv = d.kind === 'move';
     const c: CardData = {
-      id: d.name, name: d.name, kind: d.kind, cls: d.cls, traits: d.traits ?? [],
-      atk: d.atk ?? 0, def: d.def ?? 0, combo: d.combo ?? 0, expReq: d.expReq ?? 0, text: d.text ?? '',
+      id, name: d.name, kind: d.kind, cls: d.cls, traits: d.traits ?? [],
+      atk: mv ? d.atk ?? 0 : 0, def: mv ? d.def ?? 0 : 0, combo: mv ? d.combo ?? 0 : 0, expReq: d.expReq ?? 0, text: d.text ?? '',
     };
-    if (d.slot) c.slot = d.slot;
-    if (d.duration !== undefined) c.duration = d.duration;
+    if (d.kind === 'equip' && d.slot) c.slot = d.slot;
+    if (d.kind === 'buff' && d.duration != null) c.duration = d.duration;
     added.push(c);
     if (c.text && !(c.id in implemented)) notes.push(`新卡有效果文字，需先確認用語並實作效果：${c.name}`);
   }
