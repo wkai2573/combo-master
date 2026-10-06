@@ -18,7 +18,7 @@ const ZONES: ZoneName[] = ['deck', 'hand', 'discard', 'rage', 'exp', 'combat', '
 function emptyFlags(): TurnFlags {
   return {
     played: [0, 0], opened: false, pursuitPlus: [0, 0], pursuitSuccess: [0, 0],
-    rabbitUsed: [false, false], aimUsed: [0, 0], atkBonus: [0, 0], coveredQ: [], aimUp: [0, 0], vanillaBoost: [0, 0], poisonQ: [],
+    rabbitUsed: [false, false], aimUsed: [0, 0], atkBonus: [0, 0], aimUp: [0, 0], vanillaBoost: [0, 0], poisonQ: [],
     skipDraw: [false, false], damageTaken: [0, 0],
   };
 }

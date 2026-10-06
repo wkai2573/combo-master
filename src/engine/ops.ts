@@ -167,35 +167,49 @@ export function canPay(g: GameCtx, p: PlayerId, cost: Cost): boolean {
   return true;
 }
 
-export function pay(g: GameCtx, p: PlayerId, cost: Cost): void {
-  if (cost.cover) cover(g, p, cost.cover);
-  if (cost.rage) discardRage(g, p, cost.rage);
-}
+/** 經驗卡被覆蓋時的連鎖反應效果（低價買進、高價賣出） */
+export const COVER_REACTIONS: Record<string, (g: GameCtx, p: PlayerId, card: CardInst) => Gen> = {
+  低價買進: function* (g, p) {
+    recover(g, p, 3);
+  },
+  高價賣出: function* (g, p) {
+    yield* draw(g, p, 1);
+  },
+};
 
-/** 由 scripts.ts 掛上：處理剛被覆蓋的經驗卡的「被覆蓋時」效果（避免 ops 與 scripts 互相引用） */
-export const hooks: { onCovered?: (g: GameCtx) => Gen } = {};
+/** 扣除費用並自動觸發被覆蓋經驗卡的連鎖反應 */
+export function* pay(g: GameCtx, p: PlayerId, cost: Cost): Gen {
+  const newlyCovered: CardInst[] = [];
+  if (cost.cover) newlyCovered.push(...cover(g, p, cost.cover));
+  if (cost.rage) discardRage(g, p, cost.rage);
+  for (const card of newlyCovered) {
+    const reaction = COVER_REACTIONS[card.id];
+    if (reaction) {
+      log(g, `【${data(card).name}】被覆蓋`);
+      yield* reaction(g, p, card);
+    }
+  }
+}
 
 /** 可選的費用發動：付得起才詢問，同意就扣費並回傳 true */
 export function* optionalPay(g: GameCtx, p: PlayerId, card: CardInst, cost: Cost): Gen<boolean> {
   if (!canPay(g, p, cost)) return false;
   const ok = yield* confirm(g, p, `是否發動【${data(card).name}】？（${costText(cost)}）`);
   if (!ok) return false;
-  pay(g, p, cost);
   log(g, `${pname(g, p)} 發動【${data(card).name}】（${costText(cost)}）`);
-  if (hooks.onCovered) yield* hooks.onCovered(g);
+  yield* pay(g, p, cost);
   return true;
 }
 
 // ───────────────────────── 區域操作 ─────────────────────────
 
-export function cover(g: GameCtx, p: PlayerId, n: number): number {
-  let done = 0;
+export function cover(g: GameCtx, p: PlayerId, n: number): CardInst[] {
+  const done: CardInst[] = [];
   for (const c of Z(g, p, 'exp')) {
-    if (done >= n) break;
+    if (done.length >= n) break;
     if (!c.covered) {
       c.covered = true;
-      g.state.flags.coveredQ.push(c.uid);
-      done++;
+      done.push(c);
     }
   }
   return done;

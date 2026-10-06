@@ -1,5 +1,5 @@
 import {
-  ask, awakened, canPay, chooseCards, confirm, data, directHit, discard, draw, hooks, isFirst, Z, log, move,
+  ask, awakened, canPay, chooseCards, confirm, COVER_REACTIONS, data, directHit, discard, draw, isFirst, Z, log, move,
   optionalPay, order, pay, pname, recover, type Gen, type GameCtx,
 } from './ops';
 import { other, type CardInst, type PlayerId } from './types';
@@ -49,15 +49,11 @@ export const scripts: Record<string, CardScript> = {
   },
   // 低價買進（商人）：[經] 此卡被覆蓋時，回復 3
   低價買進: {
-    *onCovered(g, p) {
-      recover(g, p, 3);
-    },
+    onCovered: COVER_REACTIONS['低價買進'],
   },
   // 高價賣出（商人）：[經] 此卡被覆蓋時，抽 1
   高價賣出: {
-    *onCovered(g, p) {
-      yield* draw(g, p, 1);
-    },
+    onCovered: COVER_REACTIONS['高價賣出'],
   },
   // 地雷陷阱（弓箭手）：[追] 我方總攻擊 +3
   地雷陷阱: { pursuitAtkBonus: 3 },
@@ -133,7 +129,6 @@ export const scripts: Record<string, CardScript> = {
       const targets = [...Z(g, other(p), 'gear'), ...Z(g, other(p), 'buff')];
       if (targets.length === 0) return;
       if (!(yield* optionalPay(g, p, card, { cover: 2 }))) return;
-      yield* resolveCovered(g);
       const [t] = yield* chooseCards(g, p, '【卸除鎧甲】選擇對方 1 張裝備或增益卡送入棄牌區', targets, 1, 1);
       if (t) {
         discard(g, t);
@@ -188,10 +183,9 @@ export const scripts: Record<string, CardScript> = {
   },
 };
 
-/** 蓋 X 張經驗（付費用）後處理「被覆蓋時」效果 */
+/** 蓋 X 張經驗（付費用）並處理連鎖效果 */
 function* payCover(g: GameCtx, p: PlayerId, x: number): Gen {
-  pay(g, p, { cover: x });
-  yield* resolveCovered(g);
+  yield* pay(g, p, { cover: x });
 }
 
 /** 可變的 X（[蓋X]）：玩家選擇要蓋幾張（0 ＝ 不發動），最多 max 張且受正面經驗張數限制 */
@@ -207,27 +201,6 @@ function* chooseX(g: GameCtx, p: PlayerId, card: CardInst, max: number, label: s
   });
   return Number(k);
 }
-
-/**
- * 剛被覆蓋的經驗卡的「被覆蓋時」效果（低價買進：回復 3、高價賣出：抽 1）。
- * 由 ops.optionalPay（蓋X）與本檔的蓋 X 效果在覆蓋之後呼叫。
- */
-export function* resolveCovered(g: GameCtx): Gen {
-  const q = g.state.flags.coveredQ;
-  while (q.length > 0) {
-    const uid = q.shift()!;
-    for (const p of [0, 1] as PlayerId[]) {
-      const card = Z(g, p, 'exp').find((c) => c.uid === uid);
-      if (!card || !card.covered) continue;
-      const sc = scripts[card.id];
-      if (sc?.onCovered) {
-        log(g, `【${data(card).name}】被覆蓋`);
-        yield* sc.onCovered(g, p, card);
-      }
-    }
-  }
-}
-hooks.onCovered = resolveCovered;
 
 /**
  * 回合開始時的效果（先攻方先處理）：

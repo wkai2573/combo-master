@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { aimLimit, pursuitCount, returnStep, totalAtk, totalDef } from '../src/engine/combat';
 import type { Game } from '../src/engine/game';
-import { discard, optionalPay, Z, type Gen } from '../src/engine/ops';
-import { merchantAfterBurst, onPassEffects, resolveCovered, scripts, turnStartEffects } from '../src/engine/scripts';
+import { discard, optionalPay, pay, Z, type Gen } from '../src/engine/ops';
+import { merchantAfterBurst, onPassEffects, scripts, turnStartEffects } from '../src/engine/scripts';
 import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
 
 const filler = Array(20).fill('黑桃2') as string[];
@@ -382,8 +382,10 @@ describe('新卡（第二批）', () => {
     expect(g.state.flags.pursuitSuccess[1]).toBe(1);
   });
 
-  it('resolveCovered 沒有排隊的卡時不做事', () => {
-    const g = scenario();
-    expect(resolveCovered(g).next().done).toBe(true);
+  it('pay 蓋到低價買進與高價賣出時，自動觸發被覆蓋反應', () => {
+    const g = scenario({ p0: { exp: ['低價買進', '高價賣出'], rage: Array(5).fill('黑桃1'), deck: ['黑桃4', ...filler] } });
+    drive(pay(g, 0, { cover: 2 }), []);
+    expect(Z(g, 0, 'rage')).toHaveLength(2); // 低價買進：回復 3
+    expect(Z(g, 0, 'hand')).toHaveLength(1); // 高價賣出：抽 1
   });
 });

@@ -41,8 +41,6 @@ export interface TurnFlags {
   aimUsed: [number, number];
   /** 本回合卡片給的總攻擊加成（伏擊） */
   atkBonus: [number, number];
-  /** 剛被覆蓋、等著處理「被覆蓋時」效果的經驗卡 uid（低價買進） */
-  coveredQ: number[];
   /** 本回合瞄準的升級次數（狙擊印記） */
   aimUp: [number, number];
   /** 凡骨的意志：本回合生效次數（總攻擊／總防禦各 + 戰鬥區白板卡數量 × 次數） */
