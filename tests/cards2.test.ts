@@ -415,12 +415,25 @@ describe('新卡（第二批）', () => {
 
   it('幸運兔腳：[蓋2] 追擊判定失敗時額外翻 1 張', () => {
     const g = scenario({
-      p0: { hand: ['黑桃1'] },
-      p1: { hand: ['黑桃9'], gear: ['幸運兔腳'], exp: ['黑桃2', '黑桃3'], deck: ['黑桃5', '瞄準器', ...filler] },
+      p0: { hand: ['黑桃4'] },
+      p1: { hand: ['黑桃6'], gear: ['幸運兔腳'], exp: ['黑桃2', '黑桃3'], deck: ['黑桃5', '黑桃1', ...filler] },
     });
-    pick(g, '黑桃9');
+    pick(g, '黑桃6');
     pick(g, '發動');
     expect(g.state.flags.pursuitSuccess[1]).toBe(1);
+    expect(names(g, 1, 'hand')).toContain('黑桃5'); // 判定失敗的黑桃5加入手牌
+  });
+
+  it('追擊判定：翻開非招式卡（裝備、增益）判定失敗，加入手中', () => {
+    const g = scenario({
+      p0: { hand: ['黑桃4'] },
+      p1: { hand: ['黑桃6'], deck: ['瞄準器', ...filler] },
+    });
+    pick(g, '黑桃6');
+    // 瞄準器連擊值雖為 0（在[4, 6]之外），但因非招式卡，判定失敗
+    expect(g.state.flags.pursuitSuccess[1]).toBe(0);
+    expect(names(g, 1, 'hand')).toContain('瞄準器');
+    expect(g.state.log.join('\n')).toContain('（非招式卡）');
   });
 
   it('pay 蓋到低價買進與高價賣出時，自動觸發被覆蓋反應', () => {

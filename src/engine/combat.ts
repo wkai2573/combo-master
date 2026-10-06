@@ -80,18 +80,25 @@ function* becomePursuitCard(g: GameCtx, p: PlayerId, card: CardInst): Gen {
 
 /** 對 card 做追擊判定。回傳是否成功。 */
 function* judge(g: GameCtx, p: PlayerId, card: CardInst): Gen<boolean> {
-  log(g, `${pname(g, p)} 追擊判定：翻開【${data(card).name}】（連擊值 ${data(card).combo}）`);
-  mark(g, `${pname(g, p)} 追擊判定：翻開【${data(card).name}】（連擊值 ${data(card).combo}）`,
+  const cd = data(card);
+  const isMove = cd.kind === 'move';
+  const desc = isMove ? `（連擊值 ${cd.combo}）` : '（非招式卡）';
+
+  log(g, `${pname(g, p)} 追擊判定：翻開【${cd.name}】${desc}`);
+  mark(g, `${pname(g, p)} 追擊判定：翻開【${cd.name}】${desc}`,
     { type: 'flip', player: p, cardId: card.id });
 
-  const success = !scripts[card.id]?.pursuitFail && !inRange(g, p, card);
+  const success = isMove && !scripts[card.id]?.pursuitFail && !inRange(g, p, card);
   if (success) {
     yield* becomePursuitCard(g, p, card);
     return true;
   }
   log(g, '追擊判定失敗，該卡加入手中');
   move(g, card, 'hand');
-  mark(g, `追擊失敗：【${data(card).name}】的連擊值 ${data(card).combo} 在範圍內，回到手中`,
+  const failReason = isMove
+    ? `【${cd.name}】的連擊值 ${cd.combo} 在範圍內`
+    : `【${cd.name}】為非招式卡`;
+  mark(g, `追擊失敗：${failReason}，加入手中`,
     { type: 'flipResult', player: p, cardId: card.id, ok: false });
   return false;
 }
