@@ -9,7 +9,7 @@ import { Rng } from './rng';
 import { checkWin } from './win';
 import { viewFor, type RawFrame } from './view';
 import {
-  FRAME_MS, other, type CardInst, type FrameFx, type GameSetup, type GameState, type PlayerId, type PlayerState,
+  FRAME_MS, other, type CardInst, type FrameFx, type GameSetup, type GameState, type Phase, type PlayerId, type PlayerState,
   type Request, type TurnFlags, type ZoneName,
 } from './types';
 
@@ -108,22 +108,38 @@ export class Game {
     this.setupGame();
     this.setup.afterSetup?.(this);
     checkWin(g);
+    if (this.setup.singlePhase && this.setup.startPhase) {
+      s.turn = 1;
+      yield* this.runSinglePhase(this.setup.startPhase);
+      s.phase = '結束';
+      return;
+    }
+
     while (!this.over) {
       s.turn++;
       s.flags = emptyFlags();
       s.passed = [false, false];
       log(g, `── 第 ${s.turn} 回合（先攻：${pname(g, s.first)}）──`);
 
-      s.phase = '重置';
-      // 橫置狀態的卡改為重置狀態：目前沒有卡片使用橫置，保留階段供日後擴充
-      // 回合開始時的效果：家族相片、凡骨的意志、中毒
-      yield* markIfLogged(g, () => turnStartEffects(g));
-      checkWin(g);
-      mark(g, `第 ${s.turn} 回合・戰鬥階段（先攻：${pname(g, s.first)}）`, { type: 'phase' });
+      const start = s.turn === 1 ? this.setup.startPhase : undefined;
 
-      yield* combatPhase(g);
-      yield* drawPhase(g);
-      yield* burstPhase(g);
+      if (!start || start === '重置') {
+        s.phase = '重置';
+        // 橫置狀態的卡改為重置狀態：目前沒有卡片使用橫置，保留階段供日後擴充
+        // 回合開始時的效果：家族相片、凡骨的意志、中毒
+        yield* markIfLogged(g, () => turnStartEffects(g));
+        checkWin(g);
+      }
+      if (!start || start === '重置' || start === '起手' || start === '反擊' || start === '追擊' || start === '傷害' || start === '歸還') {
+        mark(g, `第 ${s.turn} 回合・戰鬥階段（先攻：${pname(g, s.first)}）`, { type: 'phase' });
+        yield* combatPhase(g);
+      }
+      if (!start || start === '重置' || start === '起手' || start === '反擊' || start === '追擊' || start === '傷害' || start === '歸還' || start === '抽牌') {
+        yield* drawPhase(g);
+      }
+      if (!start || start === '重置' || start === '起手' || start === '反擊' || start === '追擊' || start === '傷害' || start === '歸還' || start === '抽牌' || start === '爆發') {
+        yield* burstPhase(g);
+      }
       yield* buffPhase(g);
 
       s.phase = '回合結束';
@@ -131,6 +147,34 @@ export class Game {
       mark(g, '回合結束：交換先攻與後攻', { type: 'phase' });
       checkWin(g);
     }
+  }
+
+  private *runSinglePhase(phase: Phase): Gen {
+    const g = this;
+    const s = this.state;
+    switch (phase) {
+      case '重置':
+        s.phase = '重置';
+        yield* markIfLogged(g, () => turnStartEffects(g));
+        break;
+      case '起手':
+      case '反擊':
+      case '追擊':
+      case '傷害':
+      case '歸還':
+        yield* combatPhase(g);
+        break;
+      case '抽牌':
+        yield* drawPhase(g);
+        break;
+      case '爆發':
+        yield* burstPhase(g);
+        break;
+      case '增益':
+        yield* buffPhase(g);
+        break;
+    }
+    checkWin(g);
   }
 
   private setupGame(): void {

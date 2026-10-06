@@ -121,6 +121,10 @@ export interface GameSetup {
   noShuffle?: boolean;
   /** 測試用：設置完成（抽完起始手牌）後、第一個提示前，可改寫各區域 */
   afterSetup?: (g: import('./ops').GameCtx) => void;
+  /** 指定起始階段（測試用，若未提供則從第 1 回合重置階段開始） */
+  startPhase?: Phase;
+  /** 僅執行指定階段（測試用，階段完成後結束，不推進後續階段） */
+  singlePhase?: boolean;
 }
 
 export type { EquipSlot };

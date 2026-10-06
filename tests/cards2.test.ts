@@ -1,23 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { aimLimit, pursuitCount, returnStep, totalAtk, totalDef } from '../src/engine/combat';
-import type { Game } from '../src/engine/game';
-import { discard, optionalPay, pay, Z, type Gen } from '../src/engine/ops';
-import { merchantAfterBurst, onPassEffects, scripts, turnStartEffects } from '../src/engine/scripts';
+import { discard, optionalPay, pay, Z } from '../src/engine/ops';
+import { scripts } from '../src/engine/scripts';
 import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
 
 const filler = Array(20).fill('黑桃2') as string[];
-
-/** 依序餵答案給 generator，回傳最後一次結果 */
-function drive(it: Gen<unknown>, answers: string[][]) {
-  let r = it.next();
-  for (const a of answers) {
-    if (r.done) break;
-    r = it.next(a);
-  }
-  return r;
-}
-const keyOf = (g: Game, p: 0 | 1, zone: Parameters<typeof Z>[2], id: string, nth = 0) =>
-  `c${Z(g, p, zone).filter((c) => c.id === id)[nth].uid}`;
 
 describe('爆發階段：抽 2', () => {
   it('把 1 張手牌放入經驗區後抽 2；招財貓可以蓋 2 再多抽 1', () => {
@@ -47,28 +34,59 @@ describe('爆發階段：抽 2', () => {
 
 describe('商人', () => {
   it('爆發後可調整未覆蓋經驗卡的順序', () => {
-    const g = scenario({ chars: ['商人', '勇者'], p0: { exp: ['黑桃1', '黑桃2', '黑桃3'] } });
-    const r = drive(merchantAfterBurst(g, 0), [['yes'], [keyOf(g, 0, 'exp', '黑桃3')], [keyOf(g, 0, 'exp', '黑桃2')]]);
-    expect(r.done).toBe(true);
+    const g = scenario({
+      chars: ['商人', '勇者'],
+      phase: '爆發',
+      singlePhase: true,
+      p0: { hand: ['黑桃3'], exp: ['黑桃1', '黑桃2'] },
+      p1: { hand: [] },
+    });
+    pick(g, '黑桃3');
+    pick(g, '發動');
+    pick(g, '黑桃3');
+    pick(g, '黑桃2');
     expect(names(g, 0, 'exp')).toEqual(['黑桃3', '黑桃2', '黑桃1']);
   });
 
   it('覆蓋中的經驗卡不動，只重排未覆蓋的', () => {
-    const g = scenario({ chars: ['商人', '勇者'], p0: { exp: ['黑桃1', '~黑桃2', '黑桃3'] } });
-    drive(merchantAfterBurst(g, 0), [['yes'], [keyOf(g, 0, 'exp', '黑桃3')]]);
+    const g = scenario({
+      chars: ['商人', '勇者'],
+      phase: '爆發',
+      singlePhase: true,
+      p0: { hand: ['黑桃3'], exp: ['黑桃1', '~黑桃2'] },
+      p1: { hand: [] },
+    });
+    pick(g, '黑桃3');
+    pick(g, '發動');
+    pick(g, '黑桃3');
     expect(names(g, 0, 'exp')).toEqual(['黑桃3', '黑桃2', '黑桃1']);
     expect(Z(g, 0, 'exp')[1].covered).toBe(true);
   });
 
   it('覺醒後可以再把 1 張未覆蓋的經驗卡加入手牌；不是商人就沒有', () => {
     const exp = Array(8).fill('黑桃1') as string[];
-    const g = scenario({ chars: ['商人', '勇者'], p0: { hand: [], exp: [...exp.slice(0, 7), '黑桃4'] } });
-    const r = drive(merchantAfterBurst(g, 0), [['no'], ['yes'], [keyOf(g, 0, 'exp', '黑桃4')]]);
-    expect(r.done).toBe(true);
-    expect(names(g, 0, 'hand')).toEqual(['黑桃4']);
+    const g = scenario({
+      chars: ['商人', '勇者'],
+      phase: '爆發',
+      singlePhase: true,
+      p0: { hand: ['黑桃5'], exp: [...exp.slice(0, 7), '黑桃4'] },
+      p1: { hand: [] },
+    });
+    pick(g, '黑桃5');
+    pick(g, '不發動');
+    pick(g, '發動');
+    pick(g, '黑桃4');
+    expect(names(g, 0, 'hand')).toContain('黑桃4');
 
-    const other = scenario({ chars: ['勇者', '商人'], p0: { exp: ['黑桃1', '黑桃2'] } });
-    expect(merchantAfterBurst(other, 0).next().done).toBe(true);
+    const other = scenario({
+      chars: ['勇者', '商人'],
+      phase: '爆發',
+      singlePhase: true,
+      p0: { hand: ['黑桃5'], exp: ['黑桃1', '黑桃2'] },
+      p1: { hand: [] },
+    });
+    pick(other, '黑桃5');
+    expect(other.pending).toBeNull();
   });
 });
 
@@ -119,25 +137,26 @@ describe('新卡（第二批）', () => {
   it('低價買進：[經] 被覆蓋時回復 3', () => {
     const g = scenario({
       chars: ['商人', '勇者'],
-      p0: { hand: ['黑桃2', '黑桃5'], exp: ['低價買進', '黑桃3'], rage: Array(5).fill('黑桃1') },
+      p0: { exp: ['低價買進', '黑桃3'], rage: Array(5).fill('黑桃1') },
     });
-    const it = optionalPay(g, 0, Z(g, 0, 'hand')[0], { cover: 1 });
-    expect(drive(it, [['yes']]).done).toBe(true);
+    pay(g, 0, { cover: 1 }).next();
     expect(Z(g, 0, 'exp')[0].covered).toBe(true);
     expect(Z(g, 0, 'rage')).toHaveLength(2);
   });
 
   it('高價賣出：[經] 被覆蓋時抽 1', () => {
-    const g = scenario({ p0: { hand: ['黑桃2', '黑桃5'], exp: ['高價賣出', '黑桃3'] } });
+    const g = scenario({ p0: { exp: ['高價賣出', '黑桃3'] } });
     const before = Z(g, 0, 'hand').length;
-    drive(optionalPay(g, 0, Z(g, 0, 'hand')[0], { cover: 1 }), [['yes']]);
+    pay(g, 0, { cover: 1 }).next();
     expect(Z(g, 0, 'hand')).toHaveLength(before + 1);
   });
 
   it('復仇之嚎：[經_怒3]', () => {
     const g = scenario({ p0: { exp: ['復仇之嚎'], rage: Array(8).fill('黑桃1') } });
     const card = Z(g, 0, 'exp')[0];
-    drive(scripts['復仇之嚎'].afterDamageExp!(g, 0, card, { taken: 5, dealt: 2 }), [['yes']]);
+    const it = scripts['復仇之嚎'].afterDamageExp!(g, 0, card, { taken: 5, dealt: 2 });
+    it.next();
+    it.next(['yes']);
     expect(Z(g, 0, 'rage')).toHaveLength(8 - 3 - 1);
   });
 
@@ -241,15 +260,19 @@ describe('新卡（第二批）', () => {
     expect(g.state.flags.vanillaBoost[0]).toBe(1);
     expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['凡骨的意志']);
     expect(g.state.log.join('\n')).toContain('蓋到自己');
-    // 再跑一次回合開始效果（當作下個回合）：它已經被蓋住，不能再發動，也不會去蓋黑桃3
-    expect(drive(turnStartEffects(g), []).done).toBe(true);
-    expect(g.state.flags.vanillaBoost[0]).toBe(1);
-    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['凡骨的意志']);
+    // 下個回合：它已經被蓋住，不能再發動，也不會去蓋黑桃3
+    const nextTurn = scenario({
+      chars: ['商人', '刺客'],
+      phase: '重置',
+      singlePhase: true,
+      p0: { exp: ['~凡骨的意志', '黑桃3'] },
+    });
+    expect(nextTurn.state.flags.vanillaBoost[0]).toBe(0);
+    expect(Z(nextTurn, 0, 'exp')[1].covered).toBe(false);
   });
 
   it('凡骨的意志：它是唯一的正面經驗卡時，蓋 1 就是蓋自己，仍會生效', () => {
-    const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['凡骨的意志'] } });
-    expect(drive(turnStartEffects(g), []).done).toBe(true);
+    const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['凡骨的意志'] } });
     expect(g.state.flags.vanillaBoost[0]).toBe(1);
     expect(Z(g, 0, 'exp')[0].covered).toBe(true);
   });
@@ -341,35 +364,53 @@ describe('新卡（第二批）', () => {
   });
 
   it('中毒：我方後攻的回合開始時，直擊我方 3；先攻時不會', () => {
-    const g = scenario({ p1: { exp: ['Ex卡-中毒'] } });
-    const deck = Z(g, 1, 'deck').length;
-    drive(turnStartEffects(g), []);
-    expect(Z(g, 1, 'deck')).toHaveLength(deck - 3);
+    const g = scenario({ phase: '重置', singlePhase: true, p1: { exp: ['Ex卡-中毒'] } });
+    expect(Z(g, 1, 'deck')).toHaveLength(17);
 
-    const f = scenario({ first: 1, p1: { exp: ['Ex卡-中毒'] } });
-    const d2 = Z(f, 1, 'deck').length;
-    drive(turnStartEffects(f), []);
-    expect(Z(f, 1, 'deck')).toHaveLength(d2);
+    const f = scenario({ first: 1, phase: '重置', singlePhase: true, p1: { exp: ['Ex卡-中毒'] } });
+    expect(Z(f, 1, 'deck')).toHaveLength(20);
   });
 
   it('家族相片：回合開始時 [蓋1_怒3] 回復 1', () => {
-    const g = scenario({ p0: { gear: ['家族相片'], exp: ['黑桃3'], rage: Array(4).fill('黑桃1') } });
+    const g = scenario({
+      phase: '重置',
+      singlePhase: true,
+      p0: { gear: ['家族相片'], exp: ['黑桃3'], rage: Array(4).fill('黑桃1') },
+    });
     const deck = Z(g, 0, 'deck').length;
-    drive(turnStartEffects(g), [['yes']]);
+    pick(g, '發動');
     expect(Z(g, 0, 'rage')).toHaveLength(0); // 怒 3 再回復 1
     expect(Z(g, 0, 'deck')).toHaveLength(deck + 1);
     expect(Z(g, 0, 'exp')[0].covered).toBe(true);
   });
 
   it('冰與雷之曲：收招時戰鬥區有「冰」「雷」特徵的卡各 1 張，才可蓋 3 抽 1、回復 1', () => {
-    const g = scenario({ p0: { gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], combat: ['冰霜護甲', '電弧'], rage: ['黑桃4'] } });
-    const hand = Z(g, 0, 'hand').length;
-    drive(onPassEffects(g, 0), [['yes']]);
-    expect(Z(g, 0, 'hand')).toHaveLength(hand + 1);
+    const g = scenario({
+      phase: '起手',
+      singlePhase: true,
+      p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], combat: ['冰霜護甲', '電弧'], rage: ['黑桃4'] },
+      p1: { hand: ['黑桃9'] },
+    });
+    pick(g, '黑桃1');
+    pick(g, '黑桃9');
+    pick(g, '收招');
+    pick(g, '發動');
+    // 手牌變化：打出黑桃1 (-1)、冰與雷之曲抽 1 (+1)、追擊判定落入範圍回到手中 (+1)
+    expect(Z(g, 0, 'hand')).toHaveLength(3);
+    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(3);
     expect(Z(g, 0, 'rage')).toHaveLength(0);
 
-    const only = scenario({ p0: { gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], combat: ['冰霜護甲'] } });
-    expect(onPassEffects(only, 0).next().done).toBe(true); // 條件不足：不會詢問
+    const only = scenario({
+      phase: '起手',
+      singlePhase: true,
+      p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], combat: ['冰霜護甲'] },
+      p1: { hand: ['黑桃9'] },
+    });
+    pick(only, '黑桃1');
+    pick(only, '黑桃9');
+    pick(only, '收招');
+    expect(only.state.passed[0]).toBe(true);
+    expect(Z(only, 0, 'exp').filter((c) => c.covered)).toHaveLength(0);
   });
 
   it('幸運兔腳：[蓋2] 追擊判定失敗時額外翻 1 張', () => {
@@ -384,7 +425,7 @@ describe('新卡（第二批）', () => {
 
   it('pay 蓋到低價買進與高價賣出時，自動觸發被覆蓋反應', () => {
     const g = scenario({ p0: { exp: ['低價買進', '高價賣出'], rage: Array(5).fill('黑桃1'), deck: ['黑桃4', ...filler] } });
-    drive(pay(g, 0, { cover: 2 }), []);
+    pay(g, 0, { cover: 2 }).next();
     expect(Z(g, 0, 'rage')).toHaveLength(2); // 低價買進：回復 3
     expect(Z(g, 0, 'hand')).toHaveLength(1); // 高價賣出：抽 1
   });

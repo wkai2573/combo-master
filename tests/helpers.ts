@@ -29,6 +29,10 @@ export interface Scenario {
   seed?: number;
   /** 錄製動畫影格 */
   animate?: boolean;
+  /** 指定起始階段 */
+  phase?: import('../src/engine/types').Phase;
+  /** 僅執行指定階段 */
+  singlePhase?: boolean;
 }
 
 const FILLER = Array.from({ length: 20 }, () => '黑桃1');
@@ -42,6 +46,8 @@ export function scenario(s: Scenario = {}): Game {
   ];
   return new Game({
     decks, first: s.first ?? 0, seed: s.seed ?? 1, animate: s.animate,
+    startPhase: s.phase,
+    singlePhase: s.singlePhase,
     afterSetup: (g) => {
       if (s.p0) setZones(g, 0, { deck: FILLER, ...s.p0 });
       if (s.p1) setZones(g, 1, { deck: FILLER, ...s.p1 });
