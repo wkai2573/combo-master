@@ -1,4 +1,3 @@
-import { isVanilla } from '../data/enabledCards';
 import {
   ask, awakened, cardOpt, chooseCards, data, draw, isFirst, log, mark, markIfLogged, move, optionalPay,
   newCard, order, pname, takeDamage, Z, type GameCtx, type Gen,
@@ -6,6 +5,9 @@ import {
 import { onPassEffects, scripts } from './scripts';
 import { checkWin } from './win';
 import { other, type CardInst, type PlayerId } from './types';
+import {
+  ASSASSIN_CAP, resolveCombatStats, totalAtk, totalDef, type CombatStats, type CombatStatsBreakdown,
+} from './combatStats';
 
 // ───────────────────────── 範圍內／可出招判定 ─────────────────────────
 
@@ -52,61 +54,7 @@ export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: bool
 
 // ───────────────────────── 總攻擊／總防禦 ─────────────────────────
 
-/** 刺客「追擊判定成功」加成的總上限 */
-export const ASSASSIN_CAP = 5;
-
-/** 我方戰鬥區白板卡（無特徵、無效果的招式）數量 */
-function vanillaCount(g: GameCtx, p: PlayerId): number {
-  return Z(g, p, 'combat').filter((c) => isVanilla(data(c))).length;
-}
-
-export function totalAtk(g: GameCtx, p: PlayerId): number {
-  const zone = Z(g, p, 'combat');
-  let base = 0;
-  zone.forEach((c, i) => {
-    const mod = i === zone.length - 1 ? scripts[c.id]?.atkMod ?? 0 : 0;
-    base += Math.max(0, data(c).atk + mod);
-  });
-  for (const c of Z(g, p, 'pursuit')) base += data(c).atk + (scripts[c.id]?.pursuitAtkBonus ?? 0);
-  base += g.state.flags.atkBonus[p];
-  // [頂] 依場面加成的總攻擊（盾擊）
-  const topCard = zone[zone.length - 1];
-  base += scripts[topCard?.id ?? '']?.topAtkBonus?.(g, p) ?? 0;
-  base += g.state.flags.vanillaBoost[p] * vanillaCount(g, p);
-  base = Math.max(0, base);
-
-  const awake = awakened(g, p);
-  let bonus = 0;
-  switch (g.state.players[p].charId) {
-    case '勇者':
-      if (base >= (awake ? 10 : 15)) bonus += 3;
-      break;
-    case '刺客':
-      bonus += Math.min(ASSASSIN_CAP, (awake ? 2 : 1) * g.state.flags.pursuitSuccess[p]);
-      break;
-    case '先人':
-      if (isFirst(g, p)) bonus += Math.max(0, g.state.flags.played[p] - 1);
-      break;
-  }
-  return base + bonus;
-}
-
-export function totalDef(g: GameCtx, p: PlayerId): number {
-  const zone = Z(g, p, 'combat');
-  let total = 0;
-  zone.forEach((c, i) => {
-    const mod = i === zone.length - 1 ? scripts[c.id]?.defMod ?? 0 : 0;
-    total += Math.max(0, data(c).def + mod);
-  });
-  const rearGuard = g.state.players[p].charId === '後人';
-  for (const c of Z(g, p, 'pursuit')) {
-    total += scripts[c.id]?.pursuitDefBonus ?? 0;
-    if (rearGuard && awakened(g, p) && !isFirst(g, p)) total += data(c).def;
-  }
-  if (rearGuard && !isFirst(g, p)) total += 2;
-  total += g.state.flags.vanillaBoost[p] * vanillaCount(g, p);
-  return total;
-}
+export { ASSASSIN_CAP, resolveCombatStats, totalAtk, totalDef, type CombatStats, type CombatStatsBreakdown };
 
 // ───────────────────────── 追擊 ─────────────────────────
 
@@ -241,13 +189,15 @@ export function* pursuitPhase(g: GameCtx): Gen {
 
 export function* damageStep(g: GameCtx): Gen {
   g.state.phase = '傷害';
-  const dmg: [number, number] = [0, 0];
-  for (const p of [0, 1] as PlayerId[]) {
-    dmg[p] = Math.max(0, totalAtk(g, other(p)) - totalDef(g, p));
-  }
+  const s0 = resolveCombatStats(g, 0);
+  const s1 = resolveCombatStats(g, 1);
+  const dmg: [number, number] = [
+    Math.max(0, s1.atk - s0.def),
+    Math.max(0, s0.atk - s1.def),
+  ];
   log(g, `傷害計算：玩家A受到 ${dmg[0]}、玩家B受到 ${dmg[1]}`);
-  const atk: [number, number] = [totalAtk(g, 0), totalAtk(g, 1)];
-  const def: [number, number] = [totalDef(g, 0), totalDef(g, 1)];
+  const atk: [number, number] = [s0.atk, s1.atk];
+  const def: [number, number] = [s0.def, s1.def];
   mark(g, '攻守拼招：對方總攻擊 − 我方總防禦 ＝ 傷害', { type: 'calc', atk, def, dmg });
   for (const p of order(g)) {
     g.state.flags.damageTaken[p] = dmg[p];

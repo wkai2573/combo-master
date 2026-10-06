@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pursuitCount, totalAtk, totalDef } from '../src/engine/combat';
+import { pursuitCount, resolveCombatStats, totalAtk, totalDef } from '../src/engine/combat';
 import { draw, optionalPay, Z } from '../src/engine/ops';
 import { scripts } from '../src/engine/scripts';
 import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
@@ -250,5 +250,24 @@ describe('提示驗證', () => {
     expect(() => g.submit(1, ['x'])).toThrow();
     expect(() => g.submit(0, ['不存在'])).toThrow();
     expect(() => g.submit(0, [])).toThrow(); // 起手必須選 1 張
+  });
+});
+
+describe('戰鬥結算深模組 (resolveCombatStats)', () => {
+  it('正確結算攻守數值並提供詳細的 breakdown 明細', () => {
+    const g = scenario({ chars: ['勇者', '後人'], first: 0 });
+    // 玩家 0 (勇者)：戰鬥區出 黑桃1、黑桃9，追擊 地雷陷阱 (+3 atk)
+    setZones(g, 0, { combat: ['黑桃1', '黑桃9'], pursuit: ['地雷陷阱'] });
+    const s0 = resolveCombatStats(g, 0);
+    const expectedBase0 = atkOf('黑桃1') + atkOf('黑桃9') + atkOf('地雷陷阱') + 3;
+    expect(s0.atk).toBe(expectedBase0 + (expectedBase0 >= 15 ? 3 : 0));
+    expect(s0.breakdown.combatZoneAtk).toBe(atkOf('黑桃1') + atkOf('黑桃9'));
+    expect(s0.breakdown.pursuitAtk).toBe(atkOf('地雷陷阱') + 3);
+
+    // 玩家 1 (後人，後攻未覺醒)：防禦 +2
+    setZones(g, 1, { combat: ['黑桃1'], pursuit: ['黑桃3'] });
+    const s1 = resolveCombatStats(g, 1);
+    expect(s1.def).toBe(defOf('黑桃1') + 2);
+    expect(s1.breakdown.charBonusDef).toBe(2);
   });
 });

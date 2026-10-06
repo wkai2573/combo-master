@@ -1,4 +1,4 @@
-import { totalAtk, totalDef } from './combat';
+import { resolveCombatStats } from './combatStats';
 import type { Game } from './game';
 import type { CardInst, FrameFx, GameState, PlayerId, Request, Phase, ZoneName } from './types';
 
@@ -75,6 +75,7 @@ function playerView(game: Game, p: PlayerId, viewer: PlayerId): PlayerView {
   const mine = p === viewer;
   const list = (name: ZoneName, visible: (c: CardInst) => boolean) =>
     z[name].map((c) => (visible(c) ? show(c) : hide(c)));
+  const stats = resolveCombatStats(game, p);
   return {
     charId: s.players[p].charId,
     deckCount: z.deck.length,
@@ -87,8 +88,8 @@ function playerView(game: Game, p: PlayerId, viewer: PlayerId): PlayerView {
     gear: list('gear', () => true),
     buff: list('buff', () => true),
     passed: s.passed[p],
-    atk: totalAtk(game, p),
-    def: totalDef(game, p),
+    atk: stats.atk,
+    def: stats.def,
   };
 }
 
