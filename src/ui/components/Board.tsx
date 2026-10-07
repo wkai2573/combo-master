@@ -105,12 +105,12 @@ function HandRow({ cards, mine, optKeys, selected, onPick }: { cards: CardView[]
     ro.observe(el);
     if (first) ro.observe(first);
     return () => ro.disconnect();
-  }, [cards.length > 0]);
+  }, [cards[0]?.uid]);
   const layout = handLayout(cards.length, m.width, m.cardW, mine ? 36 : 24);
   return (
     <div
       ref={ref} className={`handrow${layout.overlap ? ' overlap' : ''}`}
-      style={layout.overlap ? { ['--hstep' as string]: `${layout.step}px` } : undefined}
+      style={layout.overlap ? { ['--hstep' as string]: `${Math.floor(layout.step)}px` } : undefined}
     >
       {cards.map((c) => (
         <div key={c.uid} className="handslot">

@@ -408,10 +408,10 @@ h1, h2, h3 { margin: 0 0 8px; }
 .expslot:hover .card.sm.short .nm { display: block; }
 .expslot.r2:hover .card.sm.short { position: absolute; bottom: 0; left: 0; }
 
-/* ───────── 手牌：放得下並排，放不下水平重疊（滑過與選中的牌浮到最上面，不用過渡動畫） ───────── */
-.handrow { display: flex; gap: 6px; align-items: flex-start; padding: 14px 4px 2px; margin-top: -12px; }
+/* ───────── 手牌：放得下並排，放不下水平重疊（滑過的牌浮到最上面，不用過渡動畫；選中的牌只抬起，不蓋住右邊的鄰牌） ───────── */
+.handrow { display: flex; gap: 6px; align-items: flex-start; padding: 14px 4px 10px; }
+.battle.wide .handrow { margin: -12px 0 -8px; }
 .handrow.overlap { display: grid; grid-auto-flow: column; grid-auto-columns: var(--hstep); gap: 0; overflow-x: auto; }
-.handslot { position: relative; min-width: 0; }
+.handslot { position: relative; flex: none; min-width: 0; }
 .handslot:hover { z-index: 6; }
-.handslot:has(.card.selected) { z-index: 7; }
-@media (prefers-reduced-motion: reduce) { .card.clickable { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .handrow .card.clickable { transition: none; } }
