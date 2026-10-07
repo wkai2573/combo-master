@@ -435,9 +435,15 @@ h1, h2, h3 { margin: 0 0 8px; }
 .gearzone.empty { display: none; }
 /* 寬螢幕版：裝備／增益區是固定大小的槽位（兩列矮卡，沒有東西時也保留） */
 .battle.wide .gearzone.empty { display: block; }
-.battle.wide .gearzone .cardrow { display: grid; grid-auto-flow: column; grid-template-rows: 50px 50px; grid-auto-columns: 76px; gap: 6px; overflow-x: auto; height: 106px; }
+.battle.wide .gearzone .cardrow { display: grid; grid-auto-flow: column; grid-template-rows: 50px 50px; grid-auto-columns: 76px; gap: 6px; overflow: auto hidden; scrollbar-width: none; height: 106px; }
 .battle.wide .gearzone.empty .cardrow { border: 1px dashed var(--line); border-radius: 8px; }
 /* 戰鬥區疊牌：疊牌區的高度由版面決定，卡越多疊得越緊（最多 28px，最少 3px），最新的一張一直完整顯示在最下面 */
 .battle.wide .vstack { container-type: size; width: var(--mdw); min-height: 0; justify-content: flex-start; }
-.battle.wide .vstack .card { --ov: max(3px, min(28px, calc((100cqh - var(--mdh)) / var(--n1, 1)))); }
+.battle.wide .vstack .card { flex: none; --ov: max(3px, min(28px, calc((100cqh - var(--mdh)) / var(--n1, 1)))); }
 .battle.wide .vstack .card + .card { margin-top: calc(var(--ov) - var(--mdh)); }
+
+/* 寬螢幕版的提示欄：選項卡排成一列，放不下時欄內橫向捲動；選中的卡靠外框標示，不抬起（欄高固定，抬起會被裁掉） */
+.battle.wide .prompt .cardrow { flex-wrap: nowrap; overflow: auto hidden; scrollbar-width: thin; }
+.battle.wide .prompt .card.selected, .battle.wide .prompt .card.clickable:hover:not(.selected) { transform: none; }
+.midnotes { margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.battle.wide .combatarea .mid { align-self: flex-start; padding-top: 80px; }
