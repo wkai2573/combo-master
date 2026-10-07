@@ -1,5 +1,5 @@
 import { FLOW_CHART_URL } from '../flowChart';
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { SPEED_LABEL, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { CardFace, InspectContext, InspectPanel, PinContext } from '../components/CardFace';
@@ -7,6 +7,8 @@ import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/B
 import { FlightLayer } from '../components/FlightLayer';
 import { Spotlight } from '../components/Spotlight';
 import { flightTiming } from '../../engine/flights';
+import { statChanges } from '../../engine/stats';
+import type { GameView } from '../../engine/view';
 import { Modal } from '../components/Modal';
 import { StepTracker } from '../components/StepTracker';
 import { PromptPanel } from '../components/PromptPanel';
@@ -41,15 +43,30 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   };
 
   const final = st.view;
-  const { cur, skip, scale } = usePlayback(st.batch, speed);
-  // 播放動畫時顯示影格當下的桌面；播完才顯示最新的真實狀態與提示
+  const { cur, skip, scale, lagging } = usePlayback(st.batch, speed);
+  // 上一個顯示的桌面：飛行與數值變化都是拿它和下一個影格比
+  const lastShown = useRef<GameView | null>(null);
+  // 播放動畫時顯示影格當下的桌面；播完才顯示最新的真實狀態與提示。
+  // 新的一批影格剛到、還沒開始播的空檔，維持上一個桌面（否則會閃出最終桌面，飛行也會倒著比）
   const v = useMemo(
     () =>
       final && cur
         ? { ...cur.frame.view, log: final.log.slice(0, cur.frame.logLen), prompt: null, waitingFor: null }
-        : final,
-    [final, cur],
+        : lagging && lastShown.current
+          ? { ...lastShown.current, prompt: null, waitingFor: null }
+          : final,
+    [final, cur, lagging],
   );
+
+  // 播放動畫時，這個影格與上一個顯示的桌面之間的數值變化（閃一下並顯示差值）
+  const changes = useMemo(
+    () => (cur && v && lastShown.current && lastShown.current !== v ? statChanges(lastShown.current, v) : undefined),
+    [v, cur],
+  );
+  useEffect(() => {
+    // 空檔維持的是上一個桌面，不要把它當成新的桌面記起來
+    if (!lagging) lastShown.current = v ?? null;
+  }, [v, lagging]);
 
   // Esc 取消固定的說明
   useEffect(() => {
@@ -147,9 +164,9 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         )}
         <div className="main">
           <div className={`board${cur ? ' playing' : ''}`}>
-            <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z) => setZone({ p, z })} hit={hitOf(opp)} />
-            <CombatArea v={v} fx={fx} caption={cur?.frame.caption} fxKey={fxKey} />
-            <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z) => setZone({ p, z })} hit={hitOf(me)} />
+            <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z) => setZone({ p, z })} hit={hitOf(opp)} changes={changes} fxKey={fxKey} />
+            <CombatArea v={v} fx={fx} caption={cur?.frame.caption} fxKey={fxKey} changes={changes} />
+            <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z) => setZone({ p, z })} hit={hitOf(me)} changes={changes} fxKey={fxKey} />
             {cur ? (
               <div className="prompt wait">
                 <span>動畫播放中…</span>

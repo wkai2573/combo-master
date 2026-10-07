@@ -70,5 +70,7 @@ export function usePlayback(batch: { id: number; frames: Frame[] } | undefined, 
     [],
   );
 
-  return { cur, skip, scale: SCALE[speed] };
+  // 新的一批影格已經到了，但還沒開始播（要等這次繪製之後的 effect）：這段空檔不能顯示最終桌面
+  const lagging = !!batch && batch.id !== seen.current && batch.frames.length > 0 && SCALE[speed] > 0;
+  return { cur, skip, scale: SCALE[speed], lagging };
 }

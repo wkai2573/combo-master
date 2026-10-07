@@ -3,6 +3,7 @@ import { getCard } from '../../data/cards';
 import type { CardData, ClassName } from '../../data/types';
 import { keywordsIn } from '../../data/keywords';
 import { CardArt } from './CardArt';
+import { Delta } from './Delta';
 import { KeywordText } from './KeywordText';
 
 export const CLASS_COLOR: Record<ClassName, string> = {
@@ -36,6 +37,9 @@ export interface CardFaceProps {
   badge?: string | number;
   /** 卡片實體編號：讓飛行圖層找得到這張卡在畫面上的位置 */
   uid?: number;
+  /** 持續時間指示物的變動量（deltaKey 變動時重播） */
+  counterDelta?: number;
+  deltaKey?: number;
   onClick?: () => void;
 }
 
@@ -45,7 +49,7 @@ export function kindLabel(c: CardData): string {
   return c.traits.join('・') || '招式';
 }
 
-export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, fresh, counters, badge, uid, onClick }: CardFaceProps) {
+export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, fresh, counters, badge, uid, counterDelta, deltaKey, onClick }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const pin = useContext(PinContext);
   const cls = ['card', size];
@@ -96,7 +100,7 @@ export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursui
         <KeywordText text={c.text} />
       </div>
       <div className="nm">{c.name}</div>
-      {counters ? <span className="ctr">⏳{counters}</span> : null}
+      {counters ? <span className="ctr">⏳{counters}<Delta d={counterDelta} k={deltaKey ?? 0} /></span> : null}
       {badge !== undefined ? <span className="badge">{badge}</span> : null}
     </div>
   );

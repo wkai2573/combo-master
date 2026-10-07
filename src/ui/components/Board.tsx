@@ -2,8 +2,10 @@ import { KeywordText } from './KeywordText';
 import { useEffect, useRef } from 'react';
 import { getCard, getCharacter } from '../../data/cards';
 import type { CardView, GameView, PlayerView } from '../../engine/view';
+import type { StatChanges } from '../../engine/stats';
 import type { FrameFx, PlayerId, Request } from '../../engine/types';
 import { CardFace } from './CardFace';
+import { Delta } from './Delta';
 
 export type ZoneKey = 'discard' | 'rage' | 'exp';
 
@@ -16,11 +18,14 @@ interface BoardProps {
   onZone: (p: PlayerId, z: ZoneKey) => void;
   /** 這位玩家剛受到傷害：震動並浮出傷害數字（key 變動時重播） */
   hit?: { amount: number; key: number; /** 第一張牌落進怒氣區要等多久（毫秒） */ delay: number };
+  /** 這個影格與上一個顯示的桌面之間的數值變化（key 變動時重播） */
+  changes?: StatChanges;
+  fxKey: number;
 }
 
 /** 牌堆：牌組、棄牌區、怒氣區。飛行圖層以 data-pile 找到它在畫面上的位置 */
-function Pile({ p, zone, label, count, top, onClick }: {
-  p: PlayerId; zone: 'deck' | 'discard' | 'rage'; label: string; count: number; top?: CardView; onClick?: () => void;
+function Pile({ p, zone, label, count, top, delta, k, onClick }: {
+  p: PlayerId; zone: 'deck' | 'discard' | 'rage'; label: string; count: number; top?: CardView; delta?: number; k?: number; onClick?: () => void;
 }) {
   const depth = Math.min(count, 6);
   const edge = Array.from({ length: depth }, (_, i) => `${(i + 1) * 2}px ${(i + 1) * 2}px 0 var(--pile-edge)`).join(', ');
@@ -35,12 +40,12 @@ function Pile({ p, zone, label, count, top, onClick }: {
           <CardFace id={null} size="sm" />
         )}
       </div>
-      <div className="pilelabel">{label} <b>{count}</b></div>
+      <div className="pilelabel">{label} <b>{count}</b><Delta d={delta} k={k ?? 0} tone="neutral" /></div>
     </div>
   );
 }
 
-export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit }: BoardProps) {
+export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, changes, fxKey }: BoardProps) {
   const pv = v.players[p];
   const mine = p === v.me;
   const ch = getCharacter(pv.charId);
@@ -57,10 +62,10 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit }: Boa
         </span>
         <span className="muted">{name}{mine ? '（你）' : ''}・{ch.cls}</span>
         {v.first === p && <span className="pill awake">先攻</span>}
-        <span className="pill hp" title="牌組張數就是生命值">生命 {pv.deckCount}</span>
+        <span className={`pill hp${changes?.life[p] ? ' flash' : ''}`} key={`hp${fxKey}`} title="牌組張數就是生命值">生命 {pv.deckCount}<Delta d={changes?.life[p]} k={fxKey} /></span>
         <span className="pill">手牌 {pv.hand.length}</span>
-        <span className={`pill click${awake ? ' awake' : ''}`} onClick={() => onZone(p, 'exp')}>
-          經驗 {pv.exp.length}/{ch.expReq}{awake ? ' 覺醒' : ''}
+        <span className={`pill click${awake ? ' awake' : ''}${changes?.exp[p] ? ' flash' : ''}`} key={`exp${fxKey}`} onClick={() => onZone(p, 'exp')}>
+          經驗 {pv.exp.length}/{ch.expReq}{awake ? ' 覺醒' : ''}<Delta d={changes?.exp[p]} k={fxKey} tone="neutral" />
         </span>
         {pv.passed && <span className="pill">已收招</span>}
       </div>
@@ -73,7 +78,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit }: Boa
           <div className="zonelabel">裝備／增益</div>
           <div className="cardrow">
             {pv.gear.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" />)}
-            {pv.buff.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" counters={c.counters} />)}
+            {pv.buff.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" counters={c.counters} counterDelta={changes?.buff[c.uid]} deltaKey={fxKey} />)}
           </div>
         </div>
       )}
@@ -82,7 +87,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit }: Boa
         <div className="piles">
           <Pile p={p} zone="deck" label="牌組" count={pv.deckCount} />
           <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={() => onZone(p, 'discard')} />
-          <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} onClick={() => onZone(p, 'rage')} />
+          <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} onClick={() => onZone(p, 'rage')} />
         </div>
         <div className="expzone">
           <div className="zonelabel">經驗區（左側為最前方）</div>
@@ -129,7 +134,7 @@ const sumOf = (cards: CardView[], key: 'atk' | 'def') =>
   cards.reduce((n, c) => n + (c.id ? getCard(c.id)[key] : 0), 0);
 
 /** 一方的戰鬥區：卡片往下疊（最新的在最下面且完整顯示），上面幾張只露出「攻／連擊／守」 */
-function StackColumn({ pv, label, mine, fx }: { pv: PlayerView; label: string; mine: boolean; fx?: FrameFx }) {
+function StackColumn({ pv, label, mine, fx, delta, k }: { pv: PlayerView; label: string; mine: boolean; fx?: FrameFx; delta?: { atk: number; def: number }; k: number }) {
   const cards = [...pv.combat, ...pv.pursuit];
   const rawAtk = sumOf(pv.combat, 'atk') + sumOf(pv.pursuit, 'atk');
   const rawDef = sumOf(pv.combat, 'def');
@@ -147,7 +152,7 @@ function StackColumn({ pv, label, mine, fx }: { pv: PlayerView; label: string; m
         {cards.length === 0 && <span className="empty">（尚未出招）</span>}
       </div>
       <div className={`sumbox${fx?.type === 'calc' ? ' pulse' : ''}`}>
-        <div>總攻 <b className="atk">{pv.atk}</b> ／ 總防 <b className="def">{pv.def}</b></div>
+        <div>總攻 <b className="atk">{pv.atk}</b><Delta d={delta?.atk} k={k} /> ／ 總防 <b className="def">{pv.def}</b><Delta d={delta?.def} k={k} /></div>
         {(pv.atk !== rawAtk || pv.def !== rawDef) && (
           <div className="note">卡面合計 {rawAtk} ／ {rawDef}{diff(pv.atk, rawAtk)}</div>
         )}
@@ -177,8 +182,8 @@ function Equation({ who, atk, def, dmg, from }: { who: string; atk: number; def:
   );
 }
 
-export function CombatArea({ v, fx, caption, fxKey }: {
-  v: GameView; fx?: FrameFx; caption?: string; fxKey: number;
+export function CombatArea({ v, fx, caption, fxKey, changes }: {
+  v: GameView; fx?: FrameFx; caption?: string; fxKey: number; changes?: StatChanges;
 }) {
   const opp: PlayerId = v.me === 0 ? 1 : 0;
   const calc = fx?.type === 'calc' ? fx : null;
@@ -187,7 +192,7 @@ export function CombatArea({ v, fx, caption, fxKey }: {
       <div className="caption" key={`c${fxKey}`}>{caption ?? ' '}</div>
       <div className="cols">
         <div className="colwrap">
-          <StackColumn pv={v.players[opp]} label="對方" mine={false} fx={fx} />
+          <StackColumn pv={v.players[opp]} label="對方" mine={false} fx={fx} delta={changes && { atk: changes.atk[opp], def: changes.def[opp] }} k={fxKey} />
           <ColumnFx fx={fx} fxKey={fxKey} player={opp} />
         </div>
         <div className="mid">
@@ -204,7 +209,7 @@ export function CombatArea({ v, fx, caption, fxKey }: {
           )}
         </div>
         <div className="colwrap">
-          <StackColumn pv={v.players[v.me]} label="我方" mine fx={fx} />
+          <StackColumn pv={v.players[v.me]} label="我方" mine fx={fx} delta={changes && { atk: changes.atk[v.me], def: changes.def[v.me] }} k={fxKey} />
           <ColumnFx fx={fx} fxKey={fxKey} player={v.me} />
         </div>
       </div>
