@@ -10,6 +10,10 @@
 
 單一情境（根目錄 `GLOSSARY.md` 與 `docs/adr/`）。請見 `docs/agents/domain.md`。
 
+### 版本號維護
+
+當有功能更新、修復或介面調整時必須同步遞增版本號。請見 `docs/agents/versioning.md`。
+
 ## 卡表
 
 使用者提到「卡表」，一律指「連擊大師卡表」：Claude 的 Artifact 網頁（只有擁有者能開），https://claude.ai/artifact/Ght9i3eEV9u639zmPDXcaS 。卡片、角色、關鍵字的數值與文字都以它為準。
