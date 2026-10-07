@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { coverChanges, diffFlights, flightTiming, fromSpotlight, type Flight } from '../src/engine/flights';
 import { pay, type GameCtx } from '../src/engine/ops';
-import { frameFor } from '../src/engine/view';
+import { frameFor, viewFor } from '../src/engine/view';
 import { pick, scenario } from './helpers';
 
 /** 火球：蓋 3 付費後對方直擊 2。回傳「付費影格」與「直擊影格」 */
@@ -178,5 +178,42 @@ describe('卡片飛行', () => {
     expect(fromSpotlight(frames[i].fx, frames[i].fx, flights[0])).toBe(false); // 只有緊接在翻牌影格之後的那一格
     // 對手的追擊判定翻牌不是這位玩家的牌
     expect(fromSpotlight(frames[i - 1].fx, frames[i].fx, { ...flights[0], owner: 1 })).toBe(false);
+  });
+
+  it('打出裝備：牌從手牌飛進裝備區；對手看到的是從牌背翻成正面', () => {
+    for (const viewer of [0, 1] as const) {
+      const g = scenario({
+        animate: true, chars: ['勇者', '勇者'], phase: '增益', singlePhase: true,
+        p0: { hand: ['家族相片'] }, p1: { hand: [] },
+      });
+      const base = g.drainFrames().slice(-1);
+      pick(g, '家族相片');
+      const frames = [...base, ...g.drainFrames()].map((f) => frameFor(f, viewer));
+      const i = frames.findIndex((f) => f.view.players[0].gear.length === 1);
+      expect(i).toBeGreaterThan(0);
+      const f = diffFlights(frames[i - 1].view, frames[i].view).find((x) => x.to === 'gear')!;
+      expect([f.owner, f.from]).toEqual([0, 'hand']);
+      expect([f.faceUpFrom, f.faceUpTo]).toEqual([viewer === 0, true]);
+    }
+  });
+
+  it('增益到期：從增益區飛進經驗區，看得出是哪一張', () => {
+    const before = viewFor(scenario({ p0: { buff: ['黑桃3'] } }), 0, false);
+    const after = structuredClone(before);
+    const [card] = after.players[0].buff.splice(0, 1);
+    after.players[0].exp.push(card);
+    const f = diffFlights(before, after);
+    expect(f).toHaveLength(1);
+    expect(f[0]).toMatchObject({ uid: card.uid, from: 'buff', to: 'exp', id: '黑桃3' });
+  });
+
+  it('離開遊戲的牌標成 gone、憑空出現的牌標成 spawn，介面用淡出與淡入呈現', () => {
+    const before = viewFor(scenario({ p0: { exp: ['黑桃3', '黑桃4'] } }), 0, false);
+    const gone = structuredClone(before);
+    const [left] = gone.players[0].exp.splice(0, 1);
+    expect(diffFlights(before, gone)).toMatchObject([{ uid: left.uid, from: 'exp', to: 'gone', faceUpFrom: true }]);
+    const spawned = structuredClone(before);
+    spawned.players[0].exp.push({ uid: 9999, id: 'Ex卡-中毒', covered: false, counters: 0 });
+    expect(diffFlights(before, spawned)).toMatchObject([{ uid: 9999, from: 'spawn', to: 'exp' }]);
   });
 });

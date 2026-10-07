@@ -10,6 +10,8 @@ const PILE_ZONES = new Set(['deck', 'discard', 'rage']);
 interface Placed {
   key: string;
   flight: Flight;
+  /** fly：飛向終點；out：離開遊戲的牌在原地淡出；in：憑空出現的牌在原地淡入 */
+  mode: 'fly' | 'out' | 'in';
   /** 起點相對終點的位移與縮放 */
   dx: number;
   dy: number;
@@ -79,20 +81,25 @@ export function FlightLayer({ view, fx, playing, n, scale }: {
       let spotUsed = false;
       for (const f0 of flies) {
         // 從中央放大出發的牌：起點是放大的那張牌（已公開，牌面看得到），並先停一下
-        const spot = !spotUsed && fromSpotlight(before.fx, fx, f0) ? before.spot : undefined;
+        const mode = f0.to === 'gone' ? 'out' : f0.from === 'spawn' ? 'in' : 'fly';
+        const spot = mode === 'fly' && !spotUsed && fromSpotlight(before.fx, fx, f0) ? before.spot : undefined;
         if (spot) spotUsed = true; // 只有被翻開的那一張
-        const f: Flight = spot && before.fx?.type === 'flip' ? { ...f0, id: before.fx.cardId, faceUpFrom: true } : f0;
-        const destEl = PILE_ZONES.has(f.to) ? null : document.querySelector<HTMLElement>(`[data-uid="${f.uid}"]`);
-        const dest = destEl ? destEl.getBoundingClientRect() : PILE_ZONES.has(f.to) ? pileRect(f.owner, f.to) : undefined;
-        const src = spot ?? (PILE_ZONES.has(f.from) ? pileRect(f.owner, f.from) : before.rects.get(f.uid));
+        let f: Flight = spot && before.fx?.type === 'flip' ? { ...f0, id: before.fx.cardId, faceUpFrom: true } : f0;
+        // 淡出、淡入的牌不翻面
+        if (mode !== 'fly') f = { ...f, faceUpTo: f.faceUpFrom };
+        const destEl = mode === 'out' || PILE_ZONES.has(f.to) ? null : document.querySelector<HTMLElement>(`[data-uid="${f.uid}"]`);
+        const dest = mode === 'out'
+          ? before.rects.get(f.uid)
+          : destEl ? destEl.getBoundingClientRect() : PILE_ZONES.has(f.to) ? pileRect(f.owner, f.to) : undefined;
+        const src = mode !== 'fly' ? dest : spot ?? (PILE_ZONES.has(f.from) ? pileRect(f.owner, f.from) : before.rects.get(f.uid));
         if (!dest || !src) continue;
         const a = center(src);
         const b = center(dest);
         placed.push({
-          key: `${n}-${f.uid}`, flight: f,
+          key: `${n}-${f.uid}`, flight: f, mode,
           dx: a.x - b.x, dy: a.y - b.y, sx: src.width / dest.width, sy: src.height / dest.height,
           to: { left: dest.left, top: dest.top, width: dest.width, height: dest.height },
-          size: destEl?.classList.contains('md') ? 'md' : 'sm',
+          size: (destEl ? destEl.classList.contains('md') : dest.width > 90) ? 'md' : 'sm',
           delay: f.order * timing.stagger + (spot ? SPOTLIGHT_HOLD_MS : 0),
           ms: timing.ms,
           pileTop: f.to === 'discard' ? document.querySelector<HTMLElement>(`[data-pile="${f.owner}-discard"] .card`) : null,
@@ -146,11 +153,17 @@ export function FlightLayer({ view, fx, playing, n, scale }: {
       const el = refs.current.get(pl.key);
       if (!el) continue;
       const flip = pl.flight.faceUpFrom !== pl.flight.faceUpTo;
+      const frames: Keyframe[] =
+        pl.mode === 'out'
+          ? [{ transform: 'none', opacity: 1 }, { transform: 'translateY(-14px) scale(.85)', opacity: 0 }]
+          : pl.mode === 'in'
+            ? [{ transform: 'scale(.85)', opacity: 0 }, { transform: 'none', opacity: 1 }]
+            : [
+                { transform: `translate(${pl.dx}px, ${pl.dy}px) scale(${pl.sx}, ${pl.sy})`, opacity: 1 },
+                { transform: 'none', opacity: 1 },
+              ];
       const fly = el.animate(
-        [
-          { transform: `translate(${pl.dx}px, ${pl.dy}px) scale(${pl.sx}, ${pl.sy})`, opacity: 1 },
-          { transform: 'none', opacity: 1 },
-        ],
+        frames,
         { duration: pl.ms * scale, delay: pl.delay * scale, easing: ease, fill: 'both' },
       );
       active.current.push(fly);
