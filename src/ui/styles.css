@@ -390,7 +390,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 /* ───────── 經驗區：高度固定，單列、兩列矮卡、水平重疊 ───────── */
 .expcards { position: relative; height: 106px; }
 .expcards.one { display: flex; gap: 6px; align-items: flex-start; }
-.expcards.two, .expcards.overlap { display: grid; grid-auto-flow: column; grid-template-rows: 50px 50px; grid-auto-columns: var(--step); row-gap: 6px; }
+.expcards.two, .expcards.overlap { display: grid; grid-auto-flow: row; grid-template-columns: repeat(var(--cols), var(--step)); grid-template-rows: 50px 50px; row-gap: 6px; }
 .expcards .expslot { position: relative; min-width: 0; }
 .expcards.two .expslot, .expcards.overlap .expslot { height: 50px; }
 .expcards .expslot.r2 { align-self: end; }

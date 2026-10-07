@@ -72,10 +72,10 @@ function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optK
   return (
     <div
       ref={ref} className={`expcards ${layout.mode}`}
-      style={short ? { ['--step' as string]: `${layout.step}px` } : undefined}
+      style={short ? { ['--step' as string]: `${layout.step}px`, ['--cols' as string]: layout.cols } : undefined}
     >
       {cards.map((c, i) => (
-        <div key={c.uid} className={`expslot${short ? (i % 2 === 0 ? ' r1' : ' r2') : ''}`}>
+        <div key={c.uid} className={`expslot${short ? (i < layout.firstRow ? ' r1' : ' r2') : ''}`}>
           <CardFace
             uid={c.uid} id={c.id} size="sm" covered={c.covered} short={short} expEffect={expEffectActive(c)}
             glow={optKeys.has(`c${c.uid}`)} selected={selected.includes(`c${c.uid}`)}
