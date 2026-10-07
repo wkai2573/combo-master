@@ -13,6 +13,7 @@ import type { GameView } from '../../engine/view';
 import { Modal } from '../components/Modal';
 import { StepTracker } from '../components/StepTracker';
 import { PromptPanel } from '../components/PromptPanel';
+import { useWide } from '../useWide';
 import type { Session } from '../../net/session';
 import type { PlayerId } from '../../engine/types';
 
@@ -20,6 +21,7 @@ const ZONE_NAME: Record<ZoneKey, string> = { discard: '棄牌區', rage: '怒氣
 
 export function Battle({ session, onExit }: { session: Session; onExit: () => void }) {
   const st = useSyncExternalStore(session.subscribe, session.getState);
+  const wide = useWide();
   const [selected, setSelected] = useState<string[]>([]);
   const [inspect, setInspect] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string | null>(null);
@@ -146,10 +148,24 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   // 第一張牌落進怒氣區的時候才震動、浮出傷害數字（這一批飛行的時序由傷害較多的那一方決定）
   const hitOf = (p: PlayerId) => (dmgFx && dmgFx[p] > 0 ? { amount: dmgFx[p], key: fxKey, delay: flightTiming(Math.max(...dmgFx) - 1).ms * scale } : undefined);
 
+  const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z) => setZone({ p, z })} hit={hitOf(opp)} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
+  const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z) => setZone({ p, z })} hit={hitOf(me)} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
+  const combat = <CombatArea v={v} fx={fx} caption={cur?.frame.caption} fxKey={fxKey} changes={changes} />;
+  const promptBar = cur ? (
+    <div className="prompt wait">
+      <span>動畫播放中…</span>
+      <div className="btns"><button onClick={skip}>跳過動畫</button></div>
+    </div>
+  ) : prompt ? (
+    <PromptPanel prompt={prompt} selected={selected} onPick={toggle} onSubmit={(k) => session.submit(k)} />
+  ) : (
+    <div className="prompt wait">{waitingOpp ? '等待對手操作…' : v.winner !== null ? '遊戲結束' : '處理中…'}</div>
+  );
+
   return (
     <InspectContext.Provider value={setInspect}>
       <PinContext.Provider value={togglePin}>
-      <div className="battle" style={{ ['--spd' as string]: scale }}>
+      <div className={`battle${wide ? ' wide' : ''}`} style={{ ['--spd' as string]: scale }}>
         <div className="topbar">
           <span className="ver" title={VERSION_TITLE}>連擊大師 {VERSION_SHORT}</span>
           <b>第 {v.turn} 回合</b>
@@ -170,25 +186,31 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           </div>
         )}
         <div className="main">
-          <div className={`board${cur ? ' playing' : ''}`}>
-            <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z) => setZone({ p, z })} hit={hitOf(opp)} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />
-            <CombatArea v={v} fx={fx} caption={cur?.frame.caption} fxKey={fxKey} changes={changes} />
-            <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z) => setZone({ p, z })} hit={hitOf(me)} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />
-            {cur ? (
-              <div className="prompt wait">
-                <span>動畫播放中…</span>
-                <div className="btns"><button onClick={skip}>跳過動畫</button></div>
+          {wide ? (
+            <div className={`board${cur ? ' playing' : ''}`}>
+              {oppBoard}
+              <div className="midrow">
+                <div className="sidecol"><InspectPanel id={pinned ?? inspect} pinned={pinned !== null} onUnpin={() => setPinned(null)} /></div>
+                {combat}
+                <div className="sidecol"><LogPanel lines={v.log} /></div>
               </div>
-            ) : prompt ? (
-              <PromptPanel prompt={prompt} selected={selected} onPick={toggle} onSubmit={(k) => session.submit(k)} />
-            ) : (
-              <div className="prompt wait">{waitingOpp ? '等待對手操作…' : v.winner !== null ? '遊戲結束' : '處理中…'}</div>
-            )}
-          </div>
-          <div className="side">
-            <InspectPanel id={pinned ?? inspect} pinned={pinned !== null} onUnpin={() => setPinned(null)} />
-            <LogPanel lines={v.log} />
-          </div>
+              {promptBar}
+              {myBoard}
+            </div>
+          ) : (
+            <>
+              <div className={`board${cur ? ' playing' : ''}`}>
+                {oppBoard}
+                {combat}
+                {myBoard}
+                {promptBar}
+              </div>
+              <div className="side">
+                <InspectPanel id={pinned ?? inspect} pinned={pinned !== null} onUnpin={() => setPinned(null)} />
+                <LogPanel lines={v.log} />
+              </div>
+            </>
+          )}
         </div>
 
         <PhaseBanner fx={fx} n={fxKey} me={me} />

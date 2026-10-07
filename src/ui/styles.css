@@ -347,3 +347,46 @@ h1, h2, h3 { margin: 0 0 8px; }
 .phasebanner.end.lose b { color: var(--fx-dmg); }
 .phasebanner.end.draw b { color: var(--text); }
 @keyframes endIn { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
+
+/* ───────── 寬螢幕版（寬 ≥ 1200 且高 ≥ 800）：整頁不捲動 ─────────
+   對手面板｜說明、戰鬥區、紀錄｜提示欄｜我方面板。只有紀錄欄自己會捲動。
+   玩家面板先用 grid 把手牌排到右邊（過渡做法，單橫列與牌堆順序由後續票券正式處理）。 */
+.battle.wide {
+  --mdw: 112px; --mdh: 156px;
+  display: flex; flex-direction: column; height: 100%; overflow: hidden;
+}
+@media (max-height: 920px) { .battle.wide { --mdw: 90px; --mdh: 126px; } }
+@media (max-height: 840px) { .battle.wide { --mdw: 80px; --mdh: 112px; } }
+.battle.wide > .topbar, .battle.wide > .steps, .battle.wide > .banner { flex: none; }
+.battle.wide .main { display: block; flex: 1; min-height: 0; }
+.battle.wide .board {
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 6px; height: 100%; padding: 6px 10px; overflow: hidden;
+}
+.battle.wide .card.md { width: var(--mdw); height: var(--mdh); }
+.battle.wide .vstack { min-height: var(--mdh); }
+.battle.wide .vstack .card + .card { margin-top: calc(28px - var(--mdh)); }
+.battle.wide .midrow { display: grid; grid-template-columns: minmax(240px, 1fr) auto minmax(240px, 1fr); gap: 8px; min-height: 0; }
+.battle.wide .midrow > * { min-height: 0; }
+.battle.wide .sidecol { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.battle.wide .sidecol .inspect { flex: 1; min-height: 0; overflow: hidden; border-bottom: 0; }
+.battle.wide .sidecol .inspect .bigart { height: 72px; }
+.battle.wide .combatarea { padding: 6px 10px; overflow: hidden; }
+.battle.wide .combatarea .cols { gap: 24px; }
+.battle.wide .combatarea .caption { min-height: 24px; margin-bottom: 2px; font-size: 15px; }
+.battle.wide .combatarea .col { gap: 4px; }
+.battle.wide .prompt { position: static; box-shadow: none; min-height: 56px; align-content: center; padding: 6px 12px; gap: 4px; }
+.battle.wide .pboard {
+  grid-template-columns: minmax(220px, 280px) minmax(0, 5fr) minmax(0, 4fr); grid-template-rows: auto; align-items: start; column-gap: 12px;
+}
+.battle.wide .pboard > .phead { grid-column: 1; grid-row: 1; }
+.battle.wide .pboard > .peffect { grid-column: 1; grid-row: 2; }
+.battle.wide .pboard > .gearzone { grid-column: 1; grid-row: 3; }
+.battle.wide .pboard > .zonesrow { grid-column: 2; grid-row: 1 / span 3; min-width: 0; }
+.battle.wide .pboard > .handzone { grid-column: 3; grid-row: 1 / span 3; min-width: 0; }
+.battle.wide .handzone .cardrow { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+/* 提示欄裡的選項卡縮成小卡，標題與卡片並排，不讓提示欄長太高 */
+.battle.wide .prompt { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; }
+.battle.wide .prompt .ptitle { grid-column: 1; }
+.battle.wide .prompt .cardrow { grid-column: 2; grid-row: 1 / span 2; }
+.battle.wide .prompt .btns { grid-column: 1; }
+.battle.wide .prompt .card.md { width: 76px; height: 106px; }

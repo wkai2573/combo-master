@@ -73,12 +73,12 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
         </span>
         {pv.passed && <span className="pill">已收招</span>}
       </div>
-      <div className="muted" style={{ fontSize: 12 }}>
+      <div className="muted peffect" style={{ fontSize: 12 }}>
         效果：<KeywordText text={ch.text} />　<span style={{ color: awake ? 'var(--accent)' : undefined }}>覺醒：<KeywordText text={ch.awakenText} /></span>
       </div>
 
       {(pv.gear.length > 0 || pv.buff.length > 0) && (
-        <div>
+        <div className="gearzone">
           <div className="zonelabel">裝備／增益</div>
           <div className="cardrow">
             {pv.gear.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" />)}
@@ -108,7 +108,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
         </div>
       </div>
 
-      <div>
+      <div className="handzone">
         <div className="zonelabel">手牌</div>
         <div className="cardrow">
           {pv.hand.map((c) => (
