@@ -1,5 +1,5 @@
 import { KeywordText } from './KeywordText';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { expLayout } from '../expLayout';
 import { getCard, getCharacter } from '../../data/cards';
 import type { CardView, GameView, PlayerView } from '../../engine/view';
@@ -54,7 +54,8 @@ function Pile({ p, zone, label, count, top, delta, k, shuffling, onClick }: {
 function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optKeys: Set<string>; selected: string[]; onPick: (key: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  useEffect(() => {
+  // 繪製前就量好寬度，第一幀就是對的版面
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     setWidth(el.clientWidth);

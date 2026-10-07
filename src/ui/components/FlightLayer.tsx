@@ -30,12 +30,20 @@ interface Placed {
   hide: HTMLElement | null;
 }
 
+/** 經驗區的矮卡飛行時以完整小卡的高度計算（以矮卡中心為準），避免飛行中的牌被壓扁或拉長 */
+const FULL_SM_H = 106;
+function fullRect(el: HTMLElement): DOMRect {
+  const r = el.getBoundingClientRect();
+  if (!el.classList.contains('short')) return r;
+  return new DOMRect(r.left, r.top + r.height / 2 - FULL_SM_H / 2, r.width, FULL_SM_H);
+}
+
 const center = (r: DOMRect) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
 
 function captureRects(): Map<number, DOMRect> {
   const out = new Map<number, DOMRect>();
   document.querySelectorAll<HTMLElement>('[data-uid]').forEach((el) => {
-    out.set(Number(el.dataset.uid), el.getBoundingClientRect());
+    out.set(Number(el.dataset.uid), fullRect(el));
   });
   return out;
 }
@@ -90,7 +98,7 @@ export function FlightLayer({ view, fx, playing, n, scale }: {
         const destEl = mode === 'out' || PILE_ZONES.has(f.to) ? null : document.querySelector<HTMLElement>(`[data-uid="${f.uid}"]`);
         const dest = mode === 'out'
           ? before.rects.get(f.uid)
-          : destEl ? destEl.getBoundingClientRect() : PILE_ZONES.has(f.to) ? pileRect(f.owner, f.to) : undefined;
+          : destEl ? fullRect(destEl) : PILE_ZONES.has(f.to) ? pileRect(f.owner, f.to) : undefined;
         const src = mode !== 'fly' ? dest : spot ?? (PILE_ZONES.has(f.from) ? pileRect(f.owner, f.from) : before.rects.get(f.uid));
         if (!dest || !src) continue;
         const a = center(src);
