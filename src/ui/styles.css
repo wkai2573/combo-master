@@ -11,6 +11,16 @@
   --atk: #e0583f;
   --def: #3f8fe0;
   --combo: #b08af0;
+  /* 動畫語彙：時長（毫秒，標準速度）、緩動、色彩語意 */
+  --fly-ms: 420;
+  --fly-stagger: 90;
+  --ease-fly: cubic-bezier(.25, .8, .3, 1);
+  --pile-edge: #2d3652;
+  --fx-atk: var(--atk);
+  --fx-def: var(--def);
+  --fx-dmg: var(--bad);
+  --fx-ok: var(--good);
+  --fx-act: var(--accent);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -153,7 +163,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .range { color: var(--combo); font-weight: 700; line-height: 1.5; }
 
 /* ───────── 動畫 ───────── */
-.caption { text-align: center; font-size: 17px; font-weight: 800; min-height: 30px; margin-bottom: 6px; color: var(--accent); animation: fadeUp .35s ease-out both; }
+.caption { text-align: center; font-size: 17px; font-weight: 800; min-height: 30px; margin-bottom: 6px; color: var(--fx-act); animation: fadeUp .35s ease-out both; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* 新出現的牌：從各自的手牌方向落到桌面（只在播放動畫時） */
@@ -188,8 +198,8 @@ h1, h2, h3 { margin: 0 0 8px; }
 .calc .eq { font-size: 15px; }
 .calc .who { display: block; font-size: 12px; color: var(--muted); }
 .calc b.atk { color: #ff8f78; font-size: 20px; } .calc b.def { color: #7dbcff; font-size: 20px; }
-.calc .dm { font-size: 28px; font-weight: 900; color: var(--bad); display: inline-block; animation: dmBump .9s .5s ease-out both; }
-.calc .dm.zero { color: var(--good); }
+.calc .dm { font-size: 28px; font-weight: 900; color: var(--fx-dmg); display: inline-block; animation: dmBump .9s .5s ease-out both; }
+.calc .dm.zero { color: var(--fx-ok); }
 @keyframes calcIn { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
 @keyframes dmBump { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.6); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 .sumbox.pulse { animation: pulseBox .9s ease-in-out 2; }
@@ -200,7 +210,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .pboard.hit { animation: shake .55s ease-in-out, hitGlow 1.2s ease-out; }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-9px); } 40% { transform: translateX(9px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); } }
 @keyframes hitGlow { 0% { box-shadow: 0 0 0 0 #ef6a6a00; } 20% { box-shadow: 0 0 26px 6px #ef6a6aaa; border-color: var(--bad); } 100% { box-shadow: 0 0 0 0 #ef6a6a00; } }
-.dmgpop { position: absolute; right: 18px; top: -4px; z-index: 20; font-size: 38px; font-weight: 900; color: var(--bad); text-shadow: 0 2px 8px #000; pointer-events: none; animation: floatUp 1.4s ease-out both; }
+.dmgpop { position: absolute; right: 18px; top: -4px; z-index: 20; font-size: 38px; font-weight: 900; color: var(--fx-dmg); text-shadow: 0 2px 8px #000; pointer-events: none; animation: floatUp 1.4s ease-out both; }
 @keyframes floatUp {
   0% { opacity: 0; transform: translateY(22px) scale(.6); }
   20% { opacity: 1; transform: translateY(0) scale(1.35); }
@@ -289,3 +299,19 @@ h1, h2, h3 { margin: 0 0 8px; }
 .inspect .pinbar button { padding: 0 8px; font-size: 12px; background: #fff3; border-color: #1b140555; color: #1b1405; }
 .inspect .kwlist { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 12px; line-height: 1.55; color: var(--muted); display: grid; gap: 4px; }
 .inspect .kwlist b { color: var(--accent); }
+
+/* ───────── 牌堆與飛行圖層 ───────── */
+.zonesrow { display: flex; gap: 14px; align-items: flex-start; }
+.zonesrow .expzone { flex: 1; min-width: 0; }
+.piles { display: flex; gap: 12px; flex: none; padding-right: 6px; }
+.pile { display: grid; gap: 4px; justify-items: center; }
+.pile.click { cursor: pointer; }
+.pile .pilestack { position: relative; margin: 0 6px 6px 0; border-radius: 8px; }
+.pile .card.slot { background: transparent; border-style: dashed; border-color: var(--line); align-items: center; justify-content: center; color: var(--muted); }
+.pilelabel { font-size: 12px; color: var(--muted); }
+.pilelabel b { color: var(--text); }
+.flightlayer { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
+.flycard { position: fixed; perspective: 800px; filter: drop-shadow(0 6px 10px #000a); will-change: transform; }
+.flycard .flip { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
+.flycard .side { position: absolute; inset: 0; backface-visibility: hidden; }
+.flycard .side.back { transform: rotateY(180deg); }

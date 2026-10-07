@@ -4,6 +4,7 @@ import { SPEED_LABEL, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { CardFace, InspectContext, InspectPanel, PinContext } from '../components/CardFace';
 import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
+import { FlightLayer } from '../components/FlightLayer';
 import { Modal } from '../components/Modal';
 import { StepTracker } from '../components/StepTracker';
 import { PromptPanel } from '../components/PromptPanel';
@@ -38,7 +39,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   };
 
   const final = st.view;
-  const { cur, skip } = usePlayback(st.batch, speed);
+  const { cur, skip, scale } = usePlayback(st.batch, speed);
   // 播放動畫時顯示影格當下的桌面；播完才顯示最新的真實狀態與提示
   const v = useMemo(
     () =>
@@ -162,6 +163,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
             <LogPanel lines={v.log} />
           </div>
         </div>
+
+        <FlightLayer view={v} playing={cur !== null} n={fxKey} scale={scale} />
 
         {zone && (
           <Modal onClose={() => setZone(null)}>

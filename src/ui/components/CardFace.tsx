@@ -34,6 +34,8 @@ export interface CardFaceProps {
   fresh?: boolean;
   counters?: number;
   badge?: string | number;
+  /** 卡片實體編號：讓飛行圖層找得到這張卡在畫面上的位置 */
+  uid?: number;
   onClick?: () => void;
 }
 
@@ -43,7 +45,7 @@ export function kindLabel(c: CardData): string {
   return c.traits.join('・') || '招式';
 }
 
-export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, fresh, counters, badge, onClick }: CardFaceProps) {
+export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, fresh, counters, badge, uid, onClick }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const pin = useContext(PinContext);
   const cls = ['card', size];
@@ -56,7 +58,7 @@ export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursui
   else cls.push('inspectable');
 
   if (id === null) {
-    return <div className={[...cls, 'back'].join(' ')} onClick={onClick}>{covered ? '覆蓋' : '?'}</div>;
+    return <div className={[...cls, 'back'].join(' ')} data-uid={uid} onClick={onClick}>{covered ? '覆蓋' : '?'}</div>;
   }
   const c = getCard(id);
   if (covered) cls.push('covered');
@@ -64,6 +66,7 @@ export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursui
   return (
     <div
       className={cls.join(' ')}
+      data-uid={uid}
       style={{ ['--cc' as string]: CLASS_COLOR[c.cls] }}
       onClick={onClick ?? (() => pin(id))}
       onContextMenu={(e) => {

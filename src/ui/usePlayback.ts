@@ -70,5 +70,5 @@ export function usePlayback(batch: { id: number; frames: Frame[] } | undefined, 
     [],
   );
 
-  return { cur, skip };
+  return { cur, skip, scale: SCALE[speed] };
 }

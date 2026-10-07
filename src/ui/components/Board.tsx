@@ -18,6 +18,28 @@ interface BoardProps {
   hit?: { amount: number; key: number };
 }
 
+/** 牌堆：牌組、棄牌區、怒氣區。飛行圖層以 data-pile 找到它在畫面上的位置 */
+function Pile({ p, zone, label, count, top, onClick }: {
+  p: PlayerId; zone: 'deck' | 'discard' | 'rage'; label: string; count: number; top?: CardView; onClick?: () => void;
+}) {
+  const depth = Math.min(count, 6);
+  const edge = Array.from({ length: depth }, (_, i) => `${(i + 1) * 2}px ${(i + 1) * 2}px 0 var(--pile-edge)`).join(', ');
+  return (
+    <div className={`pile ${zone}${onClick ? ' click' : ''}`} onClick={onClick}>
+      <div className="pilestack" data-pile={`${p}-${zone}`} style={{ boxShadow: edge || undefined }}>
+        {count === 0 ? (
+          <div className="card sm slot">空</div>
+        ) : zone === 'discard' && top?.id ? (
+          <CardFace id={top.id} size="sm" />
+        ) : (
+          <CardFace id={null} size="sm" />
+        )}
+      </div>
+      <div className="pilelabel">{label} <b>{count}</b></div>
+    </div>
+  );
+}
+
 export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit }: BoardProps) {
   const pv = v.players[p];
   const mine = p === v.me;
@@ -37,8 +59,6 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit }: Boa
         {v.first === p && <span className="pill awake">先攻</span>}
         <span className="pill hp" title="牌組張數就是生命值">生命 {pv.deckCount}</span>
         <span className="pill">手牌 {pv.hand.length}</span>
-        <span className="pill click" onClick={() => onZone(p, 'rage')}>怒氣 {pv.rage.length}</span>
-        <span className="pill click" onClick={() => onZone(p, 'discard')}>棄牌 {pv.discard.length}</span>
         <span className={`pill click${awake ? ' awake' : ''}`} onClick={() => onZone(p, 'exp')}>
           經驗 {pv.exp.length}/{ch.expReq}{awake ? ' 覺醒' : ''}
         </span>
@@ -52,23 +72,30 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit }: Boa
         <div>
           <div className="zonelabel">裝備／增益</div>
           <div className="cardrow">
-            {pv.gear.map((c) => <CardFace key={c.uid} id={c.id} size="sm" />)}
-            {pv.buff.map((c) => <CardFace key={c.uid} id={c.id} size="sm" counters={c.counters} />)}
+            {pv.gear.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" />)}
+            {pv.buff.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" counters={c.counters} />)}
           </div>
         </div>
       )}
 
-      <div>
-        <div className="zonelabel">經驗區（左側為最前方）</div>
-        <div className="cardrow scroll" style={{ minHeight: pv.exp.length ? 0 : 20 }}>
-          {pv.exp.map((c) => (
-            <CardFace
-              key={c.uid} id={c.id} size="sm" covered={c.covered}
-              glow={optKeys.has(`c${c.uid}`)} selected={selected.includes(`c${c.uid}`)}
-              onClick={optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
-            />
-          ))}
-          {pv.exp.length === 0 && <span className="muted">（空）</span>}
+      <div className="zonesrow">
+        <div className="piles">
+          <Pile p={p} zone="deck" label="牌組" count={pv.deckCount} />
+          <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={() => onZone(p, 'discard')} />
+          <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} onClick={() => onZone(p, 'rage')} />
+        </div>
+        <div className="expzone">
+          <div className="zonelabel">經驗區（左側為最前方）</div>
+          <div className="cardrow scroll" style={{ minHeight: pv.exp.length ? 0 : 20 }}>
+            {pv.exp.map((c) => (
+              <CardFace
+                key={c.uid} uid={c.uid} id={c.id} size="sm" covered={c.covered}
+                glow={optKeys.has(`c${c.uid}`)} selected={selected.includes(`c${c.uid}`)}
+                onClick={optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
+              />
+            ))}
+            {pv.exp.length === 0 && <span className="muted">（空）</span>}
+          </div>
         </div>
       </div>
 
@@ -77,7 +104,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit }: Boa
         <div className="cardrow">
           {pv.hand.map((c) => (
             <CardFace
-              key={c.uid} id={mine ? c.id : null} size={mine ? 'md' : 'sm'}
+              key={c.uid} uid={c.uid} id={mine ? c.id : null} size={mine ? 'md' : 'sm'}
               glow={mine && optKeys.has(`c${c.uid}`)} selected={mine && selected.includes(`c${c.uid}`)}
               onClick={mine && optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
             />
@@ -113,7 +140,7 @@ function StackColumn({ pv, label, mine, fx }: { pv: PlayerView; label: string; m
       <div className="vstack">
         {cards.map((c, i) => (
           <CardFace
-            key={c.uid} id={c.id} size="md" pursuit={i >= pv.combat.length}
+            key={c.uid} uid={c.uid} id={c.id} size="md" pursuit={i >= pv.combat.length}
             fresh={fx?.type === 'play' && fx.uid === c.uid}
           />
         ))}
