@@ -5,6 +5,8 @@ export interface Placement {
   /** below：edge 是面板的上緣；above：edge 是面板的下緣到可視區底端的距離 */
   side: 'below' | 'above';
   edge: number;
+  /** 這一邊實際剩下的高度：面板的最大高度不能超過它，否則會超出可視區 */
+  maxH: number;
 }
 
 const GAP = 6;
@@ -17,6 +19,6 @@ export function placePopover(anchor: Box, size: { w: number; h: number }, vp: { 
   const above = anchor.top - GAP;
   const side = below >= size.h || below >= above ? 'below' : 'above';
   return side === 'below'
-    ? { left, side, edge: anchor.bottom + GAP }
-    : { left, side, edge: vp.h - anchor.top + GAP };
+    ? { left, side, edge: anchor.bottom + GAP, maxH: Math.max(0, below - MARGIN) }
+    : { left, side, edge: vp.h - anchor.top + GAP, maxH: Math.max(0, above - MARGIN) };
 }

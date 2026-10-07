@@ -224,7 +224,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         <Spotlight fx={fx} caption={cur?.frame.caption} n={fxKey} scale={scale} />
         <FlightLayer view={v} fx={fx} playing={cur !== null} n={fxKey} scale={scale} />
 
-        {zone && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} anchor={zone.anchor} onClose={() => setZone(null)} />}
+        {zone && !(zone.z === 'rage' && zone.p !== me) && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} anchor={zone.anchor} onClose={() => setZone(null)} />}
 
         {result && (
           <Modal>
