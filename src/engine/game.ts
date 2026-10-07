@@ -7,11 +7,15 @@ import {
 } from './ops';
 import { Rng } from './rng';
 import { checkWin } from './win';
-import { viewFor, type RawFrame } from './view';
+import { diffFlights, flightsTotalMs } from './flights';
+import { viewFor, type GameView, type RawFrame } from './view';
 import {
   FRAME_MS, other, type CardInst, type FrameFx, type GameSetup, type GameState, type Phase, type PlayerId, type PlayerState,
   type Request, type TurnFlags, type ZoneName,
 } from './types';
+
+/** 飛行播完後，影格再多停留一下 */
+const FLY_BUFFER_MS = 120;
 
 const ZONES: ZoneName[] = ['deck', 'hand', 'discard', 'rage', 'exp', 'combat', 'pursuit', 'gear', 'buff'];
 
@@ -38,6 +42,7 @@ export class Game {
   pending: Request | null = null;
   private it: Generator<Request, void, string[]>;
   private frames: RawFrame[] = [];
+  private lastView: GameView | null = null;
 
   /** 取出並清空自上次以來錄下的動畫影格 */
   drainFrames(): RawFrame[] {
@@ -49,9 +54,13 @@ export class Game {
   frame = (caption: string, fx: FrameFx): void => {
     this.touched = 0;
     if (!this.setup.animate) return;
+    const views: [GameView, GameView] = [viewFor(this, 0, false), viewFor(this, 1, false)];
+    // 這個影格裡有卡片飛行時，停留要夠久，讓整批飛行播完才換下一個影格
+    const fly = this.lastView ? flightsTotalMs(diffFlights(this.lastView, views[0])) : 0;
+    this.lastView = views[0];
     this.frames.push({
-      views: [viewFor(this, 0, false), viewFor(this, 1, false)],
-      logLen: this.state.log.length, caption, fx, ms: FRAME_MS[fx.type],
+      views, logLen: this.state.log.length, caption, fx,
+      ms: Math.max(FRAME_MS[fx.type], fly > 0 ? fly + FLY_BUFFER_MS : 0),
     });
   };
 

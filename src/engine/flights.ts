@@ -1,6 +1,30 @@
 import type { CardView, GameView, PlayerView } from './view';
 import type { PlayerId, ZoneName } from './types';
 
+/** 卡片飛行的時序（毫秒，標準速度） */
+export const FLY = {
+  /** 一張牌從起點飛到終點 */
+  ms: 420,
+  /** 同一組的下一張晚多久出發 */
+  stagger: 90,
+  /** 一批飛行（含逐張錯開）最多花多久 */
+  capMs: 1500,
+  /** 再快就看不清楚了 */
+  minMs: 150,
+};
+
+/** 一批飛行的時序：maxOrder 為各組中最大的順序（0 起算）。張數多時整批壓縮到 capMs 內 */
+export function flightTiming(maxOrder: number): { ms: number; stagger: number; total: number } {
+  const natural = FLY.ms + maxOrder * FLY.stagger;
+  if (natural <= FLY.capMs) return { ms: FLY.ms, stagger: FLY.stagger, total: natural };
+  const ms = Math.max(FLY.minMs, (FLY.ms * FLY.capMs) / natural);
+  return { ms, stagger: (FLY.capMs - ms) / maxOrder, total: FLY.capMs };
+}
+
+/** 播完這批飛行要多久（沒有飛行為 0） */
+export const flightsTotalMs = (flights: Flight[]): number =>
+  flights.length === 0 ? 0 : flightTiming(Math.max(...flights.map((f) => f.order))).total;
+
 /** 影格裡看得到每張卡的區域（牌組只有張數，沒有卡片） */
 const VISIBLE_ZONES = ['hand', 'discard', 'rage', 'exp', 'combat', 'pursuit', 'gear', 'buff'] as const;
 type VisibleZone = (typeof VISIBLE_ZONES)[number];

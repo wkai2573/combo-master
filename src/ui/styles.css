@@ -11,9 +11,7 @@
   --atk: #e0583f;
   --def: #3f8fe0;
   --combo: #b08af0;
-  /* 動畫語彙：時長（毫秒，標準速度）、緩動、色彩語意 */
-  --fly-ms: 420;
-  --fly-stagger: 90;
+  /* 動畫語彙：緩動、色彩語意（飛行時長在引擎的 FLY） */
   --ease-fly: cubic-bezier(.25, .8, .3, 1);
   --pile-edge: #2d3652;
   --fx-atk: var(--atk);

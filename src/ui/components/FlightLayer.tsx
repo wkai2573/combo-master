@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { coverChanges, diffFlights, type Flight } from '../../engine/flights';
+import { coverChanges, diffFlights, FLY, flightTiming, type Flight } from '../../engine/flights';
 import type { GameView } from '../../engine/view';
 import { CardFace } from './CardFace';
 
@@ -18,17 +18,14 @@ interface Placed {
   to: { left: number; top: number; width: number; height: number };
   /** 飛行複製品的卡片尺寸，與終點的真實卡片一致 */
   size: 'sm' | 'md';
-  /** 開始飛行前的延遲（毫秒，標準速度） */
+  /** 開始飛行前的延遲與飛行時間（毫秒，標準速度） */
   delay: number;
+  ms: number;
+  /** 終點是棄牌堆時，堆頂的牌先藏起來，等整批飛完才顯示新的頂牌 */
+  pileTop: HTMLElement | null;
   /** 終點上的真實卡片，飛行期間先藏起來 */
   hide: HTMLElement | null;
 }
-
-const cssMs = (name: string, fallback: number) => {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const n = parseFloat(raw);
-  return Number.isFinite(n) ? n : fallback;
-};
 
 const center = (r: DOMRect) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
 
@@ -54,6 +51,8 @@ export function FlightLayer({ view, playing, n, scale }: {
   const prev = useRef<{ view: GameView; rects: Map<number, DOMRect> } | null>(null);
   const active = useRef<Animation[]>([]);
   const hidden = useRef<HTMLElement[]>([]);
+  // 每個棄牌堆頂還有幾張牌沒落地
+  const holds = useRef(new Map<HTMLElement, number>());
   // 這個影格裡原地翻成覆蓋（或翻開）的牌
   const turnRef = useRef<HTMLElement[]>([]);
   // 播放速度中途改變時，不重播進行中的飛行
@@ -75,6 +74,7 @@ export function FlightLayer({ view, playing, n, scale }: {
     const changed = playing && view && before && before.view !== view;
     if (changed) {
       const flies = diffFlights(before.view, view);
+      const timing = flightTiming(Math.max(0, ...flies.map((f) => f.order)));
       for (const f of flies) {
         const destEl = PILE_ZONES.has(f.to) ? null : document.querySelector<HTMLElement>(`[data-uid="${f.uid}"]`);
         const dest = destEl ? destEl.getBoundingClientRect() : PILE_ZONES.has(f.to) ? pileRect(f.owner, f.to) : undefined;
@@ -87,7 +87,9 @@ export function FlightLayer({ view, playing, n, scale }: {
           dx: a.x - b.x, dy: a.y - b.y, sx: src.width / dest.width, sy: src.height / dest.height,
           to: { left: dest.left, top: dest.top, width: dest.width, height: dest.height },
           size: destEl?.classList.contains('md') ? 'md' : 'sm',
-          delay: f.order * cssMs('--fly-stagger', 90),
+          delay: f.order * timing.stagger,
+          ms: timing.ms,
+          pileTop: f.to === 'discard' ? document.querySelector<HTMLElement>(`[data-pile="${f.owner}-discard"] .card`) : null,
           hide: destEl,
         });
       }
@@ -101,7 +103,13 @@ export function FlightLayer({ view, playing, n, scale }: {
       }
     }
     turnRef.current = turned;
+    holds.current = new Map();
     for (const pl of placed) {
+      if (pl.pileTop) {
+        pl.pileTop.style.visibility = 'hidden';
+        holds.current.set(pl.pileTop, (holds.current.get(pl.pileTop) ?? 0) + 1);
+        if (!hidden.current.includes(pl.pileTop)) hidden.current.push(pl.pileTop);
+      }
       if (pl.hide) {
         pl.hide.style.visibility = 'hidden';
         // 這張牌由飛行負責進場，不再另外淡入
@@ -120,11 +128,11 @@ export function FlightLayer({ view, playing, n, scale }: {
   const refs = useRef(new Map<string, HTMLDivElement>());
   useLayoutEffect(() => {
     const scale = scaleRef.current;
-    const dur = cssMs('--fly-ms', 420) * scale;
+    const turnMs = FLY.ms * scale;
     const ease = getComputedStyle(document.documentElement).getPropertyValue('--ease-fly').trim() || 'ease-out';
     // 翻成覆蓋的牌原地翻面（turnRef 由上一個 effect 在 setFlights 之前備好）
     for (const el of turnRef.current) {
-      active.current.push(el.animate([{ transform: 'rotateY(90deg) scale(.9)' }, { transform: 'none' }], { duration: dur, easing: ease }));
+      active.current.push(el.animate([{ transform: 'rotateY(90deg) scale(.9)' }, { transform: 'none' }], { duration: turnMs, easing: ease }));
     }
     for (const pl of flights) {
       const el = refs.current.get(pl.key);
@@ -135,7 +143,7 @@ export function FlightLayer({ view, playing, n, scale }: {
           { transform: `translate(${pl.dx}px, ${pl.dy}px) scale(${pl.sx}, ${pl.sy})`, opacity: 1 },
           { transform: 'none', opacity: 1 },
         ],
-        { duration: dur, delay: pl.delay * scale, easing: ease, fill: 'both' },
+        { duration: pl.ms * scale, delay: pl.delay * scale, easing: ease, fill: 'both' },
       );
       active.current.push(fly);
       const inner = el.querySelector<HTMLElement>('.flip');
@@ -143,13 +151,18 @@ export function FlightLayer({ view, playing, n, scale }: {
         active.current.push(
           inner.animate(
             [{ transform: `rotateY(${pl.flight.faceUpFrom ? 0 : 180}deg)` }, { transform: `rotateY(${pl.flight.faceUpTo ? 0 : 180}deg)` }],
-            { duration: dur, delay: pl.delay * scale, easing: 'ease-in-out', fill: 'both' },
+            { duration: pl.ms * scale, delay: pl.delay * scale, easing: 'ease-in-out', fill: 'both' },
           ),
         );
       }
       fly.onfinish = () => {
         // 落地：把真實卡片顯示出來，飛行的複製品消失
         if (pl.hide) pl.hide.style.visibility = '';
+        if (pl.pileTop) {
+          const left = (holds.current.get(pl.pileTop) ?? 1) - 1;
+          holds.current.set(pl.pileTop, left);
+          if (left <= 0) pl.pileTop.style.visibility = '';
+        }
         el.style.visibility = 'hidden';
       };
     }

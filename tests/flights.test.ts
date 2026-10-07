@@ -1,7 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { coverChanges, diffFlights, type Flight } from '../src/engine/flights';
+import { coverChanges, diffFlights, flightTiming, type Flight } from '../src/engine/flights';
+import { pay, type GameCtx } from '../src/engine/ops';
 import { frameFor } from '../src/engine/view';
 import { pick, scenario } from './helpers';
+
+/** 火球：蓋 3 付費後對方直擊 2。回傳「付費影格」與「直擊影格」 */
+function fireball(viewer: 0 | 1 = 0) {
+  const g = scenario({
+    animate: true, chars: ['法師', '勇者'],
+    p0: { hand: ['火球'], exp: ['黑桃3', '黑桃4', '黑桃5'] }, p1: { hand: [] },
+  });
+  g.drainFrames();
+  pick(g, '發動');
+  const frames = g.drainFrames().map((f) => frameFor(f, viewer));
+  const paid = frames.findIndex((f) => f.view.players[0].exp.every((c) => c.covered) && f.view.players[0].exp.length === 3);
+  const hit = frames.findIndex((f, i) => i > paid && f.view.players[1].discard.length === 2);
+  expect(paid).toBeGreaterThan(-1);
+  expect(hit).toBeGreaterThan(paid);
+  return { frames, paid, hit };
+}
 
 /** 一次拼招後取出影格，回傳「某個演出類型的影格」與它前一個影格之間的卡片飛行 */
 function flightsInto(fxType: string, viewer: 0 | 1 = 0): Flight[] {
@@ -65,5 +82,64 @@ describe('卡片飛行', () => {
     const exp = frames[i].view.players[0].exp;
     expect(coverChanges(frames[i - 1].view, frames[i].view)).toEqual(exp.slice(0, 3).map((c) => c.uid));
     expect(diffFlights(frames[i - 1].view, frames[i].view)).toEqual([]);
+  });
+
+  it('直擊：牌組上方的牌逐張飛進棄牌區，途中翻成正面（棄牌區是公開的）', () => {
+    for (const viewer of [0, 1] as const) {
+      const { frames, hit } = fireball(viewer);
+      const flights = diffFlights(frames[hit - 1].view, frames[hit].view).filter((f) => f.to === 'discard');
+      expect(flights).toHaveLength(2);
+      expect(flights.map((f) => f.order)).toEqual([0, 1]);
+      for (const f of flights) {
+        expect(f.owner).toBe(1);
+        expect(f.from).toBe('deck');
+        expect(f.id).not.toBeNull();
+        expect(f.faceUpFrom).toBe(false);
+        expect(f.faceUpTo).toBe(true);
+      }
+    }
+  });
+
+  it('回復：怒氣區上方的牌逐張飛回牌組頂，全程牌背', () => {
+    const g = scenario({
+      animate: true, chars: ['商人', '勇者'],
+      p0: { exp: ['低價買進', '黑桃3'], rage: Array(5).fill('黑桃1') },
+    });
+    g.drainFrames();
+    pay(g as unknown as GameCtx, 0, { cover: 1 }).next();
+    const frames = g.drainFrames().map((f) => frameFor(f, 0));
+    expect(frames.length).toBeGreaterThan(1);
+    const flights = diffFlights(frames[frames.length - 2].view, frames[frames.length - 1].view);
+    expect(flights).toHaveLength(3);
+    expect(flights.map((f) => f.order)).toEqual([0, 1, 2]);
+    for (const f of flights) {
+      expect([f.from, f.to]).toEqual(['rage', 'deck']);
+      expect([f.faceUpFrom, f.faceUpTo]).toEqual([false, false]);
+    }
+  });
+
+  it('影格停留的時間夠讓整批飛行播完，不會被下一個影格截斷', () => {
+    const g = scenario({
+      animate: true, chars: ['法師', '勇者'],
+      p0: { hand: ['Explosion!'], exp: Array(8).fill('黑桃3') }, p1: { hand: [] },
+    });
+    g.drainFrames();
+    pick(g, '發動'); // 蓋 8，對方直擊 5
+    const frames = g.drainFrames().map((f) => frameFor(f, 0));
+    const hit = frames.find((f) => f.view.players[1].discard.length === 5)!;
+    // 5 張：最後一張晚 4×90ms 出發，再飛 420ms ＝ 780ms；影格要多留一點緩衝，超過原本的 800ms
+    expect(hit.ms).toBeGreaterThanOrEqual(900);
+  });
+
+  it('飛行時序：張數少維持原速，張數多時整批壓縮在 1.5 秒內', () => {
+    expect(flightTiming(0)).toEqual({ ms: 420, stagger: 90, total: 420 });
+    expect(flightTiming(4).total).toBe(420 + 4 * 90);
+    for (const maxOrder of [10, 20, 40, 100]) {
+      const t = flightTiming(maxOrder);
+      expect(t.total).toBeLessThanOrEqual(1500);
+      expect(t.ms).toBeGreaterThanOrEqual(150); // 再快就看不清楚了
+      // 最後一張的出發時間加上飛行時間，剛好就是整批的總時長（介面實際播放的時間與引擎預估一致）
+      expect(t.ms + maxOrder * t.stagger).toBeCloseTo(t.total);
+    }
   });
 });
