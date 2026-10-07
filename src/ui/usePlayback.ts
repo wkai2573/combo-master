@@ -3,6 +3,15 @@ import type { Frame } from '../engine/view';
 
 export type Speed = 'normal' | 'fast' | 'off';
 export const SPEED_LABEL: Record<Speed, string> = { normal: '標準速度', fast: '快速', off: '關閉動畫' };
+/**
+ * 速度的初始值：玩家選過的優先（連標準速度也算）；沒選過就看瀏覽器是否要求減少動態。
+ * stored 為儲存的偏好原始值，無法讀取時給 null。
+ */
+export function initialSpeed(stored: string | null, reducedMotion: boolean): Speed {
+  if (stored === 'normal' || stored === 'fast' || stored === 'off') return stored;
+  return reducedMotion ? 'off' : 'normal';
+}
+
 const SCALE: Record<Speed, number> = { normal: 1, fast: 0.45, off: 0 };
 
 export interface Playing {

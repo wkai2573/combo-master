@@ -1,6 +1,6 @@
 import { FLOW_CHART_URL } from '../flowChart';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { SPEED_LABEL, usePlayback, type Speed } from '../usePlayback';
+import { initialSpeed, SPEED_LABEL, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { CardFace, InspectContext, InspectPanel, PinContext } from '../components/CardFace';
 import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
@@ -27,12 +27,13 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const [zone, setZone] = useState<{ p: PlayerId; z: ZoneKey } | null>(null);
   const [copied, setCopied] = useState(false);
   const [speed, setSpeedState] = useState<Speed>(() => {
+    let stored: string | null = null;
     try {
-      const s = localStorage.getItem('lianji.speed');
-      return s === 'fast' || s === 'off' ? s : 'normal';
+      stored = localStorage.getItem('lianji.speed');
     } catch {
-      return 'normal';
+      // 無法讀取偏好：視同沒選過
     }
+    return initialSpeed(stored, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
   });
   const setSpeed = (s: Speed) => {
     setSpeedState(s);

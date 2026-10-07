@@ -105,9 +105,11 @@ h1, h2, h3 { margin: 0 0 8px; }
 .card.back { background: repeating-linear-gradient(45deg, #2a3350, #2a3350 6px, #222a42 6px, #222a42 12px); align-items: center; justify-content: center; color: var(--muted); }
 .card.covered { filter: grayscale(0.8) brightness(0.7); }
 .card.covered::after { content: '覆蓋'; position: absolute; right: 3px; top: 3px; background: #000a; padding: 0 4px; border-radius: 3px; font-size: 9px; }
-.card.selected { outline: 3px solid var(--accent); transform: translateY(-6px); }
+.card.selected { outline: 3px solid var(--accent); transform: translateY(-12px); }
 .card.glow { box-shadow: 0 0 10px 2px var(--accent); cursor: pointer; }
-.card.clickable { cursor: pointer; }
+/* 可以選的牌：滑過微微抬起，選中抬更高；不能選的牌不動 */
+.card.clickable { cursor: pointer; transition: transform .12s ease-out; }
+.card.clickable:hover:not(.selected) { transform: translateY(-6px); }
 .card.dim { opacity: 0.35; }
 .card .badge {
   position: absolute; right: 3px; bottom: 3px; background: var(--accent); color: #000; font-weight: 800;
