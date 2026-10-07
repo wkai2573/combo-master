@@ -29,6 +29,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const [pinned, setPinned] = useState<{ id: string; exp: boolean } | null>(null);
   const inspectCard = useCallback((id: string | null, exp?: boolean) => setInspect(id ? { id, exp: !!exp } : null), []);
   const togglePin = useCallback((id: string, exp?: boolean) => setPinned((p) => (p?.id === id && p.exp === !!exp ? null : { id, exp: !!exp })), []);
+  // 窄螢幕版：卡片說明與遊戲紀錄收成可開關的抽屜，一次開一個
+  const [drawer, setDrawer] = useState<'inspect' | 'log' | null>(null);
   const [zone, setZone] = useState<{ p: PlayerId; z: ZoneKey; anchor: DOMRect } | null>(null);
   const zoneRef = useRef(zone);
   zoneRef.current = zone;
@@ -79,6 +81,11 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
     // 空檔維持的是上一個桌面，不要把它當成新的桌面記起來
     if (!lagging) lastShown.current = v ?? null;
   }, [v, lagging]);
+
+  // 窄螢幕沒有常駐的說明欄：固定一張卡的說明時自動打開說明抽屜
+  useEffect(() => {
+    if (pinned && !wide) setDrawer('inspect');
+  }, [pinned, wide]);
 
   // Esc：先關閉展開的牌區，沒有展開的牌區才取消固定的說明
   useEffect(() => {
@@ -182,6 +189,12 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           <span className="muted">先攻：{v.first === me ? '你' : '對手'}</span>
           <span className="spacer" />
           {st.message && <span style={{ color: 'var(--bad)' }}>{st.message}</span>}
+          {!wide && (
+            <>
+              <button className={drawer === 'inspect' ? 'on' : ''} onClick={() => setDrawer((d) => (d === 'inspect' ? null : 'inspect'))}>說明</button>
+              <button className={drawer === 'log' ? 'on' : ''} onClick={() => setDrawer((d) => (d === 'log' ? null : 'log'))}>紀錄</button>
+            </>
+          )}
           <a className="btnlink" href={FLOW_CHART_URL} target="_blank" rel="noreferrer" title="在新分頁開啟戰鬥流程圖">流程圖</a>
           <select value={speed} onChange={(e) => setSpeed(e.target.value as Speed)} title="動畫速度">
             {(Object.keys(SPEED_LABEL) as Speed[]).map((s) => <option key={s} value={s}>{SPEED_LABEL[s]}</option>)}
@@ -214,10 +227,17 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
                 {myBoard}
                 {promptBar}
               </div>
-              <div className="side">
-                <InspectPanel id={(pinned ?? inspect)?.id ?? null} expActive={(pinned ?? inspect)?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} />
-                <LogPanel lines={v.log} />
-              </div>
+              {drawer && (
+                <div className="drawer">
+                  <div className="drawerhead">
+                    <b>{drawer === 'inspect' ? '卡片說明' : '遊戲紀錄'}</b>
+                    <button onClick={() => setDrawer(null)}>關閉</button>
+                  </div>
+                  {drawer === 'inspect'
+                    ? <InspectPanel id={(pinned ?? inspect)?.id ?? null} expActive={(pinned ?? inspect)?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} />
+                    : <LogPanel lines={v.log} />}
+                </div>
+              )}
             </>
           )}
         </div>

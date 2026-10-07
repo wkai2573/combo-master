@@ -131,9 +131,8 @@ h1, h2, h3 { margin: 0 0 8px; }
 .battle { display: grid; grid-template-rows: auto 1fr; height: 100%; }
 .topbar { display: flex; gap: 14px; align-items: center; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
 .topbar .phase { color: var(--accent); font-weight: 700; }
-.main { display: grid; grid-template-columns: 1fr 300px; min-height: 0; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; }
 .board { display: flex; flex-direction: column; gap: 8px; padding: 10px; overflow-y: auto; min-height: 0; }
-.side { border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
 .inspect { padding: 10px; border-bottom: 1px solid var(--line); min-height: 170px; }
 .inspect .nm { font-size: 16px; font-weight: 700; color: var(--accent); }
 .inspect .st { margin: 4px 0; }
@@ -247,8 +246,6 @@ h1, h2, h3 { margin: 0 0 8px; }
 .curvecol { display: flex; flex-direction: column; flex: 1; justify-content: flex-end; height: 100%; }
 
 @media (max-width: 900px) {
-  .main { grid-template-columns: 1fr; }
-  .side { display: none; }
   .builder { grid-template-columns: 1fr; }
 }
 
@@ -447,3 +444,25 @@ h1, h2, h3 { margin: 0 0 8px; }
 .battle.wide .prompt .card.selected, .battle.wide .prompt .card.clickable:hover:not(.selected) { transform: none; }
 .midnotes { margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--muted); }
 .battle.wide .combatarea .mid { align-self: flex-start; padding-top: 80px; }
+
+/* ───────── 窄螢幕版：單欄、可捲動，說明與紀錄收成抽屜 ───────── */
+.battle:not(.wide) { display: flex; flex-direction: column; height: 100%; }
+.battle:not(.wide) > .topbar, .battle:not(.wide) > .steps, .battle:not(.wide) > .banner { flex: none; }
+.battle:not(.wide) .topbar { flex-wrap: wrap; gap: 6px 10px; }
+.battle:not(.wide) .main { position: relative; flex: 1; grid-template-rows: minmax(0, 1fr); }
+.topbar button.on { border-color: var(--accent); color: var(--accent); }
+/* 抽屜蓋在桌面上方，最多佔一半高度，不蓋住底部的提示面板 */
+.drawer { position: absolute; top: 0; left: 0; right: 0; z-index: 7; max-height: min(40%, 280px); display: flex; flex-direction: column; background: var(--panel); border-bottom: 2px solid var(--accent); box-shadow: 0 8px 20px #000a; }
+.drawerhead { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; border-bottom: 1px solid var(--line); }
+.drawerhead button { padding: 1px 10px; font-size: 12px; }
+.drawer .inspect { flex: 1; min-height: 0; overflow-y: auto; border-bottom: 0; }
+.drawer .log { flex: 1; min-height: 0; }
+/* 窄螢幕的提示面板：選項卡排成一列橫向捲動，不佔滿整個畫面 */
+.battle:not(.wide) .prompt .cardrow { flex-wrap: nowrap; overflow-x: auto; padding-top: 14px; }
+@media (max-width: 640px) {
+  .pboard { padding: 6px; }
+  .zonesrow { flex-wrap: wrap; }
+  .zonesrow .expzone { flex: 1 1 100%; }
+  .combatarea .cols { flex-wrap: wrap; gap: 8px 24px; }
+  .combatarea .mid { order: 3; flex: 1 1 100%; max-width: none; }
+}
