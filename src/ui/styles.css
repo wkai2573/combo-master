@@ -415,3 +415,9 @@ h1, h2, h3 { margin: 0 0 8px; }
 .handslot { position: relative; flex: none; min-width: 0; }
 .handslot:hover { z-index: 6; }
 @media (prefers-reduced-motion: reduce) { .handrow .card.clickable { transition: none; } }
+
+/* ───────── 牌區就地展開：貼著該區，不推擠其他區域 ───────── */
+.zoneback { position: fixed; inset: 0; z-index: 8; }
+.zonepop { position: fixed; z-index: 9; overflow: auto; background: var(--panel); border: 1px solid var(--accent); border-radius: 10px; padding: 8px 10px; box-shadow: 0 8px 24px #000b; }
+.zonepophead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.zonepophead button { padding: 1px 10px; font-size: 12px; }

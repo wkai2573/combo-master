@@ -2,7 +2,7 @@ import { FLOW_CHART_URL } from '../flowChart';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { initialSpeed, SPEED_LABEL, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
-import { CardFace, InspectContext, InspectPanel, PinContext } from '../components/CardFace';
+import { InspectContext, InspectPanel, PinContext } from '../components/CardFace';
 import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
 import { FlightLayer } from '../components/FlightLayer';
 import { PhaseBanner } from '../components/PhaseBanner';
@@ -11,6 +11,7 @@ import { flightTiming } from '../../engine/flights';
 import { statChanges } from '../../engine/stats';
 import type { GameView } from '../../engine/view';
 import { Modal } from '../components/Modal';
+import { ZoneViewer } from '../components/ZoneViewer';
 import { StepTracker } from '../components/StepTracker';
 import { PromptPanel } from '../components/PromptPanel';
 import { useWide } from '../useWide';
@@ -26,7 +27,9 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const [inspect, setInspect] = useState<string | null>(null);
   const [pinned, setPinned] = useState<string | null>(null);
   const togglePin = useCallback((id: string) => setPinned((p) => (p === id ? null : id)), []);
-  const [zone, setZone] = useState<{ p: PlayerId; z: ZoneKey } | null>(null);
+  const [zone, setZone] = useState<{ p: PlayerId; z: ZoneKey; anchor: DOMRect } | null>(null);
+  const zoneRef = useRef(zone);
+  zoneRef.current = zone;
   const [copied, setCopied] = useState(false);
   const [speed, setSpeedState] = useState<Speed>(() => {
     let stored: string | null = null;
@@ -75,9 +78,13 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
     if (!lagging) lastShown.current = v ?? null;
   }, [v, lagging]);
 
-  // Esc 取消固定的說明
+  // Esc：先關閉展開的牌區，沒有展開的牌區才取消固定的說明
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setPinned(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (zoneRef.current) setZone(null);
+      else setPinned(null);
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
@@ -148,8 +155,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   // 第一張牌落進怒氣區的時候才震動、浮出傷害數字（這一批飛行的時序由傷害較多的那一方決定）
   const hitOf = (p: PlayerId) => (dmgFx && dmgFx[p] > 0 ? { amount: dmgFx[p], key: fxKey, delay: flightTiming(Math.max(...dmgFx) - 1).ms * scale } : undefined);
 
-  const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z) => setZone({ p, z })} hit={hitOf(opp)} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
-  const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z) => setZone({ p, z })} hit={hitOf(me)} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
+  const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={hitOf(opp)} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
+  const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={hitOf(me)} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
   const combat = <CombatArea v={v} fx={fx} caption={cur?.frame.caption} fxKey={fxKey} changes={changes} />;
   const promptBar = cur ? (
     <div className="prompt wait">
@@ -217,22 +224,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         <Spotlight fx={fx} caption={cur?.frame.caption} n={fxKey} scale={scale} />
         <FlightLayer view={v} fx={fx} playing={cur !== null} n={fxKey} scale={scale} />
 
-        {zone && (
-          <Modal onClose={() => setZone(null)}>
-            <h3>
-              {zone.p === me ? '我方' : '對手'}{ZONE_NAME[zone.z]}（{zoneCards.length}）
-            </h3>
-            {zone.z === 'rage' && zone.p !== me ? (
-              <p className="muted">對手的怒氣區內容看不到。</p>
-            ) : (
-              <div className="cardrow" style={{ maxWidth: 720 }}>
-                {zoneCards.map((c) => <CardFace key={c.uid} id={c.id} size="sm" covered={c.covered} />)}
-                {zoneCards.length === 0 && <span className="muted">（空）</span>}
-              </div>
-            )}
-            <div style={{ marginTop: 12 }}><button onClick={() => setZone(null)}>關閉</button></div>
-          </Modal>
-        )}
+        {zone && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} anchor={zone.anchor} onClose={() => setZone(null)} />}
 
         {result && (
           <Modal>

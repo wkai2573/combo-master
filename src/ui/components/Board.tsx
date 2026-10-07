@@ -17,7 +17,8 @@ interface BoardProps {
   prompt: Request | null;
   selected: string[];
   onPick: (key: string) => void;
-  onZone: (p: PlayerId, z: ZoneKey) => void;
+  /** anchor 是被點的區域在畫面上的位置，展開面板貼著它出現 */
+  onZone: (p: PlayerId, z: ZoneKey, anchor: DOMRect) => void;
   /** 這位玩家剛受到傷害：震動並浮出傷害數字（key 變動時重播） */
   hit?: { amount: number; key: number; /** 第一張牌落進怒氣區要等多久（毫秒） */ delay: number };
   /** 這個影格與上一個顯示的桌面之間的數值變化（key 變動時重播） */
@@ -31,12 +32,12 @@ interface BoardProps {
 
 /** 牌堆：牌組、怒氣區、棄牌區。飛行圖層以 data-pile 找到它在畫面上的位置 */
 function Pile({ p, zone, label, count, top, delta, k, shuffling, onClick }: {
-  p: PlayerId; zone: 'deck' | 'discard' | 'rage'; label: string; count: number; top?: CardView; delta?: number; k?: number; shuffling?: boolean; onClick?: () => void;
+  p: PlayerId; zone: 'deck' | 'discard' | 'rage'; label: string; count: number; top?: CardView; delta?: number; k?: number; shuffling?: boolean; onClick?: (anchor: DOMRect) => void;
 }) {
   const depth = Math.min(count, 6);
   const edge = Array.from({ length: depth }, (_, i) => `${(i + 1) * 2}px ${(i + 1) * 2}px 0 var(--pile-edge)`).join(', ');
   return (
-    <div className={`pile ${zone}${onClick ? ' click' : ''}`} onClick={onClick}>
+    <div className={`pile ${zone}${onClick ? ' click' : ''}`} onClick={onClick && ((e) => onClick(e.currentTarget.getBoundingClientRect()))}>
       <div className={`pilestack${shuffling ? ' shuffling' : ''}`} data-pile={`${p}-${zone}`} style={{ boxShadow: edge || undefined }}>
         {count === 0 ? (
           <div className="card sm slot">空</div>
@@ -129,6 +130,7 @@ function HandRow({ cards, mine, optKeys, selected, onPick }: { cards: CardView[]
 export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, changes, fxKey, outcome, shuffling }: BoardProps) {
   const pv = v.players[p];
   const mine = p === v.me;
+  const expRef = useRef<HTMLDivElement>(null);
   const ch = getCharacter(pv.charId);
   const awake = pv.exp.length >= ch.expReq;
   const optKeys = new Set(prompt?.options.map((o) => o.key) ?? []);
@@ -145,7 +147,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
         {v.first === p && <span className="pill awake">先攻</span>}
         <span className={`pill hp${changes?.life[p] ? ' flash' : ''}`} key={`hp${fxKey}`} title="牌組張數就是生命值">生命 {pv.deckCount}<Delta d={changes?.life[p]} k={fxKey} /></span>
         <span className="pill">手牌 {pv.hand.length}</span>
-        <span className={`pill click${awake ? ' awake' : ''}${changes?.exp[p] ? ' flash' : ''}`} key={`exp${fxKey}`} onClick={() => onZone(p, 'exp')}>
+        <span className={`pill click${awake ? ' awake' : ''}${changes?.exp[p] ? ' flash' : ''}`} key={`exp${fxKey}`} onClick={() => expRef.current && onZone(p, 'exp', expRef.current.getBoundingClientRect())}>
           經驗 {pv.exp.length}/{ch.expReq}{awake ? ' 覺醒' : ''}<Delta d={changes?.exp[p]} k={fxKey} tone="neutral" />
         </span>
         {pv.passed && <span className="pill">已收招</span>}
@@ -167,10 +169,10 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
       <div className="zonesrow">
         <div className="piles">
           <Pile p={p} zone="deck" label="牌組" count={pv.deckCount} shuffling={shuffling} />
-          <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} onClick={() => onZone(p, 'rage')} />
-          <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={() => onZone(p, 'discard')} />
+          <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} onClick={mine ? (a) => onZone(p, 'rage', a) : undefined} />
+          <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={(a) => onZone(p, 'discard', a)} />
         </div>
-        <div className="expzone">
+        <div className="expzone" ref={expRef}>
           <div className="zonelabel">經驗區（左側為最前方）</div>
           <ExpZone cards={pv.exp} optKeys={optKeys} selected={selected} onPick={onPick} />
         </div>
