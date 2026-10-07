@@ -33,6 +33,8 @@ export interface CardFaceProps {
   pursuit?: boolean;
   /** 剛打出的牌：短暫發光 */
   fresh?: boolean;
+  /** 矮卡（經驗區兩列時）：只露出攻／連擊／守與卡圖 */
+  short?: boolean;
   counters?: number;
   badge?: string | number;
   /** 卡片實體編號：讓飛行圖層找得到這張卡在畫面上的位置 */
@@ -49,12 +51,13 @@ export function kindLabel(c: CardData): string {
   return c.traits.join('・') || '招式';
 }
 
-export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, fresh, counters, badge, uid, counterDelta, deltaKey, onClick }: CardFaceProps) {
+export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, fresh, short, counters, badge, uid, counterDelta, deltaKey, onClick }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const pin = useContext(PinContext);
   const cls = ['card', size];
   if (pursuit) cls.push('pursuit');
   if (fresh) cls.push('fresh');
+  if (short) cls.push('short');
   if (selected) cls.push('selected');
   if (glow) cls.push('glow');
   if (dim) cls.push('dim');

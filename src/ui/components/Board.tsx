@@ -1,5 +1,6 @@
 import { KeywordText } from './KeywordText';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { expLayout } from '../expLayout';
 import { getCard, getCharacter } from '../../data/cards';
 import type { CardView, GameView, PlayerView } from '../../engine/view';
 import type { StatChanges } from '../../engine/stats';
@@ -45,6 +46,39 @@ function Pile({ p, zone, label, count, top, delta, k, shuffling, onClick }: {
         )}
       </div>
       <div className="pilelabel">{label} <b>{count}</b><Delta d={delta} k={k ?? 0} tone="neutral" /></div>
+    </div>
+  );
+}
+
+/** 經驗區：高度固定。一列放得下是完整小卡，放不下分兩列矮卡，再放不下就水平重疊；滑過矮卡會展開成完整小卡 */
+function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optKeys: Set<string>; selected: string[]; onPick: (key: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    setWidth(el.clientWidth);
+    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const layout = expLayout(cards.length, width);
+  const short = layout.mode !== 'one';
+  return (
+    <div
+      ref={ref} className={`expcards ${layout.mode}`}
+      style={short ? { ['--step' as string]: `${layout.step}px` } : undefined}
+    >
+      {cards.map((c, i) => (
+        <div key={c.uid} className={`expslot${short ? (i % 2 === 0 ? ' r1' : ' r2') : ''}`}>
+          <CardFace
+            uid={c.uid} id={c.id} size="sm" covered={c.covered} short={short}
+            glow={optKeys.has(`c${c.uid}`)} selected={selected.includes(`c${c.uid}`)}
+            onClick={optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
+          />
+        </div>
+      ))}
+      {cards.length === 0 && <span className="muted">（空）</span>}
     </div>
   );
 }
@@ -95,16 +129,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
         </div>
         <div className="expzone">
           <div className="zonelabel">經驗區（左側為最前方）</div>
-          <div className="cardrow scroll" style={{ minHeight: pv.exp.length ? 0 : 20 }}>
-            {pv.exp.map((c) => (
-              <CardFace
-                key={c.uid} uid={c.uid} id={c.id} size="sm" covered={c.covered}
-                glow={optKeys.has(`c${c.uid}`)} selected={selected.includes(`c${c.uid}`)}
-                onClick={optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
-              />
-            ))}
-            {pv.exp.length === 0 && <span className="muted">（空）</span>}
-          </div>
+          <ExpZone cards={pv.exp} optKeys={optKeys} selected={selected} onPick={onPick} />
         </div>
       </div>
 

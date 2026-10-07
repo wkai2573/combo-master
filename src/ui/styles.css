@@ -390,3 +390,20 @@ h1, h2, h3 { margin: 0 0 8px; }
 .battle.wide .prompt .cardrow { grid-column: 2; grid-row: 1 / span 2; }
 .battle.wide .prompt .btns { grid-column: 1; }
 .battle.wide .prompt .card.md { width: 76px; height: 106px; }
+
+/* ───────── 經驗區：高度固定，單列、兩列矮卡、水平重疊 ───────── */
+.expcards { position: relative; height: 106px; }
+.expcards.one { display: flex; gap: 6px; align-items: flex-start; }
+.expcards.two, .expcards.overlap { display: grid; grid-auto-flow: column; grid-template-rows: 50px 50px; grid-auto-columns: var(--step); row-gap: 6px; }
+.expcards .expslot { position: relative; min-width: 0; }
+.expcards.two .expslot, .expcards.overlap .expslot { height: 50px; }
+.expcards .expslot.r2 { align-self: end; }
+.card.sm.short { height: 50px; }
+.card.sm.short .art { height: 28px; }
+.card.sm.short .nm { display: none; }
+/* 滑過矮卡：展開成完整小卡，第一列往下、第二列往上，浮在其他牌上面（不用過渡動畫，所以不受減少動態影響） */
+.expslot.r1:hover, .expslot.r2:hover { z-index: 6; }
+.expslot:hover .card.sm.short { height: 106px; }
+.expslot:hover .card.sm.short .art { height: 34px; }
+.expslot:hover .card.sm.short .nm { display: block; }
+.expslot.r2:hover .card.sm.short { position: absolute; bottom: 0; left: 0; }
