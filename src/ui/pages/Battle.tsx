@@ -6,6 +6,7 @@ import { CardFace, InspectContext, InspectPanel, PinContext } from '../component
 import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
 import { FlightLayer } from '../components/FlightLayer';
 import { Spotlight } from '../components/Spotlight';
+import { flightTiming } from '../../engine/flights';
 import { Modal } from '../components/Modal';
 import { StepTracker } from '../components/StepTracker';
 import { PromptPanel } from '../components/PromptPanel';
@@ -118,12 +119,13 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const fx = cur?.frame.fx;
   const fxKey = cur?.n ?? 0;
   const dmgFx = fx?.type === 'damage' ? fx.dmg : null;
-  const hitOf = (p: PlayerId) => (dmgFx && dmgFx[p] > 0 ? { amount: dmgFx[p], key: fxKey } : undefined);
+  // 第一張牌落進怒氣區的時候才震動、浮出傷害數字（這一批飛行的時序由傷害較多的那一方決定）
+  const hitOf = (p: PlayerId) => (dmgFx && dmgFx[p] > 0 ? { amount: dmgFx[p], key: fxKey, delay: flightTiming(Math.max(...dmgFx) - 1).ms * scale } : undefined);
 
   return (
     <InspectContext.Provider value={setInspect}>
       <PinContext.Provider value={togglePin}>
-      <div className="battle">
+      <div className="battle" style={{ ['--spd' as string]: scale }}>
         <div className="topbar">
           <span className="ver" title={VERSION_TITLE}>連擊大師 {VERSION_SHORT}</span>
           <b>第 {v.turn} 回合</b>

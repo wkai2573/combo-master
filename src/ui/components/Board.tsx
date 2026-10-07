@@ -15,7 +15,7 @@ interface BoardProps {
   onPick: (key: string) => void;
   onZone: (p: PlayerId, z: ZoneKey) => void;
   /** 這位玩家剛受到傷害：震動並浮出傷害數字（key 變動時重播） */
-  hit?: { amount: number; key: number };
+  hit?: { amount: number; key: number; /** 第一張牌落進怒氣區要等多久（毫秒） */ delay: number };
 }
 
 /** 牌堆：牌組、棄牌區、怒氣區。飛行圖層以 data-pile 找到它在畫面上的位置 */
@@ -49,7 +49,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit }: Boa
   const name = p === 0 ? '玩家A' : '玩家B';
 
   return (
-    <div className={`pboard${v.first === p ? ' turn' : ''}${hit ? ' hit' : ''}`}>
+    <div className={`pboard${v.first === p ? ' turn' : ''}${hit ? ' hit' : ''}`} style={hit ? { ['--hit-delay' as string]: `${hit.delay}ms` } : undefined}>
       {hit && <span className="dmgpop" key={hit.key}>−{hit.amount}</span>}
       <div className="phead">
         <span className="charname" title={`${ch.text}\n覺醒：${ch.awakenText}`}>
@@ -164,12 +164,24 @@ function ColumnFx({ fx, fxKey, player }: { fx?: FrameFx; fxKey: number; player: 
   return null;
 }
 
+/** 攻守拼招的一條算式：總攻、總防、傷害依序出現（from 為這條算式的第一項是全部的第幾項） */
+function Equation({ who, atk, def, dmg, from }: { who: string; atk: number; def: number; dmg: number; from: number }) {
+  const at = (i: number) => ({ ['--i' as string]: from + i });
+  return (
+    <div className="eq">
+      <span className="who">{who}</span>
+      <span className="st" style={at(0)}>攻 <b className="atk">{atk}</b></span>
+      <span className="st" style={at(1)}>− 守 <b className="def">{def}</b></span>
+      <span className="st" style={at(2)}>＝ <b className={`dm${dmg === 0 ? ' zero' : ''}`}>{dmg}</b></span>
+    </div>
+  );
+}
+
 export function CombatArea({ v, fx, caption, fxKey }: {
   v: GameView; fx?: FrameFx; caption?: string; fxKey: number;
 }) {
   const opp: PlayerId = v.me === 0 ? 1 : 0;
   const calc = fx?.type === 'calc' ? fx : null;
-  const dmgLine = (n: number) => <b className={`dm${n === 0 ? ' zero' : ''}`}>{n}</b>;
   return (
     <div className="combatarea">
       <div className="caption" key={`c${fxKey}`}>{caption ?? ' '}</div>
@@ -181,14 +193,8 @@ export function CombatArea({ v, fx, caption, fxKey }: {
         <div className="mid">
           {calc ? (
             <div className="calc" key={`calc${fxKey}`}>
-              <div className="eq">
-                <span className="who">對方 → 我方</span>
-                攻 <b className="atk">{calc.atk[opp]}</b> − 守 <b className="def">{calc.def[v.me]}</b> ＝ {dmgLine(calc.dmg[v.me])}
-              </div>
-              <div className="eq">
-                <span className="who">我方 → 對方</span>
-                攻 <b className="atk">{calc.atk[v.me]}</b> − 守 <b className="def">{calc.def[opp]}</b> ＝ {dmgLine(calc.dmg[opp])}
-              </div>
+              <Equation who="對方 → 我方" atk={calc.atk[opp]} def={calc.def[v.me]} dmg={calc.dmg[v.me]} from={0} />
+              <Equation who="我方 → 對方" atk={calc.atk[v.me]} def={calc.def[opp]} dmg={calc.dmg[opp]} from={3} />
             </div>
           ) : (
             <>
