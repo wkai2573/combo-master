@@ -27,7 +27,7 @@ interface BoardProps {
   shuffling?: boolean;
 }
 
-/** 牌堆：牌組、棄牌區、怒氣區。飛行圖層以 data-pile 找到它在畫面上的位置 */
+/** 牌堆：牌組、怒氣區、棄牌區。飛行圖層以 data-pile 找到它在畫面上的位置 */
 function Pile({ p, zone, label, count, top, delta, k, shuffling, onClick }: {
   p: PlayerId; zone: 'deck' | 'discard' | 'rage'; label: string; count: number; top?: CardView; delta?: number; k?: number; shuffling?: boolean; onClick?: () => void;
 }) {
