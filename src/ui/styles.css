@@ -360,7 +360,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .battle.wide > .topbar, .battle.wide > .steps, .battle.wide > .banner { flex: none; }
 .battle.wide .main { display: block; flex: 1; min-height: 0; }
 .battle.wide .board {
-  display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 6px; height: 100%; padding: 6px 10px; overflow: hidden;
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 6px; height: 100%; padding: 6px 10px; overflow: hidden auto;
 }
 .battle.wide .card.md { width: var(--mdw); height: var(--mdh); }
 .battle.wide .vstack { min-height: var(--mdh); }
@@ -368,9 +368,9 @@ h1, h2, h3 { margin: 0 0 8px; }
 .battle.wide .midrow { display: grid; grid-template-columns: minmax(240px, 1fr) auto minmax(240px, 1fr); gap: 8px; min-height: 0; }
 .battle.wide .midrow > * { min-height: 0; }
 .battle.wide .sidecol { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
-.battle.wide .sidecol .inspect { flex: 1; min-height: 0; overflow: hidden; border-bottom: 0; }
+.battle.wide .sidecol .inspect { flex: 1; min-height: 0; overflow-y: auto; border-bottom: 0; }
 .battle.wide .sidecol .inspect .bigart { height: 72px; }
-.battle.wide .combatarea { padding: 6px 10px; overflow: hidden; }
+.battle.wide .combatarea { padding: 6px 10px; overflow: hidden auto; }
 .battle.wide .combatarea .cols { gap: 24px; }
 .battle.wide .combatarea .caption { min-height: 24px; margin-bottom: 2px; font-size: 15px; }
 .battle.wide .combatarea .col { gap: 4px; }
@@ -383,7 +383,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .battle.wide .pboard > .gearzone { grid-column: 1; grid-row: 3; }
 .battle.wide .pboard > .zonesrow { grid-column: 2; grid-row: 1 / span 3; min-width: 0; }
 .battle.wide .pboard > .handzone { grid-column: 3; grid-row: 1 / span 3; min-width: 0; }
-.battle.wide .handzone .cardrow { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+.battle.wide .handzone .cardrow { flex-wrap: nowrap; overflow-x: auto; padding: 14px 4px 2px; margin-top: -12px; }
 /* 提示欄裡的選項卡縮成小卡，標題與卡片並排，不讓提示欄長太高 */
 .battle.wide .prompt { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; }
 .battle.wide .prompt .ptitle { grid-column: 1; }
