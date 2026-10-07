@@ -71,6 +71,7 @@ export function awakened(g: GameCtx, p: PlayerId): boolean {
 
 export function newCard(g: GameCtx, id: string, owner: PlayerId, zone: ZoneName): CardInst {
   const c: CardInst = { uid: g.nextUid++, id, owner, zone, covered: false, counters: 0 };
+  g.touched++;
   Z(g, owner, zone).push(c);
   return c;
 }

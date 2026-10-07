@@ -1,5 +1,5 @@
 import { getCard } from '../data/cards';
-import { GameOver, Z, log, pname, type GameCtx } from './ops';
+import { GameOver, Z, log, mark, pname, type GameCtx } from './ops';
 import { other, type PlayerId } from './types';
 
 /**
@@ -30,6 +30,7 @@ export function checkWin(g: GameCtx): void {
         s.winReason = '怒氣區翻牌仍分不出勝負';
         s.phase = '結束';
         log(g, '平手');
+        mark(g, '平手', { type: 'gameEnd', winner: 'draw' });
         throw new GameOver();
       }
       finish(g, i >= a.length ? 1 : 0, '怒氣區先翻完者落敗');
@@ -47,5 +48,6 @@ function finish(g: GameCtx, winner: PlayerId, reason: string): never {
   g.state.winReason = reason;
   g.state.phase = '結束';
   log(g, `${pname(g, winner)} 獲勝（${reason}）`);
+  mark(g, `${pname(g, winner)} 獲勝（${reason}）`, { type: 'gameEnd', winner });
   throw new GameOver();
 }

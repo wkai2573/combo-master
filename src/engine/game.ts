@@ -87,6 +87,7 @@ export class Game {
     this.state.phase = '結束';
     this.pending = null;
     log(this, `${pname(this, other(player))} 獲勝（${reason}）`);
+    this.frame(`${pname(this, other(player))} 獲勝（${reason}）`, { type: 'gameEnd', winner: other(player) });
   }
 
   /** 玩家回應目前的提示（回應為被選擇的選項 key） */
@@ -198,12 +199,14 @@ export class Game {
       for (const id of decks[p].cards) newCard(this, id, p, 'deck');
       if (!noShuffle) this.rng.shuffle(s.players[p].zones.deck);
     }
+    mark(this, '雙方牌組洗牌', { type: 'shuffle' });
     s.first = this.setup.first ?? (this.rng.int(2) as PlayerId);
     log(this, `先攻：${pname(this, s.first)}`);
     for (const p of [0, 1] as PlayerId[]) {
       const extra = getCharacter(decks[p].charId).id === '法師' ? 2 : 0;
       drawPlain(this, p, 5 + extra);
     }
+    mark(this, '雙方抽起始手牌', { type: 'deal' });
   }
 }
 

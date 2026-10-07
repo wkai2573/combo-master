@@ -183,4 +183,35 @@ describe('動畫影格', () => {
       { type: 'banner', kind: 'phase', name: '傷害計算' },
     ]); // 抽牌、爆發等其他階段沒有橫幅
   });
+
+  it('開局：先洗牌（手牌還是空的），再抽起始手牌，最後是第 1 回合的橫幅', () => {
+    const g = scenario({ animate: true, first: 0 });
+    const frames = types(g);
+    expect(frames.slice(0, 2).map((f) => f.fx.type)).toEqual(['shuffle', 'deal']);
+    expect(frames[0].view.players.map((p) => p.hand.length)).toEqual([0, 0]);
+    expect(frames[1].view.players.map((p) => p.hand.length)).toEqual([5, 5]);
+    expect(frames.find((f) => f.fx.type === 'banner')?.fx).toMatchObject({ kind: 'turn', turn: 1, first: 0 });
+  });
+
+  it('結束：勝負確定的那一格是專屬的結束影格，之前的影格都還沒有勝負', () => {
+    const g = scenario({
+      animate: true, p0: { hand: ['黑桃9'] }, p1: { hand: ['黑桃9'], deck: ['黑桃1', '黑桃1'] },
+    });
+    pick(g, '黑桃9');
+    expect(g.over).toBe(true);
+    const frames = types(g);
+    const end = frames.findIndex((f) => f.view.winner !== null);
+    expect(end).toBeGreaterThan(0);
+    expect(frames[end].fx).toMatchObject({ type: 'gameEnd', winner: 0 });
+    expect(frames[end].caption).toContain('獲勝');
+  });
+
+  it('玩家離線或認輸判負：也錄一個結束影格，和一般的勝負收尾一致', () => {
+    const g = scenario({ animate: true });
+    g.drainFrames();
+    g.forfeit(1, '離線');
+    const last = types(g).at(-1)!;
+    expect(last.fx).toMatchObject({ type: 'gameEnd', winner: 0 });
+    expect(last.view.winner).toBe(0);
+  });
 });

@@ -21,17 +21,21 @@ interface BoardProps {
   /** 這個影格與上一個顯示的桌面之間的數值變化（key 變動時重播） */
   changes?: StatChanges;
   fxKey: number;
+  /** 勝負確定後：勝方發光、敗方變灰 */
+  outcome?: 'win' | 'lose' | 'draw';
+  /** 開局洗牌：牌組堆抖動 */
+  shuffling?: boolean;
 }
 
 /** 牌堆：牌組、棄牌區、怒氣區。飛行圖層以 data-pile 找到它在畫面上的位置 */
-function Pile({ p, zone, label, count, top, delta, k, onClick }: {
-  p: PlayerId; zone: 'deck' | 'discard' | 'rage'; label: string; count: number; top?: CardView; delta?: number; k?: number; onClick?: () => void;
+function Pile({ p, zone, label, count, top, delta, k, shuffling, onClick }: {
+  p: PlayerId; zone: 'deck' | 'discard' | 'rage'; label: string; count: number; top?: CardView; delta?: number; k?: number; shuffling?: boolean; onClick?: () => void;
 }) {
   const depth = Math.min(count, 6);
   const edge = Array.from({ length: depth }, (_, i) => `${(i + 1) * 2}px ${(i + 1) * 2}px 0 var(--pile-edge)`).join(', ');
   return (
     <div className={`pile ${zone}${onClick ? ' click' : ''}`} onClick={onClick}>
-      <div className="pilestack" data-pile={`${p}-${zone}`} style={{ boxShadow: edge || undefined }}>
+      <div className={`pilestack${shuffling ? ' shuffling' : ''}`} data-pile={`${p}-${zone}`} style={{ boxShadow: edge || undefined }}>
         {count === 0 ? (
           <div className="card sm slot">空</div>
         ) : zone === 'discard' && top?.id ? (
@@ -45,7 +49,7 @@ function Pile({ p, zone, label, count, top, delta, k, onClick }: {
   );
 }
 
-export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, changes, fxKey }: BoardProps) {
+export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, changes, fxKey, outcome, shuffling }: BoardProps) {
   const pv = v.players[p];
   const mine = p === v.me;
   const ch = getCharacter(pv.charId);
@@ -54,7 +58,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
   const name = p === 0 ? '玩家A' : '玩家B';
 
   return (
-    <div className={`pboard${v.first === p ? ' turn' : ''}${hit ? ' hit' : ''}`} style={hit ? { ['--hit-delay' as string]: `${hit.delay}ms` } : undefined}>
+    <div className={`pboard${v.first === p ? ' turn' : ''}${hit ? ' hit' : ''}${outcome ? ` ${outcome}` : ''}`} style={hit ? { ['--hit-delay' as string]: `${hit.delay}ms` } : undefined}>
       {hit && <span className="dmgpop" key={hit.key}>−{hit.amount}</span>}
       <div className="phead">
         <span className="charname" title={`${ch.text}\n覺醒：${ch.awakenText}`}>
@@ -85,7 +89,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
 
       <div className="zonesrow">
         <div className="piles">
-          <Pile p={p} zone="deck" label="牌組" count={pv.deckCount} />
+          <Pile p={p} zone="deck" label="牌組" count={pv.deckCount} shuffling={shuffling} />
           <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={() => onZone(p, 'discard')} />
           <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} onClick={() => onZone(p, 'rage')} />
         </div>

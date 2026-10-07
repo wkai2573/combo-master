@@ -334,3 +334,14 @@ h1, h2, h3 { margin: 0 0 8px; }
 .phasebanner b { font-size: 34px; letter-spacing: 6px; color: var(--fx-act); text-shadow: 0 2px 10px #000; }
 .phasebanner small { font-size: 16px; color: var(--text); }
 @keyframes bannerIn { 0% { opacity: 0; transform: translateX(-70px); } 18% { opacity: 1; transform: none; } 78% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(70px); } }
+
+/* ───────── 開局洗牌、結束演出 ───────── */
+.pilestack.shuffling { animation: shuffle calc(.9s * var(--spd, 1)) ease-in-out; }
+@keyframes shuffle { 0%, 100% { transform: none; } 15% { transform: translateX(-9px) rotate(-5deg); } 30% { transform: translateX(9px) rotate(5deg); } 45% { transform: translateX(-7px) rotate(-3deg); } 60% { transform: translateX(7px) rotate(3deg); } 80% { transform: translateX(-3px); } }
+.pboard.lose { filter: grayscale(1) brightness(.55); transition: filter .6s; }
+.pboard.win { border-color: var(--accent); box-shadow: 0 0 26px 5px #f0b93a77; transition: box-shadow .6s; }
+.phasebanner.end { animation: endIn calc(.5s * var(--spd, 1)) ease-out both; }
+.phasebanner.end b { font-size: 46px; letter-spacing: 10px; }
+.phasebanner.end.lose b { color: var(--fx-dmg); }
+.phasebanner.end.draw b { color: var(--text); }
+@keyframes endIn { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }

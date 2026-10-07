@@ -55,13 +55,16 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         ? { ...cur.frame.view, log: final.log.slice(0, cur.frame.logLen), prompt: null, waitingFor: null }
         : lagging && lastShown.current
           ? { ...lastShown.current, prompt: null, waitingFor: null }
-          : final,
-    [final, cur, lagging],
+          : final && lagging && st.batch.frames[0]
+            ? { ...st.batch.frames[0].view, log: final.log.slice(0, st.batch.frames[0].logLen), prompt: null, waitingFor: null }
+            : final,
+    [final, cur, lagging, st.batch],
   );
 
   // 播放動畫時，這個影格與上一個顯示的桌面之間的數值變化（閃一下並顯示差值）
   const changes = useMemo(
-    () => (cur && v && lastShown.current && lastShown.current !== v ? statChanges(lastShown.current, v) : undefined),
+    // 開局抽起始手牌不算生命變動
+    () => (cur && cur.frame.fx.type !== 'deal' && v && lastShown.current && lastShown.current !== v ? statChanges(lastShown.current, v) : undefined),
     [v, cur],
   );
   useEffect(() => {
@@ -133,7 +136,9 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   };
 
   const zoneCards = zone ? v.players[zone.p][zone.z] : [];
-  const result = v.winner === null ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
+  // 結束演出播完（或跳過）才顯示結果視窗；演出期間先讓勝負在桌面上呈現
+  const result = cur || v.winner === null ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
+  const outcomeOf = (p: PlayerId) => (v.winner === null ? undefined : v.winner === 'draw' ? 'draw' : v.winner === p ? 'win' : 'lose');
   const fx = cur?.frame.fx;
   const fxKey = cur?.n ?? 0;
   const dmgFx = fx?.type === 'damage' ? fx.dmg : null;
@@ -165,9 +170,9 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         )}
         <div className="main">
           <div className={`board${cur ? ' playing' : ''}`}>
-            <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z) => setZone({ p, z })} hit={hitOf(opp)} changes={changes} fxKey={fxKey} />
+            <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z) => setZone({ p, z })} hit={hitOf(opp)} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />
             <CombatArea v={v} fx={fx} caption={cur?.frame.caption} fxKey={fxKey} changes={changes} />
-            <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z) => setZone({ p, z })} hit={hitOf(me)} changes={changes} fxKey={fxKey} />
+            <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z) => setZone({ p, z })} hit={hitOf(me)} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />
             {cur ? (
               <div className="prompt wait">
                 <span>動畫播放中…</span>
