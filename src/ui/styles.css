@@ -142,7 +142,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .log .sep { color: var(--accent); margin-top: 6px; }
 .log .win { color: var(--good); font-weight: 700; }
 
-.pboard { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
+.pboard { grid-template-columns: minmax(0, 1fr); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; }
 .pboard.turn { border-color: var(--accent); }
 .phead { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .charname { font-size: 16px; font-weight: 700; }
@@ -383,7 +383,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .battle.wide .pboard > .gearzone { grid-column: 1; grid-row: 3; }
 .battle.wide .pboard > .zonesrow { grid-column: 2; grid-row: 1 / span 3; min-width: 0; }
 .battle.wide .pboard > .handzone { grid-column: 3; grid-row: 1 / span 3; min-width: 0; }
-.battle.wide .handzone .cardrow { flex-wrap: nowrap; overflow-x: auto; padding: 14px 4px 2px; margin-top: -12px; }
+
 /* 提示欄裡的選項卡縮成小卡，標題與卡片並排，不讓提示欄長太高 */
 .battle.wide .prompt { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; }
 .battle.wide .prompt .ptitle { grid-column: 1; }
@@ -407,3 +407,11 @@ h1, h2, h3 { margin: 0 0 8px; }
 .expslot:hover .card.sm.short .art { height: 34px; }
 .expslot:hover .card.sm.short .nm { display: block; }
 .expslot.r2:hover .card.sm.short { position: absolute; bottom: 0; left: 0; }
+
+/* ───────── 手牌：放得下並排，放不下水平重疊（滑過與選中的牌浮到最上面，不用過渡動畫） ───────── */
+.handrow { display: flex; gap: 6px; align-items: flex-start; padding: 14px 4px 2px; margin-top: -12px; }
+.handrow.overlap { display: grid; grid-auto-flow: column; grid-auto-columns: var(--hstep); gap: 0; overflow-x: auto; }
+.handslot { position: relative; min-width: 0; }
+.handslot:hover { z-index: 6; }
+.handslot:has(.card.selected) { z-index: 7; }
+@media (prefers-reduced-motion: reduce) { .card.clickable { transition: none; } }

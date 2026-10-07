@@ -1,6 +1,7 @@
 import { KeywordText } from './KeywordText';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { expLayout } from '../expLayout';
+import { handLayout } from '../handLayout';
 import { getCard, getCharacter } from '../../data/cards';
 import type { CardView, GameView, PlayerView } from '../../engine/view';
 import type { StatChanges } from '../../engine/stats';
@@ -84,6 +85,47 @@ function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optK
   );
 }
 
+/** 手牌：沒有張數上限。放得下就並排，放不下就水平重疊（我方每張至少露出約 36px），滑過浮出完整卡 */
+function HandRow({ cards, mine, optKeys, selected, onPick }: { cards: CardView[]; mine: boolean; optKeys: Set<string>; selected: string[]; onPick: (key: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [m, setM] = useState({ width: 0, cardW: 0 });
+  // 繪製前就量好寬度與卡寬，第一幀就是對的版面；卡寬會隨版面尺寸變化，所以一併觀察第一張牌
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const first = el.querySelector<HTMLElement>('.card');
+    const read = () => setM((o) => {
+      const cs = getComputedStyle(el);
+      const width = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const cardW = el.querySelector<HTMLElement>('.card')?.offsetWidth ?? 0;
+      return o.width === width && o.cardW === cardW ? o : { width, cardW };
+    });
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    if (first) ro.observe(first);
+    return () => ro.disconnect();
+  }, [cards.length > 0]);
+  const layout = handLayout(cards.length, m.width, m.cardW, mine ? 36 : 24);
+  return (
+    <div
+      ref={ref} className={`handrow${layout.overlap ? ' overlap' : ''}`}
+      style={layout.overlap ? { ['--hstep' as string]: `${layout.step}px` } : undefined}
+    >
+      {cards.map((c) => (
+        <div key={c.uid} className="handslot">
+          <CardFace
+            uid={c.uid} id={mine ? c.id : null} size={mine ? 'md' : 'sm'}
+            glow={mine && optKeys.has(`c${c.uid}`)} selected={mine && selected.includes(`c${c.uid}`)}
+            onClick={mine && optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
+          />
+        </div>
+      ))}
+      {cards.length === 0 && <span className="muted">（空）</span>}
+    </div>
+  );
+}
+
 export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, changes, fxKey, outcome, shuffling }: BoardProps) {
   const pv = v.players[p];
   const mine = p === v.me;
@@ -136,16 +178,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
 
       <div className="handzone">
         <div className="zonelabel">手牌</div>
-        <div className="cardrow">
-          {pv.hand.map((c) => (
-            <CardFace
-              key={c.uid} uid={c.uid} id={mine ? c.id : null} size={mine ? 'md' : 'sm'}
-              glow={mine && optKeys.has(`c${c.uid}`)} selected={mine && selected.includes(`c${c.uid}`)}
-              onClick={mine && optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
-            />
-          ))}
-          {pv.hand.length === 0 && <span className="muted">（空）</span>}
-        </div>
+        <HandRow cards={pv.hand} mine={mine} optKeys={optKeys} selected={selected} onPick={onPick} />
       </div>
     </div>
   );
