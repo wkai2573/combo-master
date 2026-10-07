@@ -187,7 +187,7 @@ function* afterJudge(g: GameCtx, p: PlayerId, card: CardInst): Gen {
 
 export function* pursuitPhase(g: GameCtx): Gen {
   g.state.phase = '追擊';
-  mark(g, '追擊階段：雙方翻開牌組頂的牌做追擊判定', { type: 'phase' });
+  mark(g, '追擊階段：雙方翻開牌組頂的牌做追擊判定', { type: 'banner', kind: 'phase', name: '追擊階段' });
   for (const p of order(g)) yield* pursuitStep(g, p);
   checkWin(g);
 }
@@ -202,6 +202,7 @@ export function* damageStep(g: GameCtx): Gen {
     Math.max(0, s1.atk - s0.def),
     Math.max(0, s0.atk - s1.def),
   ];
+  mark(g, '傷害計算', { type: 'banner', kind: 'phase', name: '傷害計算' });
   log(g, `傷害計算：玩家A受到 ${dmg[0]}、玩家B受到 ${dmg[1]}`);
   const atk: [number, number] = [s0.atk, s1.atk];
   const def: [number, number] = [s0.def, s1.def];

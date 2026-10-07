@@ -145,7 +145,7 @@ export class Game {
         checkWin(g);
       }
       if (!start || start === '重置' || start === '起手' || start === '反擊' || start === '追擊' || start === '傷害' || start === '歸還') {
-        mark(g, `第 ${s.turn} 回合・戰鬥階段（先攻：${pname(g, s.first)}）`, { type: 'phase' });
+        mark(g, `第 ${s.turn} 回合・戰鬥階段（先攻：${pname(g, s.first)}）`, { type: 'banner', kind: 'turn', turn: s.turn, first: s.first });
         yield* combatPhase(g);
       }
       if (!start || start === '重置' || start === '起手' || start === '反擊' || start === '追擊' || start === '傷害' || start === '歸還' || start === '抽牌') {

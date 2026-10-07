@@ -327,3 +327,10 @@ h1, h2, h3 { margin: 0 0 8px; }
 .pill.flash { animation: pillFlash calc(.8s * var(--spd, 1)) ease-out; }
 @keyframes pillFlash { 0% { box-shadow: 0 0 10px 2px var(--accent); border-color: var(--accent); } 100% { box-shadow: none; } }
 .sumbox .delta { font-size: 14px; }
+
+/* ───────── 橫幅：回合開頭與戰鬥階段 ───────── */
+.phasebanner { position: fixed; left: 0; right: 0; top: 36%; z-index: 56; pointer-events: none; display: grid; place-items: center; animation: bannerIn calc(.65s * var(--spd, 1)) ease-out both; }
+.phasebanner .bannerband { display: flex; align-items: baseline; gap: 14px; padding: 14px 90px; border-block: 2px solid var(--fx-act); background: linear-gradient(90deg, transparent, #0f1320ee 18%, #0f1320ee 82%, transparent); }
+.phasebanner b { font-size: 34px; letter-spacing: 6px; color: var(--fx-act); text-shadow: 0 2px 10px #000; }
+.phasebanner small { font-size: 16px; color: var(--text); }
+@keyframes bannerIn { 0% { opacity: 0; transform: translateX(-70px); } 18% { opacity: 1; transform: none; } 78% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(70px); } }

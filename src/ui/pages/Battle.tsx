@@ -5,6 +5,7 @@ import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { CardFace, InspectContext, InspectPanel, PinContext } from '../components/CardFace';
 import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
 import { FlightLayer } from '../components/FlightLayer';
+import { PhaseBanner } from '../components/PhaseBanner';
 import { Spotlight } from '../components/Spotlight';
 import { flightTiming } from '../../engine/flights';
 import { statChanges } from '../../engine/stats';
@@ -184,6 +185,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           </div>
         </div>
 
+        <PhaseBanner fx={fx} n={fxKey} me={me} />
         <Spotlight fx={fx} caption={cur?.frame.caption} n={fxKey} scale={scale} />
         <FlightLayer view={v} fx={fx} playing={cur !== null} n={fxKey} scale={scale} />
 

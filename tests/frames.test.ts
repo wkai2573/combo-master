@@ -30,7 +30,7 @@ describe('動畫影格', () => {
     const frames = types(g);
     const t = frames.map((f) => f.fx.type);
     expect(
-      hasInOrder(t, ['play', 'pass', 'pass', 'phase', 'flip', 'flipResult', 'flip', 'flipResult', 'calc', 'damage', 'return']),
+      hasInOrder(t, ['play', 'pass', 'pass', 'banner', 'flip', 'flipResult', 'flip', 'flipResult', 'calc', 'damage', 'return']),
     ).toBe(true);
 
     // 傷害算式的數字與實際扣血一致（與 rules.test 的情境相同；玩家1 是刺客，追擊成功 +1）
@@ -171,5 +171,16 @@ describe('動畫影格', () => {
     expect(frames[swap].view.players[0].deckCount).toBe(frames[swap - 1].view.players[0].deckCount);
     const flip = frames.slice(swap).find((f) => f.fx.type === 'flip' && f.fx.player === 0);
     expect(flip?.fx.type === 'flip' && flip.fx.cardId).toBe('黑桃2');
+  });
+
+  it('橫幅只放在回合開頭與戰鬥主要階段（追擊、傷害計算），其他階段不放', () => {
+    const g = scenario({ animate: true, first: 0, p0: { hand: ['黑桃5'] }, p1: { hand: ['黑桃9'] } });
+    pick(g, '黑桃9');
+    const banners = types(g).map((f) => f.fx).filter((fx) => fx.type === 'banner');
+    expect(banners).toEqual([
+      { type: 'banner', kind: 'turn', turn: 1, first: 0 },
+      { type: 'banner', kind: 'phase', name: '追擊階段' },
+      { type: 'banner', kind: 'phase', name: '傷害計算' },
+    ]); // 抽牌、爆發等其他階段沒有橫幅
   });
 });

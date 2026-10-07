@@ -95,6 +95,9 @@ export type FrameFx =
   | { type: 'info' }
   /** 一個步驟（發動、付費、效果結果）做完，桌面有變化 */
   | { type: 'step' }
+  /** 橫幅：回合開頭，或戰鬥的主要階段（追擊、傷害計算）開始 */
+  | { type: 'banner'; kind: 'turn'; turn: number; first: PlayerId }
+  | { type: 'banner'; kind: 'phase'; name: string }
   /** 瞄準：牌組頂的牌放到牌組底（牌組只有張數，位置的變化看不出來，所以單獨錄一格） */
   | { type: 'aimSwap'; player: PlayerId }
   /** 卡片效果發動：介面把那張牌放大到中央（發動時還沒付費、效果還沒生效） */
@@ -112,7 +115,7 @@ export type FrameFx =
 
 /** 各種影格停留的毫秒數（標準速度） */
 export const FRAME_MS: Record<FrameFx['type'], number> = {
-  phase: 750, info: 800, step: 600, activate: 1100, aimSwap: 900, draw: 550, play: 1000, pass: 800,
+  phase: 750, info: 800, step: 600, activate: 1100, aimSwap: 900, banner: 700, draw: 550, play: 1000, pass: 800,
   flip: 1250, flipResult: 1150, calc: 2000, damage: 1500, return: 1000,
 };
 
