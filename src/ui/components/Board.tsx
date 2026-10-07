@@ -2,6 +2,7 @@ import { KeywordText } from './KeywordText';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { expLayout } from '../expLayout';
 import { handLayout } from '../handLayout';
+import { useWide } from '../useWide';
 import { expEffectActive } from '../expEffect';
 import { getCard, getCharacter } from '../../data/cards';
 import type { CardView, GameView, PlayerView } from '../../engine/view';
@@ -132,6 +133,8 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
   const pv = v.players[p];
   const mine = p === v.me;
   const expRef = useRef<HTMLDivElement>(null);
+  // 寬螢幕版的裝備／增益區是固定大小的槽位，卡牌用矮卡
+  const wide = useWide();
   const ch = getCharacter(pv.charId);
   const awake = pv.exp.length >= ch.expReq;
   const optKeys = new Set(prompt?.options.map((o) => o.key) ?? []);
@@ -157,15 +160,13 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
         效果：<KeywordText text={ch.text} />　<span style={{ color: awake ? 'var(--accent)' : undefined }}>覺醒：<KeywordText text={ch.awakenText} /></span>
       </div>
 
-      {(pv.gear.length > 0 || pv.buff.length > 0) && (
-        <div className="gearzone">
-          <div className="zonelabel">裝備／增益</div>
-          <div className="cardrow">
-            {pv.gear.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" />)}
-            {pv.buff.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" counters={c.counters} counterDelta={changes?.buff[c.uid]} deltaKey={fxKey} />)}
-          </div>
+      <div className={`gearzone${pv.gear.length + pv.buff.length === 0 ? ' empty' : ''}`}>
+        <div className="zonelabel">裝備／增益</div>
+        <div className="cardrow">
+          {pv.gear.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" short={wide} />)}
+          {pv.buff.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" short={wide} counters={c.counters} counterDelta={changes?.buff[c.uid]} deltaKey={fxKey} />)}
         </div>
-      )}
+      </div>
 
       <div className="zonesrow">
         <div className="piles">
@@ -208,7 +209,7 @@ function StackColumn({ pv, label, mine, fx, delta, k }: { pv: PlayerView; label:
   return (
     <div className={`col ${mine ? 'mine' : 'opp'}`}>
       <h4>{label}</h4>
-      <div className="vstack">
+      <div className="vstack" style={{ ['--n1' as string]: Math.max(cards.length - 1, 1) }}>
         {cards.map((c, i) => (
           <CardFace
             key={c.uid} uid={c.uid} id={c.id} size="md" pursuit={i >= pv.combat.length}
