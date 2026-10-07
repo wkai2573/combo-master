@@ -5,7 +5,7 @@ import { Game } from '../src/engine/game';
 import { pay, type GameCtx } from '../src/engine/ops';
 import { Rng } from '../src/engine/rng';
 import { frameFor, viewFor } from '../src/engine/view';
-import { atkOf, defOf, pick, scenario } from './helpers';
+import { atkOf, defOf, pick, scenario, title } from './helpers';
 
 const types = (g: ReturnType<typeof scenario>, viewer: 0 | 1 = 0) => g.drainFrames().map((f) => frameFor(f, viewer));
 
@@ -151,5 +151,25 @@ describe('動畫影格', () => {
     pay(g as unknown as GameCtx, 0, { cover: 1 }).next();
     const acts = types(g).filter((f) => f.fx.type === 'activate');
     expect(acts.map((f) => f.fx.type === 'activate' && f.fx.cardId)).toEqual(['高價賣出']);
+  });
+
+  it('瞄準：把牌組頂的牌放到牌組底，錄一個專屬影格，之後判定的是下一張', () => {
+    const g = scenario({
+      animate: true, chars: ['遊俠', '勇者'],
+      p0: { hand: ['黑桃5'], deck: ['黑桃1', '黑桃2', ...Array(20).fill('黑桃3')] }, p1: { hand: ['黑桃9'] },
+    });
+    g.drainFrames();
+    pick(g, '黑桃9');
+    expect(title(g)).toContain('瞄準');
+    pick(g, '放到牌組底，改看下一張');
+    const frames = types(g);
+    const swap = frames.findIndex((f) => f.fx.type === 'aimSwap');
+    expect(swap).toBeGreaterThan(-1);
+    const fx = frames[swap].fx;
+    expect(fx.type === 'aimSwap' && fx.player).toBe(0);
+    // 牌組張數不變（只是換了位置），下一個翻開的是原本的第 2 張
+    expect(frames[swap].view.players[0].deckCount).toBe(frames[swap - 1].view.players[0].deckCount);
+    const flip = frames.slice(swap).find((f) => f.fx.type === 'flip' && f.fx.player === 0);
+    expect(flip?.fx.type === 'flip' && flip.fx.cardId).toBe('黑桃2');
   });
 });

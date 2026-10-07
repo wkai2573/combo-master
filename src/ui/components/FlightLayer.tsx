@@ -10,8 +10,8 @@ const PILE_ZONES = new Set(['deck', 'discard', 'rage']);
 interface Placed {
   key: string;
   flight: Flight;
-  /** fly：飛向終點；out：離開遊戲的牌在原地淡出；in：憑空出現的牌在原地淡入 */
-  mode: 'fly' | 'out' | 'in';
+  /** fly：飛向終點；out：離開遊戲的牌在原地淡出；in：憑空出現的牌在原地淡入；tuck：牌組頂的牌繞出來塞到牌組底 */
+  mode: 'fly' | 'out' | 'in' | 'tuck';
   /** 起點相對終點的位移與縮放 */
   dx: number;
   dy: number;
@@ -107,6 +107,18 @@ export function FlightLayer({ view, fx, playing, n, scale }: {
         });
       }
     }
+    // 瞄準：牌組頂的牌放到牌組底。牌組只有張數，位置的變化看不出來，靠專屬的影格類型呈現
+    if (changed && fx?.type === 'aimSwap') {
+      const pile = pileRect(fx.player, 'deck');
+      if (pile) {
+        placed.push({
+          key: `${n}-tuck`, mode: 'tuck',
+          flight: { uid: -1, owner: fx.player, id: null, from: 'deck', to: 'deck', faceUpFrom: false, faceUpTo: false, order: 0 },
+          dx: 0, dy: 0, sx: 1, sy: 1, to: { left: pile.left, top: pile.top, width: pile.width, height: pile.height },
+          size: 'sm', delay: 0, ms: FLY.ms * 2, pileTop: null, hide: null,
+        });
+      }
+    }
     // 留在原地、只是翻成覆蓋（或翻開）的牌：原地翻面一下
     const turned: HTMLElement[] = [];
     if (changed) {
@@ -154,7 +166,13 @@ export function FlightLayer({ view, fx, playing, n, scale }: {
       if (!el) continue;
       const flip = pl.flight.faceUpFrom !== pl.flight.faceUpTo;
       const frames: Keyframe[] =
-        pl.mode === 'out'
+        pl.mode === 'tuck'
+          ? [
+              { transform: 'none', opacity: 1, offset: 0 },
+              { transform: 'translateY(-64px) rotate(-8deg)', opacity: 1, offset: 0.45 },
+              { transform: 'translate(10px, 14px) rotate(0deg)', opacity: 0.2, offset: 1 },
+            ]
+          : pl.mode === 'out'
           ? [{ transform: 'none', opacity: 1 }, { transform: 'translateY(-14px) scale(.85)', opacity: 0 }]
           : pl.mode === 'in'
             ? [{ transform: 'scale(.85)', opacity: 0 }, { transform: 'none', opacity: 1 }]

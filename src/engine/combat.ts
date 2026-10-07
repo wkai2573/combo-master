@@ -169,7 +169,7 @@ function* aim(g: GameCtx, p: PlayerId): Gen {
     g.state.flags.aimUsed[p]++;
     move(g, top, 'deck', 'bottom');
     log(g, `【瞄準】${pname(g, p)} 將牌組頂的牌放到牌組底`);
-    mark(g, `【瞄準】${pname(g, p)} 將牌組頂的牌放到牌組底，改判定下一張`, { type: 'info' });
+    mark(g, `【瞄準】${pname(g, p)} 將牌組頂的牌放到牌組底，改判定下一張`, { type: 'aimSwap', player: p });
   }
 }
 

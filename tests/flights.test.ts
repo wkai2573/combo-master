@@ -216,4 +216,20 @@ describe('卡片飛行', () => {
     spawned.players[0].exp.push({ uid: 9999, id: 'Ex卡-中毒', covered: false, counters: 0 });
     expect(diffFlights(before, spawned)).toMatchObject([{ uid: 9999, from: 'spawn', to: 'exp' }]);
   });
+
+  it('放到牌組底：手牌飛進牌組堆，途中翻成牌背（牌組是蓋著的）', () => {
+    const g = scenario({
+      animate: true, chars: ['商人', '勇者'],
+      p0: { hand: ['交涉', '黑桃2', '黑桃3'], exp: ['黑桃4', '黑桃5'] }, p1: { hand: [] },
+    });
+    pick(g, '交涉');
+    pick(g, '蓋1');
+    const base = g.drainFrames().slice(-1); // 此時已抽完 1 張，正在選要放回去的牌
+    pick(g, '黑桃2');
+    const frames = [...base, ...g.drainFrames()].map((f) => frameFor(f, 0));
+    const flights = frames.slice(1).flatMap((f, i) => diffFlights(frames[i].view, f.view));
+    const put = flights.filter((f) => f.to === 'deck');
+    expect(put).toHaveLength(1);
+    expect([put[0].owner, put[0].from, put[0].id, put[0].faceUpFrom, put[0].faceUpTo]).toEqual([0, 'hand', '黑桃2', true, false]);
+  });
 });
