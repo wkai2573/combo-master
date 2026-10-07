@@ -83,16 +83,21 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   }, [v, lagging]);
 
   // 窄螢幕沒有常駐的說明欄：固定一張卡的說明時自動打開說明抽屜
+  const wideRef = useRef(wide);
+  wideRef.current = wide;
   useEffect(() => {
-    if (pinned && !wide) setDrawer('inspect');
-  }, [pinned, wide]);
+    if (pinned && !wideRef.current) setDrawer('inspect');
+  }, [pinned]);
 
   // Esc：先關閉展開的牌區，沒有展開的牌區才取消固定的說明
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (zoneRef.current) setZone(null);
-      else setPinned(null);
+      else {
+        setPinned(null);
+        setDrawer(null);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -164,6 +169,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   // 第一張牌落進怒氣區的時候才震動、浮出傷害數字（這一批飛行的時序由傷害較多的那一方決定）
   const hitOf = (p: PlayerId) => (dmgFx && dmgFx[p] > 0 ? { amount: dmgFx[p], key: fxKey, delay: flightTiming(Math.max(...dmgFx) - 1).ms * scale } : undefined);
 
+  const shown = pinned ?? inspect;
+  const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} />;
   const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={hitOf(opp)} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
   const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={hitOf(me)} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
   const combat = <CombatArea v={v} fx={fx} caption={cur?.frame.caption} fxKey={fxKey} changes={changes} />;
@@ -191,8 +198,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           {st.message && <span style={{ color: 'var(--bad)' }}>{st.message}</span>}
           {!wide && (
             <>
-              <button className={drawer === 'inspect' ? 'on' : ''} onClick={() => setDrawer((d) => (d === 'inspect' ? null : 'inspect'))}>說明</button>
-              <button className={drawer === 'log' ? 'on' : ''} onClick={() => setDrawer((d) => (d === 'log' ? null : 'log'))}>紀錄</button>
+              <button className={drawer === 'inspect' ? 'on' : ''} aria-pressed={drawer === 'inspect'} onClick={() => setDrawer((d) => (d === 'inspect' ? null : 'inspect'))}>說明</button>
+              <button className={drawer === 'log' ? 'on' : ''} aria-pressed={drawer === 'log'} onClick={() => setDrawer((d) => (d === 'log' ? null : 'log'))}>紀錄</button>
             </>
           )}
           <a className="btnlink" href={FLOW_CHART_URL} target="_blank" rel="noreferrer" title="在新分頁開啟戰鬥流程圖">流程圖</a>
@@ -212,7 +219,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
             <div className={`board${cur ? ' playing' : ''}`}>
               {oppBoard}
               <div className="midrow">
-                <div className="sidecol"><InspectPanel id={(pinned ?? inspect)?.id ?? null} expActive={(pinned ?? inspect)?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} /></div>
+                <div className="sidecol">{inspectPanel}</div>
                 {combat}
                 <div className="sidecol"><LogPanel lines={v.log} /></div>
               </div>
@@ -231,11 +238,9 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
                 <div className="drawer">
                   <div className="drawerhead">
                     <b>{drawer === 'inspect' ? '卡片說明' : '遊戲紀錄'}</b>
-                    <button onClick={() => setDrawer(null)}>關閉</button>
+                    <button onClick={() => { setDrawer(null); setPinned(null); }}>關閉</button>
                   </div>
-                  {drawer === 'inspect'
-                    ? <InspectPanel id={(pinned ?? inspect)?.id ?? null} expActive={(pinned ?? inspect)?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} />
-                    : <LogPanel lines={v.log} />}
+                  {drawer === 'inspect' ? inspectPanel : <LogPanel lines={v.log} />}
                 </div>
               )}
             </>
