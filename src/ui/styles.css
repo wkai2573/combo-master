@@ -172,18 +172,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 }
 .card.fresh { box-shadow: 0 0 16px 4px var(--accent); }
 
-/* 追擊判定：翻出的牌浮在該方戰鬥區上 */
-.flipcard { position: absolute; left: 50%; top: 26px; z-index: 30; pointer-events: none; transform: translateX(-50%); animation: flipIn 1s ease-out both; filter: drop-shadow(0 0 14px var(--accent)); }
-.flipcard .card { animation: none !important; }
-.fliplabel { text-align: center; font-weight: 800; color: var(--accent); margin-bottom: 4px; text-shadow: 0 2px 4px #000; }
-@keyframes flipIn {
-  0% { opacity: 0; transform: translateX(-50%) rotateY(90deg) scale(.5); }
-  50% { opacity: 1; transform: translateX(-50%) rotateY(0) scale(1.3); }
-  100% { opacity: 1; transform: translateX(-50%) rotateY(0) scale(1.18); }
-}
 .resultpop { position: absolute; left: 50%; top: 2px; z-index: 31; padding: 4px 14px; border-radius: 18px; font-weight: 800; font-size: 16px; white-space: nowrap; pointer-events: none; transform: translateX(-50%); animation: popIn 1.1s ease-out both; }
-.resultpop.ok { background: #1f6b45; color: #c6f7dc; border: 2px solid #4fc98b; }
-.resultpop.fail { background: #6b2a2a; color: #ffd6d6; border: 2px solid #ef6a6a; }
 .resultpop.pass { background: #3a3f58; color: #e8ecf5; border: 2px solid #8d97b3; }
 @keyframes popIn {
   0% { opacity: 0; transform: translateX(-50%) scale(.4); }
@@ -310,6 +299,17 @@ h1, h2, h3 { margin: 0 0 8px; }
 .pilelabel b { color: var(--text); }
 .flightlayer { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
 .flycard { position: fixed; perspective: 800px; filter: drop-shadow(0 6px 10px #000a); will-change: transform; }
-.flycard .flip { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
-.flycard .side { position: absolute; inset: 0; backface-visibility: hidden; }
-.flycard .side.back { transform: rotateY(180deg); }
+.flycard .flip, .spotcard .flip { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
+.flycard .side, .spotcard .side { position: absolute; inset: 0; backface-visibility: hidden; }
+.flycard .side.back, .spotcard .side.back { transform: rotateY(180deg); }
+
+/* 中央放大：桌面壓暗，牌放大在畫面中央 */
+.spotlight { position: fixed; inset: 0; z-index: 55; pointer-events: none; display: grid; place-items: center; background: rgba(8, 10, 16, .5); animation: spotIn .25s ease-out; transition: opacity .3s; }
+.spotlight.out { opacity: 0; }
+@keyframes spotIn { from { opacity: 0; } to { opacity: 1; } }
+.spotlight .spotlabel { text-align: center; font-weight: 800; font-size: 20px; color: var(--fx-act); margin-bottom: 12px; text-shadow: 0 2px 8px #000; }
+.spotlight .spotlabel.ok { color: var(--fx-ok); }
+.spotlight .spotlabel.fail { color: var(--fx-dmg); }
+.spotlight .spotslot { width: 180px; height: 250px; display: grid; place-items: center; margin: 0 auto; }
+.spotlight .spotinner { perspective: 800px; }
+.spotlight .spotcard { position: relative; width: 112px; height: 156px; transform: scale(1.6); filter: drop-shadow(0 0 18px var(--fx-act)); }

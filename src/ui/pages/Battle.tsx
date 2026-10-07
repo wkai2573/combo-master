@@ -5,6 +5,7 @@ import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { CardFace, InspectContext, InspectPanel, PinContext } from '../components/CardFace';
 import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
 import { FlightLayer } from '../components/FlightLayer';
+import { Spotlight } from '../components/Spotlight';
 import { Modal } from '../components/Modal';
 import { StepTracker } from '../components/StepTracker';
 import { PromptPanel } from '../components/PromptPanel';
@@ -164,7 +165,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           </div>
         </div>
 
-        <FlightLayer view={v} playing={cur !== null} n={fxKey} scale={scale} />
+        <Spotlight fx={fx} n={fxKey} scale={scale} />
+        <FlightLayer view={v} fx={fx} playing={cur !== null} n={fxKey} scale={scale} />
 
         {zone && (
           <Modal onClose={() => setZone(null)}>

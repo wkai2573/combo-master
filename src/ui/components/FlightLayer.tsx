@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { coverChanges, diffFlights, FLY, flightTiming, type Flight } from '../../engine/flights';
+import { coverChanges, diffFlights, FLY, flightTiming, fromSpotlight, SPOTLIGHT_HOLD_MS, type Flight } from '../../engine/flights';
+import type { FrameFx } from '../../engine/types';
 import type { GameView } from '../../engine/view';
 import { CardFace } from './CardFace';
 
@@ -44,11 +45,11 @@ const pileRect = (owner: number, zone: string): DOMRect | undefined =>
  * 蓋滿畫面的圖層：播放動畫時，比對上一個顯示的桌面與目前影格的桌面，
  * 讓移動過的卡片從原區域飛到新區域。scale 為播放速度倍率（0 以外）。
  */
-export function FlightLayer({ view, playing, n, scale }: {
-  view: GameView | null; playing: boolean; n: number; scale: number;
+export function FlightLayer({ view, fx, playing, n, scale }: {
+  view: GameView | null; fx?: FrameFx; playing: boolean; n: number; scale: number;
 }) {
   const [flights, setFlights] = useState<Placed[]>([]);
-  const prev = useRef<{ view: GameView; rects: Map<number, DOMRect> } | null>(null);
+  const prev = useRef<{ view: GameView; fx?: FrameFx; rects: Map<number, DOMRect>; spot?: DOMRect } | null>(null);
   const active = useRef<Animation[]>([]);
   const hidden = useRef<HTMLElement[]>([]);
   // 每個棄牌堆頂還有幾張牌沒落地
@@ -75,10 +76,15 @@ export function FlightLayer({ view, playing, n, scale }: {
     if (changed) {
       const flies = diffFlights(before.view, view);
       const timing = flightTiming(Math.max(0, ...flies.map((f) => f.order)));
-      for (const f of flies) {
+      let spotUsed = false;
+      for (const f0 of flies) {
+        // 從中央放大出發的牌：起點是放大的那張牌（已公開，牌面看得到），並先停一下
+        const spot = !spotUsed && fromSpotlight(before.fx, fx, f0) ? before.spot : undefined;
+        if (spot) spotUsed = true; // 只有被翻開的那一張
+        const f: Flight = spot && before.fx?.type === 'flip' ? { ...f0, id: before.fx.cardId, faceUpFrom: true } : f0;
         const destEl = PILE_ZONES.has(f.to) ? null : document.querySelector<HTMLElement>(`[data-uid="${f.uid}"]`);
         const dest = destEl ? destEl.getBoundingClientRect() : PILE_ZONES.has(f.to) ? pileRect(f.owner, f.to) : undefined;
-        const src = PILE_ZONES.has(f.from) ? pileRect(f.owner, f.from) : before.rects.get(f.uid);
+        const src = spot ?? (PILE_ZONES.has(f.from) ? pileRect(f.owner, f.from) : before.rects.get(f.uid));
         if (!dest || !src) continue;
         const a = center(src);
         const b = center(dest);
@@ -87,7 +93,7 @@ export function FlightLayer({ view, playing, n, scale }: {
           dx: a.x - b.x, dy: a.y - b.y, sx: src.width / dest.width, sy: src.height / dest.height,
           to: { left: dest.left, top: dest.top, width: dest.width, height: dest.height },
           size: destEl?.classList.contains('md') ? 'md' : 'sm',
-          delay: f.order * timing.stagger,
+          delay: f.order * timing.stagger + (spot ? SPOTLIGHT_HOLD_MS : 0),
           ms: timing.ms,
           pileTop: f.to === 'discard' ? document.querySelector<HTMLElement>(`[data-pile="${f.owner}-discard"] .card`) : null,
           hide: destEl,
@@ -118,7 +124,9 @@ export function FlightLayer({ view, playing, n, scale }: {
       }
     }
     setFlights(placed);
-    if (view) prev.current = { view, rects: captureRects() };
+    if (view) {
+      prev.current = { view, fx, rects: captureRects(), spot: document.querySelector<HTMLElement>('[data-spotlight]')?.getBoundingClientRect() };
+    }
     return stopAll;
     // 只在影格換了或播放狀態變了時重算（影格換了 n 一定跟著變）
     // eslint-disable-next-line react-hooks/exhaustive-deps

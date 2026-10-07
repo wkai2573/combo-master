@@ -1,5 +1,5 @@
 import type { CardView, GameView, PlayerView } from './view';
-import type { PlayerId, ZoneName } from './types';
+import type { FrameFx, PlayerId, ZoneName } from './types';
 
 /** 卡片飛行的時序（毫秒，標準速度） */
 export const FLY = {
@@ -24,6 +24,17 @@ export function flightTiming(maxOrder: number): { ms: number; stagger: number; t
 /** 播完這批飛行要多久（沒有飛行為 0） */
 export const flightsTotalMs = (flights: Flight[]): number =>
   flights.length === 0 ? 0 : flightTiming(Math.max(...flights.map((f) => f.order))).total;
+
+/** 中央放大的牌停多久，才飛向它的去處（毫秒，標準速度） */
+export const SPOTLIGHT_HOLD_MS = 600;
+
+/**
+ * 這個飛行是不是從「中央放大」出發：前一格是追擊翻牌、這一格是同一位玩家的判定結果，
+ * 而且飛行是從牌組出來的（那張被翻開的牌）
+ */
+export function fromSpotlight(prevFx: FrameFx | undefined, curFx: FrameFx | undefined, f: Flight): boolean {
+  return prevFx?.type === 'flip' && curFx?.type === 'flipResult' && prevFx.player === f.owner && curFx.player === f.owner && f.from === 'deck';
+}
 
 /** 影格裡看得到每張卡的區域（牌組只有張數，沒有卡片） */
 const VISIBLE_ZONES = ['hand', 'discard', 'rage', 'exp', 'combat', 'pursuit', 'gear', 'buff'] as const;

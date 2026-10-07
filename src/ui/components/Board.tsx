@@ -157,20 +157,9 @@ function StackColumn({ pv, label, mine, fx }: { pv: PlayerView; label: string; m
   );
 }
 
-/** 疊在某一方戰鬥區上的特效：追擊翻牌、判定結果、收招 */
+/** 疊在某一方戰鬥區上的特效：收招（追擊判定改在中央放大播放） */
 function ColumnFx({ fx, fxKey, player }: { fx?: FrameFx; fxKey: number; player: PlayerId }) {
   if (!fx || !('player' in fx) || fx.player !== player) return null;
-  if (fx.type === 'flip') {
-    return (
-      <div className="flipcard" key={`f${fxKey}`}>
-        <div className="fliplabel">追擊判定</div>
-        <CardFace id={fx.cardId} size="md" />
-      </div>
-    );
-  }
-  if (fx.type === 'flipResult') {
-    return <div className={`resultpop ${fx.ok ? 'ok' : 'fail'}`} key={`r${fxKey}`}>{fx.ok ? '追擊成功！' : '追擊失敗'}</div>;
-  }
   if (fx.type === 'pass') return <div className="resultpop pass" key={`p${fxKey}`}>收招</div>;
   return null;
 }

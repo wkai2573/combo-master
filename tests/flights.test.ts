@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coverChanges, diffFlights, flightTiming, type Flight } from '../src/engine/flights';
+import { coverChanges, diffFlights, flightTiming, fromSpotlight, type Flight } from '../src/engine/flights';
 import { pay, type GameCtx } from '../src/engine/ops';
 import { frameFor } from '../src/engine/view';
 import { pick, scenario } from './helpers';
@@ -158,5 +158,25 @@ describe('卡片飛行', () => {
     const flights = flightsInto('return', 0).filter((f) => f.owner === 0 && f.to === 'exp');
     expect(flights.map((f) => f.from)).toEqual(['combat', 'pursuit']);
     expect(flights.map((f) => f.order)).toEqual([0, 1]);
+  });
+
+  it('追擊判定：結果影格裡，中央放大的那張牌從牌組出發飛進追擊區（失敗則飛進手中）', () => {
+    const g = scenario({
+      animate: true,
+      p0: { hand: ['黑桃5'], deck: ['黑桃1', ...Array(20).fill('黑桃2')] }, p1: { hand: ['黑桃9'] },
+    });
+    const base = g.drainFrames().slice(-1);
+    pick(g, '黑桃9');
+    const frames = [...base, ...g.drainFrames()].map((f) => frameFor(f, 0));
+    const i = frames.findIndex((f, j) => j > 0 && f.fx.type === 'flipResult' && f.fx.player === 0);
+    expect(i).toBeGreaterThan(0);
+    expect(frames[i - 1].fx.type).toBe('flip'); // 翻牌影格：牌還在牌組，中央放大
+    const flights = diffFlights(frames[i - 1].view, frames[i].view);
+    expect(flights).toHaveLength(1);
+    expect(flights[0]).toMatchObject({ owner: 0, from: 'deck', to: 'pursuit' }); // 黑桃1 不在 5~9 範圍內，成功
+    expect(fromSpotlight(frames[i - 1].fx, frames[i].fx, flights[0])).toBe(true);
+    expect(fromSpotlight(frames[i].fx, frames[i].fx, flights[0])).toBe(false); // 只有緊接在翻牌影格之後的那一格
+    // 對手的追擊判定翻牌不是這位玩家的牌
+    expect(fromSpotlight(frames[i - 1].fx, frames[i].fx, { ...flights[0], owner: 1 })).toBe(false);
   });
 });
