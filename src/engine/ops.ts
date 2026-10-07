@@ -34,6 +34,12 @@ export function settle(g: GameCtx, caption?: string): void {
   mark(g, caption ?? g.state.log[g.state.log.length - 1] ?? '', { type: 'step' });
 }
 
+/** 卡片效果發動：先把之前還沒呈現的變化補成影格，再錄一個發動影格（說明預設為「發動【卡名】」） */
+export function activate(g: GameCtx, p: PlayerId, card: CardInst, caption?: string): void {
+  settle(g);
+  mark(g, caption ?? `${pname(g, p)} 發動【${data(card).name}】`, { type: 'activate', player: p, uid: card.uid, cardId: card.id });
+}
+
 /** 執行 fn 後若紀錄有新增，就補一個影格顯示最後一行（用來呈現卡片效果的結果） */
 export function* markIfLogged(g: GameCtx, fn: () => Gen): Gen {
   const before = g.state.log.length;
@@ -199,6 +205,7 @@ export function* pay(g: GameCtx, p: PlayerId, cost: Cost): Gen {
     const reaction = COVER_REACTIONS[card.id];
     if (reaction) {
       log(g, `【${data(card).name}】被覆蓋`);
+      activate(g, p, card, `【${data(card).name}】被覆蓋，效果發動`);
       yield* reaction(g, p, card);
       settle(g);
     }
@@ -210,8 +217,9 @@ export function* optionalPay(g: GameCtx, p: PlayerId, card: CardInst, cost: Cost
   if (!canPay(g, p, cost)) return false;
   const ok = yield* confirm(g, p, `是否發動【${data(card).name}】？（${costText(cost)}）`);
   if (!ok) return false;
-  log(g, `${pname(g, p)} 發動【${data(card).name}】（${costText(cost)}）`);
-  settle(g);
+  const text = `${pname(g, p)} 發動【${data(card).name}】（${costText(cost)}）`;
+  log(g, text);
+  activate(g, p, card, text);
   yield* pay(g, p, cost);
   return true;
 }

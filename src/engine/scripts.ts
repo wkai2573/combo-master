@@ -1,5 +1,5 @@
 import {
-  ask, awakened, canPay, chooseCards, confirm, COVER_REACTIONS, data, directHit, discard, draw, isFirst, Z, log, move,
+  activate, ask, awakened, canPay, chooseCards, confirm, COVER_REACTIONS, data, directHit, discard, draw, isFirst, Z, log, move,
   optionalPay, order, pay, pname, recover, type Gen, type GameCtx,
 } from './ops';
 import { other, type CardInst, type PlayerId } from './types';
@@ -42,7 +42,8 @@ export const scripts: Record<string, CardScript> = {
   魅影射擊: { pursuitDefBonus: 4 },
   // 伏擊（盜賊）：[起] 此回合我方總攻擊 +2
   伏擊: {
-    *onOpen(g, p) {
+    *onOpen(g, p, card) {
+      activate(g, p, card);
       g.state.flags.atkBonus[p] += 2;
       log(g, '【伏擊】此回合總攻擊 +2');
     },
@@ -75,6 +76,7 @@ export const scripts: Record<string, CardScript> = {
     *onOpen(g, p, card) {
       const x = yield* chooseX(g, p, card, 2, '蓋 X 張經驗，抽 X，此回合總攻擊 −X');
       if (x === 0) return;
+      activate(g, p, card);
       yield* payCover(g, p, x);
       yield* draw(g, p, x);
       g.state.flags.atkBonus[p] -= x;
@@ -86,6 +88,7 @@ export const scripts: Record<string, CardScript> = {
     *onPlay(g, p, card) {
       const x = yield* chooseX(g, p, card, 3, '蓋 X 張經驗，抽 X，再放 X 張手牌到牌組底');
       if (x === 0) return;
+      activate(g, p, card);
       yield* payCover(g, p, x);
       yield* draw(g, p, x);
       const put = yield* chooseCards(g, p, `【交涉】選擇 ${x} 張手牌放到牌組底`, Z(g, p, 'hand'), x, x);
@@ -116,7 +119,8 @@ export const scripts: Record<string, CardScript> = {
   },
   // 二連矢（弓箭手）：[追] 追擊 +1
   二連矢: {
-    *onPursuitCard(g, p) {
+    *onPursuitCard(g, p, card) {
+      activate(g, p, card);
       g.state.flags.pursuitPlus[p]++;
       log(g, '【二連矢】追擊+1');
     },
@@ -153,9 +157,10 @@ export const scripts: Record<string, CardScript> = {
   },
   // 電弧（法師）：[發] 抽X，再將 X 張手牌放到牌組底。X = 對方戰鬥區的招式數量
   電弧: {
-    *onPlay(g, p) {
+    *onPlay(g, p, card) {
       const x = Z(g, other(p), 'combat').length;
       if (x === 0) return;
+      activate(g, p, card);
       yield* draw(g, p, x);
       const put = yield* chooseCards(g, p, `【電弧】選擇 ${x} 張手牌放到牌組底`, Z(g, p, 'hand'), x, x);
       for (const c of put) move(g, c, 'deck', 'bottom');
@@ -218,6 +223,7 @@ export function* turnStartEffects(g: GameCtx): Gen {
       // 前面的費用（例如家族相片）已經把它蓋住，就無效
       if (card.covered || !canPay(g, p, { cover: 1 })) continue;
       // 蓋的是最前面的正面卡，不分是不是它自己；蓋到自己時效果仍照付費後發動，但之後它被蓋住就無效
+      activate(g, p, card);
       yield* payCover(g, p, 1);
       f.vanillaBoost[p]++;
       log(g, `【凡骨的意志】${pname(g, p)} 強制蓋 1${card.covered ? '（蓋到自己，之後無效）' : ''}，此回合總攻擊與總防禦各加上戰鬥區白板卡的數量`);

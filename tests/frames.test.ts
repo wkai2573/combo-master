@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PRESET_CHARACTER_IDS, presetDeck } from '../src/data/presetDecks';
 import { randomResponse } from '../src/engine/bot';
 import { Game } from '../src/engine/game';
+import { pay, type GameCtx } from '../src/engine/ops';
 import { Rng } from '../src/engine/rng';
 import { frameFor, viewFor } from '../src/engine/view';
 import { atkOf, defOf, pick, scenario } from './helpers';
@@ -115,5 +116,40 @@ describe('動畫影格', () => {
       }
       expect(g.pending, `seed ${seed} 在步數上限內沒有結束`).toBeNull();
     }
+  });
+
+  it('發動效果自成一個影格，在付費與效果結果之前，並指出發動的是哪張牌', () => {
+    const g = scenario({
+      animate: true, chars: ['法師', '勇者'],
+      p0: { hand: ['火球'], exp: ['黑桃3', '黑桃4', '黑桃5'] }, p1: { hand: [] },
+    });
+    g.drainFrames();
+    pick(g, '發動');
+    const frames = types(g);
+    const at = frames.findIndex((f) => f.fx.type === 'activate');
+    expect(at).toBeGreaterThan(-1);
+    const fx = frames[at].fx;
+    expect(fx.type === 'activate' && [fx.player, fx.cardId]).toEqual([0, '火球']);
+    // 那張牌就是戰鬥區最上方的火球
+    const fireball = frames[at].view.players[0].combat.at(-1)!;
+    expect(fx.type === 'activate' && fx.uid).toBe(fireball.uid);
+    // 發動時還沒付費、效果還沒生效
+    expect(frames[at].view.players[0].exp.some((c) => c.covered)).toBe(false);
+    expect(frames[at].view.players[1].discard).toHaveLength(0);
+  });
+
+  it('不用付費的效果也有發動影格（伏擊）', () => {
+    const g = scenario({ animate: true, chars: ['刺客', '勇者'], p0: { hand: ['伏擊'] }, p1: { hand: [] } });
+    const act = types(g).find((f) => f.fx.type === 'activate' && f.fx.cardId === '伏擊');
+    expect(act).toBeDefined();
+    expect(act!.caption).toContain('伏擊');
+  });
+
+  it('經驗卡被覆蓋時，覆蓋反應的效果有發動影格', () => {
+    const g = scenario({ animate: true, p0: { exp: ['高價賣出', '黑桃3'] } });
+    g.drainFrames();
+    pay(g as unknown as GameCtx, 0, { cover: 1 }).next();
+    const acts = types(g).filter((f) => f.fx.type === 'activate');
+    expect(acts.map((f) => f.fx.type === 'activate' && f.fx.cardId)).toEqual(['高價賣出']);
   });
 });

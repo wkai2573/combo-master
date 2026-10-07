@@ -167,7 +167,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           </div>
         </div>
 
-        <Spotlight fx={fx} n={fxKey} scale={scale} />
+        <Spotlight fx={fx} caption={cur?.frame.caption} n={fxKey} scale={scale} />
         <FlightLayer view={v} fx={fx} playing={cur !== null} n={fxKey} scale={scale} />
 
         {zone && (

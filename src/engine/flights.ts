@@ -28,6 +28,9 @@ export const flightsTotalMs = (flights: Flight[]): number =>
 /** 中央放大的牌停多久，才飛向它的去處（毫秒，標準速度） */
 export const SPOTLIGHT_HOLD_MS = 600;
 
+/** 效果發動時，放大的牌在中央停多久，才縮回原位（毫秒，標準速度） */
+export const ACTIVATE_HOLD_MS = 750;
+
 /**
  * 這個飛行是不是從「中央放大」出發：前一格是追擊翻牌、這一格是同一位玩家的判定結果，
  * 而且飛行是從牌組出來的（那張被翻開的牌）

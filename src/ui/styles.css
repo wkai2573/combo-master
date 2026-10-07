@@ -315,3 +315,5 @@ h1, h2, h3 { margin: 0 0 8px; }
 .spotlight .spotslot { width: 180px; height: 250px; display: grid; place-items: center; margin: 0 auto; }
 .spotlight .spotinner { perspective: 800px; }
 .spotlight .spotcard { position: relative; width: 112px; height: 156px; transform: scale(1.6); filter: drop-shadow(0 0 18px var(--fx-act)); }
+.spotlight .spottext { max-width: 440px; margin: 14px auto 0; padding: 8px 16px; text-align: center; font-size: 14px; line-height: 1.6; color: var(--text); background: #0f1320f0; border: 1px solid var(--line); border-radius: 10px; }
+.spotlight .spotcaption { font-weight: 800; color: var(--fx-act); margin-bottom: 4px; }
