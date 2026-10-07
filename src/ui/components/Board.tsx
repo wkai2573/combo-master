@@ -2,6 +2,7 @@ import { KeywordText } from './KeywordText';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { expLayout } from '../expLayout';
 import { handLayout } from '../handLayout';
+import { expEffectActive } from '../expEffect';
 import { getCard, getCharacter } from '../../data/cards';
 import type { CardView, GameView, PlayerView } from '../../engine/view';
 import type { StatChanges } from '../../engine/stats';
@@ -75,7 +76,7 @@ function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optK
       {cards.map((c, i) => (
         <div key={c.uid} className={`expslot${short ? (i % 2 === 0 ? ' r1' : ' r2') : ''}`}>
           <CardFace
-            uid={c.uid} id={c.id} size="sm" covered={c.covered} short={short}
+            uid={c.uid} id={c.id} size="sm" covered={c.covered} short={short} expEffect={expEffectActive(c)}
             glow={optKeys.has(`c${c.uid}`)} selected={selected.includes(`c${c.uid}`)}
             onClick={optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
           />

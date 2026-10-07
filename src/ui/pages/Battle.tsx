@@ -24,9 +24,11 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const st = useSyncExternalStore(session.subscribe, session.getState);
   const wide = useWide();
   const [selected, setSelected] = useState<string[]>([]);
-  const [inspect, setInspect] = useState<string | null>(null);
-  const [pinned, setPinned] = useState<string | null>(null);
-  const togglePin = useCallback((id: string) => setPinned((p) => (p === id ? null : id)), []);
+  // exp：這張卡在經驗區且經驗效果生效中（說明欄多一行狀態）
+  const [inspect, setInspect] = useState<{ id: string; exp: boolean } | null>(null);
+  const [pinned, setPinned] = useState<{ id: string; exp: boolean } | null>(null);
+  const inspectCard = useCallback((id: string | null, exp?: boolean) => setInspect(id ? { id, exp: !!exp } : null), []);
+  const togglePin = useCallback((id: string, exp?: boolean) => setPinned((p) => (p?.id === id ? null : { id, exp: !!exp })), []);
   const [zone, setZone] = useState<{ p: PlayerId; z: ZoneKey; anchor: DOMRect } | null>(null);
   const zoneRef = useRef(zone);
   zoneRef.current = zone;
@@ -170,7 +172,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   );
 
   return (
-    <InspectContext.Provider value={setInspect}>
+    <InspectContext.Provider value={inspectCard}>
       <PinContext.Provider value={togglePin}>
       <div className={`battle${wide ? ' wide' : ''}`} style={{ ['--spd' as string]: scale }}>
         <div className="topbar">
@@ -197,7 +199,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
             <div className={`board${cur ? ' playing' : ''}`}>
               {oppBoard}
               <div className="midrow">
-                <div className="sidecol"><InspectPanel id={pinned ?? inspect} pinned={pinned !== null} onUnpin={() => setPinned(null)} /></div>
+                <div className="sidecol"><InspectPanel id={(pinned ?? inspect)?.id ?? null} expActive={(pinned ?? inspect)?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} /></div>
                 {combat}
                 <div className="sidecol"><LogPanel lines={v.log} /></div>
               </div>
@@ -213,7 +215,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
                 {promptBar}
               </div>
               <div className="side">
-                <InspectPanel id={pinned ?? inspect} pinned={pinned !== null} onUnpin={() => setPinned(null)} />
+                <InspectPanel id={(pinned ?? inspect)?.id ?? null} expActive={(pinned ?? inspect)?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} />
                 <LogPanel lines={v.log} />
               </div>
             </>
@@ -224,7 +226,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         <Spotlight fx={fx} caption={cur?.frame.caption} n={fxKey} scale={scale} />
         <FlightLayer view={v} fx={fx} playing={cur !== null} n={fxKey} scale={scale} />
 
-        {zone && !(zone.z === 'rage' && zone.p !== me) && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} anchor={zone.anchor} onClose={() => setZone(null)} />}
+        {zone && !(zone.z === 'rage' && zone.p !== me) && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} exp={zone.z === 'exp'} anchor={zone.anchor} onClose={() => setZone(null)} />}
 
         {result && (
           <Modal>

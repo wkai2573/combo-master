@@ -16,10 +16,10 @@ export const CLASS_COLOR: Record<ClassName, string> = {
 };
 
 /** 滑鼠移到卡片上時，把卡片 id 交給側欄的說明區 */
-export const InspectContext = createContext<(id: string | null) => void>(() => {});
+export const InspectContext = createContext<(id: string | null, expActive?: boolean) => void>(() => {});
 
 /** 右鍵（或點一下不能操作的卡）固定側欄的說明：再點同一張就取消 */
-export const PinContext = createContext<(id: string) => void>(() => {});
+export const PinContext = createContext<(id: string, expActive?: boolean) => void>(() => {});
 
 export interface CardFaceProps {
   /** null 表示看不到內容（顯示牌背） */
@@ -33,6 +33,8 @@ export interface CardFaceProps {
   pursuit?: boolean;
   /** 剛打出的牌：短暫發光 */
   fresh?: boolean;
+  /** 經驗區裡經驗效果生效中：加專屬色外框與小 [經] 標記 */
+  expEffect?: boolean;
   /** 矮卡（經驗區兩列時）：只露出攻／連擊／守與卡圖 */
   short?: boolean;
   counters?: number;
@@ -51,13 +53,14 @@ export function kindLabel(c: CardData): string {
   return c.traits.join('・') || '招式';
 }
 
-export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, fresh, short, counters, badge, uid, counterDelta, deltaKey, onClick }: CardFaceProps) {
+export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, fresh, short, expEffect, counters, badge, uid, counterDelta, deltaKey, onClick }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const pin = useContext(PinContext);
   const cls = ['card', size];
   if (pursuit) cls.push('pursuit');
   if (fresh) cls.push('fresh');
   if (short) cls.push('short');
+  if (expEffect) cls.push('expfx');
   if (selected) cls.push('selected');
   if (glow) cls.push('glow');
   if (dim) cls.push('dim');
@@ -75,12 +78,12 @@ export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursui
       className={cls.join(' ')}
       data-uid={uid}
       style={{ ['--cc' as string]: CLASS_COLOR[c.cls] }}
-      onClick={onClick ?? (() => pin(id))}
+      onClick={onClick ?? (() => pin(id, expEffect))}
       onContextMenu={(e) => {
         e.preventDefault();
-        pin(id);
+        pin(id, expEffect);
       }}
-      onMouseEnter={() => inspect(id)}
+      onMouseEnter={() => inspect(id, expEffect)}
     >
       <div className="hd">
         {isMove ? (
@@ -110,7 +113,7 @@ export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursui
 }
 
 /** 側欄的卡片完整說明：放大的卡圖、數值、效果，並列出文字裡關鍵字的說明 */
-export function InspectPanel({ id, pinned, onUnpin }: { id: string | null; pinned?: boolean; onUnpin?: () => void }) {
+export function InspectPanel({ id, expActive, pinned, onUnpin }: { id: string | null; expActive?: boolean; pinned?: boolean; onUnpin?: () => void }) {
   if (!id) {
     return (
       <div className="inspect muted">
@@ -140,6 +143,7 @@ export function InspectPanel({ id, pinned, onUnpin }: { id: string | null; pinne
           ? `攻擊 ${c.atk}　防禦 ${c.def}　連擊值 ${c.combo}`
           : `經驗需求 ${c.expReq}${c.kind === 'buff' ? `　持續時間 ${c.duration}` : ''}`}
       </div>
+      {expActive && <div className="expnote">經驗效果：生效中</div>}
       <div className="tx">{c.text ? <KeywordText text={c.text} /> : '（無效果）'}</div>
       {kws.length > 0 && (
         <div className="kwlist">
