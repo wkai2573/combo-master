@@ -107,3 +107,14 @@ export function diffFlights(prev: GameView, next: GameView): Flight[] {
   }
   return out;
 }
+
+/** 留在原區域、但覆蓋狀態改變的卡（蓋 X 付費翻成覆蓋，或覆蓋的牌被翻開），不算飛行 */
+export function coverChanges(prev: GameView, next: GameView): number[] {
+  const before = locate(prev);
+  const out: number[] = [];
+  for (const [uid, now] of locate(next)) {
+    const was = before.get(uid);
+    if (was && was.owner === now.owner && was.zone === now.zone && was.card.covered !== now.card.covered) out.push(uid);
+  }
+  return out;
+}

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { frameFor } from '../src/engine/view';
+import { PRESET_CHARACTER_IDS, presetDeck } from '../src/data/presetDecks';
+import { randomResponse } from '../src/engine/bot';
+import { Game } from '../src/engine/game';
+import { Rng } from '../src/engine/rng';
+import { frameFor, viewFor } from '../src/engine/view';
 import { atkOf, defOf, pick, scenario } from './helpers';
 
 const types = (g: ReturnType<typeof scenario>, viewer: 0 | 1 = 0) => g.drainFrames().map((f) => frameFor(f, viewer));
@@ -69,5 +73,47 @@ describe('動畫影格', () => {
     }
     const lens = frames.map((f) => f.logLen);
     expect([...lens].sort((a, b) => a - b)).toEqual(lens);
+  });
+
+  it('支付費用自成一個影格：先看到蓋 X，之後才是效果的結果', () => {
+    const g = scenario({
+      animate: true, chars: ['法師', '勇者'],
+      p0: { hand: ['火球'], exp: ['黑桃3', '黑桃4', '黑桃5'] }, p1: { hand: [] },
+    });
+    g.drainFrames(); // 丟掉開局到「是否發動」之前的影格
+    // 唯一可出的招式自動打出，停在「是否發動火球」
+    pick(g, '發動');
+    const frames = types(g);
+    const covered = (f: (typeof frames)[number]) => f.view.players[0].exp.filter((c) => c.covered).length;
+    const paid = frames.findIndex((f) => covered(f) === 3);
+    expect(paid).toBeGreaterThan(-1);
+    expect(frames[paid].view.players[1].discard).toHaveLength(0); // 直擊 2 還沒發生
+    expect(frames.some((f, i) => i > paid && f.view.players[1].discard.length === 2)).toBe(true);
+  });
+
+  it('玩家每次要回應之前，最後一個影格的桌面一定等於真實桌面（沒有未呈現的變化）', () => {
+    const zoneUids = (v: ReturnType<typeof viewFor>) =>
+      v.players.map((pv) => ({
+        deck: pv.deckCount,
+        zones: (['hand', 'discard', 'rage', 'exp', 'combat', 'pursuit', 'gear', 'buff'] as const).map((z) => pv[z].map((c) => `${c.uid}${c.covered ? '~' : ''}`)),
+      }));
+    const ids = PRESET_CHARACTER_IDS;
+    for (let seed = 1; seed <= 12; seed++) {
+      const a = ids[seed % ids.length];
+      const b = ids[(seed * 3 + 1) % ids.length];
+      const g = new Game({
+        decks: [{ charId: a, cards: presetDeck(a) }, { charId: b, cards: presetDeck(b) }], seed, animate: true,
+      });
+      const rng = new Rng(seed);
+      let last = g.drainFrames().at(-1);
+      for (let step = 0; g.pending && step < 3000; step++) {
+        const fresh = g.drainFrames();
+        last = fresh.at(-1) ?? last;
+        expect(last, `seed ${seed} 第 ${step} 步沒有影格`).toBeDefined();
+        expect(zoneUids(frameFor(last!, 0).view), `seed ${seed} 第 ${step} 步（${a} vs ${b}）`).toEqual(zoneUids(viewFor(g, 0, false)));
+        g.submit(g.pending.player, randomResponse(g.pending, rng));
+      }
+      expect(g.pending, `seed ${seed} 在步數上限內沒有結束`).toBeNull();
+    }
   });
 });

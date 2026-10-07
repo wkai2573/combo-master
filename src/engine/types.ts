@@ -93,6 +93,8 @@ export interface DeckSpec {
 export type FrameFx =
   | { type: 'phase' }
   | { type: 'info' }
+  /** 一個步驟（發動、付費、效果結果）做完，桌面有變化 */
+  | { type: 'step' }
   | { type: 'draw' }
   | { type: 'play'; player: PlayerId; uid: number }
   | { type: 'pass'; player: PlayerId }
@@ -106,7 +108,7 @@ export type FrameFx =
 
 /** 各種影格停留的毫秒數（標準速度） */
 export const FRAME_MS: Record<FrameFx['type'], number> = {
-  phase: 750, info: 800, draw: 550, play: 1000, pass: 800,
+  phase: 750, info: 800, step: 600, draw: 550, play: 1000, pass: 800,
   flip: 1250, flipResult: 1150, calc: 2000, damage: 1500, return: 1000,
 };
 

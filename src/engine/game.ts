@@ -3,7 +3,7 @@ import { combatPhase } from './combat';
 import { merchantAfterBurst, turnStartEffects } from './scripts';
 import {
   ask, awakened, cardOpt, data, draw, drawPlain, GameOver, log, mark, move, newCard,
-  markIfLogged, optionalPay, order, pname, toExp, Z, type Gen,
+  markIfLogged, optionalPay, order, pname, settle, toExp, Z, type Gen,
 } from './ops';
 import { Rng } from './rng';
 import { checkWin } from './win';
@@ -33,6 +33,7 @@ export class Game {
   state: GameState;
   rng: Rng;
   nextUid = 1;
+  touched = 0;
   /** 目前等待回應的提示；遊戲結束時為 null */
   pending: Request | null = null;
   private it: Generator<Request, void, string[]>;
@@ -46,6 +47,7 @@ export class Game {
   }
 
   frame = (caption: string, fx: FrameFx): void => {
+    this.touched = 0;
     if (!this.setup.animate) return;
     this.frames.push({
       views: [viewFor(this, 0, false), viewFor(this, 1, false)],
@@ -92,9 +94,12 @@ export class Game {
   private advance(resp: string[] | undefined): void {
     try {
       const r = this.it.next(resp as string[]);
+      // 把控制權交還給玩家（或遊戲結束）之前，把還沒呈現的變化補成一個影格
+      settle(this);
       this.pending = r.done ? null : r.value;
     } catch (e) {
       if (e instanceof GameOver) {
+        settle(this);
         this.pending = null;
         return;
       }

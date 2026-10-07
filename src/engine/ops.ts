@@ -17,6 +17,8 @@ export interface GameCtx {
   state: GameState;
   rng: Rng;
   nextUid: number;
+  /** 自上一個影格以來，卡片移動或寫入紀錄的次數（0 表示桌面沒有未呈現的變化） */
+  touched: number;
   /** 錄製一個動畫影格（未開啟 animate 時為空操作） */
   frame?: (caption: string, fx: FrameFx) => void;
 }
@@ -24,6 +26,12 @@ export interface GameCtx {
 /** 在關鍵時刻錄下目前桌面狀態與一句說明，介面會依序播放 */
 export function mark(g: GameCtx, caption: string, fx: FrameFx): void {
   g.frame?.(caption, fx);
+}
+
+/** 桌面有尚未呈現的變化時，補錄一個影格（說明預設為最新一行紀錄）。沒有變化就什麼都不做 */
+export function settle(g: GameCtx, caption?: string): void {
+  if (g.touched === 0) return;
+  mark(g, caption ?? g.state.log[g.state.log.length - 1] ?? '', { type: 'step' });
 }
 
 /** 執行 fn 後若紀錄有新增，就補一個影格顯示最後一行（用來呈現卡片效果的結果） */
@@ -47,6 +55,7 @@ export const order = (g: GameCtx): [PlayerId, PlayerId] => [g.state.first, other
 
 export function log(g: GameCtx, text: string) {
   g.state.log.push(text);
+  g.touched++;
 }
 export const pname = (g: GameCtx, p: PlayerId) => `${p === 0 ? '玩家A' : '玩家B'}（${P(g, p).charId}）`;
 
@@ -72,6 +81,7 @@ export function findCard(g: GameCtx, uid: number): CardInst | undefined {
 
 /** 將卡移到持有主的指定區域。pos='top' 為該區域的「最上方」，'bottom' 為「最下方」。 */
 export function move(g: GameCtx, card: CardInst, to: ZoneName, pos: 'top' | 'bottom' = 'bottom'): void {
+  g.touched++;
   const from = Z(g, card.owner, card.zone);
   const i = from.indexOf(card);
   if (i >= 0) from.splice(i, 1);
@@ -179,14 +189,18 @@ export const COVER_REACTIONS: Record<string, (g: GameCtx, p: PlayerId, card: Car
 
 /** 扣除費用並自動觸發被覆蓋經驗卡的連鎖反應 */
 export function* pay(g: GameCtx, p: PlayerId, cost: Cost): Gen {
+  settle(g); // 付費之前還沒呈現的變化不算費用
   const newlyCovered: CardInst[] = [];
   if (cost.cover) newlyCovered.push(...cover(g, p, cost.cover));
   if (cost.rage) discardRage(g, p, cost.rage);
+  // 付費自成一段，之後的覆蓋反應與效果各自再成一段
+  if (cost.cover || cost.rage) settle(g, `${pname(g, p)} 支付費用（${costText(cost)}）`);
   for (const card of newlyCovered) {
     const reaction = COVER_REACTIONS[card.id];
     if (reaction) {
       log(g, `【${data(card).name}】被覆蓋`);
       yield* reaction(g, p, card);
+      settle(g);
     }
   }
 }
@@ -197,6 +211,7 @@ export function* optionalPay(g: GameCtx, p: PlayerId, card: CardInst, cost: Cost
   const ok = yield* confirm(g, p, `是否發動【${data(card).name}】？（${costText(cost)}）`);
   if (!ok) return false;
   log(g, `${pname(g, p)} 發動【${data(card).name}】（${costText(cost)}）`);
+  settle(g);
   yield* pay(g, p, cost);
   return true;
 }
@@ -212,6 +227,7 @@ export function cover(g: GameCtx, p: PlayerId, n: number): CardInst[] {
       done.push(c);
     }
   }
+  if (done.length > 0) g.touched++;
   return done;
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diffFlights, type Flight } from '../src/engine/flights';
+import { coverChanges, diffFlights, type Flight } from '../src/engine/flights';
 import { frameFor } from '../src/engine/view';
 import { pick, scenario } from './helpers';
 
@@ -50,5 +50,20 @@ describe('卡片飛行', () => {
     const g = scenario({ animate: true, p0: { hand: ['黑桃5'] }, p1: { hand: ['黑桃9'] } });
     const v = frameFor(g.drainFrames()[0], 0).view;
     expect(diffFlights(v, v)).toEqual([]);
+  });
+
+  it('蓋 X 付費：經驗區最前面的 X 張正面卡翻成覆蓋（不算飛行）', () => {
+    const g = scenario({
+      animate: true, chars: ['法師', '勇者'],
+      p0: { hand: ['火球'], exp: ['黑桃3', '黑桃4', '黑桃5', '黑桃6'] }, p1: { hand: [] },
+    });
+    g.drainFrames();
+    pick(g, '發動');
+    const frames = g.drainFrames().map((f) => frameFor(f, 0));
+    const i = frames.findIndex((f) => f.view.players[0].exp.some((c) => c.covered));
+    expect(i).toBeGreaterThan(0);
+    const exp = frames[i].view.players[0].exp;
+    expect(coverChanges(frames[i - 1].view, frames[i].view)).toEqual(exp.slice(0, 3).map((c) => c.uid));
+    expect(diffFlights(frames[i - 1].view, frames[i].view)).toEqual([]);
   });
 });

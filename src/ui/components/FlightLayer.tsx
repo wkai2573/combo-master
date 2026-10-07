@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { diffFlights, type Flight } from '../../engine/flights';
+import { coverChanges, diffFlights, type Flight } from '../../engine/flights';
 import type { GameView } from '../../engine/view';
 import { CardFace } from './CardFace';
 
@@ -54,6 +54,8 @@ export function FlightLayer({ view, playing, n, scale }: {
   const prev = useRef<{ view: GameView; rects: Map<number, DOMRect> } | null>(null);
   const active = useRef<Animation[]>([]);
   const hidden = useRef<HTMLElement[]>([]);
+  // 這個影格裡原地翻成覆蓋（或翻開）的牌
+  const turnRef = useRef<HTMLElement[]>([]);
   // 播放速度中途改變時，不重播進行中的飛行
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
@@ -70,7 +72,8 @@ export function FlightLayer({ view, playing, n, scale }: {
     stopAll();
     const before = prev.current;
     let placed: Placed[] = [];
-    if (playing && view && before && before.view !== view) {
+    const changed = playing && view && before && before.view !== view;
+    if (changed) {
       const flies = diffFlights(before.view, view);
       for (const f of flies) {
         const destEl = PILE_ZONES.has(f.to) ? null : document.querySelector<HTMLElement>(`[data-uid="${f.uid}"]`);
@@ -89,6 +92,15 @@ export function FlightLayer({ view, playing, n, scale }: {
         });
       }
     }
+    // 留在原地、只是翻成覆蓋（或翻開）的牌：原地翻面一下
+    const turned: HTMLElement[] = [];
+    if (changed) {
+      for (const uid of coverChanges(before.view, view)) {
+        const el = document.querySelector<HTMLElement>(`[data-uid="${uid}"]`);
+        if (el) turned.push(el);
+      }
+    }
+    turnRef.current = turned;
     for (const pl of placed) {
       if (pl.hide) {
         pl.hide.style.visibility = 'hidden';
@@ -110,6 +122,10 @@ export function FlightLayer({ view, playing, n, scale }: {
     const scale = scaleRef.current;
     const dur = cssMs('--fly-ms', 420) * scale;
     const ease = getComputedStyle(document.documentElement).getPropertyValue('--ease-fly').trim() || 'ease-out';
+    // 翻成覆蓋的牌原地翻面（turnRef 由上一個 effect 在 setFlights 之前備好）
+    for (const el of turnRef.current) {
+      active.current.push(el.animate([{ transform: 'rotateY(90deg) scale(.9)' }, { transform: 'none' }], { duration: dur, easing: ease }));
+    }
     for (const pl of flights) {
       const el = refs.current.get(pl.key);
       if (!el) continue;
