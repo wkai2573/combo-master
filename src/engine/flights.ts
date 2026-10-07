@@ -44,7 +44,7 @@ export interface Flight {
   /** 起點、終點時是否正面朝上；兩者不同代表飛行途中翻面 */
   faceUpFrom: boolean;
   faceUpTo: boolean;
-  /** 同一組（同玩家、同起訖區域）中的第幾張，用來逐張錯開 */
+  /** 同一組（同玩家、同起點、同終點；招式與追擊卡視為同一起點）中的第幾張，用來逐張錯開 */
   order: number;
 }
 
@@ -81,7 +81,8 @@ export function diffFlights(prev: GameView, next: GameView): Flight[] {
   const out: Flight[] = [];
   const nth = new Map<string, number>();
   const push = (f: Omit<Flight, 'order'>) => {
-    const key = `${f.owner}|${f.from}|${f.to}`;
+    // 同一組依序出發。招式與追擊卡都算「桌面上的牌」，歸還時先後飛進經驗區
+    const key = `${f.owner}|${f.from === 'pursuit' ? 'combat' : f.from}|${f.to}`;
     const order = nth.get(key) ?? 0;
     nth.set(key, order + 1);
     out.push({ ...f, order });

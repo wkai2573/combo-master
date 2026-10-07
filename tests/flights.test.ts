@@ -23,10 +23,11 @@ function fireball(viewer: 0 | 1 = 0) {
 /** 一次拼招後取出影格，回傳「某個演出類型的影格」與它前一個影格之間的卡片飛行 */
 function flightsInto(fxType: string, viewer: 0 | 1 = 0): Flight[] {
   const g = scenario({ animate: true, p0: { hand: ['黑桃5'] }, p1: { hand: ['黑桃9'] } });
-  g.drainFrames();
+  const base = g.drainFrames().slice(-1); // 出招之前最後的桌面，當作第一個影格的前一格
+  expect(base).toHaveLength(1);
   pick(g, '黑桃9');
-  const frames = g.drainFrames().map((f) => frameFor(f, viewer));
-  const i = frames.findIndex((f) => f.fx.type === fxType);
+  const frames = [...base, ...g.drainFrames()].map((f) => frameFor(f, viewer));
+  const i = frames.findIndex((f, j) => j > 0 && f.fx.type === fxType); // 第 0 格是出招之前的桌面
   expect(i).toBeGreaterThan(0);
   return diffFlights(frames[i - 1].view, frames[i].view);
 }
@@ -141,5 +142,21 @@ describe('卡片飛行', () => {
       // 最後一張的出發時間加上飛行時間，剛好就是整批的總時長（介面實際播放的時間與引擎預估一致）
       expect(t.ms + maxOrder * t.stagger).toBeCloseTo(t.total);
     }
+  });
+
+  it('對手出招：牌從對手手牌飛到戰鬥區，途中翻成正面；自己出招則全程正面', () => {
+    // 玩家 1 打出黑桃9：玩家 0 視角看不到他手牌的牌面，玩家 1 自己看得到
+    const theirs = flightsInto('play', 0).find((f) => f.owner === 1 && f.to === 'combat')!;
+    expect(theirs.from).toBe('hand');
+    expect(theirs.id).toBe('黑桃9');
+    expect([theirs.faceUpFrom, theirs.faceUpTo]).toEqual([false, true]);
+    const own = flightsInto('play', 1).find((f) => f.owner === 1 && f.to === 'combat')!;
+    expect([own.faceUpFrom, own.faceUpTo]).toEqual([true, true]);
+  });
+
+  it('歸還：招式與追擊卡依序飛進經驗區，同一位玩家的牌不會同時出發', () => {
+    const flights = flightsInto('return', 0).filter((f) => f.owner === 0 && f.to === 'exp');
+    expect(flights.map((f) => f.from)).toEqual(['combat', 'pursuit']);
+    expect(flights.map((f) => f.order)).toEqual([0, 1]);
   });
 });
