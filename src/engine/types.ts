@@ -74,6 +74,8 @@ export interface Opt {
   label: string;
   uid?: number;
   cardId?: string;
+  /** 這個選項是一張看不到牌面的覆蓋卡：只有 uid（對得上經驗區的位置），沒有 cardId 與卡名 */
+  hidden?: boolean;
 }
 
 export interface Request {

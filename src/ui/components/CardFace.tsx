@@ -24,7 +24,6 @@ export const PinContext = createContext<(id: string, expActive?: boolean) => voi
 export interface CardFaceProps {
   /** null 表示看不到內容（顯示牌背） */
   id: string | null;
-  covered?: boolean;
   size?: 'sm' | 'md';
   selected?: boolean;
   glow?: boolean;
@@ -53,7 +52,7 @@ export function kindLabel(c: CardData): string {
   return c.traits.join('・') || '招式';
 }
 
-export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursuit, fresh, short, expEffect, counters, badge, uid, counterDelta, deltaKey, onClick }: CardFaceProps) {
+export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh, short, expEffect, counters, badge, uid, counterDelta, deltaKey, onClick }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const pin = useContext(PinContext);
   const cls = ['card', size];
@@ -68,10 +67,9 @@ export function CardFace({ id, covered, size = 'md', selected, glow, dim, pursui
   else cls.push('inspectable');
 
   if (id === null) {
-    return <div className={[...cls, 'back'].join(' ')} data-uid={uid} onClick={onClick}>{covered ? '覆蓋' : '?'}</div>;
+    return <div className={[...cls, 'back'].join(' ')} data-uid={uid} onClick={onClick}>?</div>;
   }
   const c = getCard(id);
-  if (covered) cls.push('covered');
   const isMove = c.kind === 'move';
   return (
     <div

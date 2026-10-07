@@ -131,6 +131,8 @@ export function toExp(g: GameCtx, card: CardInst) {
 // ───────────────────────── 提示 ─────────────────────────
 
 export function cardOpt(c: CardInst, label?: string): Opt {
+  // 覆蓋卡對雙方隱藏（ADR 0002）：選項不帶牌面與卡名，只能依位置選
+  if (c.zone === 'exp' && c.covered) return { key: `c${c.uid}`, label: '?', uid: c.uid, hidden: true };
   return { key: `c${c.uid}`, label: label ?? data(c).name, uid: c.uid, cardId: c.id };
 }
 

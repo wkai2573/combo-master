@@ -196,7 +196,9 @@ describe('新卡（第二批）', () => {
     });
     pick(g, '冰霜護甲');
     pick(g, '發動');
-    pick(g, '黑桃5', '黑桃6');
+    // 覆蓋卡是盲選（選項不帶牌面），依 uid 選出 黑桃5、黑桃6
+    const target = Z(g, 0, 'exp').filter((c) => c.id === '黑桃5' || c.id === '黑桃6').map((c) => `c${c.uid}`);
+    g.submit(g.pending!.player, target);
     expect(Z(g, 0, 'rage')).toHaveLength(1); // 回復 4
     expect(names(g, 0, 'discard')).toEqual(expect.arrayContaining(['黑桃5', '黑桃6']));
     expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(2);

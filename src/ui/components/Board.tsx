@@ -77,7 +77,7 @@ function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optK
       {cards.map((c, i) => (
         <div key={c.uid} className={`expslot${short ? (i < layout.firstRow ? ' r1' : ' r2') : ''}`}>
           <CardFace
-            uid={c.uid} id={c.id} size="sm" covered={c.covered} short={short} expEffect={expEffectActive(c)}
+            uid={c.uid} id={c.id} size="sm" short={short} expEffect={expEffectActive(c)}
             glow={optKeys.has(`c${c.uid}`)} selected={selected.includes(`c${c.uid}`)}
             onClick={optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
           />

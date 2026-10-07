@@ -82,7 +82,8 @@ function playerView(game: Game, p: PlayerId, viewer: PlayerId): PlayerView {
     hand: list('hand', () => mine),
     discard: list('discard', () => true),
     rage: list('rage', () => mine),
-    exp: list('exp', (c) => mine || !c.covered),
+    // 覆蓋卡對雙方隱藏（ADR 0002）：自己也只有牌背
+    exp: list('exp', (c) => !c.covered),
     combat: list('combat', () => true),
     pursuit: list('pursuit', () => true),
     gear: list('gear', () => true),

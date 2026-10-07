@@ -11,8 +11,9 @@ interface Props {
 /** 目前需要你回應的選擇。必選 1 個時，點選即送出；其餘情況點選切換後按確定。 */
 export function PromptPanel({ prompt, selected, onPick, onSubmit }: Props) {
   const single = prompt.min === 1 && prompt.max === 1;
-  const cardOpts = prompt.options.filter((o) => o.cardId);
-  const btnOpts = prompt.options.filter((o) => !o.cardId);
+  const isCard = (o: Request['options'][number]) => o.cardId !== undefined || o.hidden;
+  const cardOpts = prompt.options.filter(isCard);
+  const btnOpts = prompt.options.filter((o) => !isCard(o));
   const countText = single ? '' : `（選 ${prompt.min === prompt.max ? prompt.min : `${prompt.min}~${prompt.max}`} 個）`;
 
   return (
@@ -22,7 +23,7 @@ export function PromptPanel({ prompt, selected, onPick, onSubmit }: Props) {
         <div className="cardrow">
           {cardOpts.map((o) => (
             <CardFace
-              key={o.key} id={o.cardId!} size="md" glow selected={selected.includes(o.key)}
+              key={o.key} id={o.cardId ?? null} size="md" glow selected={selected.includes(o.key)}
               onClick={() => (single ? onSubmit([o.key]) : onPick(o.key))}
             />
           ))}
