@@ -90,8 +90,8 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
       <div className="zonesrow">
         <div className="piles">
           <Pile p={p} zone="deck" label="牌組" count={pv.deckCount} shuffling={shuffling} />
-          <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={() => onZone(p, 'discard')} />
           <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} onClick={() => onZone(p, 'rage')} />
+          <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={() => onZone(p, 'discard')} />
         </div>
         <div className="expzone">
           <div className="zonelabel">經驗區（左側為最前方）</div>
