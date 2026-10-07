@@ -28,7 +28,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const [inspect, setInspect] = useState<{ id: string; exp: boolean } | null>(null);
   const [pinned, setPinned] = useState<{ id: string; exp: boolean } | null>(null);
   const inspectCard = useCallback((id: string | null, exp?: boolean) => setInspect(id ? { id, exp: !!exp } : null), []);
-  const togglePin = useCallback((id: string, exp?: boolean) => setPinned((p) => (p?.id === id ? null : { id, exp: !!exp })), []);
+  const togglePin = useCallback((id: string, exp?: boolean) => setPinned((p) => (p?.id === id && p.exp === !!exp ? null : { id, exp: !!exp })), []);
   const [zone, setZone] = useState<{ p: PlayerId; z: ZoneKey; anchor: DOMRect } | null>(null);
   const zoneRef = useRef(zone);
   zoneRef.current = zone;

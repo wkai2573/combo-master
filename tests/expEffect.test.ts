@@ -12,6 +12,10 @@ describe('經驗效果', () => {
     expect(hasExpEffect('紅心5')).toBe(false);
   });
 
+  it('卡文裡轉述別張卡的 [經] 說明，不算這張卡自己的經驗效果', () => {
+    expect(hasExpEffect('塗毒')).toBe(false); // 內嵌 Ex卡-中毒 的 [經]
+  });
+
   it('只有在經驗區、正面朝上、且有經驗效果的卡才是生效中', () => {
     expect(expEffectActive(view('低價買進'))).toBe(true);
     expect(expEffectActive(view('低價買進', true))).toBe(false); // 覆蓋後無效
