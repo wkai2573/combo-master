@@ -1,6 +1,8 @@
 import { createContext, useContext } from 'react';
 import { getCard } from '../../data/cards';
 import type { CardData, ClassName } from '../../data/types';
+import { hasExpEffect } from '../../engine/effects';
+import type { CardView } from '../../engine/view';
 import { keywordsIn } from '../../data/keywords';
 import { CardArt } from './CardArt';
 import { Delta } from './Delta';
@@ -52,6 +54,11 @@ export function kindLabel(c: CardData): string {
   if (c.kind === 'equip') return `裝備・${c.slot}`;
   if (c.kind === 'buff') return '增益';
   return c.traits.join('・') || '招式';
+}
+
+/** 經驗區裡的這張卡，其經驗效果目前是否生效中：看得到牌面、表側、且有經驗效果。裏側的牌經驗效果無效，不提示 */
+export function expEffectActive(c: Pick<CardView, 'id' | 'covered'>): boolean {
+  return c.id !== null && !c.covered && hasExpEffect(c.id);
 }
 
 export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, uid, counterDelta, deltaKey, onClick }: CardFaceProps) {

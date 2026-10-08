@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: resolved
 
 # 經驗效果：改問效果來源登記表
 

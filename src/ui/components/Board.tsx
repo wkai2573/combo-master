@@ -3,12 +3,11 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { expLayout } from '../expLayout';
 import { handLayout } from '../handLayout';
 import { useWide } from '../useWide';
-import { expEffectActive } from '../expEffect';
 import { getCard, getCharacter } from '../../data/cards';
 import type { CardView, GameView, PlayerView } from '../../engine/view';
 import type { StatChanges } from '../../engine/stats';
 import type { FrameFx, PlayerId, Request } from '../../engine/types';
-import { CardFace } from './CardFace';
+import { CardFace, expEffectActive } from './CardFace';
 import { Delta } from './Delta';
 
 export type ZoneKey = 'discard' | 'rage' | 'exp';

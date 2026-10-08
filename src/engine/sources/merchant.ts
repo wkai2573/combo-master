@@ -1,5 +1,5 @@
-import { hasExpEffect } from '../../data/expEffect';
 import { canPay, chooseX, faceUpExp, pay } from '../cost';
+import { hasExpEffect } from '../effects';
 import { defineSource } from '../effectKit';
 import { activate, awakened, chooseCards, confirm, data, draw, log, move, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
 import { other, type CardInst, type PlayerId } from '../types';

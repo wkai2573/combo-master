@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import type { CardView } from '../../engine/view';
 import { placePopover } from '../popoverPlacement';
-import { expEffectActive } from '../expEffect';
-import { CardFace } from './CardFace';
+import { CardFace, expEffectActive } from './CardFace';
 
 export const ZONE_POP_W = 720;
 export const ZONE_POP_H = 360;

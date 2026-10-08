@@ -114,6 +114,8 @@ export interface Effects {
   query<K extends QueryKey>(g: GameCtx, p: PlayerId, key: K, ...args: QueryArgs[K]): Queries[K];
   moveRules(cardId: string): Readonly<MoveRules>;
   hasEffect(id: string): boolean;
+  /** 這張卡有沒有放在經驗區的效果（表側在經驗區時才有效果）。畫面高亮與高利貸數張數以此為準 */
+  hasExpEffect(id: string): boolean;
 }
 
 export function createEffects(sources: readonly EffectSource[]): Effects {
@@ -205,7 +207,7 @@ export function createEffects(sources: readonly EffectSource[]): Effects {
     return r;
   }
 
-  return { windowEffects, fire, fireEach, query, moveRules, hasEffect: registry.has } as unknown as Effects;
+  return { windowEffects, fire, fireEach, query, moveRules, hasEffect: registry.has, hasExpEffect: (id: string) => registry.byId.get(id)?.at === 'exp' } as unknown as Effects;
 }
 
 /**
@@ -222,3 +224,4 @@ export const query: Effects['query'] = (g, p, key, ...args) => effects().query(g
 export const moveRules: Effects['moveRules'] = (cardId) => effects().moveRules(cardId);
 /** 這個卡名或角色名有沒有實作效果，涵蓋招式、裝備、增益與角色 */
 export const hasEffect = (id: string): boolean => effects().hasEffect(id);
+export const hasExpEffect = (id: string): boolean => effects().hasExpEffect(id);
