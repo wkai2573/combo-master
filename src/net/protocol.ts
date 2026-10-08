@@ -11,7 +11,13 @@ export interface DeckPayload {
 export type CheatOp =
   | { k: 'add'; target: PlayerId; cardId: string }
   | { k: 'remove'; target: PlayerId; uid: number }
-  | { k: 'reorder'; target: PlayerId; zone: CheatZone; uids: number[] };
+  | { k: 'reorder'; target: PlayerId; zone: CheatZone; uids: number[] }
+  /** 把牌區的一張卡移出遊戲 */
+  | { k: 'delete'; target: PlayerId; zone: CheatZone; uid: number }
+  /** 加一張卡到牌區的第一格 */
+  | { k: 'insert'; target: PlayerId; zone: CheatZone; cardId: string }
+  /** 經驗區的卡翻面 */
+  | { k: 'flip'; target: PlayerId; uid: number };
 
 /** 訪客 → 房主 */
 export type ClientMsg =

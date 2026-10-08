@@ -49,11 +49,15 @@ function checkPlayers(by: unknown, target: unknown): void {
 }
 
 /** by 為操作者，target 為被操作的玩家；拒絕時丟出說明原因的錯誤，且不改動任何東西 */
+function checkPoolCard(cardId: unknown): asserts cardId is string {
+  if (typeof cardId !== 'string') throw new Error('卡名不合法');
+  if (cardId.startsWith('Ex卡-')) throw new Error('Ex 卡不能用作弊加入');
+  if (!CHEAT_POOL.some((c) => c.id === cardId)) throw new Error(`卡池裡沒有「${cardId}」`);
+}
+
 export function cheatAdd(g: Game, by: PlayerId, target: PlayerId, cardId: string): void {
   checkPlayers(by, target);
-  if (typeof cardId !== 'string') throw new Error('卡名不合法');
-  if (cardId.startsWith('Ex卡-')) throw new Error('Ex 卡不能用作弊加入手牌');
-  if (!CHEAT_POOL.some((c) => c.id === cardId)) throw new Error(`卡池裡沒有「${cardId}」`);
+  checkPoolCard(cardId);
   const c = newCard(g, cardId, target, 'hand');
   log(g, `【作弊】${pname(g, by)} 將【${data(c).name}】加入${pname(g, target)}的手牌`);
 }
@@ -68,12 +72,49 @@ export function cheatRemove(g: Game, by: PlayerId, target: PlayerId, uid: number
   log(g, `【作弊】${pname(g, by)} 將【${data(card).name}】從${pname(g, target)}的手牌移出遊戲`);
 }
 
+/** 牌區必須是可以調整的四區之一；手牌等其他已知牌區說明不能操作，未知的牌區說不合法 */
+function checkZone(zone: unknown, what: string): void {
+  if ((CHEAT_ZONES as readonly unknown[]).includes(zone)) return;
+  const known = typeof zone === 'string' && Object.hasOwn(CHEAT_ZONE_LABEL, zone);
+  throw new Error(known ? `${CHEAT_ZONE_LABEL[zone as CheatViewZone]}不能${what}` : '牌區不合法');
+}
+
+/** 把牌區裡的一張卡移出遊戲 */
+export function cheatDelete(g: Game, by: PlayerId, target: PlayerId, zone: CheatZone, uid: number): void {
+  checkPlayers(by, target);
+  checkZone(zone, '刪除卡片');
+  const cards = Z(g, target, zone);
+  const card = cards.find((c) => c.uid === uid);
+  if (!card) throw new Error(`這張卡已經不在${CHEAT_ZONE_LABEL[zone]}裡（畫面可能過期了）`);
+  if (referenced(g).has(uid)) throw new Error(`【${data(card).name}】是目前提示的選項，不能刪除`);
+  cards.splice(cards.indexOf(card), 1);
+  log(g, `【作弊】${pname(g, by)} 將【${data(card).name}】從${pname(g, target)}的${CHEAT_ZONE_LABEL[zone]}移出遊戲`);
+}
+
+/** 新增一張卡到牌區的第一格（牌組與怒氣區的最上方、棄牌區最先放入的位置、經驗區最前方）；經驗區的新卡是表側 */
+export function cheatInsert(g: Game, by: PlayerId, target: PlayerId, zone: CheatZone, cardId: string): void {
+  checkPlayers(by, target);
+  checkZone(zone, '加入卡片');
+  checkPoolCard(cardId);
+  const card = newCard(g, cardId, target, zone);
+  const cards = Z(g, target, zone);
+  cards.unshift(cards.pop()!);
+  log(g, `【作弊】${pname(g, by)} 將【${data(card).name}】加入${pname(g, target)}的${CHEAT_ZONE_LABEL[zone]}最前面`);
+}
+
+/** 把經驗區的一張卡在表側與裏側之間切換；只改狀態，不觸發被蓋成裏側的反應 */
+export function cheatFlip(g: Game, by: PlayerId, target: PlayerId, uid: number): void {
+  checkPlayers(by, target);
+  const card = Z(g, target, 'exp').find((c) => c.uid === uid);
+  if (!card) throw new Error('這張卡已經不在經驗區裡（畫面可能過期了）');
+  if (referenced(g).has(uid)) throw new Error(`【${data(card).name}】是目前提示的選項，不能翻面`);
+  card.covered = !card.covered;
+  log(g, `【作弊】${pname(g, by)} 將${pname(g, target)}的經驗【${data(card).name}】翻成${card.covered ? '裏側' : '表側'}`);
+}
+
 export function cheatReorder(g: Game, by: PlayerId, target: PlayerId, zone: CheatZone, uids: number[]): void {
   checkPlayers(by, target);
-  if (!(CHEAT_ZONES as readonly string[]).includes(zone)) {
-    const known = typeof zone === 'string' && Object.hasOwn(CHEAT_ZONE_LABEL, zone);
-    throw new Error(known ? `${CHEAT_ZONE_LABEL[zone as CheatViewZone]}不能調整順序` : '牌區不合法');
-  }
+  checkZone(zone, '調整順序');
   if (!Array.isArray(uids) || uids.some((u) => typeof u !== 'number')) throw new Error('順序不合法');
   const cards = Z(g, target, zone as ZoneName);
   const byUid = new Map(cards.map((c) => [c.uid, c]));

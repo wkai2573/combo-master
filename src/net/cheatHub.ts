@@ -35,6 +35,15 @@ export class CheatHub {
         case 'reorder':
           this.game.cheatReorder(by, op.target, op.zone, op.uids);
           break;
+        case 'delete':
+          this.game.cheatDelete(by, op.target, op.zone, op.uid);
+          break;
+        case 'insert':
+          this.game.cheatInsert(by, op.target, op.zone, op.cardId);
+          break;
+        case 'flip':
+          this.game.cheatFlip(by, op.target, op.uid);
+          break;
         default:
           return '作弊操作不合法';
       }

@@ -169,7 +169,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           )}
           {session.cheat && (
             <>
-              <button className={cheatOn ? 'on' : ''} aria-pressed={cheatOn} title="開啟後可以隨意加入手牌、移除手牌、調整牌堆順序" onClick={() => session.cheat?.setOn(!cheatOn)}>作弊模式</button>
+              <button className={cheatOn ? 'on' : ''} aria-pressed={cheatOn} title="開啟後可以隨意加入手牌、移除手牌，調整、刪除、新增牌堆的卡，以及翻面經驗卡" onClick={() => session.cheat?.setOn(!cheatOn)}>作弊模式</button>
               {cheatOn && <button className={cheatOpen ? 'on' : ''} aria-pressed={cheatOpen} onClick={() => setCheatOpen(!cheatOpen)}>作弊面板</button>}
             </>
           )}

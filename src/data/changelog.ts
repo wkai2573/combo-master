@@ -21,6 +21,15 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.25.0',
+    date: '2026-10-08',
+    items: [
+      { type: 'change', text: '作弊面板的牌堆順序改成只靠拖曳：被拖的卡浮起跟著游標，其他卡滑動補位，放開時滑進新位置；手機上長按卡片再拖，不影響上下捲動' },
+      { type: 'add', text: '作弊面板的牌區：每張卡右上角有 [x] 可以刪除，經驗區的卡左上角可以翻成表側或裏側，牌區最前面有虛線框，點開可以挑一張卡加進去' },
+      { type: 'change', text: '商人調整表側經驗順序，改成把卡排成一列直接拖曳，排好後按確定，不用再一張一張點' },
+    ],
+  },
+  {
     version: '0.24.1',
     date: '2026-10-08',
     items: [

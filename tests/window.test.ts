@@ -47,9 +47,7 @@ describe('觸發窗口：爆發後', () => {
     const g = burst();
     pick(g, '黑桃3');
     pick(g, ORDER);
-    pick(g, '黑桃4'); // 排第 1
-    pick(g, '黑桃3'); // 排第 2
-    pick(g, '黑桃2'); // 排第 3，剩下的黑桃1 排最後
+    pick(g, '黑桃4', '黑桃3', '黑桃2', '黑桃1');
     expect(names(g, 0, 'exp')).toEqual(['黑桃4', '黑桃3', '黑桃2', '黑桃1']);
     expect(g.pending!.title).toContain('招財貓');
     pick(g, '發動');
@@ -77,10 +75,7 @@ describe('觸發窗口：爆發後', () => {
     const g = burst(['黑桃1', '黑桃2', '黑桃4', '黑桃5']);
     pick(g, '黑桃3');
     pick(g, ORDER);
-    pick(g, '黑桃3');
-    pick(g, '黑桃5');
-    pick(g, '黑桃4'); // 5 張表側要排 4 次；最後一張自動
-    pick(g, '黑桃2');
+    pick(g, '黑桃3', '黑桃5', '黑桃4', '黑桃2', '黑桃1');
     // 順序調整完：剩招財貓一個，選單不會再出現調整順序
     expect(g.pending!.title).toContain('招財貓');
   });

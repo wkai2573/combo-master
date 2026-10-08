@@ -113,6 +113,106 @@ describe('作弊：調整牌區順序', () => {
   });
 });
 
+describe('作弊：刪除牌區的卡', () => {
+  it('牌組、怒氣區、棄牌區、經驗區的卡都能移出遊戲，其他卡的順序不變，並寫進紀錄', () => {
+    const g = scenario({
+      p0: { hand: ['黑桃1', '黑桃6'], deck: ['黑桃2', '黑桃3', '黑桃4'], rage: ['黑桃5', '黑桃6'], discard: ['黑桃7', '黑桃8'], exp: ['黑桃9', '~黑桃1'] },
+      p1: { hand: [] },
+    });
+    g.cheatDelete(0, 0, 'deck', uidOf(g, 0, 'deck', '黑桃3'));
+    g.cheatDelete(0, 0, 'rage', uidOf(g, 0, 'rage', '黑桃5'));
+    g.cheatDelete(0, 0, 'discard', uidOf(g, 0, 'discard', '黑桃8'));
+    g.cheatDelete(0, 0, 'exp', uidOf(g, 0, 'exp', '黑桃1'));
+    expect(names(g, 0, 'deck')).toEqual(['黑桃2', '黑桃4']);
+    expect(names(g, 0, 'rage')).toEqual(['黑桃6']);
+    expect(names(g, 0, 'discard')).toEqual(['黑桃7']);
+    expect(names(g, 0, 'exp')).toEqual(['黑桃9']);
+    expect(g.state.log.filter((l) => l.includes('【作弊】'))).toHaveLength(4);
+  });
+
+  it('也能刪對方的卡；不在那個牌區的卡與不合法的牌區被拒絕，內容不變', () => {
+    const g = scenario({ p0: { hand: ['黑桃1', '黑桃6'], deck: ['黑桃2'] }, p1: { hand: [], deck: ['黑桃3', '黑桃4'] } });
+    g.cheatDelete(0, 1, 'deck', uidOf(g, 1, 'deck', '黑桃3'));
+    expect(names(g, 1, 'deck')).toEqual(['黑桃4']);
+    expect(() => g.cheatDelete(0, 0, 'discard', uidOf(g, 0, 'deck', '黑桃2'))).toThrow('已經不在');
+    expect(() => g.cheatDelete(0, 0, 'deck', 99999)).toThrow('已經不在');
+    expect(() => g.cheatDelete(0, 0, 'hand' as never, uidOf(g, 0, 'hand', '黑桃1'))).toThrow('不能');
+    expect(() => g.cheatDelete(0, 0, 'combat' as never, 1)).toThrow('牌區不合法');
+    expect(names(g, 0, 'deck')).toEqual(['黑桃2']);
+  });
+});
+
+describe('作弊：加卡到牌區', () => {
+  it('新卡放在該區的第一格，四個牌區都可以；經驗區的新卡是表側', () => {
+    const g = scenario({
+      p0: { hand: ['黑桃1', '黑桃6'], deck: ['黑桃2'], rage: ['黑桃3'], discard: ['黑桃4'], exp: ['~黑桃5'] },
+      p1: { hand: [] },
+    });
+    for (const z of ['deck', 'rage', 'discard', 'exp'] as const) g.cheatInsert(0, 0, z, '熔岩之擊');
+    expect(names(g, 0, 'deck')).toEqual(['熔岩之擊', '黑桃2']);
+    expect(names(g, 0, 'rage')).toEqual(['熔岩之擊', '黑桃3']);
+    expect(names(g, 0, 'discard')).toEqual(['熔岩之擊', '黑桃4']);
+    expect(names(g, 0, 'exp')).toEqual(['熔岩之擊', '黑桃5']);
+    expect(Z(g, 0, 'exp').map((c) => c.covered)).toEqual([false, true]);
+    expect(g.state.log.filter((l) => l.includes('【作弊】'))).toHaveLength(4);
+  });
+
+  it('也能加到對方的牌區；新卡有獨立的編號，之後可以刪', () => {
+    const g = scenario({ p0: { hand: ['黑桃1', '黑桃6'] }, p1: { hand: [], deck: ['黑桃2'] } });
+    g.cheatInsert(0, 1, 'deck', '黑桃9');
+    const added = Z(g, 1, 'deck')[0];
+    expect(new Set(Z(g, 1, 'deck').map((c) => c.uid)).size).toBe(2);
+    g.cheatDelete(0, 1, 'deck', added.uid);
+    expect(names(g, 1, 'deck')).toEqual(['黑桃2']);
+  });
+
+  it('Ex 卡、不存在的卡與手牌等不能排序的牌區被拒絕，內容不變', () => {
+    const g = scenario({ p0: { hand: ['黑桃1', '黑桃6'], deck: ['黑桃2'] }, p1: { hand: [] } });
+    expect(() => g.cheatInsert(0, 0, 'deck', 'Ex卡-中毒')).toThrow('Ex');
+    expect(() => g.cheatInsert(0, 0, 'deck', '不存在的卡')).toThrow('不存在');
+    expect(() => g.cheatInsert(0, 0, 'hand' as never, '黑桃5')).toThrow('不能');
+    expect(() => g.cheatInsert(0, 0, 'combat' as never, '黑桃5')).toThrow('牌區不合法');
+    expect(names(g, 0, 'deck')).toEqual(['黑桃2']);
+    expect(names(g, 0, 'hand')).toEqual(['黑桃1', '黑桃6']);
+  });
+});
+
+describe('作弊：翻面經驗卡', () => {
+  it('表側與裏側互換，不觸發被蓋成裏側的反應，並寫進紀錄', () => {
+    const g = scenario({
+      chars: ['商人', '勇者'],
+      p0: { hand: ['黑桃1', '黑桃6'], exp: ['低價買進', '~黑桃2'], rage: ['黑桃3'] },
+      p1: { hand: [] },
+    });
+    g.cheatFlip(0, 0, uidOf(g, 0, 'exp', '低價買進'));
+    g.cheatFlip(0, 0, uidOf(g, 0, 'exp', '黑桃2'));
+    expect(Z(g, 0, 'exp').map((c) => [c.id, c.covered])).toEqual([['低價買進', true], ['黑桃2', false]]);
+    // 低價買進被蓋時會回復 3，作弊翻面不算
+    expect(names(g, 0, 'rage')).toEqual(['黑桃3']);
+    expect(g.state.log.filter((l) => l.includes('【作弊】'))).toHaveLength(2);
+  });
+
+  it('可以翻對方的經驗卡；不在經驗區的卡被拒絕，狀態不變', () => {
+    const g = scenario({ p0: { hand: ['黑桃1', '黑桃6'], deck: ['黑桃2'] }, p1: { hand: [], exp: ['黑桃3'] } });
+    g.cheatFlip(0, 1, uidOf(g, 1, 'exp', '黑桃3'));
+    expect(Z(g, 1, 'exp')[0].covered).toBe(true);
+    expect(() => g.cheatFlip(0, 0, uidOf(g, 0, 'deck', '黑桃2'))).toThrow('經驗區');
+    expect(() => g.cheatFlip(0, 0, 99999)).toThrow('經驗區');
+  });
+
+  it('提示選項裡的經驗卡不能翻面', () => {
+    const g = scenario({
+      chars: ['法師', '勇者'],
+      p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'], rage: Array(5).fill('黑桃1') },
+      p1: { hand: [] },
+    });
+    pick(g, '冰霜護甲');
+    pick(g, '發動');
+    expect(() => g.cheatFlip(0, 0, uidOf(g, 0, 'exp', '黑桃5'))).toThrow('提示');
+    expect(Z(g, 0, 'exp')[2].covered).toBe(true);
+  });
+});
+
 describe('作弊：不合法的參數一律拒絕', () => {
   it('玩家編號、卡名、順序的型別不對時，說明原因而不是執行期錯誤', () => {
     const g = scenario({ p0: { hand: ['黑桃1', '黑桃6'], deck: ['黑桃2', '黑桃3'] }, p1: { hand: [] } });

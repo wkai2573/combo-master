@@ -55,6 +55,31 @@ describe('作弊中樞：訪客的操作', () => {
     expect(ops.every((l) => l.includes('玩家B'))).toBe(true);
   });
 
+  it('訪客也能刪除牌區的卡、加卡到牌區、翻面經驗卡，紀錄寫明是誰做的', () => {
+    const { g, hub } = setup();
+    hub.setOn(1, true);
+    const before = g.state.log.length;
+    const top = Z(g, 0, 'deck')[0].uid;
+    expect(hub.apply(1, { k: 'delete', target: 0, zone: 'deck', uid: top })).toBeNull();
+    expect(hub.apply(1, { k: 'insert', target: 0, zone: 'deck', cardId: '黑桃9' })).toBeNull();
+    expect(names(g, 0, 'deck')).toEqual(['黑桃9', '黑桃4', '黑桃5']);
+    expect(hub.apply(1, { k: 'insert', target: 1, zone: 'exp', cardId: '黑桃8' })).toBeNull();
+    expect(hub.apply(1, { k: 'flip', target: 1, uid: Z(g, 1, 'exp')[0].uid })).toBeNull();
+    expect(Z(g, 1, 'exp')[0].covered).toBe(true);
+    const ops = g.state.log.slice(before);
+    expect(ops).toHaveLength(4);
+    expect(ops.every((l) => l.includes('【作弊】') && l.includes('玩家B'))).toBe(true);
+  });
+
+  it('新操作被拒絕時說明原因，桌面不變', () => {
+    const { g, hub } = setup();
+    hub.setOn(1, true);
+    expect(hub.apply(1, { k: 'delete', target: 0, zone: 'deck', uid: 99999 })).toContain('已經不在');
+    expect(hub.apply(1, { k: 'insert', target: 0, zone: 'hand' as never, cardId: '黑桃9' })).toContain('不能');
+    expect(hub.apply(1, { k: 'flip', target: 0, uid: 99999 })).toContain('經驗區');
+    expect(names(g, 0, 'deck')).toEqual(['黑桃3', '黑桃4', '黑桃5']);
+  });
+
   it('房主與訪客各自開關：房主沒開就不能操作，不受訪客的開關影響', () => {
     const { hub } = setup();
     hub.setOn(1, true);

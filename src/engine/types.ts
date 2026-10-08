@@ -81,6 +81,8 @@ export interface Request {
   options: Opt[];
   min: number;
   max: number;
+  /** 要求玩家把全部選項排好順序：回應是依序排好的選項 key（min、max 都是選項數） */
+  ordered?: boolean;
 }
 
 export interface DeckSpec {

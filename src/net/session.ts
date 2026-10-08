@@ -43,6 +43,12 @@ export interface CheatApi {
   add(target: PlayerId, cardId: string): Promise<string | null>;
   remove(target: PlayerId, uid: number): Promise<string | null>;
   reorder(target: PlayerId, zone: CheatZone, uids: number[]): Promise<string | null>;
+  /** 把牌區的一張卡移出遊戲 */
+  deleteCard(target: PlayerId, zone: CheatZone, uid: number): Promise<string | null>;
+  /** 加一張卡到牌區的第一格 */
+  insert(target: PlayerId, zone: CheatZone, cardId: string): Promise<string | null>;
+  /** 經驗區的卡翻面 */
+  flip(target: PlayerId, uid: number): Promise<string | null>;
 }
 
 export interface Session {
@@ -70,6 +76,9 @@ function makeCheatApi(parts: {
     add: (target, cardId) => run({ k: 'add', target, cardId }),
     remove: (target, uid) => run({ k: 'remove', target, uid }),
     reorder: (target, zone, uids) => run({ k: 'reorder', target, zone, uids }),
+    deleteCard: (target, zone, uid) => run({ k: 'delete', target, zone, uid }),
+    insert: (target, zone, cardId) => run({ k: 'insert', target, zone, cardId }),
+    flip: (target, uid) => run({ k: 'flip', target, uid }),
   };
 }
 

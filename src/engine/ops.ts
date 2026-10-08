@@ -141,7 +141,8 @@ export function cardOpt(c: CardInst, viewer: PlayerId, label?: string): Opt {
 export function* ask(g: GameCtx, req: Request): Gen<string[]> {
   const { options, min } = req;
   if (options.length === 0) return [];
-  if (options.length <= min) return options.map((o) => o.key);
+  // 要排順序的提示，至少有兩個選項才有排的意義
+  if (req.ordered ? options.length < 2 : options.length <= min) return options.map((o) => o.key);
   const resp: string[] = yield req;
   return resp;
 }
@@ -154,6 +155,14 @@ export function* chooseCards(
   const mx = Math.min(max, cards.length);
   const keys = yield* ask(g, { player: p, title, options: cards.map((c) => cardOpt(c, p)), min: mn, max: mx });
   return keys.map((k) => cards.find((c) => `c${c.uid}` === k)!).filter(Boolean);
+}
+
+/** 請玩家把這些卡排好順序，回傳排好的順序；不足兩張就不用問 */
+export function* orderCards(g: GameCtx, p: PlayerId, title: string, cards: CardInst[]): Gen<CardInst[]> {
+  const keys = yield* ask(g, {
+    player: p, title, options: cards.map((c) => cardOpt(c, p)), min: cards.length, max: cards.length, ordered: true,
+  });
+  return keys.map((k) => cards.find((c) => `c${c.uid}` === k)!);
 }
 
 export function* confirm(g: GameCtx, p: PlayerId, title: string): Gen<boolean> {

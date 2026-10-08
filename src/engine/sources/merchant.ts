@@ -1,8 +1,8 @@
 import { canPay, chooseX, faceUpExp, pay } from '../cost';
 import { hasExpEffect } from '../effects';
 import { defineSource } from '../effectKit';
-import { activate, awakened, chooseCards, confirm, data, draw, log, move, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
-import { other, type CardInst, type PlayerId } from '../types';
+import { activate, awakened, chooseCards, confirm, data, draw, log, move, orderCards, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
+import { other, type PlayerId } from '../types';
 
 // 招財貓（商人）：[蓋2] 爆發時，額外抽 1
 export const 招財貓 = defineSource({
@@ -35,14 +35,10 @@ export const 商人 = defineSource({
         *run(confirmed) {
           if (!confirmed && !(yield* confirm(g, p, '【商人】要調整表側經驗的順序嗎？'))) return;
           const exp = Z(g, p, 'exp');
-          const rest = faceUpExp(g, p);
-          const order_: CardInst[] = [];
-          while (rest.length > 1) {
-            const [pick] = yield* chooseCards(g, p, `【商人】選擇排在第 ${order_.length + 1} 位的表側經驗（最前面的最先被蓋）`, rest, 1, 1);
-            order_.push(pick);
-            rest.splice(rest.indexOf(pick), 1);
-          }
-          order_.push(...rest);
+          const asked = yield* orderCards(g, p, '【商人】排列表側經驗的順序（最前面的最先被蓋）', faceUpExp(g, p));
+          // 提示等待期間經驗區可能被作弊改動：只排現在還是表側的卡，新出現的表側卡接在後面
+          const now = faceUpExp(g, p);
+          const order_ = [...asked.filter((c) => now.includes(c)), ...now.filter((c) => !asked.includes(c))];
           const slots = exp.map((card, i) => (card.covered ? -1 : i)).filter((i) => i >= 0);
           order_.forEach((card, k) => {
             exp[slots[k]] = card;

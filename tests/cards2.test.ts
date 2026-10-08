@@ -49,9 +49,48 @@ describe('商人', () => {
     });
     pick(g, '黑桃3');
     pick(g, '發動');
-    pick(g, '黑桃3');
-    pick(g, '黑桃2');
+    expect(g.pending!.ordered).toBe(true); // 一次排好整列，不是逐張挑
+    expect(g.pending!.min).toBe(3);
+    expect(g.pending!.max).toBe(3);
+    pick(g, '黑桃3', '黑桃2', '黑桃1');
     expect(names(g, 0, 'exp')).toEqual(['黑桃3', '黑桃2', '黑桃1']);
+  });
+
+  it('排序要一次交出全部表側經驗，少交會被拒絕且順序不變', () => {
+    const g = scenario({
+      chars: ['商人', '勇者'],
+      phase: '爆發',
+      singlePhase: true,
+      p0: { hand: ['黑桃3'], exp: ['黑桃1', '黑桃2'] },
+      p1: { hand: [] },
+    });
+    pick(g, '黑桃3');
+    pick(g, '發動');
+    expect(() => pick(g, '黑桃3', '黑桃2')).toThrow('數量');
+    expect(names(g, 0, 'exp')).toEqual(['黑桃1', '黑桃2', '黑桃3']);
+  });
+
+  it('排序提示等待期間，作弊翻面或加入經驗卡，排好的順序仍只寫回現在的表側卡，不會重複或遺失卡', () => {
+    const g = scenario({
+      chars: ['商人', '勇者'],
+      phase: '爆發',
+      singlePhase: true,
+      p0: { hand: ['黑桃3'], exp: ['黑桃1', '~黑桃2', '黑桃4'] },
+      p1: { hand: [] },
+    });
+    pick(g, '黑桃3');
+    pick(g, '發動');
+    // 表側是黑桃1、黑桃4、黑桃3；提示等待期間把裏側的黑桃2 翻成表側，並在最前面加一張表側卡
+    g.cheatFlip(0, 0, Z(g, 0, 'exp').find((c) => c.id === '黑桃2')!.uid);
+    g.cheatInsert(0, 0, 'exp', '黑桃9');
+    pick(g, '黑桃3', '黑桃4', '黑桃1');
+    const exp = Z(g, 0, 'exp');
+    expect(new Set(exp.map((c) => c.uid)).size).toBe(5);
+    expect(names(g, 0, 'exp').sort()).toEqual(['黑桃1', '黑桃2', '黑桃3', '黑桃4', '黑桃9'].sort());
+    // 排好的三張相對順序不變：黑桃3 在黑桃4 前面，黑桃4 在黑桃1 前面
+    const at = (n: string) => names(g, 0, 'exp').indexOf(n);
+    expect(at('黑桃3')).toBeLessThan(at('黑桃4'));
+    expect(at('黑桃4')).toBeLessThan(at('黑桃1'));
   });
 
   it('裏側的經驗卡不動，只重排表側的', () => {
@@ -64,7 +103,7 @@ describe('商人', () => {
     });
     pick(g, '黑桃3');
     pick(g, '發動');
-    pick(g, '黑桃3');
+    pick(g, '黑桃3', '黑桃1'); // 裏側的黑桃2 不在排序的卡裡
     expect(names(g, 0, 'exp')).toEqual(['黑桃3', '黑桃2', '黑桃1']);
     expect(Z(g, 0, 'exp')[1].covered).toBe(true);
   });

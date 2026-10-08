@@ -240,11 +240,23 @@ h1, h2, h3 { margin: 0 0 8px; }
 .cheatnote.bad { color: var(--bad); }
 .cheatfilter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .cheatgrid { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; }
-.cheatcell { display: grid; gap: 3px; justify-items: center; padding: 2px; border-radius: 6px; cursor: grab; }
-.cheatcell.dragging { opacity: .4; }
-.cheatcell:hover { background: var(--panel2); }
-.cheatmove { display: flex; gap: 4px; align-items: center; }
-.cheatmove button { padding: 0 6px; font-size: 11px; }
+/* 可拖曳排序的清單（SortableList）：被拖的卡浮起並跟著游標，其他卡滑動補位 */
+.sortlist { position: relative; }
+.sortcell { position: relative; flex: none; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.sortcell.dragging { z-index: 6; cursor: grabbing; filter: drop-shadow(0 10px 10px #000c); }
+.sortcell img { -webkit-user-drag: none; }
+.sortlist.locked .sortcell { cursor: default; }
+.cheatcard { position: relative; }
+.cheatcard button { position: absolute; top: 2px; z-index: 2; width: 18px; height: 18px; padding: 0; line-height: 1; font-size: 12px; border-radius: 50%; background: #000b; border-color: #fff4; opacity: .85; }
+.cheatcard button:hover:not(:disabled) { opacity: 1; border-color: var(--accent); }
+.cheatcard .cheatx { right: 2px; }
+.cheatcard .cheatx:hover:not(:disabled) { color: var(--bad); border-color: var(--bad); }
+.cheatcard .cheatflip { left: 2px; }
+.cheatadd { flex: none; width: 76px; height: 106px; display: grid; place-content: center; justify-items: center; gap: 2px; border: 2px dashed var(--line); border-radius: 12px 12px 8px 8px; background: transparent; font-size: 22px; color: var(--muted); cursor: pointer; }
+.cheatadd .muted { font-size: 11px; }
+.cheatadd:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.cheatpicker { position: fixed; inset: 0; z-index: 11; display: grid; place-items: center; background: #000a; }
+.cheatpickbox { width: min(820px, calc(100vw - 16px)); max-height: 80vh; overflow: auto; background: var(--panel); border: 1px solid var(--accent); border-radius: 10px; padding: 8px 10px; display: grid; gap: 6px; align-content: start; }
 .code { font-size: 40px; letter-spacing: 8px; font-weight: 800; color: var(--accent); text-align: center; }
 
 /* ───────── 組牌 ───────── */

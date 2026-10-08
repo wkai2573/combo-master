@@ -1,4 +1,4 @@
-import { cheatAdd, cheatRemove, cheatReorder, cheatSnapshot, cheatSwitch, type CheatSnapshot, type CheatZone } from './cheat';
+import { cheatAdd, cheatDelete, cheatFlip, cheatInsert, cheatRemove, cheatReorder, cheatSnapshot, cheatSwitch, type CheatSnapshot, type CheatZone } from './cheat';
 import { combatPhase } from './combat';
 import { fire, fireEach, query } from './effects';
 import {
@@ -110,6 +110,21 @@ export class Game {
   /** by 把 target 的一張手牌移出遊戲 */
   cheatRemove(by: PlayerId, target: PlayerId, uid: number): void {
     this.cheat(() => cheatRemove(this, by, target, uid));
+  }
+
+  /** by 把 target 某個牌區（牌組、怒氣區、棄牌區、經驗區）的一張卡移出遊戲 */
+  cheatDelete(by: PlayerId, target: PlayerId, zone: CheatZone, uid: number): void {
+    this.cheat(() => cheatDelete(this, by, target, zone, uid));
+  }
+
+  /** by 把一張卡（全卡池，不含 Ex 卡）加到 target 某個牌區的第一格 */
+  cheatInsert(by: PlayerId, target: PlayerId, zone: CheatZone, cardId: string): void {
+    this.cheat(() => cheatInsert(this, by, target, zone, cardId));
+  }
+
+  /** by 把 target 經驗區的一張卡翻面（不觸發任何效果） */
+  cheatFlip(by: PlayerId, target: PlayerId, uid: number): void {
+    this.cheat(() => cheatFlip(this, by, target, uid));
   }
 
   /** by 調整 target 某個牌區的順序；uids 是新的順序（牌組與怒氣區的第一張在最上方，經驗區的第一張在最前方） */
