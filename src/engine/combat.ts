@@ -1,7 +1,8 @@
 import {
-  ask, awakened, cardOpt, chooseCards, data, draw, isFirst, log, mark, markIfLogged, move, optionalPay,
+  ask, awakened, cardOpt, chooseCards, data, draw, isFirst, log, mark, markIfLogged, move,
   newCard, order, pname, takeDamage, Z, type GameCtx, type Gen,
 } from './ops';
+import { optionalPay } from './cost';
 import { awakenCheck, onPassEffects, scripts } from './scripts';
 import { triggerWindow, type WindowEffect } from './window';
 import { checkWin } from './win';

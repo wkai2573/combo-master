@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { coverChanges, diffFlights, flightTiming, fromSpotlight, type Flight } from '../src/engine/flights';
-import { pay, type GameCtx } from '../src/engine/ops';
+import type { GameCtx } from '../src/engine/ops';
+import { pay } from '../src/engine/cost';
 import { frameFor, viewFor } from '../src/engine/view';
 import { pick, scenario } from './helpers';
 

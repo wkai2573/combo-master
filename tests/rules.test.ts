@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { playables, pursuitCount, resolveCombatStats, totalAtk, totalDef } from '../src/engine/combat';
-import { draw, optionalPay, Z } from '../src/engine/ops';
+import { draw, Z } from '../src/engine/ops';
+import { optionalPay } from '../src/engine/cost';
 import { scripts } from '../src/engine/scripts';
 import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
 

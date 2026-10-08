@@ -4,9 +4,10 @@ import { combatPhase } from './combat';
 import { awakenCheck, awakeningEffects, merchantBurstEffects, turnStartEffects } from './scripts';
 import { triggerWindow, type WindowEffect } from './window';
 import {
-  ask, awakened, canPay, cardOpt, data, draw, drawPlain, GameOver, log, mark, move, newCard,
-  markIfLogged, optionalPay, order, pname, settle, toExp, Z, type Gen,
+  ask, awakened, cardOpt, data, draw, drawPlain, GameOver, log, mark, move, newCard,
+  markIfLogged, order, pname, settle, toExp, Z, type Gen,
 } from './ops';
+import { canPay, optionalPay } from './cost';
 import { Rng } from './rng';
 import { checkWin } from './win';
 import { diffFlights, flightsTotalMs } from './flights';
