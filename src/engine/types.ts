@@ -69,6 +69,8 @@ export interface GameState {
   log: string[];
   winner: PlayerId | 'draw' | null;
   winReason: string;
+  /** 各玩家上次偵測時是否處於覺醒狀態；由未覺醒變成覺醒才算進入覺醒（見 awakeningEffects） */
+  awakeSeen: [boolean, boolean];
 }
 
 export interface Opt {

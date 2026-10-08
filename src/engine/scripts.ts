@@ -362,3 +362,39 @@ export function merchantBurstEffects(g: GameCtx, p: PlayerId): WindowEffect[] {
     },
   ];
 }
+
+/** 各角色覺醒時的效果（進覺醒時的觸發窗口） */
+const AWAKEN_EFFECTS: Record<string, (g: GameCtx, p: PlayerId) => WindowEffect[]> = {
+  // 遊俠：當我方覺醒時，可以抽 2（獲得第二個瞄準是常駐效果，見 aimLimit）
+  遊俠: (g, p) => [
+    {
+      label: '【遊俠】覺醒：抽 2',
+      available: () => true,
+      *run(confirmed) {
+        if (!confirmed && !(yield* confirm(g, p, '【遊俠】覺醒：要抽 2 張嗎？'))) return;
+        yield* draw(g, p, 2);
+        log(g, `【遊俠】${pname(g, p)} 覺醒時抽 2`);
+      },
+    },
+  ],
+};
+
+/**
+ * 偵測 p 是否剛進入覺醒：由未覺醒變成覺醒才算（退出覺醒後再次達標會再算一次）。
+ * 進入覺醒時回傳該角色覺醒時的效果；每次呼叫都會更新偵測狀態，所以要在經驗區張數可能變動的步驟之後呼叫。
+ */
+export function awakeningEffects(g: GameCtx, p: PlayerId): WindowEffect[] {
+  const now = awakened(g, p);
+  const was = g.state.awakeSeen[p];
+  g.state.awakeSeen[p] = now;
+  if (!now || was) return [];
+  return AWAKEN_EFFECTS[g.state.players[p].charId]?.(g, p) ?? [];
+}
+
+/** 雙方各偵測一次進入覺醒，有效果就開覺醒時的觸發窗口（先攻方先處理） */
+export function* awakenCheck(g: GameCtx): Gen {
+  for (const p of order(g)) {
+    const effects = awakeningEffects(g, p);
+    if (effects.length > 0) yield* triggerWindow(g, p, '覺醒時', effects);
+  }
+}

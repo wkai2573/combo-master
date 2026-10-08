@@ -18,7 +18,7 @@ export const characterText: Record<string, { text: string; awakenText: string }>
   },
   遊俠: {
     text: '獲得【瞄準】。',
-    awakenText: '（追加）獲得【瞄準】。',
+    awakenText: '（追加）當我方覺醒時，可以抽2。獲得【瞄準】。',
   },
   法師: {
     text: '起始手牌為 7 張（一般角色 5 張）。',

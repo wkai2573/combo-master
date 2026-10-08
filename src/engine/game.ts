@@ -1,6 +1,6 @@
 import { getCharacter } from '../data/cards';
 import { combatPhase } from './combat';
-import { merchantBurstEffects, turnStartEffects } from './scripts';
+import { awakenCheck, awakeningEffects, merchantBurstEffects, turnStartEffects } from './scripts';
 import { triggerWindow, type WindowEffect } from './window';
 import {
   ask, awakened, canPay, cardOpt, data, draw, drawPlain, GameOver, log, mark, move, newCard,
@@ -70,7 +70,7 @@ export class Game {
     this.state = {
       players: [emptyPlayer(0, setup.decks[0].charId), emptyPlayer(1, setup.decks[1].charId)],
       first: 0, turn: 0, phase: '設置', flags: emptyFlags(), passed: [false, false],
-      log: [], winner: null, winReason: '',
+      log: [], winner: null, winReason: '', awakeSeen: [false, false],
     };
     this.it = this.run();
     this.advance(undefined);
@@ -123,6 +123,8 @@ export class Game {
     const s = this.state;
     this.setupGame();
     this.setup.afterSetup?.(this);
+    // 開局（含測試改寫區域之後）已經覺醒的狀態不算進入覺醒
+    s.awakeSeen = [awakened(g, 0), awakened(g, 1)];
     checkWin(g);
     if (this.setup.singlePhase && this.setup.startPhase) {
       s.turn = 1;
@@ -264,6 +266,8 @@ function* burstPhase(g: Game): Gen {
       });
     }
     effects.push(...merchantBurstEffects(g, p));
+    // 這次爆發讓經驗區達到覺醒經驗時，覺醒時的效果也在同一個窗口
+    effects.push(...awakeningEffects(g, p));
     yield* triggerWindow(g, p, '爆發後', effects);
   }
   checkWin(g);
@@ -283,6 +287,7 @@ function* buffPhase(g: Game): Gen {
     }
   }
   if (g.state.log.length > logBefore) mark(g, g.state.log[g.state.log.length - 1], { type: 'info' });
+  yield* awakenCheck(g);
   // 回合 1 次：打出 1 張裝備或增益
   for (const p of order(g)) {
     const exp = Z(g, p, 'exp').length;

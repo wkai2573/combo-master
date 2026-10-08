@@ -2,7 +2,7 @@ import {
   ask, awakened, cardOpt, chooseCards, data, draw, isFirst, log, mark, markIfLogged, move, optionalPay,
   newCard, order, pname, takeDamage, Z, type GameCtx, type Gen,
 } from './ops';
-import { onPassEffects, scripts } from './scripts';
+import { awakenCheck, onPassEffects, scripts } from './scripts';
 import { triggerWindow, type WindowEffect } from './window';
 import { checkWin } from './win';
 import { other, type CardInst, type PlayerId } from './types';
@@ -312,4 +312,5 @@ export function* combatPhase(g: GameCtx): Gen {
   if (!straightToDamage) yield* pursuitPhase(g);
   yield* damageStep(g);
   returnStep(g);
+  yield* awakenCheck(g); // 歸還讓經驗區增加，可能進入覺醒
 }
