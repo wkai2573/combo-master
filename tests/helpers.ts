@@ -1,7 +1,8 @@
 import { getCard } from '../src/data/cards';
 import { Game } from '../src/engine/game';
 import { newCard, Z, data, type GameCtx } from '../src/engine/ops';
-import type { DeckSpec, PlayerId, ZoneName } from '../src/engine/types';
+import type { DeckSpec, GameSetup, PlayerId, ZoneName } from '../src/engine/types';
+import { Match } from '../src/net/match';
 import { presetDeck } from '../src/data/presetDecks';
 
 type Zones = Partial<Record<ZoneName, string[]>>;
@@ -39,12 +40,16 @@ const FILLER = Array.from({ length: 20 }, () => '黑桃1');
 
 /** 以指定情境建立遊戲。若指定區域卻沒給 deck，會補上 20 張填充牌避免意外歸零。 */
 export function scenario(s: Scenario = {}): Game {
+  return new Game(scenarioSetup(s));
+}
+
+function scenarioSetup(s: Scenario): GameSetup {
   const [a, b] = s.chars ?? ['勇者', '刺客'];
   const decks: [DeckSpec, DeckSpec] = [
     { charId: a, cards: presetDeck(a) },
     { charId: b, cards: presetDeck(b) },
   ];
-  return new Game({
+  return {
     decks, first: s.first ?? 0, seed: s.seed ?? 1, animate: s.animate,
     startPhase: s.phase,
     singlePhase: s.singlePhase,
@@ -52,7 +57,13 @@ export function scenario(s: Scenario = {}): Game {
       if (s.p0) setZones(g, 0, { deck: FILLER, ...s.p0 });
       if (s.p1) setZones(g, 1, { deck: FILLER, ...s.p1 });
     },
-  });
+  };
+}
+
+/** 以指定情境建立對局（一律錄製影格） */
+export function matchScenario(s: Scenario = {}): Match {
+  const { decks, animate: _animate, ...setup } = scenarioSetup(s);
+  return new Match(decks, setup);
 }
 
 export const names = (g: Game, p: PlayerId, z: ZoneName) => Z(g, p, z).map((c) => data(c).name);
