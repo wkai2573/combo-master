@@ -1,5 +1,6 @@
+import { hasExpEffect } from '../data/expEffect';
 import {
-  activate, ask, awakened, canPay, chooseCards, confirm, COVER_REACTIONS, data, directHit, discard, draw, isFirst, Z, log, move,
+  activate, ask, awakened, canPay, chooseCards, confirm, COVER_REACTIONS, data, directHit, discard, draw, faceUpExp, isFirst, Z, log, move,
   optionalPay, order, pay, pname, recover, type Gen, type GameCtx,
 } from './ops';
 import { other, type CardInst, type PlayerId } from './types';
@@ -177,6 +178,36 @@ export const scripts: Record<string, CardScript> = {
       g.state.passed[p] = true;
       g.state.flags.skipDraw[p] = true;
       log(g, `【Explosion!】${pname(g, p)} 收招，並跳過這回合的抽牌階段`);
+    },
+  },
+  // 高利貸（商人）：[發] 對方蓋X。X = 對方帶 [經] 的表側經驗張數
+  高利貸: {
+    *onPlay(g, p, card) {
+      const foe = other(p);
+      const x = faceUpExp(g, foe).filter((c) => hasExpEffect(c.id)).length;
+      if (x === 0) return;
+      activate(g, p, card);
+      log(g, `【高利貸】${pname(g, foe)} 的表側經驗中有 ${x} 張帶 [經]，強制蓋 ${x}`);
+      yield* pay(g, foe, { cover: x });
+    },
+  },
+  // 狙擊蓄力（弓箭手）：[發_蓋4] 抽2，再選擇 1 張手牌放到牌組頂
+  狙擊蓄力: {
+    *onPlay(g, p, card) {
+      if (!(yield* optionalPay(g, p, card, { cover: 4 }))) return;
+      yield* draw(g, p, 2);
+      const [c] = yield* chooseCards(g, p, '【狙擊蓄力】選擇 1 張手牌放到牌組頂', Z(g, p, 'hand'), 1, 1);
+      if (c) {
+        move(g, c, 'deck', 'top');
+        log(g, `【狙擊蓄力】${pname(g, p)} 抽 2，並將 1 張手牌放到牌組頂`);
+      }
+    },
+  },
+  // 熔岩之擊（劍士）：[發_怒3] 對方直擊 1
+  熔岩之擊: {
+    *onPlay(g, p, card) {
+      if (!(yield* optionalPay(g, p, card, { rage: 3 }))) return;
+      directHit(g, other(p), 1);
     },
   },
   // 狙擊印記（弓箭手）：[先] 此回合我方的瞄準升級 1

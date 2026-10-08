@@ -13,7 +13,7 @@ import type { CardData } from './types';
  */
 const profiles: Record<string, { style: string; score: (c: CardData) => number }> = {
   勇者: { style: '高攻擊：優先挑攻擊力高的牌，容易達成「總攻擊 15 以上」', score: (c) => c.atk },
-  後人: { style: '高防禦：優先挑防禦力高的牌，搭配後攻 +2 防禦', score: (c) => c.def },
+  後人: { style: '高防禦：優先挑防禦力高的牌，搭配後攻 +1 防禦', score: (c) => c.def },
   刺客: { style: '集中在中段連擊（4~6）：範圍較窄，追擊較容易成功', score: (c) => c.atk * 0.5 + (c.combo >= 4 && c.combo <= 6 ? 3 : 0) },
   先人: { style: '集中在兩端連擊（1、2、8、9）：範圍寬，容易連續出招', score: (c) => c.atk * 0.5 + ([1, 2, 8, 9].includes(c.combo) ? 3 : 0) },
   商人: { style: '攻守均衡：挑選攻、守接近的牌，搭配爆發後調整經驗順序', score: (c) => -Math.abs(c.atk - c.def) },

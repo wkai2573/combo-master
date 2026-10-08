@@ -97,3 +97,25 @@ describe('預設牌組', () => {
     }
   });
 });
+
+describe('卡表同步的新卡進組牌卡池', () => {
+  it('高利貸、狙擊蓄力、熔岩之擊已開放，各職業換進 1 張後牌組仍合法；預設牌組不含它們', () => {
+    const swaps: Array<[string, string, string]> = [['商人', '交涉', '高利貸'], ['遊俠', '二連矢', '狙擊蓄力'], ['勇者', '盾擊', '熔岩之擊']];
+    for (const [char, out, inn] of swaps) {
+      expect(isCardEnabled(getCard(inn)), inn).toBe(true);
+      expect(PLAYABLE_CARDS.map((c) => c.id), inn).toContain(inn);
+      const deck = presetDeck(char);
+      expect(deck, `${char} 預設牌組不含 ${inn}`).not.toContain(inn);
+      const i = deck.indexOf(out);
+      expect(i, `${char} 預設牌組有 ${out}`).toBeGreaterThanOrEqual(0);
+      const next = [...deck];
+      next[i] = inn;
+      expect(validateDeck(char, next), `${char} 換進 ${inn}`).toEqual({ ok: true, errors: [] });
+    }
+  });
+
+  it('電弧的特徵是法術與雷；四張商人卡的特徵是貿易', () => {
+    expect(getCard('電弧').traits).toEqual(['法術', '雷']);
+    for (const id of ['低價買進', '高價賣出', '交涉', '即時停損']) expect(getCard(id).traits, id).toEqual(['貿易']);
+  });
+});

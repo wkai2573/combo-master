@@ -13,8 +13,8 @@ export const characterText: Record<string, { text: string; awakenText: string }>
     awakenText: '（取代）此回合每次追擊判定成功，總攻擊 +2，上限為 +5。',
   },
   商人: {
-    text: '爆發後，可以調整我方未覆蓋經驗卡的順序。',
-    awakenText: '（追加）爆發後，可以將 1 張未覆蓋的經驗卡加入手牌。',
+    text: '爆發後，可以調整我方表側經驗的順序。',
+    awakenText: '（追加）爆發後，可以將 1 張表側經驗加入手牌。',
   },
   遊俠: {
     text: '獲得【瞄準】。',
@@ -29,7 +29,7 @@ export const characterText: Record<string, { text: string; awakenText: string }>
     awakenText: '（追加）我方先攻的回合，追擊判定多翻 1 張牌（追擊 +1）。',
   },
   後人: {
-    text: '我方後攻的回合，總防禦 +2。',
+    text: '我方後攻的回合，總防禦 +1。',
     awakenText: '（追加）我方後攻的回合，追擊卡的防禦也計入總防禦。',
   },
 };

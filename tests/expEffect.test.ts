@@ -9,6 +9,7 @@ describe('經驗效果', () => {
     expect(hasExpEffect('復仇之嚎')).toBe(true); // [經_怒3]
     expect(hasExpEffect('Ex卡-中毒')).toBe(true);
     expect(hasExpEffect('火球')).toBe(false); // [先_蓋3]
+    expect(hasExpEffect('高利貸')).toBe(false); // 文字裡引用 [經]，但它不是經驗效果
     expect(hasExpEffect('紅心5')).toBe(false);
   });
 

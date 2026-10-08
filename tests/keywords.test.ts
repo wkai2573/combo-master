@@ -7,7 +7,7 @@ const names = (text: string) => keywordsIn(text).map((k) => k.name);
 describe('關鍵字', () => {
   it('標籤與費用：[發_蓋3] 拆成 發、蓋X；文字裡的「回復」也算引用', () => {
     expect(names('[發_蓋3]：回復3。')).toEqual(['發', '蓋X', '回復X']);
-    expect(names('[覺_發_怒10]：此回合追擊+1。')).toEqual(['覺', '發', '怒X', '追擊+X']);
+    expect(names('[發_怒10]：此回合追擊+1。')).toEqual(['發', '怒X', '追擊+X']);
   });
 
   it('【名稱】引用角色技能；不存在的名稱不當關鍵字', () => {
@@ -46,5 +46,13 @@ describe('關鍵字', () => {
       }
       for (const m of t.matchAll(/【([^】]+)】/g)) expect(defined.has(m[1]), `關鍵字「${m[1]}」沒有定義`).toBe(true);
     }
+  });
+  it('先手步驟的標籤是「先」，不再有「起」與「覺」；書寫規範有「經驗」與「原始」', () => {
+    const all = new Map(KEYWORDS.map((k) => [k.name, k.group]));
+    expect(all.get('先')).toBe('標籤');
+    expect(all.has('起')).toBe(false);
+    expect(all.has('覺')).toBe(false);
+    expect(all.get('經驗')).toBe('書寫規範');
+    expect(all.get('原始')).toBe('書寫規範');
   });
 });

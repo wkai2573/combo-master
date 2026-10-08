@@ -59,7 +59,7 @@ export const CHARACTER_COMBAT_MODIFIERS: Record<string, CharacterCombatRule> = {
   後人: {
     calcBonus({ g, p, awake, first }) {
       if (first) return {};
-      let defBonus = 2;
+      const defBonus = 1;
       let pursuitDefBonus = 0;
       if (awake) {
         for (const c of Z(g, p, 'pursuit')) {

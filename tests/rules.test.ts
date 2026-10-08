@@ -188,12 +188,12 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(totalAtk(g, 0)).toBe(ids.reduce((n, id) => n + atkOf(id), 0) + 2);
   });
 
-  it('後人：後攻時總防禦 +2，覺醒後連追擊卡防禦也計算', () => {
+  it('後人：後攻時總防禦 +1，覺醒後連追擊卡防禦也計算', () => {
     const g = scenario({ chars: ['勇者', '後人'], first: 0 });
     setZones(g, 1, { combat: ['黑桃1'], pursuit: ['黑桃3'] });
-    expect(totalDef(g, 1)).toBe(defOf('黑桃1') + 2);
+    expect(totalDef(g, 1)).toBe(defOf('黑桃1') + 1);
     setZones(g, 1, { combat: ['黑桃1'], pursuit: ['黑桃3'], exp: Array(8).fill('黑桃1') });
-    expect(totalDef(g, 1)).toBe(defOf('黑桃1') + defOf('黑桃3') + 2);
+    expect(totalDef(g, 1)).toBe(defOf('黑桃1') + defOf('黑桃3') + 1);
   });
 
   it('戒備打擊（劍士）：[頂] 總防禦 +2，只有在最上方時才算', () => {
@@ -277,10 +277,10 @@ describe('戰鬥結算深模組 (resolveCombatStats)', () => {
     expect(s0.breakdown.combatZoneAtk).toBe(atkOf('黑桃1') + atkOf('黑桃9'));
     expect(s0.breakdown.pursuitAtk).toBe(atkOf('地雷陷阱') + 3);
 
-    // 玩家 1 (後人，後攻未覺醒)：防禦 +2
+    // 玩家 1 (後人，後攻未覺醒)：防禦 +1
     setZones(g, 1, { combat: ['黑桃1'], pursuit: ['黑桃3'] });
     const s1 = resolveCombatStats(g, 1);
-    expect(s1.def).toBe(defOf('黑桃1') + 2);
-    expect(s1.breakdown.charBonusDef).toBe(2);
+    expect(s1.def).toBe(defOf('黑桃1') + 1);
+    expect(s1.breakdown.charBonusDef).toBe(1);
   });
 });

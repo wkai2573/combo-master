@@ -444,3 +444,75 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'hand')).toHaveLength(1); // 高價賣出：抽 1
   });
 });
+
+describe('卡表同步的新卡：高利貸、狙擊蓄力、熔岩之擊', () => {
+  // 只跑戰鬥階段：先攻方手牌只有 1 張招式時自動先手出招，後攻方沒有可出的招式就直接進入傷害計算
+  const combat = (s: Parameters<typeof scenario>[0]) => scenario({ phase: '先手', singlePhase: true, ...s });
+
+  it('高利貸：[發] 對方強制蓋 X，X＝對方表側且帶 [經] 的經驗張數；被蓋的卡蓋反應照常觸發', () => {
+    const g = combat({
+      p0: { hand: ['高利貸'] },
+      p1: { hand: [], exp: ['低價買進', '黑桃3', '高價賣出', '黑桃4'], rage: Array(5).fill('黑桃1'), deck: ['黑桃6', ...filler] },
+    });
+    // X＝2（低價買進、高價賣出）：從最前面蓋 2 張＝低價買進與黑桃3
+    expect(Z(g, 1, 'exp').map((c) => c.covered)).toEqual([true, true, false, false]);
+    expect(g.state.log.join('\n')).toContain('玩家B（刺客） 回復 3'); // 低價買進被蓋成裏側：回復 3
+    expect(g.state.log.join('\n')).toContain('【低價買進】被蓋成裏側');
+  });
+
+  it('高利貸：對方沒有帶 [經] 的表側經驗時什麼都不蓋；裏側的 [經] 卡不算；表側不足就蓋到沒有為止', () => {
+    const none = combat({ p0: { hand: ['高利貸'] }, p1: { hand: [], exp: ['黑桃3', '~低價買進'] } });
+    expect(Z(none, 1, 'exp').map((c) => c.covered)).toEqual([false, true]);
+
+    const one = combat({ p0: { hand: ['高利貸'] }, p1: { hand: [], exp: ['黑桃3', '高價賣出'], deck: ['黑桃6', ...filler] } });
+    expect(Z(one, 1, 'exp').map((c) => c.covered)).toEqual([true, false]); // X＝1，蓋最前面 1 張
+  });
+
+  it('狙擊蓄力：[發_蓋4] 蓋 4、抽 2，再選 1 張手牌放到牌組頂', () => {
+    const g = combat({
+      p0: { hand: ['狙擊蓄力', '黑桃2'], exp: ['黑桃1', '黑桃3', '黑桃4', '黑桃5', '黑桃6'], deck: ['黑桃7', '黑桃8', ...filler] },
+      p1: { hand: [] },
+    });
+    pick(g, '狙擊蓄力');
+    pick(g, '發動');
+    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(4);
+    expect(names(g, 0, 'hand').sort()).toEqual(['黑桃2', '黑桃7', '黑桃8']);
+    expect(g.pending!.options.map((o) => o.label).sort()).toEqual(['黑桃2', '黑桃7', '黑桃8']);
+    pick(g, '黑桃8');
+    expect(Z(g, 0, 'deck')[0].id).toBe('黑桃8');
+    expect(names(g, 0, 'hand').sort()).toEqual(['黑桃2', '黑桃7']);
+  });
+
+  it('狙擊蓄力：表側經驗不足 4 張不詢問；選擇不發動就沒有任何效果', () => {
+    const few = combat({ p0: { hand: ['狙擊蓄力', '黑桃2'], exp: ['黑桃1', '黑桃3', '黑桃4'] }, p1: { hand: [] } });
+    pick(few, '狙擊蓄力');
+    expect(Z(few, 0, 'exp').filter((c) => c.covered)).toHaveLength(0);
+    expect(names(few, 0, 'hand')).toEqual(['黑桃2']);
+
+    const decline = combat({ p0: { hand: ['狙擊蓄力', '黑桃2'], exp: Array(5).fill('黑桃3') }, p1: { hand: [] } });
+    pick(decline, '狙擊蓄力');
+    pick(decline, '不發動');
+    expect(Z(decline, 0, 'exp').filter((c) => c.covered)).toHaveLength(0);
+    expect(names(decline, 0, 'hand')).toEqual(['黑桃2']);
+  });
+
+  it('熔岩之擊：[發_怒3] 捨棄怒氣區 3 張，對方直擊 1', () => {
+    const g = combat({
+      p0: { hand: ['熔岩之擊'], rage: Array(4).fill('黑桃1') },
+      p1: { hand: [] },
+    });
+    pick(g, '發動');
+    expect(Z(g, 0, 'rage')).toHaveLength(1);
+    expect(Z(g, 1, 'discard')).toHaveLength(1);
+  });
+
+  it('熔岩之擊：怒氣不足 3 張不詢問；選擇不發動就沒有任何效果', () => {
+    const few = combat({ p0: { hand: ['熔岩之擊'], rage: ['黑桃1', '黑桃1'] }, p1: { hand: [] } });
+    expect(Z(few, 1, 'discard')).toHaveLength(0);
+
+    const decline = combat({ p0: { hand: ['熔岩之擊'], rage: Array(3).fill('黑桃1') }, p1: { hand: [] } });
+    pick(decline, '不發動');
+    expect(Z(decline, 0, 'rage')).toHaveLength(3);
+    expect(Z(decline, 1, 'discard')).toHaveLength(0);
+  });
+});
