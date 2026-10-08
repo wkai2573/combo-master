@@ -1,6 +1,6 @@
 import { faceUpExp, pay } from '../cost';
-import { defineSource } from '../effectKit';
-import { activate, directHit, log, move, pname, recover, Z } from '../ops';
+import { defineSource, lasting, slot } from '../effectKit';
+import { activate, awakened, data, directHit, isFirst, log, move, pname, recover, Z } from '../ops';
 import { other } from '../types';
 
 // 家族相片（劍士）：[蓋1_怒3] 回合開始時，回復 1，可選
@@ -14,6 +14,9 @@ export const 家族相片 = defineSource({
     ),
   },
 });
+
+/** 凡骨的意志這回合生效的次數 */
+export const 凡骨狀態 = slot('凡骨的意志', () => ({ n: 0 }));
 
 // 凡骨的意志（劍士）：[經] 回合開始時需蓋前 2 張表側經驗，此回合總攻擊 +X、總防禦 +X，強制
 export const 凡骨的意志 = defineSource({
@@ -34,12 +37,14 @@ export const 凡骨的意志 = defineSource({
           const n = Math.min(2, faceUpExp(g, p).length);
           activate(g, p, card);
           yield* pay(g, p, { cover: n });
-          g.state.flags.vanillaBoost[p]++;
+          凡骨狀態.of(g, p).n++;
           log(g, `【凡骨的意志】${pname(g, p)} 蓋前 ${n} 張表側經驗${card.covered ? '（蓋到自己，之後無效）' : ''}，此回合總攻擊與總防禦各加上戰鬥區白板卡的數量`);
         },
       };
     },
   },
+  // 蓋到自己之後它是裏側，但這回合的加成仍然生效，所以離場後也要問
+  ask: { vanillaBoost: lasting((c) => 凡骨狀態.read(c.g, c.p).n) },
 });
 
 // 復仇之嚎（劍士）：[經_怒3] 傷害計算後，若對方給予的傷害 > 我方給予的傷害，將怒氣區上方 1 張卡加入手牌
@@ -74,4 +79,30 @@ export const 熔岩之擊 = defineSource({
   },
 });
 
-export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊];
+// 戒備打擊（劍士）：[頂] 我方總攻擊 +2，總防禦 +2
+export const 戒備打擊 = defineSource({ id: '戒備打擊', at: 'combat', asMove: { topAtk: 2, topDef: 2 } });
+
+// 盾擊（劍士）：[頂] 我方戰鬥區的招式卡，若原始攻擊力小於原始防禦力，則該卡的攻擊力改為原始防禦力
+export const 盾擊 = defineSource({ id: '盾擊', at: 'combat', asMove: { liftAtkToDef: true } });
+
+// 勇者：戰鬥結算前的基礎攻擊達到門檻時，總攻擊 +3；覺醒時門檻較低
+export const 勇者 = defineSource({
+  id: '勇者',
+  at: 'char',
+  ask: { combatBonus: (c, { baseAtk }) => ({ atk: baseAtk >= (awakened(c.g, c.p) ? 10 : 15) ? 3 : 0 }) },
+});
+
+// 後人：後攻回合總防禦 +1；覺醒時追擊卡的防禦力也計入總防禦
+export const 後人 = defineSource({
+  id: '後人',
+  at: 'char',
+  ask: {
+    combatBonus: (c) => {
+      if (isFirst(c.g, c.p)) return {};
+      const pursuitDef = awakened(c.g, c.p) ? Z(c.g, c.p, 'pursuit').reduce((n, card) => n + data(card).def, 0) : 0;
+      return { def: 1, pursuitDef };
+    },
+  },
+});
+
+export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊, 戒備打擊, 盾擊, 勇者, 後人];

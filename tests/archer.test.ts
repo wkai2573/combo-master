@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Z } from '../src/engine/ops';
 import { names, pick, scenario } from './helpers';
+import { 二連矢狀態 } from '../src/engine/sources/archer';
 
 const filler = Array(20).fill('黑桃2') as string[];
 const SWAP = '放到牌組底，改看下一張';
@@ -30,9 +31,10 @@ describe('遊俠・瞄準', () => {
 
   it('選「就用這張」就直接判定，且不消耗次數', () => {
     const g = archerScenario(['黑桃8', '黑桃1', ...filler]);
+    二連矢狀態.of(g, 0).plus = 1; // 追擊 2 次，才看得到第一次選「就用這張」之後還剩幾次
     pick(g, '黑桃9');
     pick(g, KEEP);
-    expect(g.state.flags.aimUsed[0]).toBe(0);
+    expect(g.pending!.title).toContain('剩 1 次'); // 沒有消耗次數
     expect(g.state.flags.pursuitSuccess[0]).toBe(0); // 黑桃8 在範圍內，判定失敗
     expect(names(g, 0, 'hand')).toContain('黑桃8');
   });

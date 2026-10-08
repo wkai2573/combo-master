@@ -4,7 +4,6 @@ import {
   type EffectSource, type EventKey, type FireArgList, type FireArgs, type MoveRules, type Offer, type Place,
   type QueryArgs, type QueryContribution, type QueryKey, type Queries,
 } from './effectKit';
-import { scripts } from './scripts';
 import { ALL_SOURCES } from './sources';
 import type { CardInst, PlayerId } from './types';
 import { triggerWindow, type WindowEffect } from './window';
@@ -178,5 +177,5 @@ export function createEffects(sources: readonly EffectSource[]): Effects {
 const effects = createEffects(ALL_SOURCES);
 
 export const { windowEffects, fire, fireEach, query, moveRules } = effects;
-/** 遷移期間：在新登記表，或還在舊的 scripts 表，都算已實作 */
-export const hasEffect = (id: string): boolean => effects.hasEffect(id) || id in scripts;
+/** 這個卡名或角色名有沒有實作效果，涵蓋招式、裝備、增益與角色 */
+export const hasEffect = (id: string): boolean => effects.hasEffect(id);

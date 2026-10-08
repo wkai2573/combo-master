@@ -1,5 +1,5 @@
-import { defineSource } from '../effectKit';
-import { activate, chooseCards, data, directHit, discard, draw, log, move, pname, recover, Z } from '../ops';
+import { defineSource, lasting, slot } from '../effectKit';
+import { activate, awakened, chooseCards, data, directHit, discard, draw, log, move, pname, recover, Z } from '../ops';
 import { other } from '../types';
 
 // 冰與雷之曲（法師）：[蓋3] 收招時，戰鬥區的卡合計具有「冰」「電」兩個特徵時，抽 1、回復 1；
@@ -34,6 +34,9 @@ export const 火球 = defineSource({
   },
 });
 
+/** Explosion! 是否讓這回合跳過抽牌階段 */
+export const Explosion狀態 = slot('Explosion!', () => ({ skip: false }));
+
 // Explosion!（法師）：[先_蓋8] 對方直擊 5，然後我方收招，並跳過我方下個抽牌階段
 export const Explosion = defineSource({
   id: 'Explosion!',
@@ -43,10 +46,11 @@ export const Explosion = defineSource({
       const { g, p } = c;
       directHit(g, other(p), 5);
       g.state.passed[p] = true;
-      g.state.flags.skipDraw[p] = true;
+      Explosion狀態.of(g, p).skip = true;
       log(g, `【Explosion!】${pname(g, p)} 收招，並跳過這回合的抽牌階段`);
     }),
   },
+  ask: { skipDrawPhase: lasting((c) => Explosion狀態.read(c.g, c.p).skip) },
 });
 
 // 冰霜護甲（法師）：[發_蓋2] 回復X，再捨棄我方 3 張裏側經驗。X = 我方裏側經驗的張數；不足 3 張就全捨棄
@@ -85,4 +89,17 @@ export const 電弧 = defineSource({
   },
 });
 
-export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧];
+// 力量爆破（法師）：[頂] 我方總攻擊 -3；[追] 此卡追擊判定失敗
+export const 力量爆破 = defineSource({ id: '力量爆破', at: 'combat', asMove: { topAtk: -3, pursuitFails: true } });
+
+// 法師：開局多抽 2；覺醒時抽牌階段多抽 1
+export const 法師 = defineSource({
+  id: '法師',
+  at: 'char',
+  ask: {
+    openingDraw: () => 2,
+    drawPhaseExtra: (c) => (awakened(c.g, c.p) ? 1 : 0),
+  },
+});
+
+export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 法師];

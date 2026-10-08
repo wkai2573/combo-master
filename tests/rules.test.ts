@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { playables, pursuitCount, resolveCombatStats, totalAtk, totalDef } from '../src/engine/combat';
 import { draw, Z } from '../src/engine/ops';
 import { optionalPay } from '../src/engine/cost';
-import { scripts } from '../src/engine/scripts';
 import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
+import { 伏擊狀態 } from '../src/engine/sources/thief';
 
 const labels = (g: ReturnType<typeof scenario>) => g.pending!.options.map((o) => o.label);
 
@@ -228,12 +228,12 @@ describe('角色效果（總攻擊／總防禦）', () => {
     const g = scenario({ chars: ['刺客', '勇者'], p0: { hand: ['伏擊', '黑桃3'] }, p1: { hand: ['黑桃5'] } });
     expect(g.pending!.options.map((o) => o.label)).toContain('伏擊');
     pick(g, '伏擊');
-    expect(g.state.flags.atkBonus[0]).toBe(4);
+    expect(伏擊狀態.read(g, 0).atk).toBe(4);
     expect(totalAtk(g, 0)).toBe(atkOf('伏擊') + 4);
 
     const g2 = scenario({ first: 1, chars: ['勇者', '刺客'], p0: { hand: ['伏擊'] }, p1: { hand: ['黑桃5'] } });
     pick(g2, '伏擊'); // 玩家1 先攻只有一張牌、自動先手出招；玩家0 後攻反擊，不是先手步驟
-    expect(g2.state.flags.atkBonus[0]).toBe(0);
+    expect(伏擊狀態.read(g2, 0).atk).toBe(0);
   });
 
   it('魅影射擊（弓箭手）：[追] 成為追擊卡時，我方總防禦 +4', () => {

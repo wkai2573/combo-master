@@ -30,27 +30,15 @@ export interface PlayerState {
   zones: Record<ZoneName, CardInst[]>;
 }
 
+/**
+ * 引擎擁有的回合紀錄，規則本身會讀它。卡片自己的回合狀態不在這裡，
+ * 放在各效果來源宣告的狀態槽（GameState.slots）。
+ */
 export interface TurnFlags {
   /** 本回合出招張數 */
   played: [number, number];
   opened: boolean;
-  pursuitPlus: [number, number];
   pursuitSuccess: [number, number];
-  rabbitUsed: [boolean, boolean];
-  /** 遊俠「瞄準」本回合已使用的次數 */
-  aimUsed: [number, number];
-  /** 本回合卡片給的總攻擊加成（伏擊） */
-  atkBonus: [number, number];
-  /** 本回合卡片給的總防禦加成（順手牽羊為負） */
-  defBonus: [number, number];
-  /** 本回合瞄準的升級次數（狙擊印記） */
-  aimUp: [number, number];
-  /** 凡骨的意志：本回合生效次數（總攻擊／總防禦各 + 戰鬥區白板卡數量 × 次數） */
-  vanillaBoost: [number, number];
-  /** 塗毒：歸還時要放出 [Ex卡-中毒] 的出招方 */
-  poisonQ: PlayerId[];
-  /** Explosion!：跳過我方這回合之後的抽牌階段 */
-  skipDraw: [boolean, boolean];
   damageTaken: [number, number];
 }
 

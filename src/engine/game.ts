@@ -1,7 +1,6 @@
-import { getCharacter } from '../data/cards';
 import { cheatAdd, cheatRemove, cheatReorder, cheatSnapshot, cheatSwitch, type CheatSnapshot, type CheatZone } from './cheat';
 import { combatPhase } from './combat';
-import { fire, fireEach } from './effects';
+import { fire, fireEach, query } from './effects';
 import {
   ask, awakened, cardOpt, data, draw, drawPlain, GameOver, log, mark, move, newCard,
   markIfLogged, order, pname, settle, toExp, Z, type Gen,
@@ -22,9 +21,7 @@ const ZONES: ZoneName[] = ['deck', 'hand', 'discard', 'rage', 'exp', 'combat', '
 
 function emptyFlags(): TurnFlags {
   return {
-    played: [0, 0], opened: false, pursuitPlus: [0, 0], pursuitSuccess: [0, 0],
-    rabbitUsed: [false, false], aimUsed: [0, 0], atkBonus: [0, 0], defBonus: [0, 0], aimUp: [0, 0], vanillaBoost: [0, 0], poisonQ: [],
-    skipDraw: [false, false], damageTaken: [0, 0],
+    played: [0, 0], opened: false, pursuitSuccess: [0, 0], damageTaken: [0, 0],
   };
 }
 
@@ -250,8 +247,7 @@ export class Game {
     s.first = this.setup.first ?? (this.rng.int(2) as PlayerId);
     log(this, `先攻：${pname(this, s.first)}`);
     for (const p of [0, 1] as PlayerId[]) {
-      const extra = getCharacter(decks[p].charId).id === '法師' ? 2 : 0;
-      drawPlain(this, p, 5 + extra);
+      drawPlain(this, p, 5 + query(this, p, 'openingDraw'));
     }
     mark(this, '雙方抽起始手牌', { type: 'deal' });
   }
@@ -263,16 +259,17 @@ function* drawPhase(g: Game): Gen {
   g.state.phase = '抽牌';
   const skipped: PlayerId[] = [];
   for (const p of order(g)) {
-    // Explosion!：跳過抽牌階段（連法師覺醒的額外抽牌一起跳過）
-    if (g.state.flags.skipDraw[p]) {
+    // 跳過抽牌階段時，連額外抽牌一起跳過
+    if (query(g, p, 'skipDrawPhase')) {
       skipped.push(p);
-      log(g, `【Explosion!】${pname(g, p)} 跳過抽牌階段`);
+      log(g, `${pname(g, p)} 跳過抽牌階段`);
       continue;
     }
     yield* draw(g, p, 1);
-    if (g.state.players[p].charId === '法師' && awakened(g, p)) {
-      yield* draw(g, p, 1);
-      log(g, `【法師】${pname(g, p)} 抽牌階段額外抽 1`);
+    const more = query(g, p, 'drawPhaseExtra');
+    if (more > 0) {
+      yield* draw(g, p, more);
+      log(g, `${pname(g, p)} 抽牌階段額外抽 ${more}`);
     }
   }
   mark(g, skipped.length ? `抽牌階段：${skipped.map((p) => pname(g, p)).join('、')} 跳過` : '抽牌階段：雙方各抽 1 張', { type: 'draw' });

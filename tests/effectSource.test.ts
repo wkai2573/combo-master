@@ -37,11 +37,14 @@ describe('登記表', () => {
     expect(r.has('刺客')).toBe(false);
   });
 
-  // 遷移期間尚未接進效果來源的開放卡；每遷移一批就從這裡拿掉，票 08 要求清空
-  const PENDING: string[] = ['瞄準器'];
-  it('開放名單裡的每張卡都已實作（遷移中允許清單內的卡暫缺）', () => {
-    const missing = ENABLED_EFFECT_CARDS.filter((id) => !hasEffect(id));
-    expect(missing.sort()).toEqual([...PENDING].sort());
+  it('開放名單裡的每張卡都已實作，沒有例外', () => {
+    expect(ENABLED_EFFECT_CARDS.filter((id) => !hasEffect(id))).toEqual([]);
+  });
+
+  it('hasEffect 涵蓋角色與裝備，沒有條目的卡為否', () => {
+    for (const id of ['勇者', '刺客', '先人', '後人', '商人', '遊俠', '法師']) expect(hasEffect(id), id).toBe(true);
+    for (const id of ['家族相片', '瞄準器', '招財貓', '幸運兔腳', '冰與雷之曲']) expect(hasEffect(id), id).toBe(true);
+    expect(hasEffect('黑桃1')).toBe(false);
   });
 });
 
@@ -269,6 +272,14 @@ describe('查詢', () => {
     const g = scenario({ p0: { gear: ['黑桃2'] } });
     expect(fx.query(g, 0, 'skipDrawPhase')).toBe(true);
     expect(fx.query(g, 0, 'combatBonus', { baseAtk: 5 })).toEqual({ atk: 7, def: 1, pursuitDef: 0 });
+  });
+
+  it('lasting 的查詢不論場上有幾張卡都只問一次；沒寫 lasting 的每張各問一次', () => {
+    const once = createEffects([defineSource({ id: '黑桃3', at: 'exp', ask: { aimLimit: lasting(() => 1) } })]);
+    const each = createEffects([defineSource({ id: '黑桃3', at: 'exp', ask: { aimLimit: () => 1 } })]);
+    const g = scenario({ p0: { exp: ['黑桃3', '黑桃3'] } });
+    expect(once.query(g, 0, 'aimLimit')).toBe(1);
+    expect(each.query(g, 0, 'aimLimit')).toBe(2);
   });
 
   it('卡不在位就不貢獻；明寫 lasting 的查詢離場後仍然貢獻', () => {

@@ -5,6 +5,8 @@ import { botChoice } from '../src/engine/bot';
 import { Rng } from '../src/engine/rng';
 import type { Request } from '../src/engine/types';
 import { names, pick, scenario } from './helpers';
+import { 伏擊狀態 } from '../src/engine/sources/thief';
+import { 凡骨狀態 } from '../src/engine/sources/swordsman';
 
 const labels = (g: ReturnType<typeof scenario>) => g.pending!.options.map((o) => o.label);
 
@@ -259,12 +261,12 @@ describe('觸發窗口：回合開始', () => {
     const a = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
     pick(a, '【家族相片】回復 1（蓋1、怒3）');
     expect(Z(a, 0, 'exp').map((c) => c.covered)).toEqual([true, false, false]);
-    expect(a.state.flags.vanillaBoost[0]).toBe(0); // 凡骨已被蓋成裏側，從清單消失
+    expect(凡骨狀態.read(a, 0).n).toBe(0); // 凡骨已被蓋成裏側，從清單消失
     expect(a.pending).toBeNull();
 
     const b = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
     pick(b, '【強制】【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量');
-    expect(b.state.flags.vanillaBoost[0]).toBe(1);
+    expect(凡骨狀態.read(b, 0).n).toBe(1);
     expect(Z(b, 0, 'exp').map((c) => c.covered)).toEqual([true, true, false]);
     expect(b.pending!.title).toContain('家族相片'); // 只剩一個可選效果：原本的確認
     pick(b, '發動');
@@ -286,7 +288,7 @@ describe('觸發窗口：回合開始', () => {
     expect(labels(g).every((l) => l.startsWith('【強制】'))).toBe(true);
     pick(g, '【強制】【中毒】直擊 3');
     expect(g.pending).toBeNull(); // 剩下的凡骨強制效果直接處理
-    expect(g.state.flags.vanillaBoost[1]).toBe(1);
+    expect(凡骨狀態.read(g, 1).n).toBe(1);
     expect(Z(g, 1, 'discard')).toHaveLength(3);
   });
 
@@ -312,7 +314,7 @@ describe('觸發窗口：傷害計算後', () => {
 
   it('兩張復仇之嚎各算一個效果：選單可以選要發哪張，也可以結束', () => {
     const g = hit(['復仇之嚎', '復仇之嚎']);
-    g.state.flags.atkBonus[1] = 3; // 對方多 3 點總攻擊：受到的傷害大於造成的
+    伏擊狀態.of(g, 1).atk = 3; // 對方多 3 點總攻擊：受到的傷害大於造成的
     pick(g, '黑桃9');
     expect(g.pending!.title).toContain('傷害計算後');
     expect(labels(g)).toEqual(['【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）', '【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）', '結束（不再發動）']);

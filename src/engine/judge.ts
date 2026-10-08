@@ -1,8 +1,7 @@
 import {
   data, log, mark, move, pname, Z, type GameCtx, type Gen,
 } from './ops';
-import { fire } from './effects';
-import { scripts } from './scripts';
+import { fire, moveRules } from './effects';
 import { other, type CardInst, type PlayerId } from './types';
 
 // ───────────────────────── 範圍內／追擊判定 ─────────────────────────
@@ -37,7 +36,7 @@ export function* judge(g: GameCtx, p: PlayerId, card: CardInst): Gen<boolean> {
   mark(g, `${pname(g, p)} 追擊判定：翻開【${cd.name}】${desc}`,
     { type: 'flip', player: p, cardId: card.id });
 
-  const success = isMove && !scripts[card.id]?.pursuitFail && !inRange(g, p, card);
+  const success = isMove && !moveRules(card.id).pursuitFails && !inRange(g, p, card);
   if (success) {
     yield* becomePursuitCard(g, p, card);
     return true;

@@ -1,10 +1,9 @@
 import {
-  ask, awakened, cardOpt, chooseCards, data, draw, isFirst, log, mark, markIfLogged, move,
-  newCard, order, pname, takeDamage, Z, type GameCtx, type Gen,
+  ask, cardOpt, chooseCards, data, draw, log, mark, markIfLogged, move,
+  order, pname, takeDamage, Z, type GameCtx, type Gen,
 } from './ops';
 import { inRange, judge } from './judge';
-import { fire, fireEach } from './effects';
-import { scripts } from './scripts';
+import { fire, fireEach, moveRules, query } from './effects';
 import { checkWin } from './win';
 import { other, type CardInst, type PlayerId } from './types';
 import {
@@ -45,30 +44,23 @@ export { ASSASSIN_CAP, resolveCombatStats, totalAtk, totalDef, type CombatStats,
 // ───────────────────────── 追擊 ─────────────────────────
 
 export function pursuitCount(g: GameCtx, p: PlayerId): number {
-  const f = g.state.flags;
-  let n = 1 + f.pursuitPlus[p];
-  if (g.state.players[p].charId === '先人' && awakened(g, p) && isFirst(g, p)) n += 1;
-  // [頂] 戰鬥區只有這張卡時追擊 +N（二刀連擊）
-  const combat = Z(g, p, 'combat');
-  if (combat.length === 1) n += scripts[combat[0].id]?.soloPursuitPlus ?? 0;
-  return Math.max(0, n);
+  return Math.max(0, 1 + query(g, p, 'pursuitBonus'));
 }
 
 function* pursuitStep(g: GameCtx, p: PlayerId): Gen {
   const deck = Z(g, p, 'deck');
   // 追擊+N 可能在追擊中途增加（二連矢），所以每次重新計算張數
+  // 瞄準的已使用次數是這個步驟自己的記帳，不屬於任何一張卡
+  const aimUsed = { n: 0 };
   for (let i = 0; i < pursuitCount(g, p) && deck.length > 0; i++) {
-    yield* aim(g, p);
+    yield* aim(g, p, aimUsed);
     yield* afterJudge(g, p, deck[0]);
   }
 }
 
 /** 【瞄準】可使用次數：遊俠 1（覺醒 +1）、瞄準器 +1；每個瞄準每回合 1 次 */
 export function aimLimit(g: GameCtx, p: PlayerId): number {
-  let n = 0;
-  if (g.state.players[p].charId === '遊俠') n += awakened(g, p) ? 2 : 1;
-  if (Z(g, p, 'gear').some((c) => c.id === '瞄準器')) n++;
-  return n;
+  return query(g, p, 'aimLimit');
 }
 
 /**
@@ -76,13 +68,13 @@ export function aimLimit(g: GameCtx, p: PlayerId): number {
  * LV1：看牌組頂 1 張，選擇放到牌組頂（就用這張）或牌組底（改看下一張）。
  * LV2（狙擊印記使本回合升級）：抽 1，然後選擇手中 1 張卡放到牌組頂或底。
  */
-function* aim(g: GameCtx, p: PlayerId): Gen {
+function* aim(g: GameCtx, p: PlayerId, used: { n: number }): Gen {
   const limit = aimLimit(g, p);
   if (limit === 0) return;
   const deck = Z(g, p, 'deck');
-  while (g.state.flags.aimUsed[p] < limit && deck.length >= 1) {
-    const left = limit - g.state.flags.aimUsed[p];
-    const level = 1 + g.state.flags.aimUp[p];
+  while (used.n < limit && deck.length >= 1) {
+    const left = limit - used.n;
+    const level = 1 + query(g, p, 'aimLevel');
     if (level >= 2) {
       const [use] = yield* ask(g, {
         player: p,
@@ -91,7 +83,7 @@ function* aim(g: GameCtx, p: PlayerId): Gen {
         options: [{ key: 'use', label: '使用' }, { key: 'skip', label: '不使用' }],
       });
       if (use !== 'use') return;
-      g.state.flags.aimUsed[p]++;
+      used.n++;
       yield* draw(g, p, 1);
       const [put] = yield* chooseCards(g, p, '【瞄準】選擇手中 1 張卡放到牌組頂或底', Z(g, p, 'hand'), 1, 1);
       if (!put) return;
@@ -106,7 +98,7 @@ function* aim(g: GameCtx, p: PlayerId): Gen {
     }
     if (deck.length < 2) return;
     const top = deck[0];
-    const hit = !scripts[top.id]?.pursuitFail && !inRange(g, p, top);
+    const hit = !moveRules(top.id).pursuitFails && !inRange(g, p, top);
     const keys = yield* ask(g, {
       player: p,
       title: `【瞄準】牌組頂是【${data(top).name}】（連擊值 ${data(top).combo}），以目前範圍會判定${hit ? '成功' : '失敗'}。（剩 ${left} 次）`,
@@ -117,7 +109,7 @@ function* aim(g: GameCtx, p: PlayerId): Gen {
       ],
     });
     if (keys[0] === 'keep') return;
-    g.state.flags.aimUsed[p]++;
+    used.n++;
     move(g, top, 'deck', 'bottom');
     log(g, `【瞄準】${pname(g, p)} 將牌組頂的牌放到牌組底`);
     mark(g, `【瞄準】${pname(g, p)} 將牌組頂的牌放到牌組底，改判定下一張`, { type: 'aimSwap', player: p });
@@ -178,7 +170,6 @@ export function* returnStep(g: GameCtx): Gen {
   }
   // 塗毒：歸還時，把 [Ex卡-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
   yield* fireEach(g, 'afterReturn');
-  g.state.flags.poisonQ = [];
   mark(g, '招式與追擊卡依序放入經驗區', { type: 'return' });
 }
 

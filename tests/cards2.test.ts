@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { aimLimit, pursuitCount, returnStep, totalAtk, totalDef } from '../src/engine/combat';
 import { discard, Z } from '../src/engine/ops';
 import { optionalPay, pay } from '../src/engine/cost';
-import { scripts } from '../src/engine/scripts';
 import { getCard } from '../src/data/cards';
 import { atkOf, defOf, drive, names, pick, scenario, setZones } from './helpers';
+import { Explosion狀態 } from '../src/engine/sources/mage';
+import { 伏擊狀態, 塗毒狀態, 順手牽羊狀態 } from '../src/engine/sources/thief';
+import { 凡骨狀態 } from '../src/engine/sources/swordsman';
+import { 狙擊印記狀態 } from '../src/engine/sources/archer';
 
 const filler = Array(20).fill('黑桃2') as string[];
 
@@ -109,7 +112,7 @@ describe('瞄準：次數與等級', () => {
   it('狙擊印記：[先] 此回合瞄準升級 1', () => {
     const g = scenario({ chars: ['遊俠', '勇者'], p0: { hand: ['狙擊印記', '黑桃2'] }, p1: { hand: [] } });
     pick(g, '狙擊印記');
-    expect(g.state.flags.aimUp[0]).toBe(1);
+    expect(狙擊印記狀態.read(g, 0).up).toBe(1);
   });
 
   it('LV2：抽 1，再選手中 1 張卡放到牌組頂或底，然後判定牌組頂', () => {
@@ -118,12 +121,12 @@ describe('瞄準：次數與等級', () => {
       p0: { hand: ['黑桃7'], deck: ['黑桃8', '黑桃1', ...filler] },
       p1: { hand: ['黑桃9'] },
     });
-    g.state.flags.aimUp[0] = 1;
+    狙擊印記狀態.of(g, 0).up = 1;
     pick(g, '黑桃9');
     expect(g.pending!.title).toContain('LV2');
     pick(g, '使用');
     pick(g, '牌組底'); // 抽到的黑桃8 是手中唯一一張，自動選它
-    expect(g.state.flags.aimUsed[0]).toBe(1);
+    expect(g.pending?.title ?? '').not.toContain('瞄準'); // 本回合的瞄準用完了
     expect(Z(g, 0, 'deck').at(-1)!.id).toBe('黑桃8');
     expect(g.state.flags.pursuitSuccess[0]).toBe(1); // 新的牌頂黑桃1 在範圍 7~9 外
   });
@@ -155,7 +158,7 @@ describe('新卡（第二批）', () => {
 
   it('復仇之嚎：[經_怒3] 傷害計算後，若受到的傷害大於造成的，可以蓋怒氣 3 再把怒氣區上方 1 張加入手牌', () => {
     const g = scenario({ p0: { hand: ['黑桃1'], exp: ['復仇之嚎'], rage: Array(8).fill('黑桃1') }, p1: { hand: ['黑桃9'] } });
-    g.state.flags.atkBonus[1] = 3; // 對方多 3 點總攻擊：受到的傷害大於造成的
+    伏擊狀態.of(g, 1).atk = 3; // 對方多 3 點總攻擊：受到的傷害大於造成的
     pick(g, '黑桃9');
     expect(g.pending!.title).toContain('復仇之嚎');
     const rage = Z(g, 0, 'rage').length;
@@ -174,8 +177,8 @@ describe('新卡（第二批）', () => {
     pick(g, '順手牽羊');
     expect(g.pending!.options.map((o) => o.label)).toEqual(['不發動', '蓋1', '蓋2']);
     pick(g, '蓋2');
-    expect(g.state.flags.defBonus[0]).toBe(-2);
-    expect(g.state.flags.atkBonus[0]).toBe(0);
+    expect(順手牽羊狀態.read(g, 0).def).toBe(-2);
+    expect(伏擊狀態.read(g, 0).atk).toBe(0);
     expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(2);
     expect(Z(g, 0, 'hand')).toHaveLength(4); // 打出後剩 1 張＋抽 2＋抽牌階段抽 1
   });
@@ -189,9 +192,9 @@ describe('新卡（第二批）', () => {
     pick(g, '黑桃5');
     pick(g, '順手牽羊');
     pick(g, '蓋1');
-    expect(g.state.flags.defBonus[1]).toBe(-1);
+    expect(順手牽羊狀態.read(g, 1).def).toBe(-1);
     expect(totalDef(g, 1)).toBe(defOf('順手牽羊') - 1);
-    g.state.flags.defBonus[1] = -99;
+    順手牽羊狀態.of(g, 1).def = -99;
     expect(totalDef(g, 1)).toBe(0);
   });
 
@@ -257,7 +260,7 @@ describe('新卡（第二批）', () => {
     expect(totalAtk(g, 0)).toBe(atkOf('盾擊') + atkOf('梅花1'));
     setZones(g, 0, { combat: ['梅花1', '盾擊'], pursuit: ['梅花1'] });
     expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + atkOf('梅花1')); // 追擊的梅花1 照原本的攻擊力
-    g.state.flags.atkBonus[0] = 3;
+    伏擊狀態.of(g, 0).atk = 3;
     expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + atkOf('梅花1') + 3);
   });
 
@@ -294,18 +297,18 @@ describe('新卡（第二批）', () => {
   it('凡骨的意志：回合開始時需蓋前 2 張表側經驗，總攻擊與總防禦各加戰鬥區白板卡數量', () => {
     // scenario 開局時已經跑過第一回合的回合開始效果
     const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['黑桃3', '黑桃4', '凡骨的意志'] } });
-    expect(g.state.flags.vanillaBoost[0]).toBe(1);
+    expect(凡骨狀態.read(g, 0).n).toBe(1);
     expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃3', '黑桃4']);
     const ids = ['黑桃1', '黑桃2', '伏擊'];
     setZones(g, 0, { combat: ids, exp: [] });
-    g.state.flags.vanillaBoost[0] = 1;
+    凡骨狀態.of(g, 0).n = 1;
     expect(totalAtk(g, 0)).toBe(ids.reduce((n, id) => n + atkOf(id), 0) + 2); // 白板卡 2 張
     expect(totalDef(g, 0)).toBe(ids.reduce((n, id) => n + defOf(id), 0) + 2);
   });
 
   it('凡骨的意志：蓋是照順序蓋，最前面就是自己時會蓋到自己；效果照常發動，之後被蓋住就無效', () => {
     const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['凡骨的意志', '黑桃3', '黑桃4'] } });
-    expect(g.state.flags.vanillaBoost[0]).toBe(1);
+    expect(凡骨狀態.read(g, 0).n).toBe(1);
     expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['凡骨的意志', '黑桃3']);
     expect(g.state.log.join('\n')).toContain('蓋到自己');
     // 下個回合：它已經被蓋住，不能再發動，也不會去蓋黑桃3
@@ -315,20 +318,20 @@ describe('新卡（第二批）', () => {
       singlePhase: true,
       p0: { exp: ['~凡骨的意志', '黑桃3'] },
     });
-    expect(nextTurn.state.flags.vanillaBoost[0]).toBe(0);
+    expect(凡骨狀態.read(nextTurn, 0).n).toBe(0);
     expect(Z(nextTurn, 0, 'exp')[1].covered).toBe(false);
   });
 
   it('凡骨的意志：表側經驗剛好 2 張，兩張都蓋（包含自己），仍會生效', () => {
     const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['黑桃3', '~黑桃4', '凡骨的意志'] } });
     // 表側只有黑桃3 與它自己
-    expect(g.state.flags.vanillaBoost[0]).toBe(1);
+    expect(凡骨狀態.read(g, 0).n).toBe(1);
     expect(Z(g, 0, 'exp').map((c) => c.covered)).toEqual([true, true, true]);
   });
 
   it('凡骨的意志：它是唯一的表側經驗時，蓋 1 就是蓋自己，仍會生效', () => {
     const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['凡骨的意志'] } });
-    expect(g.state.flags.vanillaBoost[0]).toBe(1);
+    expect(凡骨狀態.read(g, 0).n).toBe(1);
     expect(Z(g, 0, 'exp')[0].covered).toBe(true);
   });
 
@@ -414,20 +417,20 @@ describe('新卡（第二批）', () => {
     });
     pick(no, 'Explosion!');
     pick(no, '不發動');
-    expect(no.state.flags.skipDraw).toEqual([false, false]);
+    expect(Explosion狀態.read(no, 0).skip).toBe(false);
     expect(Z(no, 0, 'exp').filter((c) => c.covered)).toHaveLength(0);
     expect(Z(no, 1, 'discard')).toHaveLength(0);
   });
 
   it('塗毒：歸還時 [Ex卡-中毒] 移入出招卡較少的一方，相同時落入對方；離開經驗區就移除遊戲', () => {
     const g = scenario();
-    g.state.flags.poisonQ = [0];
+    塗毒狀態.of(g, 0).armed = 1;
     g.state.flags.played = [1, 2];
     drive(returnStep(g));
     expect(names(g, 0, 'exp')).toContain('Ex卡-中毒');
 
     const t = scenario();
-    t.state.flags.poisonQ = [0];
+    塗毒狀態.of(t, 0).armed = 1;
     t.state.flags.played = [2, 2];
     drive(returnStep(t));
     expect(names(t, 1, 'exp')).toContain('Ex卡-中毒');
