@@ -8,6 +8,8 @@
  *   chars      角色被改過的名稱、職業、生命值、覺醒經驗（同樣以 id 為鍵）
  *   added      表上新增的卡（卡表上標「新」的卡；若與 xlsx 的卡同名，就整張取代那張卡）
  *   keywords   關鍵字區塊（名稱、分類、說明）；卡上用【名稱】或 [標籤] 引用，遊戲裡滑過就顯示說明
+ *   uids       卡表給每張卡、每位角色、每個關鍵字的永久編號（招式 A、裝備 E、增益 B、角色 C、關鍵字 K）→ 內部 id；
+ *              只給人與文件指稱用，遊戲引擎仍以 id 為鍵，不讀它
  * 文字（效果描述）不在這裡套用：新描述要先由 Claude 跟你確認用語，再寫進程式。
  */
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -94,11 +96,24 @@ for (const d of readDocs('chars')) {
   if (Object.keys(o).length) chars[id] = o;
 }
 
+// 永久編號：編號 → 內部 id（卡與角色用改名前的名字，關鍵字用名稱）。缺編號只提醒，重複編號直接擋下
+const uids: Record<string, string> = {};
+function addUid(uid: unknown, id: string, label: string) {
+  if (typeof uid !== 'string' || !/^[A-Z]\d+$/.test(uid)) { notes.push(`缺少編號：${label}`); return; }
+  if (uid in uids) throw new Error(`編號重複：${uid}（${uids[uid]}、${id}）`);
+  uids[uid] = id;
+}
+for (const d of readDocs('cards')) addUid(d.uid, d.base?.name ?? d.name, `卡片【${d.name}】`);
+for (const d of readDocs('chars')) addUid(d.uid, d.base?.name ?? d.name, `角色【${d.name}】`);
+for (const d of readDocs('keywords')) addUid(d.uid, d.name, `關鍵字【${d.name}】`);
+const uidKey = (u: string) => u.charCodeAt(0) * 100000 + Number(u.slice(1));
+const sortedUids = Object.fromEntries(Object.entries(uids).sort((x, y) => uidKey(x[0]) - uidKey(y[0])));
+
 const keywords = readDocs('keywords')
   .sort((a, b) => a.order - b.order)
   .map((d) => ({ name: d.name as string, group: d.cls as string, desc: d.desc as string }));
 for (const d of readDocs('keywords')) if (d.textPending) notes.push(`關鍵字說明待確認用語：${d.name}`);
 
-writeFileSync(out, JSON.stringify({ overrides, chars, added, keywords }, null, 2) + '\n');
-console.log(`已寫入 ${out}：既有卡改動 ${Object.keys(overrides).length} 張、角色改動 ${Object.keys(chars).length} 位、新增 ${added.length} 張、關鍵字 ${keywords.length} 個`);
+writeFileSync(out, JSON.stringify({ overrides, chars, added, keywords, uids: sortedUids }, null, 2) + '\n');
+console.log(`已寫入 ${out}：既有卡改動 ${Object.keys(overrides).length} 張、角色改動 ${Object.keys(chars).length} 位、新增 ${added.length} 張、關鍵字 ${keywords.length} 個、編號 ${Object.keys(uids).length} 個`);
 for (const n of notes) console.log('注意：' + n);

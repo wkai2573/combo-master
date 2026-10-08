@@ -28,7 +28,7 @@ npm run build      # 型別檢查＋打包
 
 ## 卡表網頁與數值同步
 
-卡片、角色的數值在「連擊大師卡表」網頁（Claude 的 Artifact，只有擁有者能開）上調整，可以新增卡片。調完請 Claude 同步：Claude 用 `ArtifactData` 把資料讀成 JSON，再執行 `npm run table -- <資料夾>`，產生 `src/data/cardTable.json`（既有卡的數值覆蓋、角色數值、新增的卡）。`src/data/cards.ts` 會把它疊在 xlsx 產生的資料上，所以重跑 `npm run data` 不會洗掉。
+卡片、角色的數值在「連擊大師卡表」網頁（Claude 的 Artifact，只有擁有者能開）上調整，可以新增卡片。調完請 Claude 同步：Claude 用 `ArtifactData` 把資料讀成 JSON，再執行 `npm run table -- <資料夾>`，產生 `src/data/cardTable.json`（既有卡的數值覆蓋、角色數值、新增的卡、永久編號）。`src/data/cards.ts` 會把它疊在 xlsx 產生的資料上，所以重跑 `npm run data` 不會洗掉。
 
 卡表頁面標題旁有頁面版本（例如 `v1.2`），下方顯示「遊戲已同步到 vX.Y.Z」，那是每次同步後由 Claude 寫進資料庫的 `meta/sync`；頁面上「尚未同步的改動」（黃框，旁邊是「原」值）是拿每筆資料的 `base`（基準值）和現值比對。所以同步完成後，Claude 要把有差異的資料的 `base` 一併重設成現值，黃框才會消失；`base.name` 不可動，它是遊戲內部 id（見 `docs/規則詮釋.md`）。
 

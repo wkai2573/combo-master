@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_CARDS, ALL_CHARACTERS, getCard, PLAYABLE_CARDS } from '../src/data/cards';
 import { ENABLED_EFFECT_CARDS, isCardEnabled, isVanilla } from '../src/data/enabledCards';
 import { presetDeck, PRESET_CHARACTER_IDS } from '../src/data/presetDecks';
+import tableJson from '../src/data/cardTable.json';
 import { validateDeck } from '../src/deck/validate';
 
 describe('卡表資料', () => {
@@ -55,6 +56,35 @@ describe('卡表資料', () => {
   it('每張卡都有職業', () => {
     const classes = ['共用', '劍士', '盜賊', '商人', '弓箭手', '法師'];
     for (const c of ALL_CARDS) expect(classes, c.id).toContain(c.cls);
+  });
+});
+
+describe('卡表永久編號', () => {
+  const table = tableJson as { uids: Record<string, string>; keywords: Array<{ name: string }> };
+  const entries = Object.entries(table.uids);
+
+  it('編號格式：招式 A、裝備 E、增益 B、角色 C、關鍵字 K，後面接數字', () => {
+    expect(entries.length).toBeGreaterThan(0);
+    for (const [uid] of entries) expect(uid, uid).toMatch(/^[AEBCK]\d+$/);
+  });
+
+  it('每個編號都指到存在的卡、角色或關鍵字，且它們不共用編號', () => {
+    const cardIds = new Set(ALL_CARDS.map((c) => c.id));
+    const charIds = new Set(ALL_CHARACTERS.map((c) => c.id));
+    const kwNames = new Set(table.keywords.map((k) => k.name));
+    for (const [uid, id] of entries) {
+      const pool = uid[0] === 'C' ? charIds : uid[0] === 'K' ? kwNames : cardIds;
+      expect(pool.has(id), `${uid} → ${id}`).toBe(true);
+    }
+  });
+
+  it('同一個 id 在同一類只有一個編號；每張卡、每位角色、每個關鍵字都有編號', () => {
+    const owners = (prefix: RegExp) => entries.filter(([u]) => prefix.test(u)).map(([, id]) => id);
+    const cards = owners(/^[AEB]/), chars = owners(/^C/), kws = owners(/^K/);
+    for (const list of [cards, chars, kws]) expect(new Set(list).size).toBe(list.length);
+    expect(new Set(cards)).toEqual(new Set(ALL_CARDS.filter((c) => !c.id.startsWith('Ex卡-')).map((c) => c.id)));
+    expect(new Set(chars)).toEqual(new Set(ALL_CHARACTERS.map((c) => c.id)));
+    expect(new Set(kws)).toEqual(new Set(table.keywords.map((k) => k.name)));
   });
 });
 
