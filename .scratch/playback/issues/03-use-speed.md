@@ -4,10 +4,14 @@
 
 **Blocked by（被誰阻擋）：** 02
 
-**Status：** ready-for-agent
+**Status：** resolved
 
-- [ ] `useSpeed()` 讀不到或寫不進儲存時視同沒選過、忽略失敗，與重構前相同
-- [ ] Battle 不再直接碰 `localStorage` 或 `matchMedia`
-- [ ] `initialSpeed` 與既有的 `speed.test.ts` 不改
-- [ ] 型別檢查、建置與全部測試通過
-- [ ] 純內部重構，依版本號維護規範不升版
+- [x] `useSpeed()` 讀不到或寫不進儲存時視同沒選過、忽略失敗，與重構前相同
+- [x] Battle 不再直接碰 `localStorage` 或 `matchMedia`
+- [x] `initialSpeed` 與既有的 `speed.test.ts` 不改
+- [x] 型別檢查、建置與全部測試通過
+- [x] 純內部重構，依版本號維護規範不升版
+
+## Answer
+
+`useSpeed()` 放進 `usePlayback.ts`，Battle 不再碰 `localStorage` 與 `matchMedia`；`initialSpeed` 與 `speed.test.ts` 未動。

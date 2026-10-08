@@ -38,14 +38,14 @@ export interface Presentation {
   playing: boolean;
   /** 播完，而且不在空檔：這時才顯示結果視窗、允許作弊面板操作 */
   settled: boolean;
-  /** 新一批影格剛到、還沒開始播的空檔；只給 settle 判斷用，介面不需要看 */
-  gap: boolean;
   scale: number;
 }
 
 interface Playing {
   frame: Frame;
   n: number;
+  /** 這一格相對上一個顯示的桌面的數值變化：換格的當下算一次，這一格播放期間不變 */
+  changes?: StatChanges;
 }
 
 /**
@@ -58,6 +58,12 @@ export class Playback {
   private seen = 0;
   private counter = 0;
   private shown: GameView | null = null;
+  private _version = 0;
+
+  /** 內部狀態每改變一次就加一；呈現依賴它重算 */
+  get version(): number {
+    return this._version;
+  }
 
   /**
    * 新一批影格到了。同一個批次編號只處理一次；速度是關閉時直接丟掉。
@@ -66,6 +72,7 @@ export class Playback {
   ingest(batch: Batch | undefined, speed: Speed): number | null {
     if (!batch || batch.id === this.seen) return null;
     this.seen = batch.id;
+    this._version++;
     if (SCALE[speed] === 0) return null;
     this.queue.push(...batch.frames);
     return this.cur ? null : this.advance(speed);
@@ -74,16 +81,20 @@ export class Playback {
   /** 停留時間到了，換下一格。回傳這一格要停留的毫秒；已經沒有下一格就回傳 null */
   advance(speed: Speed): number | null {
     const frame = this.queue.shift();
+    this._version++;
     if (!frame) {
       this.cur = null;
       return null;
     }
-    this.cur = { frame, n: ++this.counter };
+    // 開局抽起始手牌不算生命變動
+    const changes = frame.fx.type !== 'deal' && this.shown ? statChanges(this.shown, frame.view) : undefined;
+    this.cur = { frame, n: ++this.counter, changes };
     return Math.max(MIN_HOLD_MS, frame.ms * SCALE[speed]);
   }
 
   /** 跳過：清掉佇列並結束目前的播放 */
   skip(): void {
+    if (this.queue.length > 0 || this.cur) this._version++;
     this.queue = [];
     this.cur = null;
   }
@@ -92,6 +103,7 @@ export class Playback {
   reset(): void {
     this.skip();
     this.seen = 0;
+    this._version++;
   }
 
   /** 此刻該呈現什麼：batch 是最新收到的一批，final 是最新的真實狀態 */
@@ -112,20 +124,18 @@ export class Playback {
             : final;
     const fx = cur?.frame.fx;
     const fxKey = cur?.n ?? 0;
-    // 開局抽起始手牌不算生命變動
-    const changes = cur && fx!.type !== 'deal' && view && this.shown && this.shown !== view ? statChanges(this.shown, view) : undefined;
     const dmg = fx?.type === 'damage' ? fx.dmg : null;
     // 這一批飛行的時序由傷害較多的那一方決定
     const hit = (p: 0 | 1): Hit | undefined =>
       dmg && dmg[p] > 0 ? { amount: dmg[p], key: fxKey, delay: flightTiming(Math.max(...dmg) - 1).ms * scale } : undefined;
     return {
-      view, changes, fx, fxKey, caption: cur?.frame.caption, hits: [hit(0), hit(1)],
-      playing: cur !== null, settled: cur === null && !gap, gap, scale,
+      view, changes: cur?.changes, fx, fxKey, caption: cur?.frame.caption, hits: [hit(0), hit(1)],
+      playing: cur !== null, settled: cur === null && !gap, scale,
     };
   }
 
-  /** 渲染之後記下目前顯示的桌面，下一格的數值變化與飛行拿它來比；空檔顯示的是舊桌面，不記 */
+  /** 渲染之後記下目前顯示的桌面，下一格的數值變化拿它來比；空檔顯示的是舊桌面或第一格，不記 */
   settle(p: Presentation): void {
-    if (!p.gap) this.shown = p.view;
+    if (p.playing || p.settled) this.shown = p.view;
   }
 }

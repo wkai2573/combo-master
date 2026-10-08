@@ -43,27 +43,28 @@ export function useSpeed(): [Speed, (s: Speed) => void] {
  */
 export function usePlayback(batch: Batch | undefined, final: GameView | null, speed: Speed) {
   const [pb] = useState(() => new Playback());
-  const [version, bump] = useReducer((n: number) => n + 1, 0);
+  const [, rerender] = useReducer((n: number) => n + 1, 0);
   const timer = useRef<number | undefined>(undefined);
   const speedRef = useRef(speed);
   speedRef.current = speed;
 
-  // hold 是這一格要停留的毫秒；null 表示沒有開始新的一格（不動已經在跑的計時器）
-  const schedule = useCallback(
-    (hold: number | null) => {
-      if (hold !== null) timer.current = window.setTimeout(() => schedule(pb.advance(speedRef.current)), hold);
-      bump();
+  // 只有 Playback 的狀態真的變了才重繪；hold 是這一格要停留的毫秒，null 表示沒有開始新的一格（不動已經在跑的計時器）
+  const run = useCallback(
+    (step: () => number | null) => {
+      const before = pb.version;
+      const hold = step();
+      if (hold !== null) timer.current = window.setTimeout(() => run(() => pb.advance(speedRef.current)), hold);
+      if (pb.version !== before) rerender();
     },
     [pb],
   );
 
   const skip = useCallback(() => {
     window.clearTimeout(timer.current);
-    pb.skip();
-    bump();
-  }, [pb]);
+    run(() => (pb.skip(), null));
+  }, [pb, run]);
 
-  useEffect(() => schedule(pb.ingest(batch, speedRef.current)), [batch, pb, schedule]);
+  useEffect(() => run(() => pb.ingest(batch, speedRef.current)), [batch, pb, run]);
 
   // 切到「關閉動畫」時立刻結束目前的播放
   useEffect(() => {
@@ -80,9 +81,9 @@ export function usePlayback(batch: Batch | undefined, final: GameView | null, sp
   );
 
   const presentation: Presentation = useMemo(
-    // version 變了代表 Playback 的內部狀態變了，要重算
+    // pb.version 變了代表 Playback 的內部狀態變了，要重算
     () => pb.present(batch, final, speed),
-    [pb, batch, final, speed, version],
+    [pb, batch, final, speed, pb.version],
   );
   // 渲染之後記下顯示的桌面，下一格的數值變化拿它來比
   useEffect(() => pb.settle(presentation), [pb, presentation]);

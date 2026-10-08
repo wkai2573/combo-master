@@ -131,7 +131,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
 
   const zoneCards = zone ? v.players[zone.p][zone.z] : [];
   // 結束演出播完（或跳過）才顯示結果視窗；演出期間先讓勝負在桌面上呈現
-  const result = !pres.settled || v.winner === null ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
+  const result = pres.playing || v.winner === null ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
   const outcomeOf = (p: PlayerId) => (v.winner === null ? undefined : v.winner === 'draw' ? 'draw' : v.winner === p ? 'win' : 'lose');
   const shown = pinned ?? inspect;
   const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} />;

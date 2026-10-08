@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: resolved
 
 # 播放：讓播放模組直接交出「呈現」
 
@@ -26,22 +26,23 @@ Status: ready-for-agent
 ```ts
 interface Presentation {
   view: GameView | null     // 此刻該顯示的桌面
-  changes?: StatChanges     // 相對上一個顯示的桌面；開局抽牌不算
+  changes?: StatChanges     // 這一格相對上一個顯示的桌面；換格時算一次，開局抽牌不算
   fx?: FrameFx
   fxKey: number             // 第幾個播放的影格，同一種特效要能重播
   caption?: string
   hits: [Hit | undefined, Hit | undefined]   // 傷害震動，延遲已乘上速度
   playing: boolean          // 有一個影格正在播
-  settled: boolean          // 播完且沒有空檔
+  settled: boolean          // 播完且沒有空檔；既不在播也不是播完就是空檔
   scale: number
 }
 
 class Playback {
-  ingest(batch, speed): void          // 新批次進佇列；速度關閉時丟棄
-  advance(speed): number | null       // 計時到了，換下一格；回傳要停留的毫秒，佇列空了回 null
+  readonly version: number            // 內部狀態每改變一次加一，呈現依賴它重算
+  ingest(batch, speed): number | null // 新批次進佇列，速度關閉時丟棄；若因此開始播第一格，回傳停留毫秒
+  advance(speed): number | null       // 計時到了，換下一格並算出這一格的數值變化；回傳停留毫秒，佇列空了回 null
   skip(): void
   reset(): void                       // 卸載時重置，重新掛載會重播同一批
-  present(batch, final): Presentation // 純函式，只讀不寫
+  present(batch, final, speed): Presentation // 純函式，只讀不寫
   settle(p: Presentation): void       // 渲染之後記下「上一個顯示的桌面」（空檔不記）
 }
 ```

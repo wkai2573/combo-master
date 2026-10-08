@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { flightTiming } from '../src/engine/flights';
 import { frameFor, viewFor, type Frame } from '../src/engine/view';
-import { Playback, SCALE } from '../src/ui/playback';
+import { Playback, SCALE, type Presentation } from '../src/ui/playback';
 import { scenario } from './helpers';
 
 /** 真實的開局影格與最終桌面 */
@@ -12,6 +12,8 @@ function opening() {
 }
 const { frames, final } = opening();
 const batch = (id: number, fs: Frame[] = frames) => ({ id, frames: fs });
+/** 新一批影格剛到、還沒開始播的空檔：既不在播放，也還沒播完 */
+const isGap = (p: Presentation) => !p.playing && !p.settled;
 const withFx = (f: Frame, fx: Frame['fx'], ms = f.ms): Frame => ({ ...f, fx, ms });
 
 describe('播放：依序播放', () => {
@@ -90,7 +92,7 @@ describe('播放：依序播放', () => {
     const pb = new Playback();
     expect(pb.ingest(batch(1), 'off')).toBeNull();
     const p = pb.present(batch(1), final, 'off');
-    expect(p.gap).toBe(false);
+    expect(isGap(p)).toBe(false);
     expect(p.settled).toBe(true);
     expect(p.view).toBe(final);
     expect(p.scale).toBe(0);
@@ -101,7 +103,7 @@ describe('播放：依序播放', () => {
   it('沒有影格的批次（例如只有作弊）不播放也不是空檔', () => {
     const pb = new Playback();
     const empty = batch(1, []);
-    expect(pb.present(empty, final, 'normal').gap).toBe(false);
+    expect(isGap(pb.present(empty, final, 'normal'))).toBe(false);
     expect(pb.ingest(empty, 'normal')).toBeNull();
     expect(pb.present(empty, final, 'normal').settled).toBe(true);
   });
@@ -119,7 +121,7 @@ describe('播放：空檔', () => {
   it('批次到了但還沒開始播：沒有上一桌時取第一格的桌面，不能閃出最終桌面', () => {
     const pb = new Playback();
     const p = pb.present(batch(1), final, 'normal');
-    expect(p.gap).toBe(true);
+    expect(isGap(p)).toBe(true);
     expect(p.settled).toBe(false);
     expect(p.playing).toBe(false);
     expect(p.view).not.toBe(final);
@@ -132,7 +134,7 @@ describe('播放：空檔', () => {
     const before = pb.present(undefined, final, 'normal');
     pb.settle(before);
     const gap = pb.present(batch(1), final, 'normal');
-    expect(gap.gap).toBe(true);
+    expect(isGap(gap)).toBe(true);
     expect(gap.view).toEqual({ ...final, prompt: null, waitingFor: null });
   });
 
@@ -158,6 +160,64 @@ describe('播放：沒有上一桌時的空檔', () => {
     pb.settle(pb.present(arrived, final, 'normal')); // 空檔
     pb.ingest(arrived, 'normal');
     expect(pb.present(arrived, final, 'normal').changes).toBeUndefined();
+  });
+});
+
+describe('播放：同一格重新計算', () => {
+  const k = frames.findIndex((f) => f.fx.type !== 'deal');
+  const arrived = batch(1, [frames[k], frames[k]]);
+
+  it('數值變化是這一格的固定屬性：渲染後 settle、換速度、重算都不會變成全零', () => {
+    const pb = new Playback();
+    const oldView = { ...final, players: [{ ...final.players[0], deckCount: final.players[0].deckCount + 7 }, final.players[1]] as typeof final.players };
+    pb.settle(pb.present(undefined, oldView, 'normal'));
+    pb.ingest(arrived, 'normal');
+    const first = pb.present(arrived, final, 'normal');
+    expect(first.changes!.life[0]).not.toBe(0);
+    pb.settle(first);
+    expect(pb.present(arrived, final, 'normal').changes).toEqual(first.changes);
+    expect(pb.present(arrived, final, 'fast').changes).toEqual(first.changes);
+  });
+
+  it('播放中又來新批次並 settle：目前這一格的呈現不變', () => {
+    const pb = new Playback();
+    pb.ingest(arrived, 'normal');
+    pb.settle(pb.present(arrived, final, 'normal'));
+    const next = batch(2, [withFx(frames[0], { type: 'step' })]);
+    pb.ingest(next, 'normal');
+    const p = pb.present(next, final, 'normal');
+    expect(p.fx).toEqual(frames[k].fx);
+    expect(p.fxKey).toBe(1);
+    pb.settle(p);
+    expect(pb.present(next, final, 'normal').fxKey).toBe(1);
+  });
+});
+
+describe('播放：版本', () => {
+  it('狀態改變才加一：收到新批次、換格、跳過、重置', () => {
+    const pb = new Playback();
+    const v0 = pb.version;
+    pb.ingest(batch(1, [frames[0], frames[0]]), 'normal');
+    const v1 = pb.version;
+    expect(v1).toBeGreaterThan(v0);
+    pb.advance('normal');
+    const v2 = pb.version;
+    expect(v2).toBeGreaterThan(v1);
+    pb.skip();
+    const v3 = pb.version;
+    expect(v3).toBeGreaterThan(v2);
+    pb.reset();
+    expect(pb.version).toBeGreaterThan(v3);
+  });
+
+  it('沒有變化就不變：重複的批次編號、沒有東西可跳過', () => {
+    const pb = new Playback();
+    pb.ingest(batch(1, [frames[0]]), 'normal');
+    pb.skip();
+    const v = pb.version;
+    pb.ingest(batch(1, [frames[0]]), 'normal');
+    pb.skip();
+    expect(pb.version).toBe(v);
   });
 });
 
