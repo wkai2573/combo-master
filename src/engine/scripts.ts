@@ -300,7 +300,7 @@ function turnStartWindowEffects(g: GameCtx, p: PlayerId): WindowEffect[] {
   return out;
 }
 
-/** 收招時的效果（進收招時的觸發窗口）：冰與雷之曲（[蓋3] 戰鬥區的卡合計具有「冰」「雷」兩個特徵時，抽 1、回復 1；一張卡兩個特徵或兩張各一個都算） */
+/** 收招時的效果（進收招時的觸發窗口）：冰與雷之曲（[蓋3] 戰鬥區的卡合計具有「冰」「電」兩個特徵時，抽 1、回復 1；一張卡兩個特徵或兩張各一個都算） */
 export function* onPassEffects(g: GameCtx, p: PlayerId): Gen {
   const song = Z(g, p, 'gear').find((c) => c.id === '冰與雷之曲');
   if (!song) return;
@@ -308,7 +308,7 @@ export function* onPassEffects(g: GameCtx, p: PlayerId): Gen {
   yield* triggerWindow(g, p, '收招時', [
     {
       label: '【冰與雷之曲】抽 1，回復 1（蓋3）',
-      available: () => song.zone === 'gear' && has(['冰']) && has(['雷']) && canPay(g, p, { cover: 3 }),
+      available: () => song.zone === 'gear' && has(['冰']) && has(['電']) && canPay(g, p, { cover: 3 }),
       *run(confirmed) {
         if (!(yield* optionalPay(g, p, song, { cover: 3 }, !confirmed))) return;
         yield* draw(g, p, 1);

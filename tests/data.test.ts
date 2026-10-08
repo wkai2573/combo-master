@@ -114,8 +114,8 @@ describe('卡表同步的新卡進組牌卡池', () => {
     }
   });
 
-  it('電弧的特徵是法術與雷；四張商人卡的特徵是貿易', () => {
-    expect(getCard('電弧').traits).toEqual(['法術', '雷']);
+  it('電弧的特徵是法術與電；四張商人卡的特徵是貿易', () => {
+    expect(getCard('電弧').traits).toEqual(['法術', '電']);
     for (const id of ['低價買進', '高價賣出', '交涉', '即時停損']) expect(getCard(id).traits, id).toEqual(['貿易']);
   });
 });

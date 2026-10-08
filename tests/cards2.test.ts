@@ -458,7 +458,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'exp')[0].covered).toBe(true);
   });
 
-  it('冰與雷之曲：收招時戰鬥區有「冰」「雷」特徵的卡各 1 張，才可蓋 3 抽 1、回復 1', () => {
+  it('冰與雷之曲：收招時戰鬥區有「冰」「電」特徵的卡各 1 張，才可蓋 3 抽 1、回復 1', () => {
     const g = scenario({
       phase: '先手',
       singlePhase: true,
@@ -589,8 +589,8 @@ describe('卡表同步的新卡：高利貸、狙擊蓄力、熔岩之擊', () =
   });
 });
 
-describe('冰與雷之曲：戰鬥區的卡合計具有冰與雷兩個特徵', () => {
-  // 以暫時改動特徵來驗證：一張卡同時有冰與雷、電不再當作雷
+describe('冰與雷之曲：戰鬥區的卡合計具有冰與電兩個特徵', () => {
+  // 以暫時改動特徵來驗證：一張卡同時有冰與電、雷不再當作電
   const withTraits = (id: string, traits: string[], run: () => void) => {
     const card = getCard(id);
     const saved = [...card.traits];
@@ -614,21 +614,21 @@ describe('冰與雷之曲：戰鬥區的卡合計具有冰與雷兩個特徵', (
     return g;
   };
 
-  it('兩張卡各有一個特徵算符合；電弧的特徵是雷', () => {
-    expect(getCard('電弧').traits).toContain('雷');
+  it('兩張卡各有一個特徵算符合；電弧的特徵是電', () => {
+    expect(getCard('電弧').traits).toContain('電');
     expect(song(['冰霜護甲', '電弧']).pending!.title).toContain('冰與雷之曲');
   });
 
-  it('一張卡同時有冰與雷也算符合', () => {
-    withTraits('冰霜護甲', ['法術', '冰', '雷'], () => {
+  it('一張卡同時有冰與電也算符合', () => {
+    withTraits('冰霜護甲', ['法術', '冰', '電'], () => {
       expect(song(['冰霜護甲']).pending!.title).toContain('冰與雷之曲');
     });
   });
 
-  it('只有冰或只有雷不算；電不再當作雷', () => {
+  it('只有冰或只有電不算；雷不再當作電', () => {
     expect(song(['冰霜護甲']).pending).toBeNull();
     expect(song(['電弧']).pending).toBeNull();
-    withTraits('電弧', ['法術', '電'], () => {
+    withTraits('電弧', ['法術', '雷'], () => {
       expect(song(['冰霜護甲', '電弧']).pending).toBeNull();
     });
   });
