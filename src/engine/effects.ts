@@ -114,7 +114,10 @@ export interface Effects {
   query<K extends QueryKey>(g: GameCtx, p: PlayerId, key: K, ...args: QueryArgs[K]): Queries[K];
   moveRules(cardId: string): Readonly<MoveRules>;
   hasEffect(id: string): boolean;
-  /** 這張卡有沒有放在經驗區的效果（表側在經驗區時才有效果）。畫面高亮與高利貸數張數以此為準 */
+  /**
+   * 這張卡有沒有放在經驗區的效果（表側在經驗區時才有效果）。畫面高亮與高利貸數張數以此為準。
+   * 一張卡的效果登記在單一放置位置；將來若有卡同時有經驗效果與其他位置的效果，要先擴充登記表，一致性測試會提醒
+   */
   hasExpEffect(id: string): boolean;
 }
 

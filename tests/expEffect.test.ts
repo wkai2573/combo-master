@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_CARDS, getCard } from '../src/data/cards';
 import { isCardEnabled } from '../src/data/enabledCards';
 import { createEffects, hasExpEffect } from '../src/engine/effects';
+import { allSources } from '../src/engine/sources';
 import { defineSource } from '../src/engine/effectKit';
 import { expEffectActive } from '../src/ui/components/CardFace';
 
@@ -50,6 +51,13 @@ describe('經驗效果：卡文與登記表一致', () => {
   it('每張開放的卡與 Ex 卡：卡文帶 [經] 標籤，登記表就有放在經驗區的條目', () => {
     const mismatch = cards.filter((c) => textSaysExpEffect(c.id) !== hasExpEffect(c.id)).map((c) => c.id);
     expect(mismatch).toEqual([]);
+  });
+
+  it('反方向：登記在經驗區的條目，對應的卡卡文都帶 [經] 標籤', () => {
+    const exp = allSources().filter((s) => s.at === 'exp');
+    expect(exp.length).toBeGreaterThan(0);
+    const wrong = exp.filter((s) => !ALL_CARDS.some((c) => c.id === s.id) || !textSaysExpEffect(s.id)).map((s) => s.id);
+    expect(wrong).toEqual([]);
   });
 
   it('讀卡文的判斷本身：轉述別張卡的 [經] 說明不算，引用 [經] 的說明不算', () => {
