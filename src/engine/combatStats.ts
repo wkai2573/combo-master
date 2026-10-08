@@ -13,6 +13,7 @@ export interface CombatStatsBreakdown {
   pursuitAtk: number;
   pursuitDef: number;
   flagBonusAtk: number;
+  flagBonusDef: number;
   vanillaBonus: number;
   charBonusAtk: number;
   charBonusDef: number;
@@ -103,13 +104,14 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
   }
 
   const flagBonusAtk = g.state.flags.atkBonus[p];
+  const flagBonusDef = g.state.flags.defBonus[p];
   const vanillaBonus = g.state.flags.vanillaBoost[p] * vanillaCount(g, p);
 
   // 基礎攻擊力（未加角色被動前）
   let baseAtk = combatZoneAtk + topBonusAtk + pursuitAtk + flagBonusAtk + vanillaBonus;
   baseAtk = Math.max(0, baseAtk);
 
-  let baseDef = combatZoneDef + pursuitDef + vanillaBonus;
+  let baseDef = Math.max(0, combatZoneDef + pursuitDef + flagBonusDef + vanillaBonus);
 
   // 角色專屬攻防修正
   const charId = g.state.players[p].charId;
@@ -143,6 +145,7 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
       pursuitAtk,
       pursuitDef,
       flagBonusAtk,
+      flagBonusDef,
       vanillaBonus,
       charBonusAtk,
       charBonusDef,

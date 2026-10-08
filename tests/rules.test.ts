@@ -196,21 +196,23 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(totalDef(g, 1)).toBe(defOf('黑桃1') + defOf('黑桃3') + 1);
   });
 
-  it('戒備打擊（劍士）：[頂] 總防禦 +2，只有在最上方時才算', () => {
+  it('戒備打擊（劍士）：[頂] 總攻擊 +2、總防禦 +2，只有在最上方時才算', () => {
     const g = scenario();
     setZones(g, 0, { combat: ['黑桃1', '戒備打擊'] });
     expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('戒備打擊') + 2);
+    expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('戒備打擊') + 2);
     setZones(g, 0, { combat: ['戒備打擊', '黑桃1'] });
     expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('戒備打擊'));
+    expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('戒備打擊'));
   });
 
 
-  it('伏擊（盜賊）：[先] 作為先手步驟出招時，此回合總攻擊 +2；不是先手步驟就沒有', () => {
+  it('伏擊（盜賊）：[先] 作為先手步驟出招時，此回合總攻擊 +4；不是先手步驟就沒有', () => {
     const g = scenario({ chars: ['刺客', '勇者'], p0: { hand: ['伏擊', '黑桃3'] }, p1: { hand: ['黑桃5'] } });
     expect(g.pending!.options.map((o) => o.label)).toContain('伏擊');
     pick(g, '伏擊');
-    expect(g.state.flags.atkBonus[0]).toBe(2);
-    expect(totalAtk(g, 0)).toBe(atkOf('伏擊') + 2);
+    expect(g.state.flags.atkBonus[0]).toBe(4);
+    expect(totalAtk(g, 0)).toBe(atkOf('伏擊') + 4);
 
     const g2 = scenario({ first: 1, chars: ['勇者', '刺客'], p0: { hand: ['伏擊'] }, p1: { hand: ['黑桃5'] } });
     pick(g2, '伏擊'); // 玩家1 先攻只有一張牌、自動先手出招；玩家0 後攻反擊，不是先手步驟

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { aimLimit, pursuitCount, returnStep, totalAtk, totalDef } from '../src/engine/combat';
 import { discard, optionalPay, pay, Z } from '../src/engine/ops';
 import { scripts } from '../src/engine/scripts';
+import { getCard } from '../src/data/cards';
 import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
 
 const filler = Array(20).fill('黑桃2') as string[];
@@ -160,7 +161,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'rage')).toHaveLength(8 - 3 - 1);
   });
 
-  it('順手牽羊：[先_蓋X] 抽 X，此回合總攻擊 −X（X ≤ 2）', () => {
+  it('順手牽羊：[發_蓋X] 抽 X，此回合總防禦 −X（X ≤ 2），不影響總攻擊', () => {
     const g = scenario({
       chars: ['刺客', '勇者'],
       p0: { hand: ['順手牽羊', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5'] },
@@ -169,9 +170,25 @@ describe('新卡（第二批）', () => {
     pick(g, '順手牽羊');
     expect(g.pending!.options.map((o) => o.label)).toEqual(['不發動', '蓋1', '蓋2']);
     pick(g, '蓋2');
-    expect(g.state.flags.atkBonus[0]).toBe(-2);
+    expect(g.state.flags.defBonus[0]).toBe(-2);
+    expect(g.state.flags.atkBonus[0]).toBe(0);
     expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(2);
     expect(Z(g, 0, 'hand')).toHaveLength(4); // 打出後剩 1 張＋抽 2＋抽牌階段抽 1
+  });
+
+  it('順手牽羊：[發] 在反擊步驟打出也能發動；總防禦最低為 0', () => {
+    const g = scenario({
+      chars: ['勇者', '刺客'],
+      p0: { hand: ['黑桃5', '黑桃4'] },
+      p1: { hand: ['順手牽羊', '黑桃6'], exp: ['黑桃3', '黑桃4'], deck: ['黑桃7', ...filler] },
+    });
+    pick(g, '黑桃5');
+    pick(g, '順手牽羊');
+    pick(g, '蓋1');
+    expect(g.state.flags.defBonus[1]).toBe(-1);
+    expect(totalDef(g, 1)).toBe(defOf('順手牽羊') - 1);
+    g.state.flags.defBonus[1] = -99;
+    expect(totalDef(g, 1)).toBe(0);
   });
 
   it('交涉：[發_蓋X] 抽 X，再放 X 張手牌到牌組底', () => {
@@ -278,7 +295,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'exp')[0].covered).toBe(true);
   });
 
-  it('卸除鎧甲：[先_蓋2] 把對方 1 張裝備或增益送入棄牌區', () => {
+  it('卸除鎧甲：[發_蓋2] 把對方 1 張裝備或增益送入棄牌區', () => {
     const g = scenario({
       chars: ['刺客', '勇者'],
       p0: { hand: ['卸除鎧甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5'] },
@@ -288,6 +305,26 @@ describe('新卡（第二批）', () => {
     pick(g, '發動'); // 對方只有 1 張裝備，自動選它
     expect(names(g, 1, 'discard')).toContain('瞄準器');
     expect(Z(g, 1, 'gear')).toHaveLength(0);
+  });
+
+  it('卸除鎧甲：[發] 在反擊步驟打出也能發動；對方沒有裝備與增益時不詢問', () => {
+    const g = scenario({
+      chars: ['勇者', '刺客'],
+      p0: { hand: ['黑桃5'], gear: ['瞄準器'] },
+      p1: { hand: ['卸除鎧甲', '黑桃6'], exp: ['黑桃3', '黑桃4', '黑桃7'] },
+    });
+    pick(g, '卸除鎧甲');
+    pick(g, '發動');
+    expect(names(g, 0, 'discard')).toContain('瞄準器');
+
+    const none = scenario({
+      chars: ['勇者', '刺客'],
+      p0: { hand: ['黑桃5'] },
+      p1: { hand: ['卸除鎧甲', '黑桃6'], exp: ['黑桃3', '黑桃4', '黑桃7'] },
+    });
+    pick(none, '卸除鎧甲');
+    expect(none.pending?.title ?? '').not.toContain('卸除鎧甲');
+    expect(Z(none, 1, 'exp').filter((c) => c.covered)).toHaveLength(0);
   });
 
   it('火球：[先_蓋3] 對方直擊 2', () => {
@@ -514,5 +551,50 @@ describe('卡表同步的新卡：高利貸、狙擊蓄力、熔岩之擊', () =
     pick(decline, '不發動');
     expect(Z(decline, 0, 'rage')).toHaveLength(3);
     expect(Z(decline, 1, 'discard')).toHaveLength(0);
+  });
+});
+
+describe('冰與雷之曲：戰鬥區的卡合計具有冰與雷兩個特徵', () => {
+  // 以暫時改動特徵來驗證：一張卡同時有冰與雷、電不再當作雷
+  const withTraits = (id: string, traits: string[], run: () => void) => {
+    const card = getCard(id);
+    const saved = [...card.traits];
+    card.traits.splice(0, card.traits.length, ...traits);
+    try {
+      run();
+    } finally {
+      card.traits.splice(0, card.traits.length, ...saved);
+    }
+  };
+  const song = (combat: string[]) => {
+    const g = scenario({
+      phase: '先手',
+      singlePhase: true,
+      p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], combat, rage: ['黑桃4'] },
+      p1: { hand: ['黑桃9'] },
+    });
+    pick(g, '黑桃1');
+    pick(g, '黑桃9');
+    pick(g, '收招');
+    return g;
+  };
+
+  it('兩張卡各有一個特徵算符合；電弧的特徵是雷', () => {
+    expect(getCard('電弧').traits).toContain('雷');
+    expect(song(['冰霜護甲', '電弧']).pending!.title).toContain('冰與雷之曲');
+  });
+
+  it('一張卡同時有冰與雷也算符合', () => {
+    withTraits('冰霜護甲', ['法術', '冰', '雷'], () => {
+      expect(song(['冰霜護甲']).pending!.title).toContain('冰與雷之曲');
+    });
+  });
+
+  it('只有冰或只有雷不算；電不再當作雷', () => {
+    expect(song(['冰霜護甲']).pending).toBeNull();
+    expect(song(['電弧']).pending).toBeNull();
+    withTraits('電弧', ['法術', '電'], () => {
+      expect(song(['冰霜護甲', '電弧']).pending).toBeNull();
+    });
   });
 });

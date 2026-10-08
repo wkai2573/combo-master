@@ -37,16 +37,16 @@ export interface CardScript {
 }
 
 export const scripts: Record<string, CardScript> = {
-  // 戒備打擊（劍士）：[頂] 我方總防禦 +2
-  戒備打擊: { defMod: 2 },
+  // 戒備打擊（劍士）：[頂] 我方總攻擊 +2，總防禦 +2
+  戒備打擊: { atkMod: 2, defMod: 2 },
   // 魅影射擊（弓箭手）：[追] 作為追擊卡時防禦力也計入總防禦
   魅影射擊: { pursuitDefBonus: 4 },
-  // 伏擊（盜賊）：[先] 此回合我方總攻擊 +2
+  // 伏擊（盜賊）：[先] 此回合我方總攻擊 +4
   伏擊: {
     *onOpen(g, p, card) {
       activate(g, p, card);
-      g.state.flags.atkBonus[p] += 2;
-      log(g, '【伏擊】此回合總攻擊 +2');
+      g.state.flags.atkBonus[p] += 4;
+      log(g, '【伏擊】此回合總攻擊 +4');
     },
   },
   // 低價買進（商人）：[經] 此卡被蓋成裏側時，回復 3
@@ -72,16 +72,16 @@ export const scripts: Record<string, CardScript> = {
   },
   // 二刀連擊（盜賊）：[頂] 戰鬥區只有此卡時，追擊 +1
   二刀連擊: { soloPursuitPlus: 1 },
-  // 順手牽羊（盜賊）：[先_蓋X] 抽X，此回合我方總攻擊 -X。X 最大為 2
+  // 順手牽羊（盜賊）：[發_蓋X] 抽X，此回合我方總防禦 -X。X 最大為 2
   順手牽羊: {
-    *onOpen(g, p, card) {
-      const x = yield* chooseX(g, p, card, 2, '蓋 X 張經驗，抽 X，此回合總攻擊 −X');
+    *onPlay(g, p, card) {
+      const x = yield* chooseX(g, p, card, 2, '蓋 X 張經驗，抽 X，此回合總防禦 −X');
       if (x === 0) return;
       activate(g, p, card);
       yield* payCover(g, p, x);
       yield* draw(g, p, x);
-      g.state.flags.atkBonus[p] -= x;
-      log(g, `【順手牽羊】抽 ${x}，此回合總攻擊 −${x}`);
+      g.state.flags.defBonus[p] -= x;
+      log(g, `【順手牽羊】抽 ${x}，此回合總防禦 −${x}`);
     },
   },
   // 交涉（商人）：[發_蓋X] 抽X，再將 X 張手牌放到牌組底。X 最大為 3
@@ -128,9 +128,9 @@ export const scripts: Record<string, CardScript> = {
   },
   // 凡骨的意志（劍士）：[經] 回合開始時強制蓋 1，此回合總攻擊 +X、總防禦 +X（見 turnStartEffects）
   凡骨的意志: {},
-  // 卸除鎧甲（盜賊）：[先_蓋2] 選擇對方 1 張裝備或增益卡，送入棄牌區
+  // 卸除鎧甲（盜賊）：[發_蓋2] 選擇對方 1 張裝備或增益卡，送入棄牌區
   卸除鎧甲: {
-    *onOpen(g, p, card) {
+    *onPlay(g, p, card) {
       const targets = [...Z(g, other(p), 'gear'), ...Z(g, other(p), 'buff')];
       if (targets.length === 0) return;
       if (!(yield* optionalPay(g, p, card, { cover: 2 }))) return;
@@ -269,12 +269,12 @@ export function* turnStartEffects(g: GameCtx): Gen {
   }
 }
 
-/** 收招時的效果：冰與雷之曲（[蓋3] 戰鬥區有「冰」「雷」特徵的卡各至少 1 張時，抽 1、回復 1） */
+/** 收招時的效果：冰與雷之曲（[蓋3] 戰鬥區的卡合計具有「冰」「雷」兩個特徵時，抽 1、回復 1；一張卡兩個特徵或兩張各一個都算） */
 export function* onPassEffects(g: GameCtx, p: PlayerId): Gen {
   const song = Z(g, p, 'gear').find((c) => c.id === '冰與雷之曲');
   if (!song) return;
   const has = (traits: string[]) => Z(g, p, 'combat').some((c) => data(c).traits.some((t) => traits.includes(t)));
-  if (!has(['冰']) || !has(['雷', '電'])) return;
+  if (!has(['冰']) || !has(['雷'])) return;
   if (!(yield* optionalPay(g, p, song, { cover: 3 }))) return;
   yield* draw(g, p, 1);
   recover(g, p, 1);
