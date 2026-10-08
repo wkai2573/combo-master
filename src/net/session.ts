@@ -2,11 +2,11 @@ import Peer, { type DataConnection } from 'peerjs';
 import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
 import type { CheatSnapshot, CheatZone } from '../engine/cheat';
-import { Game } from '../engine/game';
 import { Rng } from '../engine/rng';
-import { frameFor, viewFor, type Frame, type GameView } from '../engine/view';
+import type { Frame, GameView } from '../engine/view';
 import type { PlayerId } from '../engine/types';
-import { CheatHub } from './cheatHub';
+import { peerTransport, type HostLink, type HostTransport, type Room } from './hostTransport';
+import { Match, type MatchUpdate, type SeatUpdate } from './match';
 import {
   FORFEIT_AFTER_S, OFFLINE_AFTER_MS, PING_EVERY_MS, peerIdOf, randomRoomCode,
   type CheatOp, type ClientMsg, type DeckPayload, type HostMsg,
@@ -101,66 +101,56 @@ abstract class Base implements Session {
 
 export class LocalSession extends Base {
   readonly me: PlayerId = 0;
-  private game: Game;
+  private match: Match;
   private rng = new Rng();
   private timer: ReturnType<typeof setTimeout> | undefined;
   private closed = false;
 
-  private hub: CheatHub;
-
   readonly cheat: CheatApi = makeCheatApi({
-    setOn: (on) => {
-      this.hub.setOn(0, on);
-      this.publish();
-    },
-    snapshot: () => this.hub.snapshotFor(0),
+    setOn: (on) => this.publish(this.match.cheatSwitch(0, on)),
+    snapshot: () => this.match.cheatSnapshot(0),
     run: async (op) => {
-      const err = this.hub.apply(0, op);
-      if (!err) this.publish();
-      return err;
+      const r = this.match.cheat(0, op);
+      if (!r.error) this.publish(r.update);
+      return r.error;
     },
     closed: () => this.closed,
   });
 
   constructor(mine: DeckPayload, theirs: DeckPayload) {
     super();
-    this.game = new Game({ decks: [mine, theirs], animate: true });
-    this.hub = new CheatHub(this.game);
-    this.sync();
+    this.match = new Match([mine, theirs]);
+    this.sync(this.match.flush());
   }
 
   submit(keys: string[]) {
     if (this.closed) return;
-    try {
-      this.game.submit(0, keys);
-    } catch (e) {
-      this.set({ message: (e as Error).message });
+    const r = this.match.submit(0, keys);
+    if (r.error) {
+      this.set({ message: r.error });
       return;
     }
-    this.sync();
+    this.sync(r.update);
   }
 
   /** 只更新畫面：不重設機器人的出招計時，連續作弊也不會讓它一直等 */
-  private publish() {
-    const g = this.game;
+  private publish([mine]: MatchUpdate) {
     this.set({
-      status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '', cheatOn: [...this.hub.on],
-      batch: this.nextBatch(g.drainFrames().map((f) => frameFor(f, 0))),
+      status: this.match.over ? 'over' : 'playing', view: mine.view, message: '', cheatOn: mine.cheatOn,
+      batch: this.nextBatch(mine.frames),
     });
   }
 
-  private sync() {
-    const g = this.game;
-    const frames = g.drainFrames().map((f) => frameFor(f, 0));
-    this.set({
-      status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '', batch: this.nextBatch(frames),
-    });
+  private sync(update: MatchUpdate) {
+    this.publish(update);
     clearTimeout(this.timer);
-    if (!g.over && g.pending?.player === 1) {
+    const m = this.match;
+    if (!m.over && m.pending?.player === 1) {
       this.timer = setTimeout(() => {
-        if (this.closed || !g.pending || g.pending.player !== 1) return;
-        g.submit(1, botChoice(g.pending, this.rng));
-        this.sync();
+        if (this.closed || m.pending?.player !== 1) return;
+        const r = m.submit(1, botChoice(m.pending, this.rng));
+        if (r.error) throw new Error(`機器人的出招不合法：${r.error}`);
+        this.sync(r.update);
       }, 900);
     }
   }
@@ -175,10 +165,9 @@ export class LocalSession extends Base {
 
 export class HostSession extends Base {
   readonly me: PlayerId = 0;
-  private peer: Peer | undefined;
-  private conn: DataConnection | undefined;
-  private game: Game | undefined;
-  private hub: CheatHub | undefined;
+  private room: Room | undefined;
+  private link: HostLink | undefined;
+  private match: Match | undefined;
   private guestSeen = 0;
   private offlineTimer: ReturnType<typeof setInterval> | undefined;
   private watchTimer: ReturnType<typeof setInterval> | undefined;
@@ -188,139 +177,123 @@ export class HostSession extends Base {
 
   readonly cheat: CheatApi = makeCheatApi({
     setOn: (on) => {
-      this.hub?.setOn(0, on);
-      this.pushViews();
+      if (this.match) this.push(this.match.cheatSwitch(0, on));
     },
-    snapshot: () => this.hub?.snapshotFor(0) ?? null,
+    snapshot: () => this.match?.cheatSnapshot(0) ?? null,
     run: async (op) => {
-      const err = this.hub ? this.hub.apply(0, op) : '遊戲還沒開始';
-      if (!err) this.pushViews();
-      return err;
+      if (!this.match) return '遊戲還沒開始';
+      const r = this.match.cheat(0, op);
+      if (!r.error) this.push(r.update);
+      return r.error;
     },
     closed: () => this.left,
   });
 
-  constructor(private deck: DeckPayload) {
+  constructor(private deck: DeckPayload, private transport: HostTransport = peerTransport) {
     super();
     this.open();
   }
 
   private open() {
     const code = randomRoomCode();
-    const peer = new Peer(peerIdOf(code));
-    this.peer = peer;
-    peer.on('open', () => this.set({ status: 'waiting', roomCode: code, message: '等待朋友加入…' }));
-    peer.on('connection', (conn) => this.onConnection(conn));
-    peer.on('error', (err: Error & { type?: string }) => {
-      if (err.type === 'unavailable-id' && this.attempts++ < 5) {
-        peer.destroy();
-        this.open();
-        return;
-      }
-      this.set({ status: 'error', message: `連線服務發生錯誤（${err.type ?? err.message}）` });
+    this.room = this.transport.host(code, {
+      opened: () => this.set({ status: 'waiting', roomCode: code, message: '等待朋友加入…' }),
+      connection: (link) => this.onConnection(link),
+      failed: (error) => {
+        if (error.kind === 'taken' && this.attempts++ < 5) {
+          this.room?.close();
+          this.open();
+          return;
+        }
+        this.set({ status: 'error', message: `連線服務發生錯誤（${error.kind === 'taken' ? 'unavailable-id' : error.detail}）` });
+      },
     });
     this.watchTimer ??= setInterval(() => this.watch(), 1000);
   }
 
-  private onConnection(conn: DataConnection) {
-    if (this.conn?.open || this.game) {
-      conn.on('open', () => {
-        conn.send({ t: 'reject', reason: '房間已滿或遊戲已開始' } satisfies HostMsg);
-        setTimeout(() => conn.close(), 300);
+  private onConnection(link: HostLink) {
+    if (this.link?.open || this.match) {
+      link.onOpen(() => {
+        link.send({ t: 'reject', reason: '房間已滿或遊戲已開始' });
+        setTimeout(() => link.close(), 300);
       });
       return;
     }
-    this.conn = conn;
-    conn.on('data', (raw) => this.onData(conn, raw as ClientMsg));
-    conn.on('close', () => {
-      if (this.conn !== conn) return;
-      if (this.game) this.markOffline();
-      else this.conn = undefined; // 還沒開局就離開：房間重新開放
+    this.link = link;
+    link.onMessage((msg) => this.onData(link, msg));
+    link.onClose(() => {
+      if (this.link !== link) return;
+      if (this.match) this.markOffline();
+      else this.link = undefined; // 還沒開局就離開：房間重新開放
     });
   }
 
-  private onData(conn: DataConnection, msg: ClientMsg) {
+  private onData(link: HostLink, msg: ClientMsg) {
     this.guestSeen = Date.now();
     if (msg.t === 'ping') {
-      conn.send({ t: 'pong' } satisfies HostMsg);
+      link.send({ t: 'pong' });
       if (this.forfeitLeft !== null) this.markOnline();
       return;
     }
-    if (msg.t === 'hello' && !this.game) {
+    if (msg.t === 'hello' && !this.match) {
       const check = validateDeck(msg.deck.charId, msg.deck.cards);
       if (!check.ok) {
-        conn.send({ t: 'reject', reason: `牌組不合法：${check.errors[0]}` } satisfies HostMsg);
+        link.send({ t: 'reject', reason: `牌組不合法：${check.errors[0]}` });
         return;
       }
-      this.game = new Game({ decks: [this.deck, msg.deck], animate: true });
-      this.hub = new CheatHub(this.game);
-      this.pushViews();
+      this.match = new Match([this.deck, msg.deck]);
+      this.push(this.match.flush());
       return;
     }
-    if (msg.t === 'cheat' && this.hub) {
-      // 操作者以連線身分為準：訪客只能開關自己的作弊模式
-      this.hub.setOn(1, !!msg.on);
-      this.pushViews();
-      return;
-    }
-    if (msg.t === 'cheatOp' && this.hub) {
-      const error = this.hub.apply(1, msg.op);
-      if (error) conn.send(this.viewMsg(this.game!, []));
-      else this.pushViews();
-      conn.send({ t: 'cheatResult', id: msg.id, error } satisfies HostMsg);
-      return;
-    }
-    if (msg.t === 'submit' && this.game) {
-      try {
-        this.game.submit(1, msg.keys);
-      } catch (e) {
+    const match = this.match;
+    if (!match) return;
+    // 操作者以連線身分為準：訪客一律是玩家 B，訊息裡自稱別人也沒用
+    if (msg.t === 'cheat') {
+      this.push(match.cheatSwitch(1, !!msg.on));
+    } else if (msg.t === 'cheatOp') {
+      const r = match.cheat(1, msg.op);
+      if (r.error) link.send(viewMsg(r.update[1]));
+      else this.push(r.update);
+      link.send({ t: 'cheatResult', id: msg.id, error: r.error });
+    } else if (msg.t === 'submit') {
+      const r = match.submit(1, msg.keys);
+      if (r.error) {
         // 多半是訪客的畫面過期：告知原因，並直接補送最新狀態
-        conn.send({ t: 'reject', reason: (e as Error).message } satisfies HostMsg);
-        conn.send(this.viewMsg(this.game, []));
+        link.send({ t: 'reject', reason: r.error });
+        link.send(viewMsg(r.update[1]));
         return;
       }
-      this.pushViews();
+      this.push(r.update);
     }
   }
 
-  private pushViews() {
-    const g = this.game;
-    if (!g) return;
-    const raw = g.drainFrames();
-    const cheatOn: [boolean, boolean] = this.hub ? [...this.hub.on] : [false, false];
+  /** 房主的畫面更新，並把訪客那份送出去 */
+  private push([mine, theirs]: MatchUpdate) {
     this.set({
-      status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '', cheatOn,
-      batch: this.nextBatch(raw.map((f) => frameFor(f, 0))),
+      status: this.match?.over ? 'over' : 'playing', view: mine.view, message: '', cheatOn: mine.cheatOn,
+      batch: this.nextBatch(mine.frames),
     });
-    if (this.conn?.open) this.conn.send(this.viewMsg(g, raw.map((f) => frameFor(f, 1))));
-  }
-
-  /** 送給訪客的視角訊息：每一條路徑都走這裡，作弊的開關與檢視才不會漏。檢視只附給開啟作弊的訪客 */
-  private viewMsg(g: Game, frames: Frame[]): HostMsg {
-    return {
-      t: 'view', view: viewFor(g, 1), frames,
-      cheatOn: this.hub ? [...this.hub.on] : [false, false], cheatSnap: this.hub?.snapshotFor(1) ?? null,
-    };
+    if (this.link?.open) this.link.send(viewMsg(theirs));
   }
 
   /** 每秒檢查訪客是否仍有回應；離線後倒數判負 */
   private watch() {
-    if (!this.game || this.game.over || !this.conn) return;
+    if (!this.match || this.match.over || !this.link) return;
     if (this.forfeitLeft === null && Date.now() - this.guestSeen > OFFLINE_AFTER_MS) this.markOffline();
   }
 
   private markOffline() {
-    const g = this.game;
-    if (!g || g.over || this.forfeitLeft !== null) return;
+    const match = this.match;
+    if (!match || match.over || this.forfeitLeft !== null) return;
     this.forfeitLeft = FORFEIT_AFTER_S;
     this.set({ opponentOnline: false, forfeitIn: this.forfeitLeft });
     this.offlineTimer = setInterval(() => {
       this.forfeitLeft = (this.forfeitLeft ?? 0) - 1;
       if (this.forfeitLeft <= 0) {
         clearInterval(this.offlineTimer);
-        g.forfeit(1, `對手離線超過 ${FORFEIT_AFTER_S} 秒`);
+        const update = match.forfeit(1, `對手離線超過 ${FORFEIT_AFTER_S} 秒`);
         this.set({ opponentOnline: false, forfeitIn: null });
-        this.pushViews();
+        this.push(update);
       } else {
         this.set({ forfeitIn: this.forfeitLeft });
       }
@@ -334,28 +307,31 @@ export class HostSession extends Base {
   }
 
   submit(keys: string[]) {
-    const g = this.game;
-    if (!g) return;
-    try {
-      g.submit(0, keys);
-    } catch (e) {
-      this.set({ message: (e as Error).message });
+    if (!this.match) return;
+    const r = this.match.submit(0, keys);
+    if (r.error) {
+      this.set({ message: r.error });
       return;
     }
-    this.pushViews();
+    this.push(r.update);
   }
 
   leave() {
     this.left = true;
     clearInterval(this.offlineTimer);
     clearInterval(this.watchTimer);
-    this.conn?.close();
-    this.peer?.destroy();
+    this.link?.close();
+    this.room?.close();
   }
 
   get isLeft() {
     return this.left;
   }
+}
+
+/** 送給訪客的視角訊息：每一條路徑都走這裡，作弊的開關與檢視才不會漏。檢視只附給開啟作弊的訪客 */
+function viewMsg(seat: SeatUpdate): HostMsg {
+  return { t: 'view', view: seat.view, frames: seat.frames, cheatOn: seat.cheatOn, cheatSnap: seat.cheatSnap };
 }
 
 // ───────────────────────── 訪客 ─────────────────────────

@@ -1,40 +1,26 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { presetDeck } from '../src/data/presetDecks';
 import type { HostMsg } from '../src/net/protocol';
 import { HostSession } from '../src/net/session';
-
-// 不連真正的連線服務
-vi.mock('peerjs', () => ({
-  default: class {
-    on() {}
-    destroy() {}
-  },
-}));
-
-/** 假的連線：記下房主送出的訊息，並讓測試以訪客的身分送訊息給房主 */
-function fakeGuest() {
-  const sent: HostMsg[] = [];
-  const handlers: Record<string, (d?: unknown) => void> = {};
-  const conn = {
-    open: true,
-    send: (m: HostMsg) => void sent.push(m),
-    on: (ev: string, cb: (d?: unknown) => void) => void (handlers[ev] = cb),
-    close: () => {},
-  };
-  return { conn, sent, say: (msg: unknown) => handlers.data(msg) };
-}
+import { FakeTransport } from './fakeTransport';
 
 const hosts: HostSession[] = [];
 afterEach(() => {
   hosts.splice(0).forEach((h) => h.leave());
 });
 
+/** 房主開房，訪客連上（還沒開局） */
+function connect() {
+  const transport = new FakeTransport();
+  const host = new HostSession({ charId: '勇者', cards: presetDeck('勇者') }, transport);
+  hosts.push(host);
+  transport.ready();
+  return { host, guest: transport.connect() };
+}
+
 /** 房主與訪客連上、開局 */
 function start() {
-  const host = new HostSession({ charId: '勇者', cards: presetDeck('勇者') });
-  hosts.push(host);
-  const guest = fakeGuest();
-  (host as unknown as { onConnection(c: unknown): void }).onConnection(guest.conn);
+  const { host, guest } = connect();
   guest.say({ t: 'hello', deck: { charId: '刺客', cards: presetDeck('刺客') } });
   return { host, guest };
 }
@@ -81,7 +67,7 @@ describe('房主處理訪客的作弊訊息', () => {
   it('操作者以連線身分為準：訊息裡自稱別人也沒用', () => {
     const { host, guest } = start();
     guest.say({ t: 'cheat', on: true });
-    guest.say({ t: 'cheatOp', id: 1, by: 0, op: { k: 'add', target: 1, cardId: '黑桃9' } });
+    guest.say({ t: 'cheatOp', id: 1, by: 0, op: { k: 'add', target: 1, cardId: '黑桃9' } } as never);
     const line = host.getState().view!.log.find((l) => l.includes('將【黑桃9】加入'))!;
     expect(line).toContain('玩家B');
   });
@@ -123,15 +109,12 @@ describe('房主處理訪客的作弊訊息', () => {
   it('不合法的牌區名稱被拒絕並說明', () => {
     const { guest } = start();
     guest.say({ t: 'cheat', on: true });
-    guest.say({ t: 'cheatOp', id: 3, op: { k: 'reorder', target: 0, zone: '__proto__', uids: [] } });
+    guest.say({ t: 'cheatOp', id: 3, op: { k: 'reorder', target: 0, zone: '__proto__', uids: [] } } as never);
     expect(results(guest.sent)).toEqual([{ t: 'cheatResult', id: 3, error: '牌區不合法' }]);
   });
 
   it('遊戲開始前的作弊訊息被忽略', () => {
-    const host = new HostSession({ charId: '勇者', cards: presetDeck('勇者') });
-    hosts.push(host);
-    const guest = fakeGuest();
-    (host as unknown as { onConnection(c: unknown): void }).onConnection(guest.conn);
+    const { guest } = connect();
     guest.say({ t: 'cheat', on: true });
     guest.say({ t: 'cheatOp', id: 1, op: { k: 'add', target: 0, cardId: '黑桃9' } });
     expect(guest.sent).toEqual([]);
