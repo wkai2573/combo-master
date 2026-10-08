@@ -89,6 +89,13 @@ abstract class Base implements Session {
     this.subs.add(cb);
     return () => this.subs.delete(cb);
   };
+  /** 持有引擎的一方（單機與房主）把自己那份對局更新呈現到畫面 */
+  protected show(mine: SeatUpdate, over: boolean) {
+    this.set({
+      status: over ? 'over' : 'playing', view: mine.view, message: '', cheatOn: mine.cheatOn,
+      batch: this.nextBatch(mine.frames),
+    });
+  }
   protected set(patch: Partial<SessionState>) {
     this.s = { ...this.s, ...patch };
     this.subs.forEach((f) => f());
@@ -135,10 +142,7 @@ export class LocalSession extends Base {
 
   /** 只更新畫面：不重設機器人的出招計時，連續作弊也不會讓它一直等 */
   private publish([mine]: MatchUpdate) {
-    this.set({
-      status: this.match.over ? 'over' : 'playing', view: mine.view, message: '', cheatOn: mine.cheatOn,
-      batch: this.nextBatch(mine.frames),
-    });
+    this.show(mine, this.match.over);
   }
 
   private sync(update: MatchUpdate) {
@@ -205,7 +209,7 @@ export class HostSession extends Base {
           this.open();
           return;
         }
-        this.set({ status: 'error', message: `連線服務發生錯誤（${error.kind === 'taken' ? 'unavailable-id' : error.detail}）` });
+        this.set({ status: 'error', message: `連線服務發生錯誤（${error.detail}）` });
       },
     });
     this.watchTimer ??= setInterval(() => this.watch(), 1000);
@@ -269,10 +273,7 @@ export class HostSession extends Base {
 
   /** 房主的畫面更新，並把訪客那份送出去 */
   private push([mine, theirs]: MatchUpdate) {
-    this.set({
-      status: this.match?.over ? 'over' : 'playing', view: mine.view, message: '', cheatOn: mine.cheatOn,
-      batch: this.nextBatch(mine.frames),
-    });
+    this.show(mine, !!this.match?.over);
     if (this.link?.open) this.link.send(viewMsg(theirs));
   }
 

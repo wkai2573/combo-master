@@ -13,7 +13,7 @@ export interface HostLink {
 }
 
 /** 開房失敗的原因：房號已被占用可以換房號重試，其餘的只能回報 */
-export type RoomError = { kind: 'taken' } | { kind: 'other'; detail: string };
+export type RoomError = { kind: 'taken' | 'other'; detail: string };
 
 export interface RoomEvents {
   /** 房間開好了，朋友可以用房號加入 */
@@ -27,7 +27,10 @@ export interface Room {
   close(): void;
 }
 
-/** 房主對外的網路介面：以房號開房，並接收訪客的連線。測試用記憶體內的假實作取代 */
+/**
+ * 房主對外的網路介面：以房號開房，並接收訪客的連線。測試用記憶體內的假實作取代。
+ * 事件一律在 host 回傳之後才觸發；房間關閉後，該房間不能再觸發任何事件。
+ */
 export interface HostTransport {
   host(code: string, events: RoomEvents): Room;
 }
@@ -49,11 +52,19 @@ function linkOf(conn: DataConnection): HostLink {
 export const peerTransport: HostTransport = {
   host(code, events) {
     const peer = new Peer(peerIdOf(code));
-    peer.on('open', () => events.opened());
-    peer.on('connection', (conn) => events.connection(linkOf(conn)));
+    // 房間關掉之後，舊 Peer 殘留的事件不能作用到換房號後的新房間
+    let closed = false;
+    peer.on('open', () => closed || events.opened());
+    peer.on('connection', (conn) => closed || events.connection(linkOf(conn)));
     peer.on('error', (err: Error & { type?: string }) => {
-      events.failed(err.type === 'unavailable-id' ? { kind: 'taken' } : { kind: 'other', detail: err.type ?? err.message });
+      if (closed) return;
+      events.failed({ kind: err.type === 'unavailable-id' ? 'taken' : 'other', detail: err.type ?? err.message });
     });
-    return { close: () => peer.destroy() };
+    return {
+      close: () => {
+        closed = true;
+        peer.destroy();
+      },
+    };
   },
 };

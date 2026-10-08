@@ -42,7 +42,7 @@ describe('房主：開房', () => {
 
   it('房號被占用時換房號重試，舊的房間關掉', () => {
     const { host, transport } = open();
-    transport.fail({ kind: 'taken' });
+    transport.fail({ kind: 'taken', detail: 'unavailable-id' });
     expect(transport.rooms).toHaveLength(2);
     expect(transport.rooms[0].closed).toBe(true);
     expect(host.getState().status).toBe('connecting');
@@ -53,10 +53,10 @@ describe('房主：開房', () => {
 
   it('重試超過次數就回報錯誤', () => {
     const { host, transport } = open();
-    for (let i = 0; i < 5; i++) transport.fail({ kind: 'taken' });
+    for (let i = 0; i < 5; i++) transport.fail({ kind: 'taken', detail: 'unavailable-id' });
     expect(transport.rooms).toHaveLength(6);
     expect(host.getState().status).toBe('connecting');
-    transport.fail({ kind: 'taken' });
+    transport.fail({ kind: 'taken', detail: 'unavailable-id' });
     expect(host.getState().status).toBe('error');
     expect(host.getState().message).toContain('unavailable-id');
   });

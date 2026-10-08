@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: resolved
 
 # 對局：把持有引擎的一方抽成 Match
 
