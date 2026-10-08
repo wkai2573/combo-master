@@ -15,7 +15,7 @@ export interface CardScript {
   defMod?: number;
   /** [追] 此卡追擊判定失敗 */
   pursuitFail?: boolean;
-  /** [起] 作為起手出招時 */
+  /** [先] 作為先手步驟出招時 */
   onOpen?: (g: GameCtx, p: PlayerId, card: CardInst) => Gen;
   /** [發] 打出時 */
   onPlay?: (g: GameCtx, p: PlayerId, card: CardInst) => Gen;
@@ -40,7 +40,7 @@ export const scripts: Record<string, CardScript> = {
   戒備打擊: { defMod: 2 },
   // 魅影射擊（弓箭手）：[追] 作為追擊卡時防禦力也計入總防禦
   魅影射擊: { pursuitDefBonus: 4 },
-  // 伏擊（盜賊）：[起] 此回合我方總攻擊 +2
+  // 伏擊（盜賊）：[先] 此回合我方總攻擊 +2
   伏擊: {
     *onOpen(g, p, card) {
       activate(g, p, card);
@@ -71,7 +71,7 @@ export const scripts: Record<string, CardScript> = {
   },
   // 二刀連擊（盜賊）：[頂] 戰鬥區只有此卡時，追擊 +1
   二刀連擊: { soloPursuitPlus: 1 },
-  // 順手牽羊（盜賊）：[起_蓋X] 抽X，此回合我方總攻擊 -X。X 最大為 2
+  // 順手牽羊（盜賊）：[先_蓋X] 抽X，此回合我方總攻擊 -X。X 最大為 2
   順手牽羊: {
     *onOpen(g, p, card) {
       const x = yield* chooseX(g, p, card, 2, '蓋 X 張經驗，抽 X，此回合總攻擊 −X');
@@ -127,7 +127,7 @@ export const scripts: Record<string, CardScript> = {
   },
   // 凡骨的意志（劍士）：[經] 回合開始時強制蓋 1，此回合總攻擊 +X、總防禦 +X（見 turnStartEffects）
   凡骨的意志: {},
-  // 卸除鎧甲（盜賊）：[起_蓋2] 選擇對方 1 張裝備或增益卡，送入棄牌區
+  // 卸除鎧甲（盜賊）：[先_蓋2] 選擇對方 1 張裝備或增益卡，送入棄牌區
   卸除鎧甲: {
     *onOpen(g, p, card) {
       const targets = [...Z(g, other(p), 'gear'), ...Z(g, other(p), 'buff')];
@@ -140,14 +140,14 @@ export const scripts: Record<string, CardScript> = {
       }
     },
   },
-  // 火球（法師）：[起_蓋3] 對方直擊 2
+  // 火球（法師）：[先_蓋3] 對方直擊 2
   火球: {
     *onOpen(g, p, card) {
       if (!(yield* optionalPay(g, p, card, { cover: 3 }))) return;
       directHit(g, other(p), 2);
     },
   },
-  // 塗毒（盜賊）：[起_蓋1] 歸還時，將 [Ex卡-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
+  // 塗毒（盜賊）：[先_蓋1] 歸還時，將 [Ex卡-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
   塗毒: {
     *onOpen(g, p, card) {
       if (!(yield* optionalPay(g, p, card, { cover: 1 }))) return;
@@ -169,7 +169,7 @@ export const scripts: Record<string, CardScript> = {
   },
   // 力量爆破（法師）：[頂] 我方總攻擊 -3；[追] 此卡追擊判定失敗
   力量爆破: { atkMod: -3, pursuitFail: true },
-  // Explosion!（法師）：[起_蓋8] 對方直擊 5，然後我方收招，並跳過我方下個抽牌階段
+  // Explosion!（法師）：[先_蓋8] 對方直擊 5，然後我方收招，並跳過我方下個抽牌階段
   'Explosion!': {
     *onOpen(g, p, card) {
       if (!(yield* optionalPay(g, p, card, { cover: 8 }))) return;
@@ -179,7 +179,7 @@ export const scripts: Record<string, CardScript> = {
       log(g, `【Explosion!】${pname(g, p)} 收招，並跳過這回合的抽牌階段`);
     },
   },
-  // 狙擊印記（弓箭手）：[起] 此回合我方的瞄準升級 1
+  // 狙擊印記（弓箭手）：[先] 此回合我方的瞄準升級 1
   狙擊印記: {
     *onOpen(g, p) {
       g.state.flags.aimUp[p]++;

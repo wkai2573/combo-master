@@ -582,7 +582,7 @@
       "lane": "combat",
       "col": 1,
       "type": "messagebus",
-      "label": "起手",
+      "label": "先手",
       "sublabel": "先攻出 1 張招式",
       "tag": "無招式則展示手牌",
       "width": 148

@@ -10,13 +10,13 @@ interface Group {
   steps: Step[];
 }
 
-// 一個回合的步驟流動：重置 → 戰鬥（起手→反擊→追擊→傷害→歸還）→ 抽牌 → 爆發 → 增益 → 回合結束
+// 一個回合的步驟流動：重置 → 戰鬥（先手→反擊→追擊→傷害→歸還）→ 抽牌 → 爆發 → 增益 → 回合結束
 const GROUPS: Group[] = [
   { label: '重置', steps: [{ phase: '重置', hint: '把橫置的卡改回重置狀態' }] },
   {
     label: '戰鬥',
     steps: [
-      { phase: '起手', hint: '先攻出 1 張招式' },
+      { phase: '先手', hint: '先攻出 1 張招式' },
       { phase: '反擊', hint: '後攻先，輪流出招或收招' },
       { phase: '追擊', hint: '雙方翻牌組頂，不在範圍內才成功' },
       { phase: '傷害', hint: '對方攻擊 − 我方防禦＝放進怒氣區的張數' },
@@ -35,7 +35,7 @@ export function StepTracker({ phase, waitingFor, me }: { phase: Phase; waitingFo
   const at = phase === '結束' ? ORDER.length : ORDER.indexOf(phase);
   const cur = GROUPS.flatMap((g) => g.steps).find((s) => s.phase === phase);
   const turnNote =
-    waitingFor === null || (phase !== '起手' && phase !== '反擊') ? '' : waitingFor === me ? '　輪到你' : '　輪到對手';
+    waitingFor === null || (phase !== '先手' && phase !== '反擊') ? '' : waitingFor === me ? '　輪到你' : '　輪到對手';
 
   return (
     <div className="steps" aria-label="回合步驟">

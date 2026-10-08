@@ -104,7 +104,7 @@ describe('瞄準：次數與等級', () => {
     expect(aimLimit(w, 0)).toBe(1);
   });
 
-  it('狙擊印記：[起] 此回合瞄準升級 1', () => {
+  it('狙擊印記：[先] 此回合瞄準升級 1', () => {
     const g = scenario({ chars: ['遊俠', '勇者'], p0: { hand: ['狙擊印記', '黑桃2'] }, p1: { hand: [] } });
     pick(g, '狙擊印記');
     expect(g.state.flags.aimUp[0]).toBe(1);
@@ -160,7 +160,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'rage')).toHaveLength(8 - 3 - 1);
   });
 
-  it('順手牽羊：[起_蓋X] 抽 X，此回合總攻擊 −X（X ≤ 2）', () => {
+  it('順手牽羊：[先_蓋X] 抽 X，此回合總攻擊 −X（X ≤ 2）', () => {
     const g = scenario({
       chars: ['刺客', '勇者'],
       p0: { hand: ['順手牽羊', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5'] },
@@ -215,7 +215,7 @@ describe('新卡（第二批）', () => {
     expect(totalAtk(g, 0)).toBe(atkOf('盾擊') + atkOf('黑桃1'));
   });
 
-  it('即時停損：[發_蓋4] 起手打出後雙方立即收招，沒有反擊步驟也不做追擊判定', () => {
+  it('即時停損：[發_蓋4] 先手步驟打出後雙方立即收招，沒有反擊步驟也不做追擊判定', () => {
     const g = scenario({
       chars: ['商人', '勇者'],
       p0: { hand: ['即時停損', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5', '黑桃6'] },
@@ -279,7 +279,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'exp')[0].covered).toBe(true);
   });
 
-  it('卸除鎧甲：[起_蓋2] 把對方 1 張裝備或增益送入棄牌區', () => {
+  it('卸除鎧甲：[先_蓋2] 把對方 1 張裝備或增益送入棄牌區', () => {
     const g = scenario({
       chars: ['刺客', '勇者'],
       p0: { hand: ['卸除鎧甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5'] },
@@ -291,7 +291,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 1, 'gear')).toHaveLength(0);
   });
 
-  it('火球：[起_蓋3] 對方直擊 2', () => {
+  it('火球：[先_蓋3] 對方直擊 2', () => {
     const g = scenario({
       chars: ['法師', '勇者'],
       p0: { hand: ['火球', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5'] },
@@ -302,7 +302,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 1, 'discard')).toHaveLength(2);
   });
 
-  it('Explosion!：[起_蓋8] 對方直擊 5，我方收招（對方仍可反擊），並跳過我方這回合的抽牌階段', () => {
+  it('Explosion!：[先_蓋8] 對方直擊 5，我方收招（對方仍可反擊），並跳過我方這回合的抽牌階段', () => {
     const g = scenario({
       chars: ['法師', '勇者'],
       p0: { hand: ['Explosion!', '黑桃2'], exp: Array(8).fill('黑桃3') },
@@ -388,7 +388,7 @@ describe('新卡（第二批）', () => {
 
   it('冰與雷之曲：收招時戰鬥區有「冰」「雷」特徵的卡各 1 張，才可蓋 3 抽 1、回復 1', () => {
     const g = scenario({
-      phase: '起手',
+      phase: '先手',
       singlePhase: true,
       p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], combat: ['冰霜護甲', '電弧'], rage: ['黑桃4'] },
       p1: { hand: ['黑桃9'] },
@@ -403,7 +403,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'rage')).toHaveLength(0);
 
     const only = scenario({
-      phase: '起手',
+      phase: '先手',
       singlePhase: true,
       p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], combat: ['冰霜護甲'] },
       p1: { hand: ['黑桃9'] },

@@ -39,9 +39,9 @@ const MAX_SAME_COMBO = 2;
 export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: boolean): Gen {
   move(g, card, 'combat', 'top');
   g.state.flags.played[p]++;
-  log(g, `${pname(g, p)} ${opening ? '起手' : '出招'}【${data(card).name}】`);
+  log(g, `${pname(g, p)} ${opening ? '先手出招' : '出招'}【${data(card).name}】`);
   const cd = data(card);
-  mark(g, `${pname(g, p)} ${opening ? '起手' : '出招'}【${cd.name}】　攻${cd.atk}　連擊${cd.combo}　守${cd.def}`,
+  mark(g, `${pname(g, p)} ${opening ? '先手出招' : '出招'}【${cd.name}】　攻${cd.atk}　連擊${cd.combo}　守${cd.def}`,
     { type: 'play', player: p, uid: card.uid });
 
   const sc = scripts[card.id];
@@ -256,14 +256,14 @@ export function* combatPhase(g: GameCtx): Gen {
   const s = g.state;
   const [first, second] = order(g);
 
-  s.phase = '起手';
+  s.phase = '先手';
   const opening = playables(g, first);
   if (opening.length === 0) {
     const hand = Z(g, first, 'hand').map((c) => data(c).name).join('、') || '（無）';
     log(g, `${pname(g, first)} 沒有可出的招式，展示手牌：${hand}`);
     mark(g, `${pname(g, first)} 沒有可出的招式，展示手牌`, { type: 'info' });
   } else {
-    const [c] = yield* chooseCards(g, first, '起手步驟：選擇 1 張招式出招', opening, 1, 1);
+    const [c] = yield* chooseCards(g, first, '先手步驟：選擇 1 張招式出招', opening, 1, 1);
     yield* playMove(g, first, c, true);
   }
   s.flags.opened = true;
@@ -271,7 +271,7 @@ export function* combatPhase(g: GameCtx): Gen {
   s.phase = '反擊';
   let cur: PlayerId = second;
   let firstAction = true;
-  // 起手時雙方就被迫收招（即時停損）：沒有進入反擊步驟，不做追擊判定，直接傷害計算
+  // 先手步驟時雙方就被迫收招（即時停損）：沒有進入反擊步驟，不做追擊判定，直接傷害計算
   let straightToDamage = s.passed[0] && s.passed[1];
   for (let guard = 0; guard < 200 && !(s.passed[0] && s.passed[1]); guard++) {
     if (s.passed[cur]) {

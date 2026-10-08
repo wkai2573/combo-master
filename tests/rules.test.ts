@@ -7,7 +7,7 @@ import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
 const labels = (g: ReturnType<typeof scenario>) => g.pending!.options.map((o) => o.label);
 
 describe('出招與範圍內', () => {
-  it('起手任何招式皆可；之後只能出兩邊最後一張之間的連擊值', () => {
+  it('先手步驟任何招式皆可；之後只能出兩邊最後一張之間的連擊值', () => {
     const g = scenario({
       p0: { hand: ['黑桃5', '黑桃3', '黑桃8'] },
       p1: { hand: ['黑桃1', '黑桃6', '黑桃9'] },
@@ -19,6 +19,19 @@ describe('出招與範圍內', () => {
     pick(g, '黑桃9');
     // 先攻範圍：5 ~ 9
     expect(labels(g)).toEqual(['黑桃8', '收招']);
+  });
+
+  it('戰鬥階段第一個步驟叫先手步驟：階段、提示與紀錄都用這個名稱', () => {
+    const g = scenario({
+      p0: { hand: ['黑桃5', '黑桃3'] },
+      p1: { hand: ['黑桃1', '黑桃6'] },
+    });
+    expect(g.state.phase).toBe('先手');
+    expect(g.pending!.title).toContain('先手步驟');
+    pick(g, '黑桃5');
+    expect(g.state.phase).toBe('反擊');
+    expect(g.state.log.some((l) => l.includes('先手出招【黑桃5】'))).toBe(true);
+    expect(g.state.log.some((l) => l.includes('起手'))).toBe(false);
   });
 
   it('同連擊值可以重複打出 1 次（共 2 張），第 3 張起就不行', () => {
@@ -41,7 +54,7 @@ describe('出招與範圍內', () => {
       p0: { hand: ['黑桃4', '紅心4', '方塊5'] },
       p1: { hand: ['黑桃5', '紅心5', '梅花5'] },
     });
-    pick(g, '黑桃4'); // 我方起手 4
+    pick(g, '黑桃4'); // 我方先手 4
     pick(g, '黑桃5'); // 對方出 5
     expect(labels(g)).toEqual(['紅心4', '方塊5', '收招']); // 範圍 4~5，再出一張 4 合法
     pick(g, '紅心4'); // 我方第 2 張 4
@@ -192,7 +205,7 @@ describe('角色效果（總攻擊／總防禦）', () => {
   });
 
 
-  it('伏擊（盜賊）：[起] 作為起手出招時，此回合總攻擊 +2；不是起手就沒有', () => {
+  it('伏擊（盜賊）：[先] 作為先手步驟出招時，此回合總攻擊 +2；不是先手步驟就沒有', () => {
     const g = scenario({ chars: ['刺客', '勇者'], p0: { hand: ['伏擊', '黑桃3'] }, p1: { hand: ['黑桃5'] } });
     expect(g.pending!.options.map((o) => o.label)).toContain('伏擊');
     pick(g, '伏擊');
@@ -200,7 +213,7 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(totalAtk(g, 0)).toBe(atkOf('伏擊') + 2);
 
     const g2 = scenario({ first: 1, chars: ['勇者', '刺客'], p0: { hand: ['伏擊'] }, p1: { hand: ['黑桃5'] } });
-    pick(g2, '伏擊'); // 玩家1 先攻只有一張牌、自動起手；玩家0 後攻反擊，不是起手
+    pick(g2, '伏擊'); // 玩家1 先攻只有一張牌、自動先手出招；玩家0 後攻反擊，不是先手步驟
     expect(g2.state.flags.atkBonus[0]).toBe(0);
   });
 
@@ -235,7 +248,7 @@ describe('角色效果（總攻擊／總防禦）', () => {
       p0: { hand: ['電弧', '黑桃2'], deck: ['黑桃7', ...Array(20).fill('黑桃1')] },
       p1: { hand: ['黑桃5'] },
     });
-    pick(g, '電弧'); // 玩家1 先攻只有 1 張，自動起手；對方戰鬥區有 1 張 → X = 1
+    pick(g, '電弧'); // 玩家1 先攻只有 1 張，自動先手出招；對方戰鬥區有 1 張 → X = 1
     expect(g.pending!.title).toContain('電弧');
     pick(g, '黑桃2');
     expect(names(g, 0, 'hand')).toContain('黑桃7');
@@ -249,7 +262,7 @@ describe('提示驗證', () => {
     const g = scenario({ p0: { hand: ['黑桃5', '黑桃3'] } });
     expect(() => g.submit(1, ['x'])).toThrow();
     expect(() => g.submit(0, ['不存在'])).toThrow();
-    expect(() => g.submit(0, [])).toThrow(); // 起手必須選 1 張
+    expect(() => g.submit(0, [])).toThrow(); // 先手步驟必須選 1 張
   });
 });
 

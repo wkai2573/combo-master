@@ -53,7 +53,7 @@ export interface TurnFlags {
 }
 
 export type Phase =
-  | '設置' | '重置' | '起手' | '反擊' | '追擊' | '傷害' | '歸還'
+  | '設置' | '重置' | '先手' | '反擊' | '追擊' | '傷害' | '歸還'
   | '抽牌' | '爆發' | '增益' | '回合結束' | '結束';
 
 export interface GameState {
