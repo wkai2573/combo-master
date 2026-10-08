@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { query } from '../src/engine/effects';
 import { Z } from '../src/engine/ops';
-import { 凡骨狀態 } from '../src/engine/sources/swordsman';
 import { 二連矢狀態, 狙擊印記狀態 } from '../src/engine/sources/archer';
 import { 伏擊狀態, 順手牽羊狀態 } from '../src/engine/sources/thief';
 import { Explosion狀態 } from '../src/engine/sources/mage';
@@ -33,13 +32,7 @@ describe('電弧：抽 X，X 是對方戰鬥區的招式數量', () => {
 });
 
 describe('卡離場後仍要生效的查詢', () => {
-  // 這些效果的加成存在回合狀態槽，卡本身早已離開常駐位置，所以處理器要明寫 lasting
-  it('凡骨的意志：蓋到自己之後，這回合的加成仍然算', () => {
-    const g = scenario({ p0: { exp: [] } });
-    凡骨狀態.of(g, 0).n = 1;
-    expect(query(g, 0, 'vanillaBoost')).toBe(1);
-  });
-
+  // 這些效果的加成存在回合狀態槽，卡本身早已離開常駐位置，所以處理器要明寫 lasting（凡骨的意志不在此列：加成跟著卡走）
   it('二連矢：追擊卡歸還之後，這回合的追擊加成仍然算', () => {
     const g = scenario({ p0: { pursuit: [] } });
     二連矢狀態.of(g, 0).plus = 2;

@@ -1,6 +1,12 @@
 import type { Request } from '../../engine/types';
 import { CardFace } from './CardFace';
 
+/** 選項對應畫面上的某張卡（例如窗口裡的效果來源）：滑過或聚焦選項時讓那張卡亮起來 */
+function hintCard(uid: number | undefined, on: boolean) {
+  if (uid === undefined) return;
+  document.querySelectorAll(`[data-uid="${uid}"]`).forEach((el) => el.classList.toggle('hint', on));
+}
+
 interface Props {
   prompt: Request;
   selected: string[];
@@ -35,6 +41,10 @@ export function PromptPanel({ prompt, selected, onPick, onSubmit }: Props) {
             key={o.key}
             className={o.key === 'yes' || o.key === 'pass' || o.key === 'end' ? '' : 'primary'}
             onClick={() => (single ? onSubmit([o.key]) : onPick(o.key))}
+            onMouseEnter={() => hintCard(o.uid, true)}
+            onMouseLeave={() => hintCard(o.uid, false)}
+            onFocus={() => hintCard(o.uid, true)}
+            onBlur={() => hintCard(o.uid, false)}
           >
             {o.label}
           </button>

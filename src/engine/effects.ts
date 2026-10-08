@@ -27,6 +27,7 @@ export function makeCtx(g: GameCtx, p: PlayerId, self: CardInst | null, here: ()
       if (o.cost && !self) throw new Error(`效果「${o.label}」有費用，但沒有對應的卡`);
       return {
         label: o.label,
+        card: self ?? undefined,
         mandatory: o.mandatory,
         mark: o.mark,
         available: () => here() && (!o.when || o.when()) && (!o.cost || canPay(g, p, o.cost)),

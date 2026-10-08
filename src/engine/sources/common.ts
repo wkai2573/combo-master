@@ -10,6 +10,7 @@ export const Ex卡中毒 = defineSource({
       if (isFirst(c.g, c.p)) return null;
       return {
         label: '【中毒】直擊 3',
+        card: c.self ?? undefined,
         mandatory: true,
         available: () => c.here(),
         *run() {

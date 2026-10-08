@@ -1,10 +1,12 @@
-import { ask, markIfLogged, type GameCtx, type Gen } from './ops';
-import type { PlayerId } from './types';
+import { ask, markIfLogged, Z, type GameCtx, type Gen } from './ops';
+import type { CardInst, PlayerId, ZoneName } from './types';
 
 /** 觸發窗口裡的一個可發動效果 */
 export interface WindowEffect {
   /** 提示選項上的文字：效果名稱、卡名與費用 */
   label: string;
+  /** 效果來自哪張卡；角色等沒有對應卡的效果為空。同名效果靠它區分，畫面也用它亮起對應的卡 */
+  card?: CardInst;
   /** 強制效果：標示「強制」，只能排序、不能跳過 */
   mandatory?: boolean;
   /** 結算完不要再補錄一個說明影格（效果自己已經錄好影格時設為 false） */
@@ -19,6 +21,22 @@ export interface WindowEffect {
 }
 
 export const WINDOW_END_KEY = 'end';
+
+const ZONE_LABEL: Record<ZoneName, string> = {
+  deck: '牌組', hand: '手牌', discard: '棄牌區', rage: '怒氣區', exp: '經驗區', combat: '戰鬥區', pursuit: '追擊區', gear: '裝備區', buff: '增益區',
+};
+
+/**
+ * 窗口選單上各效果的文字。同一個窗口裡文字相同的效果（例如兩張凡骨的意志）才加上卡所在的位置，
+ * 位置從該區最前面數起，包含裏側卡；文字不重複就維持原樣。
+ */
+function optionLabels(g: GameCtx, p: PlayerId, effects: readonly WindowEffect[]): string[] {
+  const base = effects.map((e) => `${e.mandatory ? '【強制】' : ''}${e.label}`);
+  return effects.map((e, i) => {
+    if (!e.card || base.filter((b) => b === base[i]).length < 2) return base[i];
+    return `${base[i]}（${ZONE_LABEL[e.card.zone]}第 ${Z(g, p, e.card.zone).indexOf(e.card) + 1} 張）`;
+  });
+}
 
 /**
  * 觸發窗口：同一時機有多個效果可發動時，由玩家 p 選要發哪個、先發哪個，也可以結束不再發動。
@@ -37,7 +55,8 @@ export function* triggerWindow(g: GameCtx, p: PlayerId, title: string, effects: 
       yield* settleEffect(g, only, only.mandatory ?? false);
       continue;
     }
-    const options = avail.map((e, i) => ({ key: `e${i}`, label: `${e.mandatory ? '【強制】' : ''}${e.label}` }));
+    const texts = optionLabels(g, p, avail);
+    const options = avail.map((e, i) => ({ key: `e${i}`, label: texts[i], ...(e.card && { uid: e.card.uid }) }));
     if (!avail.some((e) => e.mandatory)) options.push({ key: WINDOW_END_KEY, label: '結束（不再發動）' });
     const [key] = yield* ask(g, { player: p, title: `${title}：選擇要發動的效果`, options, min: 1, max: 1 });
     if (key === WINDOW_END_KEY) return;

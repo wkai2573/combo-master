@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { aimLimit, pursuitCount, returnStep, totalAtk, totalDef } from '../src/engine/combat';
 import { discard, Z } from '../src/engine/ops';
-import { optionalPay, pay } from '../src/engine/cost';
+import { cover, optionalPay, pay } from '../src/engine/cost';
 import { getCard } from '../src/data/cards';
 import { atkOf, defOf, drive, names, pick, scenario, setZones } from './helpers';
 import { Explosion狀態 } from '../src/engine/sources/mage';
@@ -296,45 +296,68 @@ describe('新卡（第二批）', () => {
     expect(pursuitCount(g, 0)).toBe(2);
   });
 
-  it('凡骨的意志：回合開始時需蓋前 2 張表側經驗，總攻擊與總防禦各加戰鬥區白板卡數量', () => {
-    // scenario 開局時已經跑過第一回合的回合開始效果
-    const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['黑桃3', '黑桃4', '凡骨的意志'] } });
-    expect(凡骨狀態.read(g, 0).n).toBe(1);
-    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃3', '黑桃4']);
+  describe('凡骨的意志', () => {
     const ids = ['黑桃1', '黑桃2', '伏擊'];
-    setZones(g, 0, { combat: ids, exp: [] });
-    凡骨狀態.of(g, 0).n = 1;
-    expect(totalAtk(g, 0)).toBe(ids.reduce((n, id) => n + atkOf(id), 0) + 2); // 白板卡 2 張
-    expect(totalDef(g, 0)).toBe(ids.reduce((n, id) => n + defOf(id), 0) + 2);
-  });
+    const base = ids.reduce((n, id) => n + atkOf(id), 0);
+    const baseDef = ids.reduce((n, id) => n + defOf(id), 0);
+    // 戰鬥區放 3 張招式，其中 2 張是白板卡；scenario 開局時已經跑過第一回合的回合開始效果
+    const play = (exp: string[], phase?: boolean) =>
+      scenario({ chars: ['商人', '刺客'], p0: { exp, combat: ids }, ...(phase ? { phase: '重置', singlePhase: true } : {}) });
+    const coveredIds = (g: ReturnType<typeof scenario>) => Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id);
 
-  it('凡骨的意志：蓋是照順序蓋，最前面就是自己時會蓋到自己；效果照常發動，之後被蓋住就無效', () => {
-    const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['凡骨的意志', '黑桃3', '黑桃4'] } });
-    expect(凡骨狀態.read(g, 0).n).toBe(1);
-    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['凡骨的意志', '黑桃3']);
-    expect(g.state.log.join('\n')).toContain('蓋到自己');
-    // 下個回合：它已經被蓋住，不能再發動，也不會去蓋黑桃3
-    const nextTurn = scenario({
-      chars: ['商人', '刺客'],
-      phase: '重置',
-      singlePhase: true,
-      p0: { exp: ['~凡骨的意志', '黑桃3'] },
+    it('回合開始時需蓋前 2 張表側經驗，總攻擊與總防禦各加戰鬥區白板卡數量', () => {
+      const g = play(['黑桃3', '黑桃4', '凡骨的意志']);
+      expect(coveredIds(g)).toEqual(['黑桃3', '黑桃4']);
+      expect(totalAtk(g, 0)).toBe(base + 2); // 白板卡 2 張
+      expect(totalDef(g, 0)).toBe(baseDef + 2);
     });
-    expect(凡骨狀態.read(nextTurn, 0).n).toBe(0);
-    expect(Z(nextTurn, 0, 'exp')[1].covered).toBe(false);
-  });
 
-  it('凡骨的意志：表側經驗剛好 2 張，兩張都蓋（包含自己），仍會生效', () => {
-    const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['黑桃3', '~黑桃4', '凡骨的意志'] } });
-    // 表側只有黑桃3 與它自己
-    expect(凡骨狀態.read(g, 0).n).toBe(1);
-    expect(Z(g, 0, 'exp').map((c) => c.covered)).toEqual([true, true, true]);
-  });
+    it('前 2 張表側經驗包含自己時，連自己一起蓋，效果失效，沒有加成', () => {
+      const g = play(['凡骨的意志', '黑桃3', '黑桃4']);
+      expect(coveredIds(g)).toEqual(['凡骨的意志', '黑桃3']);
+      expect(g.state.log.join('\n')).toContain('蓋到自己而失效');
+      expect(totalAtk(g, 0)).toBe(base);
+      expect(totalDef(g, 0)).toBe(baseDef);
+      // 下個回合：它已經被蓋住，不能再發動，也不會去蓋黑桃3
+      const nextTurn = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['~凡骨的意志', '黑桃3'] } });
+      expect(Z(nextTurn, 0, 'exp')[1].covered).toBe(false);
+    });
 
-  it('凡骨的意志：它是唯一的表側經驗時，蓋 1 就是蓋自己，仍會生效', () => {
-    const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['凡骨的意志'] } });
-    expect(凡骨狀態.read(g, 0).n).toBe(1);
-    expect(Z(g, 0, 'exp')[0].covered).toBe(true);
+    it('表側經驗剛好 2 張（包含自己）：兩張都蓋，沒有加成', () => {
+      const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['黑桃3', '~黑桃4', '凡骨的意志'] } });
+      expect(Z(g, 0, 'exp').map((c) => c.covered)).toEqual([true, true, true]);
+      expect(凡骨狀態.read(g, 0).uids).toEqual([]);
+    });
+
+    it('它是唯一的表側經驗時，蓋的就是自己，沒有加成', () => {
+      const g = play(['凡骨的意志']);
+      expect(Z(g, 0, 'exp')[0].covered).toBe(true);
+      expect(totalAtk(g, 0)).toBe(base);
+    });
+
+    it('發動之後它才被蓋成裏側或離開經驗區，這回合的加成就消失；翻回表側才恢復', () => {
+      const g = play(['黑桃3', '黑桃4', '凡骨的意志']);
+      expect(totalAtk(g, 0)).toBe(base + 2);
+      cover(g, 0, 1); // 表側只剩它一張
+      expect(totalAtk(g, 0)).toBe(base);
+      Z(g, 0, 'exp').find((c) => c.id === '凡骨的意志')!.covered = false;
+      expect(totalAtk(g, 0)).toBe(base + 2);
+      discard(g, Z(g, 0, 'exp').find((c) => c.id === '凡骨的意志')!);
+      expect(totalAtk(g, 0)).toBe(base);
+    });
+
+    it('蓋掉另一張 [經] 卡，那張立即失效：它在窗口裡消失，不會發動', () => {
+      // 位置：[黑桃3, 凡骨B, 凡骨A]；A 先發會蓋黑桃3 與 B，B 就不能再發動，A 的加成照給
+      const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['黑桃3', '凡骨的意志', '凡骨的意志'], combat: ids } });
+      const [, , a] = Z(g, 0, 'exp');
+      expect(g.pending!.options.map((o) => o.uid)).toEqual([Z(g, 0, 'exp')[1].uid, a.uid]);
+      expect(g.pending!.options.map((o) => o.label.slice(-10))).toEqual(['（經驗區第 2 張）', '（經驗區第 3 張）']);
+      pick(g, g.pending!.options[1].label);
+      expect(g.pending).toBeNull();
+      expect(Z(g, 0, 'exp').map((c) => c.covered)).toEqual([true, true, false]);
+      expect(凡骨狀態.read(g, 0).uids).toEqual([a.uid]);
+      expect(totalAtk(g, 0)).toBe(base + 2);
+    });
   });
 
   it('卸除鎧甲：[發_蓋2] 把對方 1 張裝備或增益送入棄牌區', () => {

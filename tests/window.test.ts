@@ -261,12 +261,12 @@ describe('觸發窗口：回合開始', () => {
     const a = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
     pick(a, '【家族相片】回復 1（蓋1、怒3）');
     expect(Z(a, 0, 'exp').map((c) => c.covered)).toEqual([true, false, false]);
-    expect(凡骨狀態.read(a, 0).n).toBe(0); // 凡骨已被蓋成裏側，從清單消失
+    expect(凡骨狀態.read(a, 0).uids).toEqual([]); // 凡骨已被蓋成裏側，從清單消失
     expect(a.pending).toBeNull();
 
     const b = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
     pick(b, '【強制】【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量');
-    expect(凡骨狀態.read(b, 0).n).toBe(1);
+    expect(凡骨狀態.read(b, 0).uids).toEqual([]); // 前 2 張就包含它自己：蓋到自己而失效
     expect(Z(b, 0, 'exp').map((c) => c.covered)).toEqual([true, true, false]);
     expect(b.pending!.title).toContain('家族相片'); // 只剩一個可選效果：原本的確認
     pick(b, '發動');
@@ -280,7 +280,7 @@ describe('觸發窗口：回合開始', () => {
       phase: '重置',
       singlePhase: true,
       p0: { exp: ['黑桃1'] },
-      p1: { exp: ['Ex卡-中毒', '凡骨的意志', '黑桃3'] },
+      p1: { exp: ['Ex卡-中毒', '黑桃3', '凡骨的意志'] },
     });
     // 玩家0 先攻：先處理玩家0（沒有效果），再到玩家1 的窗口
     expect(g.pending!.player).toBe(1);
@@ -288,8 +288,23 @@ describe('觸發窗口：回合開始', () => {
     expect(labels(g).every((l) => l.startsWith('【強制】'))).toBe(true);
     pick(g, '【強制】【中毒】直擊 3');
     expect(g.pending).toBeNull(); // 剩下的凡骨強制效果直接處理
-    expect(凡骨狀態.read(g, 1).n).toBe(1);
+    expect(凡骨狀態.read(g, 1).uids).toHaveLength(1);
     expect(Z(g, 1, 'discard')).toHaveLength(3);
+  });
+
+  it('凡骨的意志先發，把中毒蓋住：中毒不再發動', () => {
+    const g = scenario({
+      chars: ['刺客', '商人'],
+      first: 0,
+      phase: '重置',
+      singlePhase: true,
+      p0: { exp: ['黑桃1'] },
+      p1: { exp: ['Ex卡-中毒', '黑桃3', '凡骨的意志'] },
+    });
+    pick(g, labels(g).find((l) => l.includes('凡骨的意志'))!);
+    expect(Z(g, 1, 'exp').map((c) => c.covered)).toEqual([true, true, false]);
+    expect(g.pending).toBeNull(); // 中毒已失效，從窗口消失
+    expect(Z(g, 1, 'discard')).toHaveLength(0); // 沒有被直擊
   });
 
   it('先攻方先處理完自己的窗口，再換後攻方', () => {
@@ -317,9 +332,12 @@ describe('觸發窗口：傷害計算後', () => {
     伏擊狀態.of(g, 1).atk = 3; // 對方多 3 點總攻擊：受到的傷害大於造成的
     pick(g, '黑桃9');
     expect(g.pending!.title).toContain('傷害計算後');
-    expect(labels(g)).toEqual(['【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）', '【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）', '結束（不再發動）']);
+    const REV = '【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）';
+    // 文字相同的效果註明卡所在的位置，並帶卡的 uid 讓畫面亮起對應的卡
+    expect(labels(g)).toEqual([`${REV}（經驗區第 1 張）`, `${REV}（經驗區第 2 張）`, '結束（不再發動）']);
+    expect(g.pending!.options.map((o) => o.uid)).toEqual([...Z(g, 0, 'exp').map((c) => c.uid), undefined]);
     const rage = Z(g, 0, 'rage').length;
-    pick(g, '【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）');
+    pick(g, `${REV}（經驗區第 2 張）`);
     expect(Z(g, 0, 'rage')).toHaveLength(rage - 4);
     expect(g.pending!.title).toContain('復仇之嚎'); // 剩下一張：原本的確認
     pick(g, '不發動');
