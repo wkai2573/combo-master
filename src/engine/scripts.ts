@@ -3,7 +3,7 @@ import {
   activate, ask, awakened, canPay, chooseCards, confirm, COVER_REACTIONS, data, directHit, discard, draw, faceUpExp, isFirst, Z, log, move,
   optionalPay, order, pay, pname, recover, type Gen, type GameCtx,
 } from './ops';
-import type { WindowEffect } from './window';
+import { triggerWindow, type WindowEffect } from './window';
 import { other, type CardInst, type PlayerId } from './types';
 
 /**
@@ -33,8 +33,8 @@ export interface CardScript {
   pursuitAtkBonus?: number;
   /** [頂] 戰鬥區只有此卡時，追擊 +N */
   soloPursuitPlus?: number;
-  /** [經] 以正面存在經驗區時，傷害計算後的反應 */
-  afterDamageExp?: (g: GameCtx, p: PlayerId, card: CardInst, info: { dealt: number; taken: number }) => Gen;
+  /** [經] 以表側存在經驗區時，傷害計算後的效果（進傷害計算後的觸發窗口）；此刻不成立就回傳 null */
+  afterDamageEffect?: (g: GameCtx, p: PlayerId, card: CardInst, info: { dealt: number; taken: number }) => WindowEffect | null;
 }
 
 export const scripts: Record<string, CardScript> = {
@@ -62,13 +62,19 @@ export const scripts: Record<string, CardScript> = {
   地雷陷阱: { pursuitAtkBonus: 3 },
   // 復仇之嚎（劍士）：[經_怒3] 傷害計算後，若對方給予的傷害 > 我方給予的傷害，將怒氣區上方 1 張卡加入手牌
   復仇之嚎: {
-    *afterDamageExp(g, p, card, { dealt, taken }) {
-      if (taken <= dealt) return;
-      if (!(yield* optionalPay(g, p, card, { rage: 3 }))) return;
-      const top = Z(g, p, 'rage')[0];
-      if (!top) return;
-      move(g, top, 'hand');
-      log(g, `【復仇之嚎】${pname(g, p)} 將怒氣區上方 1 張卡加入手牌`);
+    afterDamageEffect(g, p, card, { dealt, taken }) {
+      if (taken <= dealt) return null;
+      return {
+        label: '【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）',
+        available: () => card.zone === 'exp' && !card.covered && canPay(g, p, { rage: 3 }),
+        *run(confirmed) {
+          if (!(yield* optionalPay(g, p, card, { rage: 3 }, !confirmed))) return;
+          const top = Z(g, p, 'rage')[0];
+          if (!top) return;
+          move(g, top, 'hand');
+          log(g, `【復仇之嚎】${pname(g, p)} 將怒氣區上方 1 張卡加入手牌`);
+        },
+      };
     },
   },
   // 二刀連擊（盜賊）：[頂] 戰鬥區只有此卡時，追擊 +1
@@ -240,49 +246,77 @@ function* chooseX(g: GameCtx, p: PlayerId, card: CardInst, max: number, label: s
 }
 
 /**
- * 回合開始時的效果（先攻方先處理）：
- * - 家族相片：[蓋1_怒3] 回復 1
- * - 凡骨的意志：蓋前 2 張表側經驗（不足就全蓋），此回合總攻擊 +X、總防禦 +X（X = 戰鬥區白板卡數）
- * - 中毒：我方後攻的回合開始時，直擊我方 3
+ * 回合開始時的效果（進回合開始的觸發窗口，先攻方先處理）：
+ * - 家族相片：[蓋1_怒3] 回復 1，可選
+ * - 凡骨的意志：蓋前 2 張表側經驗，此回合總攻擊 +X、總防禦 +X（X = 戰鬥區白板卡數），強制
+ * - 中毒：我方後攻的回合開始時，直擊我方 3，強制
  */
 export function* turnStartEffects(g: GameCtx): Gen {
-  const f = g.state.flags;
-  for (const p of order(g)) {
-    for (const photo of Z(g, p, 'gear').filter((c) => c.id === '家族相片')) {
-      if (yield* optionalPay(g, p, photo, { cover: 1, rage: 3 })) recover(g, p, 1);
-    }
-    for (const card of Z(g, p, 'exp').filter((c) => c.id === '凡骨的意志' && !c.covered)) {
-      // 前面的效果（例如家族相片）已經把它蓋住，就無效
-      if (card.covered) continue;
-      // 蓋是效果處理而非費用：蓋最前面的表側經驗 2 張，不足就全蓋，不分是不是它自己；
-      // 蓋到自己時這回合的加成照給，但之後它是裏側就無效
-      const n = Math.min(2, faceUpExp(g, p).length);
-      if (n === 0) continue;
-      activate(g, p, card);
-      yield* payCover(g, p, n);
-      f.vanillaBoost[p]++;
-      log(g, `【凡骨的意志】${pname(g, p)} 蓋前 ${n} 張表側經驗${card.covered ? '（蓋到自己，之後無效）' : ''}，此回合總攻擊與總防禦各加上戰鬥區白板卡的數量`);
-    }
-    if (!isFirst(g, p)) {
-      const poisons = Z(g, p, 'exp').filter((x) => x.id === 'Ex卡-中毒' && !x.covered).length;
-      for (let i = 0; i < poisons; i++) {
-        log(g, `【中毒】${pname(g, p)} 的後攻回合開始`);
-        directHit(g, p, 3);
-      }
-    }
-  }
+  for (const p of order(g)) yield* triggerWindow(g, p, '回合開始', turnStartWindowEffects(g, p));
 }
 
-/** 收招時的效果：冰與雷之曲（[蓋3] 戰鬥區的卡合計具有「冰」「雷」兩個特徵時，抽 1、回復 1；一張卡兩個特徵或兩張各一個都算） */
+function turnStartWindowEffects(g: GameCtx, p: PlayerId): WindowEffect[] {
+  const f = g.state.flags;
+  const out: WindowEffect[] = [];
+  for (const photo of Z(g, p, 'gear').filter((c) => c.id === '家族相片')) {
+    out.push({
+      label: '【家族相片】回復 1（蓋1、怒3）',
+      available: () => photo.zone === 'gear' && canPay(g, p, { cover: 1, rage: 3 }),
+      *run(confirmed) {
+        if (yield* optionalPay(g, p, photo, { cover: 1, rage: 3 }, !confirmed)) recover(g, p, 1);
+      },
+    });
+  }
+  for (const card of Z(g, p, 'exp').filter((c) => c.id === '凡骨的意志' && !c.covered)) {
+    out.push({
+      label: '【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量',
+      mandatory: true,
+      // 前面的效果（例如家族相片）已經把它蓋成裏側，就無效
+      available: () => card.zone === 'exp' && !card.covered && faceUpExp(g, p).length > 0,
+      *run() {
+        // 蓋是效果處理而非費用：蓋最前面的表側經驗 2 張，不足就全蓋，不分是不是它自己；
+        // 蓋到自己時這回合的加成照給，但之後它是裏側就無效
+        const n = Math.min(2, faceUpExp(g, p).length);
+        activate(g, p, card);
+        yield* payCover(g, p, n);
+        f.vanillaBoost[p]++;
+        log(g, `【凡骨的意志】${pname(g, p)} 蓋前 ${n} 張表側經驗${card.covered ? '（蓋到自己，之後無效）' : ''}，此回合總攻擊與總防禦各加上戰鬥區白板卡的數量`);
+      },
+    });
+  }
+  if (!isFirst(g, p)) {
+    for (const poison of Z(g, p, 'exp').filter((x) => x.id === 'Ex卡-中毒' && !x.covered)) {
+      out.push({
+        label: '【中毒】直擊 3',
+        mandatory: true,
+        available: () => poison.zone === 'exp' && !poison.covered,
+        *run() {
+          log(g, `【中毒】${pname(g, p)} 的後攻回合開始`);
+          directHit(g, p, 3);
+        },
+      });
+    }
+  }
+  return out;
+}
+
+/** 收招時的效果（進收招時的觸發窗口）：冰與雷之曲（[蓋3] 戰鬥區的卡合計具有「冰」「雷」兩個特徵時，抽 1、回復 1；一張卡兩個特徵或兩張各一個都算） */
 export function* onPassEffects(g: GameCtx, p: PlayerId): Gen {
   const song = Z(g, p, 'gear').find((c) => c.id === '冰與雷之曲');
   if (!song) return;
   const has = (traits: string[]) => Z(g, p, 'combat').some((c) => data(c).traits.some((t) => traits.includes(t)));
-  if (!has(['冰']) || !has(['雷'])) return;
-  if (!(yield* optionalPay(g, p, song, { cover: 3 }))) return;
-  yield* draw(g, p, 1);
-  recover(g, p, 1);
-  log(g, '【冰與雷之曲】抽 1，回復 1');
+  yield* triggerWindow(g, p, '收招時', [
+    {
+      label: '【冰與雷之曲】抽 1，回復 1（蓋3）',
+      available: () => song.zone === 'gear' && has(['冰']) && has(['雷']) && canPay(g, p, { cover: 3 }),
+      *run(confirmed) {
+        if (!(yield* optionalPay(g, p, song, { cover: 3 }, !confirmed))) return;
+        yield* draw(g, p, 1);
+        recover(g, p, 1);
+        log(g, '【冰與雷之曲】抽 1，回復 1');
+      },
+    },
+  ]);
 }
 
 /**

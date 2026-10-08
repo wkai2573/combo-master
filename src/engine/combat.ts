@@ -3,6 +3,7 @@ import {
   newCard, order, pname, takeDamage, Z, type GameCtx, type Gen,
 } from './ops';
 import { onPassEffects, scripts } from './scripts';
+import { triggerWindow, type WindowEffect } from './window';
 import { checkWin } from './win';
 import { other, type CardInst, type PlayerId } from './types';
 import {
@@ -219,13 +220,15 @@ export function* damageStep(g: GameCtx): Gen {
     { type: 'damage', dmg },
   );
   yield* markIfLogged(g, function* (): Gen {
-    // 經驗區中正面的 [經] 卡：傷害計算後的反應（復仇之嚎）
+    // 經驗區中表側的 [經] 卡：傷害計算後的效果（復仇之嚎），進觸發窗口，先攻方先處理
     for (const p of order(g)) {
+      const effects: WindowEffect[] = [];
       for (const card of [...Z(g, p, 'exp')]) {
-        if (card.covered || card.zone !== 'exp') continue;
-        const sc = scripts[card.id];
-        if (sc?.afterDamageExp) yield* sc.afterDamageExp(g, p, card, { dealt: dmg[other(p)], taken: dmg[p] });
+        if (card.covered) continue;
+        const e = scripts[card.id]?.afterDamageEffect?.(g, p, card, { dealt: dmg[other(p)], taken: dmg[p] });
+        if (e) effects.push(e);
       }
+      yield* triggerWindow(g, p, '傷害計算後', effects);
     }
   });
   checkWin(g);

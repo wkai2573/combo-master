@@ -7,6 +7,8 @@ export interface WindowEffect {
   label: string;
   /** 強制效果：標示「強制」，只能排序、不能跳過 */
   mandatory?: boolean;
+  /** 結算完不要再補錄一個說明影格（效果自己已經錄好影格時設為 false） */
+  mark?: boolean;
   /** 此刻是否仍可發動（每次結算後重新檢查，例如費用付不起就從清單消失） */
   available: () => boolean;
   /**
@@ -32,7 +34,7 @@ export function* triggerWindow(g: GameCtx, p: PlayerId, title: string, effects: 
       // 只剩一個：強制效果直接處理；可選效果維持原本的發動與不發動確認
       const [only] = avail;
       pending.splice(pending.indexOf(only), 1);
-      yield* markIfLogged(g, () => only.run(only.mandatory ?? false));
+      yield* settleEffect(g, only, only.mandatory ?? false);
       continue;
     }
     const options = avail.map((e, i) => ({ key: `e${i}`, label: `${e.mandatory ? '【強制】' : ''}${e.label}` }));
@@ -41,6 +43,11 @@ export function* triggerWindow(g: GameCtx, p: PlayerId, title: string, effects: 
     if (key === WINDOW_END_KEY) return;
     const chosen = avail[Number(key.slice(1))];
     pending.splice(pending.indexOf(chosen), 1);
-    yield* markIfLogged(g, () => chosen.run(true));
+    yield* settleEffect(g, chosen, true);
   }
+}
+
+function* settleEffect(g: GameCtx, e: WindowEffect, confirmed: boolean): Gen {
+  if (e.mark === false) yield* e.run(confirmed);
+  else yield* markIfLogged(g, () => e.run(confirmed));
 }

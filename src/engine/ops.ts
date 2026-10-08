@@ -1,6 +1,7 @@
 import { getCard, getCharacter } from '../data/cards';
 import type { CardData } from '../data/types';
 import type { Rng } from './rng';
+import { triggerWindow, type WindowEffect } from './window';
 import {
   other,
   type CardInst,
@@ -196,6 +197,9 @@ export const COVER_REACTIONS: Record<string, (g: GameCtx, p: PlayerId, card: Car
   },
 };
 
+/** 蓋反應的說明（顯示在觸發窗口的選單上） */
+const COVER_REACTION_TEXT: Record<string, string> = { 低價買進: '回復 3', 高價賣出: '抽 1' };
+
 /** 扣除費用並自動觸發被蓋成裏側的經驗卡的蓋反應 */
 export function* pay(g: GameCtx, p: PlayerId, cost: Cost): Gen {
   settle(g); // 付費之前還沒呈現的變化不算費用
@@ -204,15 +208,22 @@ export function* pay(g: GameCtx, p: PlayerId, cost: Cost): Gen {
   if (cost.rage) discardRage(g, p, cost.rage);
   // 付費自成一段，之後的蓋反應與效果各自再成一段
   if (cost.cover || cost.rage) settle(g, `${pname(g, p)} 支付費用（${costText(cost)}）`);
-  for (const card of newlyCovered) {
-    const reaction = COVER_REACTIONS[card.id];
-    if (reaction) {
-      log(g, `【${data(card).name}】被蓋成裏側`);
-      activate(g, p, card, `【${data(card).name}】被蓋成裏側，效果發動`);
-      yield* reaction(g, p, card);
-      settle(g);
-    }
-  }
+  // 同一次蓋到多張有蓋反應的卡：進觸發窗口，由卡的擁有者決定先後；蓋反應是強制的
+  const reactions: WindowEffect[] = newlyCovered
+    .filter((card) => COVER_REACTIONS[card.id])
+    .map((card) => ({
+      label: `【${data(card).name}】被蓋成裏側：${COVER_REACTION_TEXT[card.id] ?? '效果發動'}`,
+      mandatory: true,
+      mark: false, // 蓋反應自己會錄發動與步驟影格
+      available: () => true,
+      *run(): Gen {
+        log(g, `【${data(card).name}】被蓋成裏側`);
+        activate(g, p, card, `【${data(card).name}】被蓋成裏側，效果發動`);
+        yield* COVER_REACTIONS[card.id](g, p, card);
+        settle(g);
+      },
+    }));
+  yield* triggerWindow(g, p, '被蓋成裏側', reactions);
 }
 
 /** 可選的費用發動：付得起才詢問，同意就扣費並回傳 true。askFirst 為 false 時（已在觸發窗口選定）不再詢問 */

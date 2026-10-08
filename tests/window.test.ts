@@ -241,3 +241,125 @@ describe('提示：窗口選單', () => {
     expect(g.pending!.max).toBe(1);
   });
 });
+
+describe('觸發窗口：回合開始', () => {
+  const start = (p0: Parameters<typeof scenario>[0] extends infer S ? (S extends { p0?: infer P } ? P : never) : never, extra: Partial<Parameters<typeof scenario>[0]> = {}) =>
+    scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0, ...extra });
+
+  it('家族相片可選、凡骨的意志強制：選單標示強制且沒有結束選項', () => {
+    const g = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
+    expect(g.pending!.title).toContain('回合開始');
+    expect(labels(g).map((l) => l.replace(/^【強制】/, '強制：'))).toEqual([
+      '【家族相片】回復 1（蓋1、怒3）',
+      '強制：【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量',
+    ]);
+  });
+
+  it('先發家族相片會蓋到凡骨的意志自己，凡骨就沒有效果；先發凡骨則兩張都能發', () => {
+    const a = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
+    pick(a, '【家族相片】回復 1（蓋1、怒3）');
+    expect(Z(a, 0, 'exp').map((c) => c.covered)).toEqual([true, false, false]);
+    expect(a.state.flags.vanillaBoost[0]).toBe(0); // 凡骨已被蓋成裏側，從清單消失
+    expect(a.pending).toBeNull();
+
+    const b = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
+    pick(b, '【強制】【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量');
+    expect(b.state.flags.vanillaBoost[0]).toBe(1);
+    expect(Z(b, 0, 'exp').map((c) => c.covered)).toEqual([true, true, false]);
+    expect(b.pending!.title).toContain('家族相片'); // 只剩一個可選效果：原本的確認
+    pick(b, '發動');
+    expect(Z(b, 0, 'exp').map((c) => c.covered)).toEqual([true, true, true]);
+  });
+
+  it('兩個強制效果：凡骨的意志與中毒，自己決定先後，都會處理', () => {
+    const g = scenario({
+      chars: ['刺客', '商人'],
+      first: 0,
+      phase: '重置',
+      singlePhase: true,
+      p0: { exp: ['黑桃1'] },
+      p1: { exp: ['Ex卡-中毒', '凡骨的意志', '黑桃3'] },
+    });
+    // 玩家0 先攻：先處理玩家0（沒有效果），再到玩家1 的窗口
+    expect(g.pending!.player).toBe(1);
+    expect(labels(g)).toHaveLength(2);
+    expect(labels(g).every((l) => l.startsWith('【強制】'))).toBe(true);
+    pick(g, '【強制】【中毒】直擊 3');
+    expect(g.pending).toBeNull(); // 剩下的凡骨強制效果直接處理
+    expect(g.state.flags.vanillaBoost[1]).toBe(1);
+    expect(Z(g, 1, 'discard')).toHaveLength(3);
+  });
+
+  it('先攻方先處理完自己的窗口，再換後攻方', () => {
+    const g = scenario({
+      chars: ['商人', '商人'],
+      first: 1,
+      phase: '重置',
+      singlePhase: true,
+      p0: { gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3'], rage: Array(4).fill('黑桃1') },
+      p1: { gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3'], rage: Array(4).fill('黑桃1') },
+    });
+    expect(g.pending!.player).toBe(1);
+    pick(g, '【家族相片】回復 1（蓋1、怒3）');
+    expect(g.pending!.player).toBe(0);
+    expect(g.pending!.title).toContain('回合開始');
+  });
+});
+
+describe('觸發窗口：傷害計算後', () => {
+  const hit = (exp: string[]) =>
+    scenario({ p0: { hand: ['黑桃1'], exp, rage: Array(12).fill('黑桃1') }, p1: { hand: ['黑桃9'] } });
+
+  it('兩張復仇之嚎各算一個效果：選單可以選要發哪張，也可以結束', () => {
+    const g = hit(['復仇之嚎', '復仇之嚎']);
+    g.state.flags.atkBonus[1] = 3; // 對方多 3 點總攻擊：受到的傷害大於造成的
+    pick(g, '黑桃9');
+    expect(g.pending!.title).toContain('傷害計算後');
+    expect(labels(g)).toEqual(['【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）', '【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）', '結束（不再發動）']);
+    const rage = Z(g, 0, 'rage').length;
+    pick(g, '【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）');
+    expect(Z(g, 0, 'rage')).toHaveLength(rage - 4);
+    expect(g.pending!.title).toContain('復仇之嚎'); // 剩下一張：原本的確認
+    pick(g, '不發動');
+    expect(Z(g, 0, 'rage')).toHaveLength(rage - 4);
+  });
+
+  it('傷害沒有大於造成的傷害，就沒有窗口', () => {
+    const g = scenario({ p0: { hand: ['黑桃9'], exp: ['復仇之嚎', '復仇之嚎'], rage: Array(12).fill('黑桃1') }, p1: { hand: ['黑桃1'] } });
+    pick(g, '黑桃1');
+    expect(g.pending?.title ?? '').not.toContain('復仇之嚎');
+  });
+});
+
+describe('觸發窗口：收招時', () => {
+  it('冰與雷之曲進窗口，只有它一個可選效果時維持原本的發動與不發動確認', () => {
+    const g = scenario({
+      phase: '先手',
+      singlePhase: true,
+      p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], combat: ['冰霜護甲', '電弧'], rage: ['黑桃4'] },
+      p1: { hand: ['黑桃9'] },
+    });
+    pick(g, '黑桃1');
+    pick(g, '黑桃9');
+    pick(g, '收招');
+    expect(g.pending!.title).toContain('冰與雷之曲');
+    expect(labels(g)).toEqual(['發動', '不發動']);
+  });
+});
+
+describe('觸發窗口：被蓋成裏側的蓋反應', () => {
+  it('同一次蓋到兩張有蓋反應的卡，擁有者決定先後，兩個都強制', () => {
+    const g = scenario({
+      p0: { hand: ['高利貸'] },
+      p1: { hand: [], exp: ['低價買進', '高價賣出', '黑桃3'], rage: Array(5).fill('黑桃1'), deck: ['黑桃4', ...Array(20).fill('黑桃2')] },
+    });
+    // 高利貸：對方的表側且帶 [經] 的經驗有 2 張，強制蓋 2，兩張都有蓋反應
+    expect(g.pending!.player).toBe(1);
+    expect(g.pending!.title).toContain('被蓋成裏側');
+    expect(labels(g)).toEqual(['【強制】【低價買進】被蓋成裏側：回復 3', '【強制】【高價賣出】被蓋成裏側：抽 1']);
+    pick(g, '【強制】【高價賣出】被蓋成裏側：抽 1'); // 先抽牌
+    expect(g.pending?.title ?? '').not.toContain('被蓋成裏側'); // 剩下的低價買進直接處理
+    const log = g.state.log.join('\n');
+    expect(log.indexOf('【高價賣出】被蓋成裏側')).toBeLessThan(log.indexOf('【低價買進】被蓋成裏側'));
+  });
+});

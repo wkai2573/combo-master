@@ -152,13 +152,16 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'hand')).toHaveLength(before + 1);
   });
 
-  it('復仇之嚎：[經_怒3]', () => {
-    const g = scenario({ p0: { exp: ['復仇之嚎'], rage: Array(8).fill('黑桃1') } });
-    const card = Z(g, 0, 'exp')[0];
-    const it = scripts['復仇之嚎'].afterDamageExp!(g, 0, card, { taken: 5, dealt: 2 });
-    it.next();
-    it.next(['yes']);
-    expect(Z(g, 0, 'rage')).toHaveLength(8 - 3 - 1);
+  it('復仇之嚎：[經_怒3] 傷害計算後，若受到的傷害大於造成的，可以蓋怒氣 3 再把怒氣區上方 1 張加入手牌', () => {
+    const g = scenario({ p0: { hand: ['黑桃1'], exp: ['復仇之嚎'], rage: Array(8).fill('黑桃1') }, p1: { hand: ['黑桃9'] } });
+    g.state.flags.atkBonus[1] = 3; // 對方多 3 點總攻擊：受到的傷害大於造成的
+    pick(g, '黑桃9');
+    expect(g.pending!.title).toContain('復仇之嚎');
+    const rage = Z(g, 0, 'rage').length;
+    const hand = Z(g, 0, 'hand').length;
+    pick(g, '發動');
+    expect(Z(g, 0, 'rage')).toHaveLength(rage - 3 - 1);
+    expect(Z(g, 0, 'hand')).toHaveLength(hand + 2); // 怒氣區上方 1 張＋之後抽牌階段抽 1
   });
 
   it('順手牽羊：[發_蓋X] 抽 X，此回合總防禦 −X（X ≤ 2），不影響總攻擊', () => {
@@ -507,11 +510,10 @@ describe('新卡（第二批）', () => {
     expect(g.state.log.join('\n')).toContain('（非招式卡）');
   });
 
-  it('pay 蓋到低價買進與高價賣出時，自動觸發蓋反應', () => {
-    const g = scenario({ p0: { exp: ['低價買進', '高價賣出'], rage: Array(5).fill('黑桃1'), deck: ['黑桃4', ...filler] } });
-    pay(g, 0, { cover: 2 }).next();
+  it('pay 只蓋到一張蓋反應的卡時，自動觸發它的效果', () => {
+    const g = scenario({ p0: { exp: ['低價買進', '黑桃3'], rage: Array(5).fill('黑桃1'), deck: ['黑桃4', ...filler] } });
+    pay(g, 0, { cover: 1 }).next();
     expect(Z(g, 0, 'rage')).toHaveLength(2); // 低價買進：回復 3
-    expect(Z(g, 0, 'hand')).toHaveLength(1); // 高價賣出：抽 1
   });
 });
 
