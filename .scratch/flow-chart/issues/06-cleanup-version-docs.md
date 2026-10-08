@@ -4,12 +4,16 @@
 
 **Blocked by（被誰阻擋）：** 03、04、05
 
-**Status：** ready-for-agent
+**Status：** resolved
 
-- [ ] 刪除舊流程圖的 HTML、來源 JSON，以及只放舊網址常數的小檔；刪除前先全專案搜尋，確認沒有任何地方還引用它們
-- [ ] 移除 `.gitignore` 裡只為 Archify 加的 `.archify` 一行
-- [ ] 重寫 `README.md` 的「戰鬥流程圖」一段：說明它是 App 內的元件、入口在哪裡、圖的主幹與引擎共用同一份步驟表、分支要手動維護
-- [ ] 全專案搜尋 `archify`，不再有任何殘留；`dist/` 是建置產物，不用手動處理
-- [ ] 版本號升到 v0.24.0，依 `docs/agents/versioning.md`；在 `src/data/changelog.ts` 補一筆，只寫玩家看得到的變化，格式與排序要通過現有的更新日誌測試
-- [ ] 評估 `GLOSSARY.md` 是否需要新增流程圖相關詞條；不需要就不加
-- [ ] 全部測試與型別檢查通過
+- [x] 刪除舊流程圖的 HTML、來源 JSON，以及只放舊網址常數的小檔；刪除前先全專案搜尋，確認沒有任何地方還引用它們
+- [x] 移除 `.gitignore` 裡只為 Archify 加的 `.archify` 一行
+- [x] 重寫 `README.md` 的「戰鬥流程圖」一段：說明它是 App 內的元件、入口在哪裡、圖的主幹與引擎共用同一份步驟表、分支要手動維護
+- [x] 全專案搜尋 `archify`，不再有任何殘留；`dist/` 是建置產物，不用手動處理
+- [x] 版本號升到 v0.24.0，依 `docs/agents/versioning.md`；在 `src/data/changelog.ts` 補一筆，只寫玩家看得到的變化，格式與排序要通過現有的更新日誌測試
+- [x] 評估 `GLOSSARY.md` 是否需要新增流程圖相關詞條；不需要就不加
+- [x] 全部測試與型別檢查通過
+
+## Answer
+
+已於 v0.24.0 生效。`GLOSSARY.md` 不新增詞條：流程圖是介面元件，不是領域詞彙。

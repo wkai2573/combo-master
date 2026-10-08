@@ -21,6 +21,15 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.24.0',
+    date: '2026-10-08',
+    items: [
+      { type: 'change', text: '戰鬥流程圖改成遊戲內的彈窗，不再開新分頁，手機上也看得清楚；首頁、規則說明、對戰畫面上方的「流程圖」都能開啟' },
+      { type: 'add', text: '對戰中開啟流程圖，會標出目前進行到的步驟（你在這裡），並隨對局推進更新' },
+      { type: 'fix', text: '流程圖補上先手沒有招式時展示手牌、追擊一律失敗的情況與每個步驟結束後都檢查勝負，並修正加賽終點（一方先翻完怒氣區落敗，雙方同時翻完才平手）' },
+    ],
+  },
+  {
     version: '0.23.0',
     date: '2026-10-08',
     items: [{ type: 'add', text: '主選單新增「更新日誌」，點首頁標題旁的版本號也能開啟' }],

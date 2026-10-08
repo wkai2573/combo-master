@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { APP_BUILT_AT, VERSION_LABEL, VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { ChangelogModal } from '../components/ChangelogModal';
+import { FlowChartModal } from '../components/FlowChartModal';
 import { Modal } from '../components/Modal';
-import { FLOW_CHART_URL } from '../flowChart';
 import type { LobbyMode } from './Lobby';
 
 export type Route = 'home' | 'decks' | LobbyMode;
@@ -10,6 +10,7 @@ export type Route = 'home' | 'decks' | LobbyMode;
 export function Home({ go }: { go: (r: Route) => void }) {
   const [rules, setRules] = useState(false);
   const [changelog, setChangelog] = useState(false);
+  const [flow, setFlow] = useState(false);
   return (
     <div className="page home">
       <h1>
@@ -24,9 +25,10 @@ export function Home({ go }: { go: (r: Route) => void }) {
         <button onClick={() => go('decks')}>組牌</button>
         <button onClick={() => setRules(true)}>規則說明</button>
         <button onClick={() => setChangelog(true)}>更新日誌</button>
-        <a className="btnlink" href={FLOW_CHART_URL} target="_blank" rel="noreferrer">戰鬥流程圖</a>
+        <button onClick={() => setFlow(true)}>戰鬥流程圖</button>
       </div>
       {changelog && <ChangelogModal onClose={() => setChangelog(false)} />}
+      {flow && <FlowChartModal onClose={() => setFlow(false)} />}
       {rules && (
         <Modal onClose={() => setRules(false)}>
           <div style={{ textAlign: 'left', maxWidth: 560, lineHeight: 1.7 }}>
@@ -42,7 +44,7 @@ export function Home({ go }: { go: (r: Route) => void }) {
             </ul>
             <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
               <button onClick={() => setRules(false)}>關閉</button>
-              <a className="btnlink" href={FLOW_CHART_URL} target="_blank" rel="noreferrer">看戰鬥流程圖</a>
+              <button onClick={() => { setRules(false); setFlow(true); }}>看戰鬥流程圖</button>
             </div>
           </div>
         </Modal>

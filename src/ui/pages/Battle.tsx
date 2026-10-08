@@ -1,4 +1,3 @@
-import { FLOW_CHART_URL } from '../flowChart';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { SPEED_LABEL, useSpeed, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
@@ -7,6 +6,7 @@ import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/B
 import { FlightLayer } from '../components/FlightLayer';
 import { PhaseBanner } from '../components/PhaseBanner';
 import { Spotlight } from '../components/Spotlight';
+import { FlowChartModal } from '../components/FlowChartModal';
 import { Modal } from '../components/Modal';
 import { ZoneViewer } from '../components/ZoneViewer';
 import { StepTracker } from '../components/StepTracker';
@@ -33,6 +33,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const zoneRef = useRef(zone);
   zoneRef.current = zone;
   const [copied, setCopied] = useState(false);
+  const [flowOpen, setFlowOpen] = useState(false);
   // 作弊模式：開關記在連線層（對方才看得到提示），離開或下一局都會回到關閉；面板的開合只是這個畫面的事
   const [cheatOpen, setCheatOpen] = useState(false);
   const cheatOpenRef = useRef(cheatOpen);
@@ -172,7 +173,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
               {cheatOn && <button className={cheatOpen ? 'on' : ''} aria-pressed={cheatOpen} onClick={() => setCheatOpen(!cheatOpen)}>作弊面板</button>}
             </>
           )}
-          <a className="btnlink" href={FLOW_CHART_URL} target="_blank" rel="noreferrer" title="在新分頁開啟戰鬥流程圖">流程圖</a>
+          <button title="開啟戰鬥流程圖" onClick={() => setFlowOpen(true)}>流程圖</button>
           <select value={speed} onChange={(e) => setSpeed(e.target.value as Speed)} title="動畫速度">
             {(Object.keys(SPEED_LABEL) as Speed[]).map((s) => <option key={s} value={s}>{SPEED_LABEL[s]}</option>)}
           </select>
@@ -226,6 +227,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         <Spotlight fx={fx} caption={pres.caption} n={fxKey} scale={scale} />
         <FlightLayer view={v} fx={fx} playing={pres.playing} n={fxKey} scale={scale} />
 
+        {flowOpen && <FlowChartModal phase={v.phase} onClose={() => setFlowOpen(false)} />}
         {zone && !(zone.z === 'rage' && zone.p !== me) && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} exp={zone.z === 'exp'} anchor={zone.anchor} onClose={() => setZone(null)} />}
 
         {result && (

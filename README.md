@@ -12,7 +12,11 @@ https://wkai2573.github.io/combo-master/
 
 ## 戰鬥流程圖
 
-`public/battle-flow.html` 是可互動的回合與戰鬥流程圖（可縮放、追蹤路徑），會隨網站一起部署；遊戲首頁、規則說明和對戰畫面上方的「流程圖」都能開啟（新分頁）。它由 [Archify](https://github.com/tt-a1i/archify) 產生，來源在 `docs/戰鬥流程圖.source.json`；規則改了之後，用 Claude Code 的 `archify` 技能依這份來源修改並重新產生即可。
+戰鬥流程圖是 App 內的元件（`src/ui/components/FlowChartModal.tsx`，圖的版面資料在 `src/ui/flowChart.ts`），用彈窗開啟：遊戲首頁、規則說明和對戰畫面上方的「流程圖」都是入口。從對戰畫面開啟時，主幹上會標出目前的步驟（你在這裡），並隨對局推進更新。
+
+- 回合主幹（重置、戰鬥內五個步驟、抽牌、爆發、增益、回合結束）由 `src/data/turnSteps.ts` 的步驟表產生，戰鬥畫面上方的步驟列讀同一份，調整回合順序只要改這一處；新增階段時還要在 `flowChart.ts` 補主幹節點文字，沒補會有明確的錯誤。
+- 分支（先手無招式、跳過追擊、追擊判定、勝負與加賽）在 `src/ui/flowChart.ts` 手寫座標與文字，規則改了要手動維護；規則以 `docs/連擊大師.md` 為準。
+- 節點文字預先斷成最多兩行、每行最多十字，由 `tests/flowChart.test.ts` 檢查，同時檢查節點不超出寬度、彼此不重疊。
 
 ## 指令
 
