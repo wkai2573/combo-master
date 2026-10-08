@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.25.1',
+    date: '2026-10-08',
+    items: [
+      { type: 'change', text: '作弊面板牌區的卡片按鈕移到下方：左下藍色是翻面，右下紅色是刪除，並改成不透明，更容易看見' },
+    ],
+  },
+  {
     version: '0.25.0',
     date: '2026-10-08',
     items: [

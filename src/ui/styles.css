@@ -247,11 +247,10 @@ h1, h2, h3 { margin: 0 0 8px; }
 .sortcell img { -webkit-user-drag: none; }
 .sortlist.locked .sortcell { cursor: default; }
 .cheatcard { position: relative; }
-.cheatcard button { position: absolute; top: 2px; z-index: 2; width: 18px; height: 18px; padding: 0; line-height: 1; font-size: 12px; border-radius: 50%; background: #000b; border-color: #fff4; opacity: .85; }
-.cheatcard button:hover:not(:disabled) { opacity: 1; border-color: var(--accent); }
-.cheatcard .cheatx { right: 2px; }
-.cheatcard .cheatx:hover:not(:disabled) { color: var(--bad); border-color: var(--bad); }
-.cheatcard .cheatflip { left: 2px; }
+.cheatcard button { position: absolute; bottom: 2px; z-index: 2; width: 20px; height: 20px; padding: 0; line-height: 1; font-size: 13px; font-weight: 800; color: #fff; border-radius: 50%; border: 1px solid #fffa; box-shadow: 0 1px 3px #000c; }
+.cheatcard button:hover:not(:disabled) { filter: brightness(1.2); border-color: #fff; }
+.cheatcard .cheatx { right: 2px; background: #d83a3a; }
+.cheatcard .cheatflip { left: 2px; background: #2f6fd6; }
 .cheatadd { flex: none; width: 76px; height: 106px; display: grid; place-content: center; justify-items: center; gap: 2px; border: 2px dashed var(--line); border-radius: 12px 12px 8px 8px; background: transparent; font-size: 22px; color: var(--muted); cursor: pointer; }
 .cheatadd .muted { font-size: 11px; }
 .cheatadd:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
