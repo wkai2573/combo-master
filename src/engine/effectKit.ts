@@ -31,7 +31,7 @@ export interface Events {
   afterDamage: { dealt: number; taken: number };
   afterReturn: Record<never, never>;
   /** flipExtra：額外翻 1 張牌做追擊判定，以回呼傳入，條目不必匯入戰鬥模組 */
-  afterPursuitFail: { flipExtra: () => Gen };
+  afterPursuitFail: { flipExtra: () => Gen<boolean> };
   /** 主體型：只問主體那張卡自己的條目，不看它所在的區域 */
   onOpen: { card: CardInst };
   onPlay: { card: CardInst };

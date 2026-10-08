@@ -1,6 +1,7 @@
 import {
   data, log, mark, move, pname, Z, type GameCtx, type Gen,
 } from './ops';
+import { fire } from './effects';
 import { scripts } from './scripts';
 import { other, type CardInst, type PlayerId } from './types';
 
@@ -23,8 +24,7 @@ export function* becomePursuitCard(g: GameCtx, p: PlayerId, card: CardInst): Gen
   log(g, `追擊成功：【${data(card).name}】成為追擊卡`);
   mark(g, `追擊成功！【${data(card).name}】成為追擊卡（攻擊 +${data(card).atk}）`,
     { type: 'flipResult', player: p, cardId: card.id, ok: true });
-  const sc = scripts[card.id];
-  if (sc?.onPursuitCard) yield* sc.onPursuitCard(g, p, card);
+  yield* fire(g, p, 'onPursuitCard', { card });
 }
 
 /** 對 card 做追擊判定。回傳是否成功。 */

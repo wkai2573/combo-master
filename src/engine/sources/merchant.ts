@@ -1,7 +1,8 @@
-import { faceUpExp } from '../cost';
+import { hasExpEffect } from '../../data/expEffect';
+import { canPay, chooseX, faceUpExp, pay } from '../cost';
 import { defineSource } from '../effectKit';
-import { awakened, chooseCards, confirm, data, draw, log, move, pname, Z } from '../ops';
-import type { CardInst } from '../types';
+import { activate, awakened, chooseCards, confirm, data, draw, log, move, pname, Z } from '../ops';
+import { other, type CardInst } from '../types';
 
 // 招財貓（商人）：[蓋2] 爆發時，額外抽 1
 export const 招財貓 = defineSource({
@@ -65,4 +66,56 @@ export const 商人 = defineSource({
   },
 });
 
-export const MERCHANT_SOURCES = [招財貓, 商人];
+// 交涉（商人）：[發_蓋X] 抽X，再將 X 張手牌放到牌組底。X 最大為 3
+export const 交涉 = defineSource({
+  id: '交涉',
+  at: 'combat',
+  on: {
+    onPlay: (c) => c.effect(
+      { label: '【交涉】蓋 X 張經驗，抽 X，再放 X 張手牌到牌組底', when: () => canPay(c.g, c.p, { cover: 1 }) },
+      function* () {
+        const { g, p } = c;
+        const x = yield* chooseX(g, p, c.self!, 3, '蓋 X 張經驗，抽 X，再放 X 張手牌到牌組底');
+        if (x === 0) return;
+        activate(g, p, c.self!);
+        yield* pay(g, p, { cover: x });
+        yield* draw(g, p, x);
+        const put = yield* chooseCards(g, p, `【交涉】選擇 ${x} 張手牌放到牌組底`, Z(g, p, 'hand'), x, x);
+        for (const card of put) move(g, card, 'deck', 'bottom');
+        log(g, `【交涉】抽 ${x}，並將 ${put.length} 張手牌放到牌組底`);
+      },
+    ),
+  },
+});
+
+// 即時停損（商人）：[發_蓋4] 此卡打出後雙方立即收招
+export const 即時停損 = defineSource({
+  id: '即時停損',
+  at: 'combat',
+  on: {
+    onPlay: (c) => c.effect({ label: '【即時停損】雙方立即收招（蓋4）', cost: { cover: 4 } }, () => {
+      c.g.state.passed = [true, true];
+      log(c.g, '【即時停損】雙方立即收招');
+    }),
+  },
+});
+
+// 高利貸（商人）：[發] 對方蓋X。X = 對方帶 [經] 的表側經驗張數
+export const 高利貸 = defineSource({
+  id: '高利貸',
+  at: 'combat',
+  on: {
+    onPlay: (c) => {
+      const foe = other(c.p);
+      const count = () => faceUpExp(c.g, foe).filter((card) => hasExpEffect(card.id)).length;
+      return c.effect({ label: '【高利貸】對方蓋X', mandatory: true, when: () => count() > 0 }, function* () {
+        const x = count();
+        activate(c.g, c.p, c.self!);
+        log(c.g, `【高利貸】${pname(c.g, foe)} 的表側經驗中有 ${x} 張帶 [經]，強制蓋 ${x}`);
+        yield* pay(c.g, foe, { cover: x });
+      });
+    },
+  },
+});
+
+export const MERCHANT_SOURCES = [招財貓, 商人, 交涉, 即時停損, 高利貸];

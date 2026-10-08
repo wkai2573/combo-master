@@ -77,9 +77,12 @@ const hereOf = (src: EffectSource, self: CardInst | null) => (): boolean =>
 
 export interface Effects {
   /** 這個時機、這位玩家此刻可發動的效果（不結算）。要與其他窗口合併，或測試時使用 */
-  windowEffects<K extends EventKey>(g: GameCtx, p: PlayerId, key: K, ...arg: FireArgList<K>): WindowEffect[];
-  /** 開該時機的觸發窗口並結算；沒有效果時不產生任何提示 */
-  fire<K extends EventKey>(g: GameCtx, p: PlayerId, key: K, ...arg: FireArgList<K>): Gen;
+  windowEffects<K extends EventKey>(g: GameCtx, p: PlayerId, key: K | readonly K[], ...arg: FireArgList<K>): WindowEffect[];
+  /**
+   * 開該時機的觸發窗口並結算；沒有效果時不產生任何提示。
+   * 同時發生的幾個時機傳陣列，例如先手出招同時是先手出招時與打出時，它們的效果進同一個窗口，標題取第一個。
+   */
+  fire<K extends EventKey>(g: GameCtx, p: PlayerId, key: K | readonly K[], ...arg: FireArgList<K>): Gen;
   /** 雙方各開一次，先攻方先。參數可依玩家而異 */
   fireEach<K extends EventKey>(g: GameCtx, key: K, ...arg: [arg?: FireArgs[K] | ((p: PlayerId) => FireArgs[K])]): Gen;
   query<K extends QueryKey>(g: GameCtx, p: PlayerId, key: K, ...args: QueryArgs[K]): Queries[K];
@@ -125,7 +128,9 @@ export function createEffects(sources: readonly EffectSource[]): Effects {
     return out;
   }
 
-  function windowEffects(g: GameCtx, p: PlayerId, key: EventKey, arg?: unknown): WindowEffect[] {
+  function windowEffects(g: GameCtx, p: PlayerId, keyOrKeys: EventKey | readonly EventKey[], arg?: unknown): WindowEffect[] {
+    if (Array.isArray(keyOrKeys)) return (keyOrKeys as EventKey[]).flatMap((k) => windowEffects(g, p, k, arg));
+    const key = keyOrKeys as EventKey;
     // 爆發後的窗口也收覺醒時的效果；偵測要在每次都做，才不會漏掉進入覺醒的那一次
     if (key === 'afterBurst') {
       const out = gather(g, p, 'afterBurst', arg);
@@ -136,8 +141,9 @@ export function createEffects(sources: readonly EffectSource[]): Effects {
     return gather(g, p, key, arg);
   }
 
-  function* fire(g: GameCtx, p: PlayerId, key: EventKey, arg?: unknown): Gen {
-    yield* triggerWindow(g, p, EVENT_TITLES[key], windowEffects(g, p, key, arg));
+  function* fire(g: GameCtx, p: PlayerId, keyOrKeys: EventKey | readonly EventKey[], arg?: unknown): Gen {
+    const first = Array.isArray(keyOrKeys) ? (keyOrKeys as EventKey[])[0] : (keyOrKeys as EventKey);
+    yield* triggerWindow(g, p, EVENT_TITLES[first], windowEffects(g, p, keyOrKeys, arg));
   }
 
   function* fireEach(g: GameCtx, key: EventKey, arg?: unknown): Gen {

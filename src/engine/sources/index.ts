@@ -4,6 +4,7 @@ import { COMMON_SOURCES } from './common';
 import { MAGE_SOURCES } from './mage';
 import { MERCHANT_SOURCES } from './merchant';
 import { SWORDSMAN_SOURCES } from './swordsman';
+import { THIEF_SOURCES } from './thief';
 
 /**
  * 全部的效果來源。依職業分檔，這裡攤平登記。
@@ -11,6 +12,7 @@ import { SWORDSMAN_SOURCES } from './swordsman';
  */
 export const ALL_SOURCES: EffectSource[] = [
   ...SWORDSMAN_SOURCES,
+  ...THIEF_SOURCES,
   ...MERCHANT_SOURCES,
   ...ARCHER_SOURCES,
   ...MAGE_SOURCES,

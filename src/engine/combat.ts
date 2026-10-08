@@ -2,7 +2,6 @@ import {
   ask, awakened, cardOpt, chooseCards, data, draw, isFirst, log, mark, markIfLogged, move,
   newCard, order, pname, takeDamage, Z, type GameCtx, type Gen,
 } from './ops';
-import { optionalPay } from './cost';
 import { inRange, judge } from './judge';
 import { fire, fireEach } from './effects';
 import { scripts } from './scripts';
@@ -34,11 +33,8 @@ export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: bool
   mark(g, `${pname(g, p)} ${opening ? '先手出招' : '出招'}【${cd.name}】　攻${cd.atk}　連擊${cd.combo}　守${cd.def}`,
     { type: 'play', player: p, uid: card.uid });
 
-  const sc = scripts[card.id];
-  yield* markIfLogged(g, function* (): Gen {
-    if (opening && sc?.onOpen) yield* sc.onOpen(g, p, card);
-    if (sc?.onPlay) yield* sc.onPlay(g, p, card);
-  });
+  // 先手出招同時是「先手出招時」與「打出時」，兩者的效果進同一個窗口
+  yield* fire(g, p, opening ? (['onOpen', 'onPlay'] as const) : 'onPlay', { card });
   checkWin(g);
 }
 
@@ -130,14 +126,8 @@ function* aim(g: GameCtx, p: PlayerId): Gen {
 
 function* afterJudge(g: GameCtx, p: PlayerId, card: CardInst): Gen {
   const ok = yield* judge(g, p, card);
-  if (ok || g.state.flags.rabbitUsed[p]) return;
-  const rabbit = Z(g, p, 'gear').find((c) => c.id === '幸運兔腳');
-  const deck = Z(g, p, 'deck');
-  if (rabbit && deck.length > 0 && (yield* optionalPay(g, p, rabbit, { cover: 2 }))) {
-    g.state.flags.rabbitUsed[p] = true;
-    log(g, `【${data(rabbit).name}】額外翻 1 張卡做追擊判定`);
-    yield* judge(g, p, deck[0]);
-  }
+  if (ok) return;
+  yield* fire(g, p, 'afterPursuitFail', { flipExtra: () => judge(g, p, Z(g, p, 'deck')[0]) });
 }
 
 export function* pursuitPhase(g: GameCtx): Gen {

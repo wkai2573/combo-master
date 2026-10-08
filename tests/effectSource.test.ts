@@ -38,7 +38,7 @@ describe('登記表', () => {
   });
 
   // 遷移期間尚未接進效果來源的開放卡；每遷移一批就從這裡拿掉，票 08 要求清空
-  const PENDING: string[] = ['幸運兔腳', '瞄準器'];
+  const PENDING: string[] = ['瞄準器'];
   it('開放名單裡的每張卡都已實作（遷移中允許清單內的卡暫缺）', () => {
     const missing = ENABLED_EFFECT_CARDS.filter((id) => !hasEffect(id));
     expect(missing.sort()).toEqual([...PENDING].sort());
@@ -172,6 +172,37 @@ describe('fire', () => {
     const req = r.value as { title: string; options: { label: string }[] };
     expect(req.title).toBe('回合開始：選擇要發動的效果');
     expect(labels(req.options)).toEqual(['G', 'E', '結束（不再發動）']);
+  });
+
+  it('先手出招同時是先手出招時與打出時，兩者的效果進同一個窗口，玩家自己選順序', () => {
+    const order: string[] = [];
+    const src = defineSource({
+      id: '黑桃4', at: 'combat',
+      on: {
+        onOpen: (c) => c.effect({ label: 'O' }, () => void order.push('O')),
+        onPlay: (c) => c.effect({ label: 'P' }, () => void order.push('P')),
+      },
+    });
+    const fx = createEffects([src]);
+    const g = scenario({ p0: { combat: ['黑桃4'] } });
+    const card = Z(g, 0, 'combat')[0];
+    const gen = fx.fire(g, 0, ['onOpen', 'onPlay'], { card });
+    const r = gen.next([]);
+    const req = r.value as { title: string; options: { label: string }[] };
+    expect(req.title).toBe('先手出招時：選擇要發動的效果');
+    expect(labels(req.options)).toEqual(['O', 'P', '結束（不再發動）']);
+    // 先選 P，剩下的 O 是唯一可選的效果，沿用原本的行為直接結算
+    expect(gen.next(['e1']).done).toBe(true);
+    expect(order).toEqual(['P', 'O']);
+  });
+
+  it('一個時機只有一個效果，且玩家沒有選擇的餘地時，不多出任何提示', () => {
+    const only = defineSource({
+      id: '黑桃4', at: 'combat',
+      on: { onPlay: (c) => c.effect({ label: 'P', mandatory: true }, noop) },
+    });
+    const g = scenario({ p0: { combat: ['黑桃4'] } });
+    drive(createEffects([only]).fire(g, 0, 'onPlay', { card: Z(g, 0, 'combat')[0] }));
   });
 
   it('fireEach 先攻方先，參數可依玩家而異', () => {

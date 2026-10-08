@@ -1,6 +1,7 @@
 import { faceUpExp, pay } from '../cost';
 import { defineSource } from '../effectKit';
-import { activate, log, move, pname, recover, Z } from '../ops';
+import { activate, directHit, log, move, pname, recover, Z } from '../ops';
+import { other } from '../types';
 
 // 家族相片（劍士）：[蓋1_怒3] 回合開始時，回復 1，可選
 export const 家族相片 = defineSource({
@@ -61,4 +62,16 @@ export const 復仇之嚎 = defineSource({
   },
 });
 
-export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎];
+// 熔岩之擊（劍士）：[發_怒3] 對方直擊 1
+export const 熔岩之擊 = defineSource({
+  id: '熔岩之擊',
+  at: 'combat',
+  on: {
+    onPlay: (c) => c.effect(
+      { label: '【熔岩之擊】對方直擊 1（怒3）', cost: { rage: 3 } },
+      () => void directHit(c.g, other(c.p), 1),
+    ),
+  },
+});
+
+export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊];

@@ -1,5 +1,5 @@
 import { triggerWindow, type WindowEffect } from './window';
-import { activate, confirm, data, discard, draw, log, pname, recover, settle, Z, type GameCtx, type Gen } from './ops';
+import { activate, ask, confirm, data, discard, draw, log, pname, recover, settle, Z, type GameCtx, type Gen } from './ops';
 import type { CardInst, PlayerId } from './types';
 
 // ───────────────────────── 費用 ─────────────────────────
@@ -99,4 +99,18 @@ export function discardRage(g: GameCtx, p: PlayerId, n: number): number {
     done++;
   }
   return done;
+}
+
+/** 可變的 X（[蓋X]）：玩家選擇要蓋幾張（0 ＝ 不發動），最多 max 張且受正面經驗張數限制 */
+export function* chooseX(g: GameCtx, p: PlayerId, card: CardInst, max: number, label: string): Gen<number> {
+  let limit = 0;
+  while (limit < max && canPay(g, p, { cover: limit + 1 })) limit++;
+  if (limit === 0) return 0;
+  const [k] = yield* ask(g, {
+    player: p,
+    title: `【${data(card).name}】${label}（X 最大為 ${max}）`,
+    min: 1, max: 1,
+    options: [{ key: '0', label: '不發動' }, ...Array.from({ length: limit }, (_, i) => ({ key: String(i + 1), label: `蓋${i + 1}` }))],
+  });
+  return Number(k);
 }
