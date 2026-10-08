@@ -72,7 +72,7 @@ export class Game {
     this.state = {
       players: [emptyPlayer(0, setup.decks[0].charId), emptyPlayer(1, setup.decks[1].charId)],
       first: 0, turn: 0, phase: '設置', flags: emptyFlags(), passed: [false, false],
-      log: [], winner: null, winReason: '', awakeSeen: [false, false],
+      log: [], winner: null, winReason: '', awakeSeen: [false, false], slots: [{}, {}],
     };
     this.it = this.run();
     this.advance(undefined);
@@ -181,6 +181,7 @@ export class Game {
     while (!this.over) {
       s.turn++;
       s.flags = emptyFlags();
+      s.slots = [{}, {}];
       s.passed = [false, false];
       log(g, `── 第 ${s.turn} 回合（先攻：${pname(g, s.first)}）──`);
 

@@ -17,10 +17,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import baseCards from '../src/data/generated/cards.json';
 import baseChars from '../src/data/generated/characters.json';
-import { scripts } from '../src/engine/scripts';
+import { hasEffect } from '../src/engine/effects';
 import type { CardData, CharacterData } from '../src/data/types';
-
-const implemented = scripts as Record<string, unknown>;
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const out = resolve(root, 'src', 'data', 'cardTable.json');
@@ -71,7 +69,7 @@ for (const d of readDocs('cards').sort((a, b) => a.order - b.order)) {
     if (d.kind === 'equip' && d.slot) c.slot = d.slot;
     if (d.kind === 'buff' && d.duration != null) c.duration = d.duration;
     added.push(c);
-    if (c.text && !(c.id in implemented)) notes.push(`新卡有效果文字，需先確認用語並實作效果：${c.name}`);
+    if (c.text && !hasEffect(c.id)) notes.push(`新卡有效果文字，需先確認用語並實作效果：${c.name}`);
   }
 }
 

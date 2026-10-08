@@ -75,6 +75,13 @@ export function pass(g: Game): void {
   g.submit(g.pending!.player, []);
 }
 
+/** 把不會產生提示的 Gen 跑完並回傳結果；中途要提示就丟錯 */
+export function drive<T>(gen: Generator<unknown, T, string[]>): T {
+  const r = gen.next([]);
+  if (!r.done) throw new Error('預期不會有提示，卻要求了回應');
+  return r.value;
+}
+
 export const title = (g: Game) => g.pending?.title ?? '(無提示)';
 
 /** 卡片攻擊／防禦（直接讀卡表，數值調整時測試不用跟著改） */
