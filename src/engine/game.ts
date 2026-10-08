@@ -1,13 +1,11 @@
 import { getCharacter } from '../data/cards';
 import { cheatAdd, cheatRemove, cheatReorder, cheatSnapshot, cheatSwitch, type CheatSnapshot, type CheatZone } from './cheat';
 import { combatPhase } from './combat';
-import { awakenCheck, awakeningEffects, merchantBurstEffects, turnStartEffects } from './scripts';
-import { triggerWindow, type WindowEffect } from './window';
+import { fire, fireEach } from './effects';
 import {
   ask, awakened, cardOpt, data, draw, drawPlain, GameOver, log, mark, move, newCard,
   markIfLogged, order, pname, settle, toExp, Z, type Gen,
 } from './ops';
-import { canPay, optionalPay } from './cost';
 import { Rng } from './rng';
 import { checkWin } from './win';
 import { diffFlights, flightsTotalMs } from './flights';
@@ -191,7 +189,7 @@ export class Game {
         s.phase = '重置';
         // 橫置狀態的卡改為重置狀態：目前沒有卡片使用橫置，保留階段供日後擴充
         // 回合開始時的效果：家族相片、凡骨的意志、中毒
-        yield* markIfLogged(g, () => turnStartEffects(g));
+        yield* markIfLogged(g, () => fireEach(g, 'turnStart'));
         checkWin(g);
       }
       if (!start || start === '重置' || start === '先手' || start === '反擊' || start === '追擊' || start === '傷害' || start === '歸還') {
@@ -219,7 +217,7 @@ export class Game {
     switch (phase) {
       case '重置':
         s.phase = '重置';
-        yield* markIfLogged(g, () => turnStartEffects(g));
+        yield* markIfLogged(g, () => fireEach(g, 'turnStart'));
         break;
       case '先手':
       case '反擊':
@@ -296,25 +294,8 @@ function* burstPhase(g: Game): Gen {
     log(g, `${pname(g, p)} 爆發：將【${data(card).name}】放入經驗區`);
     yield* draw(g, p, 2);
     mark(g, `${pname(g, p)} 爆發：1 張手牌放入經驗區，抽 2`, { type: 'info' });
-    // 爆發後的觸發窗口：招財貓、商人的調整順序、商人覺醒的加入手牌，由玩家選要發哪個、先發哪個
-    const effects: WindowEffect[] = [];
-    // 招財貓：[蓋2] 爆發時，額外抽 1
-    const cat = Z(g, p, 'gear').find((c) => c.id === '招財貓');
-    if (cat) {
-      effects.push({
-        label: '【招財貓】爆發時，抽 1（蓋2）',
-        available: () => canPay(g, p, { cover: 2 }),
-        *run(confirmed) {
-          if (!(yield* optionalPay(g, p, cat, { cover: 2 }, !confirmed))) return;
-          yield* draw(g, p, 1);
-          log(g, `【招財貓】${pname(g, p)} 爆發時額外抽 1`);
-        },
-      });
-    }
-    effects.push(...merchantBurstEffects(g, p));
-    // 這次爆發讓經驗區達到覺醒經驗時，覺醒時的效果也在同一個窗口
-    effects.push(...awakeningEffects(g, p));
-    yield* triggerWindow(g, p, '爆發後', effects);
+    // 爆發後的觸發窗口：招財貓、商人的調整順序、商人覺醒的加入手牌，以及這次爆發讓經驗區達到覺醒經驗時的覺醒效果
+    yield* fire(g, p, 'afterBurst');
   }
   checkWin(g);
 }
@@ -333,7 +314,7 @@ function* buffPhase(g: Game): Gen {
     }
   }
   if (g.state.log.length > logBefore) mark(g, g.state.log[g.state.log.length - 1], { type: 'info' });
-  yield* awakenCheck(g);
+  yield* fireEach(g, 'onAwaken');
   // 回合 1 次：打出 1 張裝備或增益
   for (const p of order(g)) {
     const exp = Z(g, p, 'exp').length;

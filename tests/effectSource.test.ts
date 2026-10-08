@@ -38,7 +38,7 @@ describe('登記表', () => {
   });
 
   // 遷移期間尚未接進效果來源的開放卡；每遷移一批就從這裡拿掉，票 08 要求清空
-  const PENDING: string[] = ['冰與雷之曲', '家族相片', '幸運兔腳', '招財貓', '瞄準器'];
+  const PENDING: string[] = ['幸運兔腳', '瞄準器'];
   it('開放名單裡的每張卡都已實作（遷移中允許清單內的卡暫缺）', () => {
     const missing = ENABLED_EFFECT_CARDS.filter((id) => !hasEffect(id));
     expect(missing.sort()).toEqual([...PENDING].sort());

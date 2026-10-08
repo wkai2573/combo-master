@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { awakeningEffects } from '../src/engine/scripts';
+import { windowEffects } from '../src/engine/effects';
 import { Z } from '../src/engine/ops';
 import { pick, scenario, setZones } from './helpers';
 
@@ -76,20 +76,20 @@ describe('覺醒時的效果（遊俠：可以抽 2）', () => {
 describe('進入覺醒的偵測', () => {
   it('每次由未覺醒變成覺醒都算一次；退出覺醒後再次達標會再觸發', () => {
     const g = scenario({ chars: ['遊俠', '勇者'], p0: { exp: exp(0) } });
-    expect(awakeningEffects(g, 0)).toHaveLength(0);
+    expect(windowEffects(g, 0, 'onAwaken')).toHaveLength(0);
     setZones(g, 0, { exp: exp(8) });
-    expect(awakeningEffects(g, 0)).toHaveLength(1); // 第一次進入覺醒
-    expect(awakeningEffects(g, 0)).toHaveLength(0); // 狀態沒變，不重複
+    expect(windowEffects(g, 0, 'onAwaken')).toHaveLength(1); // 第一次進入覺醒
+    expect(windowEffects(g, 0, 'onAwaken')).toHaveLength(0); // 狀態沒變，不重複
     setZones(g, 0, { exp: exp(7) });
-    expect(awakeningEffects(g, 0)).toHaveLength(0); // 退出覺醒
+    expect(windowEffects(g, 0, 'onAwaken')).toHaveLength(0); // 退出覺醒
     setZones(g, 0, { exp: exp(8) });
-    expect(awakeningEffects(g, 0)).toHaveLength(1); // 再次覺醒：再次觸發
+    expect(windowEffects(g, 0, 'onAwaken')).toHaveLength(1); // 再次覺醒：再次觸發
   });
 
   it('雙方各自偵測', () => {
     const g = scenario({ chars: ['遊俠', '遊俠'], p0: { exp: exp(0) }, p1: { exp: exp(0) } });
     setZones(g, 1, { exp: exp(8) });
-    expect(awakeningEffects(g, 0)).toHaveLength(0);
-    expect(awakeningEffects(g, 1)).toHaveLength(1);
+    expect(windowEffects(g, 0, 'onAwaken')).toHaveLength(0);
+    expect(windowEffects(g, 1, 'onAwaken')).toHaveLength(1);
   });
 });

@@ -4,8 +4,8 @@ import {
 } from './ops';
 import { optionalPay } from './cost';
 import { inRange, judge } from './judge';
-import { awakenCheck, onPassEffects, scripts } from './scripts';
-import { triggerWindow, type WindowEffect } from './window';
+import { fire, fireEach } from './effects';
+import { scripts } from './scripts';
 import { checkWin } from './win';
 import { other, type CardInst, type PlayerId } from './types';
 import {
@@ -174,16 +174,8 @@ export function* damageStep(g: GameCtx): Gen {
     { type: 'damage', dmg },
   );
   yield* markIfLogged(g, function* (): Gen {
-    // 經驗區中表側的 [經] 卡：傷害計算後的效果（復仇之嚎），進觸發窗口，先攻方先處理
-    for (const p of order(g)) {
-      const effects: WindowEffect[] = [];
-      for (const card of [...Z(g, p, 'exp')]) {
-        if (card.covered) continue;
-        const e = scripts[card.id]?.afterDamageEffect?.(g, p, card, { dealt: dmg[other(p)], taken: dmg[p] });
-        if (e) effects.push(e);
-      }
-      yield* triggerWindow(g, p, '傷害計算後', effects);
-    }
+    // 經驗區中表側的 [經] 卡：傷害計算後的效果，進觸發窗口，先攻方先處理
+    yield* fireEach(g, 'afterDamage', (p) => ({ dealt: dmg[other(p)], taken: dmg[p] }));
   });
   checkWin(g);
 }
@@ -253,7 +245,7 @@ export function* combatPhase(g: GameCtx): Gen {
       log(g, `${pname(g, cur)} 收招`);
       const direct = firstAction && cur === second;
       mark(g, `${pname(g, cur)} 收招${direct ? '，直接進入傷害計算' : ''}`, { type: 'pass', player: cur });
-      yield* markIfLogged(g, () => onPassEffects(g, cur));
+      yield* markIfLogged(g, () => fire(g, cur, 'onPass'));
       if (direct) {
         straightToDamage = true;
         break;
@@ -266,5 +258,5 @@ export function* combatPhase(g: GameCtx): Gen {
   if (!straightToDamage) yield* pursuitPhase(g);
   yield* damageStep(g);
   returnStep(g);
-  yield* awakenCheck(g); // 歸還讓經驗區增加，可能進入覺醒
+  yield* fireEach(g, 'onAwaken'); // 歸還讓經驗區增加，可能進入覺醒
 }

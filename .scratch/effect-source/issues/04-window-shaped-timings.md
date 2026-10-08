@@ -12,14 +12,18 @@
 
 **Blocked by（被誰阻擋）：** 03
 
-**Status：** ready-for-agent
+**Status：** resolved
 
-- [ ] 每個時機遷移前，先補現有測試沒覆蓋到的卡行為作為特徵測試
-- [ ] 凡骨的意志蓋到自己後，這回合的加成仍然生效，之後它是裏側就無效；對應的測試保留並通過
-- [ ] 上述條目改由 `fire` 或 `fireEach` 取得，`game.ts`、`combat.ts` 不再有招財貓、家族相片、冰與雷之曲的卡名比對
-- [ ] `turnStartEffects`、`onPassEffects`、`merchantBurstEffects`、`awakeningEffects` 與覺醒表從 `scripts.ts` 移除
-- [ ] 影格數量與說明文字與遷移前相同，`frames.test.ts` 通過
-- [ ] `tests/awakening.test.ts` 改用新位置，斷言不變
-- [ ] 現有測試全部通過，沒有新增行為
-- [ ] 型別檢查、單元測試與機器人壓測通過
-- [ ] 純內部重構，依版本號維護規範不升版
+- [x] 每個時機遷移前，先補現有測試沒覆蓋到的卡行為作為特徵測試
+- [x] 凡骨的意志蓋到自己後，這回合的加成仍然生效，之後它是裏側就無效；對應的測試保留並通過
+- [x] 上述條目改由 `fire` 或 `fireEach` 取得，`game.ts`、`combat.ts` 不再有招財貓、家族相片、冰與雷之曲的卡名比對
+- [x] `turnStartEffects`、`onPassEffects`、`merchantBurstEffects`、`awakeningEffects` 與覺醒表從 `scripts.ts` 移除
+- [x] 影格數量與說明文字與遷移前相同，`frames.test.ts` 通過
+- [x] `tests/awakening.test.ts` 改用新位置，斷言不變
+- [x] 現有測試全部通過，沒有新增行為
+- [x] 型別檢查、單元測試與機器人壓測通過
+- [x] 純內部重構，依版本號維護規範不升版
+
+## Answer
+
+純內部重構，不升版，維持 v0.22.2。回合開始、收招時、爆發後、覺醒時、傷害計算後五個時機改由效果來源提供，條目分檔在 `sources/`；既有的窗口測試未改斷言，覆蓋已足夠，沒有另補特徵測試。
