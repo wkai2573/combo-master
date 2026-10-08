@@ -1,6 +1,6 @@
 /**
  * 角色效果的顯示文字（以角色名為鍵）。覆蓋 xlsx／characterFill 的原文，所以重跑 npm run data 也不會被洗掉。
- * 格式：時機｜條件→效果；覺醒開頭標明「取代」（覆蓋原效果）或「追加」（原效果仍在）。
+ * 不套用卡片的句型，只統一用語（見 docs/卡片撰寫規範.md）；覺醒開頭標明「取代」（覆蓋原效果）或「追加」（原效果仍在）。
  * 這裡只改顯示，行為在 src/engine；文字的意思若改變，引擎要一起改。
  */
 export const characterText: Record<string, { text: string; awakenText: string }> = {
