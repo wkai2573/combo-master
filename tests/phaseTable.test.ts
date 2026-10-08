@@ -51,10 +51,26 @@ describe('階段表：只跑單一階段', () => {
     expect(g.state.turn).toBe(1);
   });
 
+  it('單階段的抽牌與增益也只跑那一項', () => {
+    const draw = scenario({ ...hands, phase: '抽牌', singlePhase: true });
+    expect(draw.pending).toBeNull();
+    expect(draw.state.players[0].zones.hand).toHaveLength(3);
+    const buff = scenario({ ...hands, phase: '增益', singlePhase: true });
+    expect(buff.pending).toBeNull();
+    expect(buff.state.players[0].zones.hand).toHaveLength(2);
+  });
+
   it('單階段的重置只執行回合開始的效果', () => {
     const g = scenario({ ...hands, phase: '重置', singlePhase: true });
     expect(g.pending).toBeNull();
     expect(g.state.phase).toBe('結束');
+  });
+});
+
+describe('階段表：不認得的起點', () => {
+  it('直接報錯，不悄悄跑錯階段', () => {
+    expect(() => scenario({ phase: '追擊' as never })).toThrow('不能從「追擊」階段開始');
+    expect(() => scenario({ phase: '反擊' as never, singlePhase: true })).toThrow('不能從「反擊」階段開始');
   });
 });
 

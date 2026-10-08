@@ -181,7 +181,7 @@ export class Game {
       log(g, `── 第 ${s.turn} 回合（先攻：${pname(g, s.first)}）──`);
 
       // 起始階段只適用於第 1 回合
-      const from = s.turn === 1 && this.setup.startPhase ? PHASES.findIndex((x) => x.start === this.setup.startPhase) : 0;
+      const from = s.turn === 1 && this.setup.startPhase ? phaseIndex(this.setup.startPhase) : 0;
       for (const step of PHASES.slice(from)) yield* step.run(this, true);
 
       s.phase = '回合結束';
@@ -192,7 +192,7 @@ export class Game {
   }
 
   private *runSinglePhase(phase: StartPhase): Gen {
-    yield* PHASES.find((x) => x.start === phase)!.run(this, false);
+    yield* PHASES[phaseIndex(phase)].run(this, false);
     checkWin(this);
   }
 
@@ -240,6 +240,13 @@ const PHASES: { start: StartPhase; run: (g: Game, full: boolean) => Gen }[] = [
   { start: '爆發', run: burstPhase },
   { start: '增益', run: buffPhase },
 ];
+
+/** 起點在階段表裡的位置；不認得的起點直接報錯，不悄悄跑錯階段 */
+function phaseIndex(start: StartPhase): number {
+  const i = PHASES.findIndex((x) => x.start === start);
+  if (i < 0) throw new Error(`不能從「${start}」階段開始`);
+  return i;
+}
 
 // ───────────────────────── 抽牌／爆發／增益階段 ─────────────────────────
 
