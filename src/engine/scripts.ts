@@ -21,7 +21,7 @@ export interface CardScript {
   onPlay?: (g: GameCtx, p: PlayerId, card: CardInst) => Gen;
   /** [追] 成為追擊卡時 */
   onPursuitCard?: (g: GameCtx, p: PlayerId, card: CardInst) => Gen;
-  /** [經] 此卡在經驗區被覆蓋時 */
+  /** [經] 此卡在經驗區被蓋成裏側時 */
   onCovered?: (g: GameCtx, p: PlayerId, card: CardInst) => Gen;
   /** [頂] 依場面加成的總攻擊（盾擊） */
   topAtkBonus?: (g: GameCtx, p: PlayerId) => number;
@@ -48,11 +48,11 @@ export const scripts: Record<string, CardScript> = {
       log(g, '【伏擊】此回合總攻擊 +2');
     },
   },
-  // 低價買進（商人）：[經] 此卡被覆蓋時，回復 3
+  // 低價買進（商人）：[經] 此卡被蓋成裏側時，回復 3
   低價買進: {
     onCovered: COVER_REACTIONS['低價買進'],
   },
-  // 高價賣出（商人）：[經] 此卡被覆蓋時，抽 1
+  // 高價賣出（商人）：[經] 此卡被蓋成裏側時，抽 1
   高價賣出: {
     onCovered: COVER_REACTIONS['高價賣出'],
   },
@@ -96,15 +96,15 @@ export const scripts: Record<string, CardScript> = {
       log(g, `【交涉】抽 ${x}，並將 ${put.length} 張手牌放到牌組底`);
     },
   },
-  // 冰霜護甲（法師）：[發_蓋2] 回復X，再捨棄我方 2 張覆蓋狀態的經驗卡。X = 我方覆蓋狀態的經驗卡數量
+  // 冰霜護甲（法師）：[發_蓋2] 回復X，再捨棄我方 2 張裏側經驗。X = 我方裏側經驗的張數
   冰霜護甲: {
     *onPlay(g, p, card) {
       if (!(yield* optionalPay(g, p, card, { cover: 2 }))) return;
       const covered = Z(g, p, 'exp').filter((c) => c.covered);
       recover(g, p, covered.length);
-      const drop = yield* chooseCards(g, p, '【冰霜護甲】選擇 2 張覆蓋狀態的經驗卡捨棄', covered, 2, 2);
+      const drop = yield* chooseCards(g, p, '【冰霜護甲】選擇 2 張裏側經驗捨棄', covered, 2, 2);
       for (const c of drop) discard(g, c);
-      log(g, `【冰霜護甲】回復 ${covered.length}，捨棄 ${drop.length} 張覆蓋的經驗`);
+      log(g, `【冰霜護甲】回復 ${covered.length}，捨棄 ${drop.length} 張裏側經驗`);
     },
   },
   // 盾擊（劍士）：[頂] 我方總攻擊 +X。X = 我方戰鬥區防禦力 ≧ 4 的卡片張數
@@ -251,17 +251,17 @@ export function* onPassEffects(g: GameCtx, p: PlayerId): Gen {
 }
 
 /**
- * 商人爆發後：可以調整未覆蓋經驗卡的順序（蓋X 從最前面開始蓋）；覺醒後還可以把 1 張未覆蓋的經驗卡加入手牌。
+ * 商人爆發後：可以調整表側經驗的順序（蓋X 從最前面開始蓋）；覺醒後還可以把 1 張表側的經驗卡加入手牌。
  */
 export function* merchantAfterBurst(g: GameCtx, p: PlayerId): Gen {
   if (g.state.players[p].charId !== '商人') return;
   const exp = Z(g, p, 'exp');
   const faceUp = exp.filter((c) => !c.covered);
-  if (faceUp.length >= 2 && (yield* confirm(g, p, '【商人】要調整未覆蓋經驗卡的順序嗎？'))) {
+  if (faceUp.length >= 2 && (yield* confirm(g, p, '【商人】要調整表側經驗的順序嗎？'))) {
     const rest = [...faceUp];
     const order_: CardInst[] = [];
     while (rest.length > 1) {
-      const [c] = yield* chooseCards(g, p, `【商人】選擇排在第 ${order_.length + 1} 位的未覆蓋經驗卡（最前面的最先被蓋）`, rest, 1, 1);
+      const [c] = yield* chooseCards(g, p, `【商人】選擇排在第 ${order_.length + 1} 位的表側經驗（最前面的最先被蓋）`, rest, 1, 1);
       order_.push(c);
       rest.splice(rest.indexOf(c), 1);
     }
@@ -270,12 +270,12 @@ export function* merchantAfterBurst(g: GameCtx, p: PlayerId): Gen {
     order_.forEach((c, k) => {
       exp[slots[k]] = c;
     });
-    log(g, `【商人】${pname(g, p)} 調整了未覆蓋經驗卡的順序`);
+    log(g, `【商人】${pname(g, p)} 調整了表側經驗的順序`);
   }
   if (awakened(g, p)) {
     const pool = Z(g, p, 'exp').filter((c) => !c.covered);
-    if (pool.length > 0 && (yield* confirm(g, p, '【商人】覺醒：要將 1 張未覆蓋的經驗卡加入手牌嗎？'))) {
-      const [pick] = yield* chooseCards(g, p, '【商人】選擇 1 張未覆蓋的經驗卡加入手牌', pool, 1, 1);
+    if (pool.length > 0 && (yield* confirm(g, p, '【商人】覺醒：要將 1 張表側經驗加入手牌嗎？'))) {
+      const [pick] = yield* chooseCards(g, p, '【商人】選擇 1 張表側經驗加入手牌', pool, 1, 1);
       if (pick) {
         move(g, pick, 'hand');
         log(g, `【商人】${pname(g, p)} 將經驗【${data(pick).name}】加入手牌`);

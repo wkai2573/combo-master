@@ -70,7 +70,7 @@ interface Loc {
   pos: number;
 }
 
-/** 怒氣區的牌與覆蓋中的經驗卡一律背面朝上：自己看得到內容，但飛進飛出時仍顯示牌背 */
+/** 怒氣區的牌與裏側的經驗卡一律背面朝上：自己看得到內容，但飛進飛出時仍顯示牌背 */
 const faceUp = (zone: ZoneName, card: CardView) => zone !== 'rage' && !card.covered && card.id !== null;
 
 function locate(v: GameView): Map<number, Loc> {
@@ -147,7 +147,7 @@ export function diffFlights(prev: GameView, next: GameView): Flight[] {
   return out;
 }
 
-/** 留在原區域、但覆蓋狀態改變的卡（蓋 X 付費翻成覆蓋，或覆蓋的牌被翻開），不算飛行 */
+/** 留在原區域、但表裏側改變的卡（蓋 X 付費轉為裏側，或裏側的牌被翻開），不算飛行 */
 export function coverChanges(prev: GameView, next: GameView): number[] {
   const before = locate(prev);
   const out: number[] = [];

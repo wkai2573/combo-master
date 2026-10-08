@@ -32,7 +32,7 @@ export function ZoneViewer({ title, cards, exp, anchor, onClose }: { title: stri
           <button onClick={onClose}>關閉</button>
         </div>
         <div className="cardrow">
-          {cards.map((c) => <CardFace key={c.uid} id={c.id} size="sm" expEffect={exp && expEffectActive(c)} />)}
+          {cards.map((c) => <CardFace key={c.uid} id={c.id} size="sm" expEffect={exp && expEffectActive(c)} covered={exp && c.covered} />)}
           {cards.length === 0 && <span className="muted">（空）</span>}
         </div>
       </div>

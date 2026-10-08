@@ -64,7 +64,7 @@ export function FlightLayer({ view, fx, playing, n, scale }: {
   const hidden = useRef<HTMLElement[]>([]);
   // 每個棄牌堆頂還有幾張牌沒落地
   const holds = useRef(new Map<HTMLElement, number>());
-  // 這個影格裡原地翻成覆蓋（或翻開）的牌
+  // 這個影格裡原地轉為裏側（或翻開）的牌
   const turnRef = useRef<HTMLElement[]>([]);
   // 播放速度中途改變時，不重播進行中的飛行
   const scaleRef = useRef(scale);
@@ -127,7 +127,7 @@ export function FlightLayer({ view, fx, playing, n, scale }: {
         });
       }
     }
-    // 留在原地、只是翻成覆蓋（或翻開）的牌：原地翻面一下
+    // 留在原地、只是轉為裏側（或翻開）的牌：原地翻面一下
     const turned: HTMLElement[] = [];
     if (changed) {
       for (const uid of coverChanges(before.view, view)) {
@@ -165,7 +165,7 @@ export function FlightLayer({ view, fx, playing, n, scale }: {
     const scale = scaleRef.current;
     const turnMs = FLY.ms * scale;
     const ease = getComputedStyle(document.documentElement).getPropertyValue('--ease-fly').trim() || 'ease-out';
-    // 翻成覆蓋的牌原地翻面（turnRef 由上一個 effect 在 setFlights 之前備好）
+    // 轉為裏側的牌原地翻面（turnRef 由上一個 effect 在 setFlights 之前備好）
     for (const el of turnRef.current) {
       active.current.push(el.animate([{ transform: 'rotateY(90deg) scale(.9)' }, { transform: 'none' }], { duration: turnMs, easing: ease }));
     }

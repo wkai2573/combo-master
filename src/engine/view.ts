@@ -2,7 +2,7 @@ import { resolveCombatStats } from './combatStats';
 import type { Game } from './game';
 import type { CardInst, FrameFx, GameState, PlayerId, Request, Phase, ZoneName } from './types';
 
-/** 玩家看到的卡：id 為 null 表示看不到內容（對手的手牌、怒氣、覆蓋的經驗） */
+/** 玩家看到的卡：id 為 null 表示看不到內容（對手的手牌、怒氣、裏側的經驗） */
 export interface CardView {
   uid: number;
   id: string | null;
@@ -82,8 +82,8 @@ function playerView(game: Game, p: PlayerId, viewer: PlayerId): PlayerView {
     hand: list('hand', () => mine),
     discard: list('discard', () => true),
     rage: list('rage', () => mine),
-    // 覆蓋卡對雙方隱藏（ADR 0002）：自己也只有牌背
-    exp: list('exp', (c) => !c.covered),
+    // 裏側卡只對擁有者顯示牌面（ADR 0003），對手只有牌背
+    exp: list('exp', (c) => !c.covered || mine),
     combat: list('combat', () => true),
     pursuit: list('pursuit', () => true),
     gear: list('gear', () => true),

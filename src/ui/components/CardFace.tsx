@@ -34,6 +34,8 @@ export interface CardFaceProps {
   fresh?: boolean;
   /** 經驗區裡經驗效果生效中：加專屬色外框與小 [經] 標記 */
   expEffect?: boolean;
+  /** 經驗區裡的裏側卡（擁有者看得到牌面）：加半透明黑色遮罩 */
+  covered?: boolean;
   /** 矮卡（經驗區兩列時）：只露出攻／連擊／守與卡圖 */
   short?: boolean;
   counters?: number;
@@ -52,7 +54,7 @@ export function kindLabel(c: CardData): string {
   return c.traits.join('・') || '招式';
 }
 
-export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh, short, expEffect, counters, badge, uid, counterDelta, deltaKey, onClick }: CardFaceProps) {
+export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, uid, counterDelta, deltaKey, onClick }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const pin = useContext(PinContext);
   const cls = ['card', size];
@@ -60,6 +62,7 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
   if (fresh) cls.push('fresh');
   if (short) cls.push('short');
   if (expEffect) cls.push('expfx');
+  if (covered) cls.push('facedown');
   if (selected) cls.push('selected');
   if (glow) cls.push('glow');
   if (dim) cls.push('dim');
@@ -104,6 +107,7 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
         <KeywordText text={c.text} />
       </div>
       <div className="nm">{c.name}</div>
+      {covered ? <span className="fdtag">裏側</span> : null}
       {counters ? <span className="ctr">⏳{counters}<Delta d={counterDelta} k={deltaKey ?? 0} /></span> : null}
       {badge !== undefined ? <span className="badge">{badge}</span> : null}
     </div>

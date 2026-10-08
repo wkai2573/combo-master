@@ -59,7 +59,7 @@ export function Spotlight({ fx, caption, n, scale }: { fx?: FrameFx; caption?: s
         const r = origin?.getBoundingClientRect();
         if (origin && r && r.width > 0) {
           anims.push(el.animate([from(r, slot.getBoundingClientRect()), { transform: 'none' }], { duration: dur, easing: EASE }));
-          // 原本是牌背（對手覆蓋的經驗卡等）就翻成正面
+          // 原本是牌背（對手裏側的經驗卡等）就翻成正面
           if (origin.classList.contains('back')) {
             flipIn(el, dur, anims);
           }

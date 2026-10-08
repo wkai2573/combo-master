@@ -130,9 +130,9 @@ export function toExp(g: GameCtx, card: CardInst) {
 
 // ───────────────────────── 提示 ─────────────────────────
 
-export function cardOpt(c: CardInst, label?: string): Opt {
-  // 覆蓋卡對雙方隱藏（ADR 0002）：選項不帶牌面與卡名，只能依位置選
-  if (c.zone === 'exp' && c.covered) return { key: `c${c.uid}`, label: '?', uid: c.uid, hidden: true };
+/** viewer 是回應這個提示的玩家：裏側的經驗卡只有擁有者看得到牌面（ADR 0003），其他人的選項只有位置 */
+export function cardOpt(c: CardInst, label?: string, viewer?: PlayerId): Opt {
+  if (c.zone === 'exp' && c.covered && viewer !== c.owner) return { key: `c${c.uid}`, label: '?', uid: c.uid, hidden: true };
   return { key: `c${c.uid}`, label: label ?? data(c).name, uid: c.uid, cardId: c.id };
 }
 
@@ -151,7 +151,7 @@ export function* chooseCards(
   if (cards.length === 0) return [];
   const mn = Math.min(min, cards.length);
   const mx = Math.min(max, cards.length);
-  const keys = yield* ask(g, { player: p, title, options: cards.map((c) => cardOpt(c)), min: mn, max: mx });
+  const keys = yield* ask(g, { player: p, title, options: cards.map((c) => cardOpt(c, undefined, p)), min: mn, max: mx });
   return keys.map((k) => cards.find((c) => `c${c.uid}` === k)!).filter(Boolean);
 }
 
@@ -166,7 +166,7 @@ export function* confirm(g: GameCtx, p: PlayerId, title: string): Gen<boolean> {
 // ───────────────────────── 費用 ─────────────────────────
 
 export interface Cost {
-  /** 蓋X：覆蓋經驗區最前面的 X 張正面卡 */
+  /** 蓋X：把經驗區最前面的 X 張表側卡轉為裏側 */
   cover?: number;
   /** 怒X：捨棄怒氣區上方 X 張 */
   rage?: number;
@@ -186,7 +186,7 @@ export function canPay(g: GameCtx, p: PlayerId, cost: Cost): boolean {
   return true;
 }
 
-/** 經驗卡被覆蓋時的連鎖反應效果（低價買進、高價賣出） */
+/** 經驗卡被蓋成裏側時的蓋反應（低價買進、高價賣出） */
 export const COVER_REACTIONS: Record<string, (g: GameCtx, p: PlayerId, card: CardInst) => Gen> = {
   低價買進: function* (g, p) {
     recover(g, p, 3);
@@ -196,19 +196,19 @@ export const COVER_REACTIONS: Record<string, (g: GameCtx, p: PlayerId, card: Car
   },
 };
 
-/** 扣除費用並自動觸發被覆蓋經驗卡的連鎖反應 */
+/** 扣除費用並自動觸發被蓋成裏側的經驗卡的蓋反應 */
 export function* pay(g: GameCtx, p: PlayerId, cost: Cost): Gen {
   settle(g); // 付費之前還沒呈現的變化不算費用
   const newlyCovered: CardInst[] = [];
   if (cost.cover) newlyCovered.push(...cover(g, p, cost.cover));
   if (cost.rage) discardRage(g, p, cost.rage);
-  // 付費自成一段，之後的覆蓋反應與效果各自再成一段
+  // 付費自成一段，之後的蓋反應與效果各自再成一段
   if (cost.cover || cost.rage) settle(g, `${pname(g, p)} 支付費用（${costText(cost)}）`);
   for (const card of newlyCovered) {
     const reaction = COVER_REACTIONS[card.id];
     if (reaction) {
-      log(g, `【${data(card).name}】被覆蓋`);
-      activate(g, p, card, `【${data(card).name}】被覆蓋，效果發動`);
+      log(g, `【${data(card).name}】被蓋成裏側`);
+      activate(g, p, card, `【${data(card).name}】被蓋成裏側，效果發動`);
       yield* reaction(g, p, card);
       settle(g);
     }

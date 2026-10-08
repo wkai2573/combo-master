@@ -18,7 +18,7 @@ export interface CardInst {
   id: string;
   owner: PlayerId;
   zone: ZoneName;
-  /** 經驗區：覆蓋中 */
+  /** 經驗區：裏側 */
   covered: boolean;
   /** 增益：持續時間指示物 */
   counters: number;
@@ -74,7 +74,7 @@ export interface Opt {
   label: string;
   uid?: number;
   cardId?: string;
-  /** 這個選項是一張看不到牌面的覆蓋卡：只有 uid（對得上經驗區的位置），沒有 cardId 與卡名 */
+  /** 這個選項是一張回應者看不到牌面的裏側卡：只有 uid（對得上經驗區的位置），沒有 cardId 與卡名 */
   hidden?: boolean;
 }
 

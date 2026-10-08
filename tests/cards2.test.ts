@@ -33,7 +33,7 @@ describe('爆發階段：抽 2', () => {
 });
 
 describe('商人', () => {
-  it('爆發後可調整未覆蓋經驗卡的順序', () => {
+  it('爆發後可調整表側經驗的順序', () => {
     const g = scenario({
       chars: ['商人', '勇者'],
       phase: '爆發',
@@ -48,7 +48,7 @@ describe('商人', () => {
     expect(names(g, 0, 'exp')).toEqual(['黑桃3', '黑桃2', '黑桃1']);
   });
 
-  it('覆蓋中的經驗卡不動，只重排未覆蓋的', () => {
+  it('裏側的經驗卡不動，只重排表側的', () => {
     const g = scenario({
       chars: ['商人', '勇者'],
       phase: '爆發',
@@ -63,7 +63,7 @@ describe('商人', () => {
     expect(Z(g, 0, 'exp')[1].covered).toBe(true);
   });
 
-  it('覺醒後可以再把 1 張未覆蓋的經驗卡加入手牌；不是商人就沒有', () => {
+  it('覺醒後可以再把 1 張表側經驗加入手牌；不是商人就沒有', () => {
     const exp = Array(8).fill('黑桃1') as string[];
     const g = scenario({
       chars: ['商人', '勇者'],
@@ -134,7 +134,7 @@ describe('新卡（第二批）', () => {
     expect(totalAtk(g, 0)).toBe(atkOf('力量爆破') - 3);
   });
 
-  it('低價買進：[經] 被覆蓋時回復 3', () => {
+  it('低價買進：[經] 被蓋成裏側時回復 3', () => {
     const g = scenario({
       chars: ['商人', '勇者'],
       p0: { exp: ['低價買進', '黑桃3'], rage: Array(5).fill('黑桃1') },
@@ -144,7 +144,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'rage')).toHaveLength(2);
   });
 
-  it('高價賣出：[經] 被覆蓋時抽 1', () => {
+  it('高價賣出：[經] 被蓋成裏側時抽 1', () => {
     const g = scenario({ p0: { exp: ['高價賣出', '黑桃3'] } });
     const before = Z(g, 0, 'hand').length;
     pay(g, 0, { cover: 1 }).next();
@@ -188,7 +188,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'hand')).toHaveLength(3); // 剩 2 張＋抽 1，放 1 張到牌組底，再加抽牌階段抽 1
   });
 
-  it('冰霜護甲：[發_蓋2] 回復 X（X＝覆蓋的經驗數），再捨棄 2 張覆蓋的經驗', () => {
+  it('冰霜護甲：[發_蓋2] 回復 X（X＝裏側經驗數），再捨棄 2 張裏側經驗', () => {
     const g = scenario({
       chars: ['法師', '勇者'],
       p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'], rage: Array(5).fill('黑桃1') },
@@ -196,9 +196,8 @@ describe('新卡（第二批）', () => {
     });
     pick(g, '冰霜護甲');
     pick(g, '發動');
-    // 覆蓋卡是盲選（選項不帶牌面），依 uid 選出 黑桃5、黑桃6
-    const target = Z(g, 0, 'exp').filter((c) => c.id === '黑桃5' || c.id === '黑桃6').map((c) => `c${c.uid}`);
-    g.submit(g.pending!.player, target);
+    // 裏側卡對擁有者顯示牌面，直接看著牌面選出 黑桃5、黑桃6
+    pick(g, '黑桃5', '黑桃6');
     expect(Z(g, 0, 'rage')).toHaveLength(1); // 回復 4
     expect(names(g, 0, 'discard')).toEqual(expect.arrayContaining(['黑桃5', '黑桃6']));
     expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(2);
@@ -438,7 +437,7 @@ describe('新卡（第二批）', () => {
     expect(g.state.log.join('\n')).toContain('（非招式卡）');
   });
 
-  it('pay 蓋到低價買進與高價賣出時，自動觸發被覆蓋反應', () => {
+  it('pay 蓋到低價買進與高價賣出時，自動觸發蓋反應', () => {
     const g = scenario({ p0: { exp: ['低價買進', '高價賣出'], rage: Array(5).fill('黑桃1'), deck: ['黑桃4', ...filler] } });
     pay(g, 0, { cover: 2 }).next();
     expect(Z(g, 0, 'rage')).toHaveLength(2); // 低價買進：回復 3
