@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: resolved
 
 # 牌面可見性：誰看得到哪張牌的牌面，只寫一次
 

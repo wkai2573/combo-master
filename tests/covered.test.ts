@@ -86,8 +86,8 @@ describe('裏側卡的視角', () => {
   it('提示選項依選擇者決定：不是擁有者就看不到裏側卡的牌面與卡名', () => {
     const g = scenario({ p0: { exp: ['~黑桃4'] } });
     const card = Z(g, 0, 'exp')[0];
-    expect(cardOpt(card, undefined, 0)).toMatchObject({ cardId: '黑桃4', label: '黑桃4' });
-    const opp = cardOpt(card, undefined, 1);
+    expect(cardOpt(card, 0)).toMatchObject({ cardId: '黑桃4', label: '黑桃4' });
+    const opp = cardOpt(card, 1);
     expect(opp).toMatchObject({ label: '?', hidden: true });
     expect(opp.cardId).toBeUndefined();
   });

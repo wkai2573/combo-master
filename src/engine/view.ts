@@ -1,5 +1,6 @@
 import { resolveCombatStats } from './combatStats';
 import type { Game } from './game';
+import { faceVisibleTo } from './visibility';
 import type { CardInst, FrameFx, GameState, PlayerId, Request, Phase, ZoneName } from './types';
 
 /** 玩家看到的卡：id 為 null 表示看不到內容（對手的手牌、怒氣、裏側的經驗） */
@@ -72,22 +73,19 @@ export const show = (c: CardInst): CardView => ({ uid: c.uid, id: c.id, covered:
 function playerView(game: Game, p: PlayerId, viewer: PlayerId): PlayerView {
   const s: GameState = game.state;
   const z = s.players[p].zones;
-  const mine = p === viewer;
-  const list = (name: ZoneName, visible: (c: CardInst) => boolean) =>
-    z[name].map((c) => (visible(c) ? show(c) : hide(c)));
+  const list = (name: ZoneName) => z[name].map((c) => (faceVisibleTo(c, viewer) ? show(c) : hide(c)));
   const stats = resolveCombatStats(game, p);
   return {
     charId: s.players[p].charId,
     deckCount: z.deck.length,
-    hand: list('hand', () => mine),
-    discard: list('discard', () => true),
-    rage: list('rage', () => mine),
-    // 裏側卡只對擁有者顯示牌面（ADR 0003），對手只有牌背
-    exp: list('exp', (c) => !c.covered || mine),
-    combat: list('combat', () => true),
-    pursuit: list('pursuit', () => true),
-    gear: list('gear', () => true),
-    buff: list('buff', () => true),
+    hand: list('hand'),
+    discard: list('discard'),
+    rage: list('rage'),
+    exp: list('exp'),
+    combat: list('combat'),
+    pursuit: list('pursuit'),
+    gear: list('gear'),
+    buff: list('buff'),
     passed: s.passed[p],
     atk: stats.atk,
     def: stats.def,

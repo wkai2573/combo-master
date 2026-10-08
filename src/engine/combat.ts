@@ -104,7 +104,7 @@ function* aim(g: GameCtx, p: PlayerId, used: { n: number }): Gen {
       title: `【瞄準】牌組頂是【${data(top).name}】（連擊值 ${data(top).combo}），以目前範圍會判定${hit ? '成功' : '失敗'}。（剩 ${left} 次）`,
       min: 1, max: 1,
       options: [
-        { ...cardOpt(top, `就用這張`), key: 'keep' },
+        { ...cardOpt(top, p, `就用這張`), key: 'keep' },
         { key: 'swap', label: '放到牌組底，改看下一張' },
       ],
     });
@@ -208,7 +208,7 @@ export function* combatPhase(g: GameCtx): Gen {
         player: cur,
         title: '反擊步驟：選擇 1 張招式出招，或收招',
         min: 1, max: 1,
-        options: [...options.map((c) => cardOpt(c)), { key: 'pass', label: '收招' }],
+        options: [...options.map((c) => cardOpt(c, cur)), { key: 'pass', label: '收招' }],
       });
       playedCard = options.find((c) => `c${c.uid}` === keys[0]);
     }

@@ -1,6 +1,7 @@
 import { getCard, getCharacter } from '../data/cards';
 import type { CardData } from '../data/types';
 import type { Rng } from './rng';
+import { faceVisibleTo } from './visibility';
 import {
   other,
   type CardInst,
@@ -130,9 +131,9 @@ export function toExp(g: GameCtx, card: CardInst) {
 
 // ───────────────────────── 提示 ─────────────────────────
 
-/** viewer 是回應這個提示的玩家：裏側的經驗卡只有擁有者看得到牌面（ADR 0003），其他人的選項只有位置 */
-export function cardOpt(c: CardInst, label?: string, viewer?: PlayerId): Opt {
-  if (c.zone === 'exp' && c.covered && viewer !== c.owner) return { key: `c${c.uid}`, label: '?', uid: c.uid, hidden: true };
+/** viewer 是回應這個提示的玩家：牌面看不看得到依牌面可見性，看不到的選項只有位置 */
+export function cardOpt(c: CardInst, viewer: PlayerId, label?: string): Opt {
+  if (!faceVisibleTo(c, viewer)) return { key: `c${c.uid}`, label: '?', uid: c.uid, hidden: true };
   return { key: `c${c.uid}`, label: label ?? data(c).name, uid: c.uid, cardId: c.id };
 }
 
@@ -151,7 +152,7 @@ export function* chooseCards(
   if (cards.length === 0) return [];
   const mn = Math.min(min, cards.length);
   const mx = Math.min(max, cards.length);
-  const keys = yield* ask(g, { player: p, title, options: cards.map((c) => cardOpt(c, undefined, p)), min: mn, max: mx });
+  const keys = yield* ask(g, { player: p, title, options: cards.map((c) => cardOpt(c, p)), min: mn, max: mx });
   return keys.map((k) => cards.find((c) => `c${c.uid}` === k)!).filter(Boolean);
 }
 
