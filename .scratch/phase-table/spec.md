@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: resolved
 
 # 階段表：階段順序只寫一次
 
