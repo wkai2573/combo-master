@@ -13,6 +13,30 @@ export function initialSpeed(stored: string | null, reducedMotion: boolean): Spe
   return reducedMotion ? 'off' : 'normal';
 }
 
+const SPEED_KEY = 'lianji.speed';
+
+/** 動畫速度與它的偏好：讀不到或存不進儲存時視同沒選過，不影響使用 */
+export function useSpeed(): [Speed, (s: Speed) => void] {
+  const [speed, setSpeedState] = useState<Speed>(() => {
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(SPEED_KEY);
+    } catch {
+      // 無法讀取偏好：視同沒選過
+    }
+    return initialSpeed(stored, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
+  });
+  const setSpeed = useCallback((s: Speed) => {
+    setSpeedState(s);
+    try {
+      localStorage.setItem(SPEED_KEY, s);
+    } catch {
+      // 無法儲存偏好：忽略
+    }
+  }, []);
+  return [speed, setSpeed];
+}
+
 /**
  * 依序播放引擎錄下的動畫影格，回傳此刻的呈現。播放的規則都在 Playback，這裡只負責計時器與生命週期。
  * batch 是最新收到的一批影格，final 是最新的真實狀態。

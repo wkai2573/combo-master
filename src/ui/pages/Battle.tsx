@@ -1,6 +1,6 @@
 import { FLOW_CHART_URL } from '../flowChart';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { initialSpeed, SPEED_LABEL, usePlayback, type Speed } from '../usePlayback';
+import { SPEED_LABEL, useSpeed, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { InspectContext, InspectPanel, PinContext } from '../components/CardFace';
 import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
@@ -40,24 +40,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   // 面板跟著連線層確認過的開關走：開啟被確認才打開，關閉就收起（房主沒回應或遊戲已結束時不會憑空彈出）
   const cheatOnState = st.cheatOn[session.me];
   useEffect(() => setCheatOpen(cheatOnState), [cheatOnState]);
-  const [speed, setSpeedState] = useState<Speed>(() => {
-    let stored: string | null = null;
-    try {
-      stored = localStorage.getItem('lianji.speed');
-    } catch {
-      // 無法讀取偏好：視同沒選過
-    }
-    return initialSpeed(stored, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
-  });
-  const setSpeed = (s: Speed) => {
-    setSpeedState(s);
-    try {
-      localStorage.setItem('lianji.speed', s);
-    } catch {
-      // 無法儲存偏好：忽略
-    }
-  };
-
+  const [speed, setSpeed] = useSpeed();
   const final = st.view;
   const { presentation: pres, skip } = usePlayback(st.batch, final, speed);
   const { view: v, changes, fx, fxKey, scale } = pres;
