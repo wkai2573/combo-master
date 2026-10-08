@@ -4,7 +4,7 @@ import type { CardData, ClassName } from '../../data/types';
 import { keywordsIn } from '../../data/keywords';
 import { CardArt } from './CardArt';
 import { Delta } from './Delta';
-import { KeywordText } from './KeywordText';
+import { CardText } from './CardText';
 
 export const CLASS_COLOR: Record<ClassName, string> = {
   共用: '#8a93a8',
@@ -104,7 +104,7 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
       <CardArt id={id} />
       <div className="ef">
         <span className="tg">{c.cls}・{kindLabel(c)}　</span>
-        <KeywordText text={c.text} />
+        <CardText text={c.text} />
       </div>
       <div className="nm">{c.name}</div>
       {covered ? <span className="fdtag">裏側</span> : null}
@@ -146,7 +146,7 @@ export function InspectPanel({ id, expActive, pinned, onUnpin }: { id: string | 
           : `經驗需求 ${c.expReq}${c.kind === 'buff' ? `　持續時間 ${c.duration}` : ''}`}
       </div>
       {expActive && <div className="expnote">經驗效果：生效中</div>}
-      <div className="tx">{c.text ? <KeywordText text={c.text} /> : '（無效果）'}</div>
+      <div className="tx">{c.text ? <CardText text={c.text} /> : '（無效果）'}</div>
       {kws.length > 0 && (
         <div className="kwlist">
           {kws.map((k) => (

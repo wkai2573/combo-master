@@ -3,7 +3,7 @@ import { getCard } from '../../data/cards';
 import { ACTIVATE_HOLD_MS, FLY, SPOTLIGHT_HOLD_MS } from '../../engine/flights';
 import type { FrameFx } from '../../engine/types';
 import { CardFace } from './CardFace';
-import { KeywordText } from './KeywordText';
+import { CardText } from './CardText';
 
 const EASE = 'cubic-bezier(.25, .8, .3, 1)';
 
@@ -98,7 +98,7 @@ export function Spotlight({ fx, caption, n, scale }: { fx?: FrameFx; caption?: s
         {fx.type === 'activate' && (
           <div className="spottext">
             <div className="spotcaption">{caption}</div>
-            <KeywordText text={getCard(fx.cardId).text} />
+            <CardText text={getCard(fx.cardId).text} />
           </div>
         )}
       </div>

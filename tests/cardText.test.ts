@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CARDS, ALL_CHARACTERS } from '../src/data/cards';
-import { checkCardText, checkWording, parseCardLine, parseCardText } from '../src/data/cardText';
+import { checkCardText, checkWording, lineBoxes, parseCardLine, parseCardText } from '../src/data/cardText';
 import { isCardEnabled } from '../src/data/enabledCards';
+import { keywordsIn } from '../src/data/keywords';
 
 describe('卡片文字句型：切成各段', () => {
   it('規範範例一：費用、時機、條件、效果各自切開，接起來等於原文', () => {
@@ -96,6 +97,31 @@ describe('全部卡片與角色文字都符合撰寫規範', () => {
     const problems: string[] = [];
     for (const ch of ALL_CHARACTERS) {
       for (const e of [...checkWording(ch.text ?? ''), ...checkWording(ch.awakenText ?? '')]) problems.push(`${ch.name}：${e}`);
+    }
+    expect(problems).toEqual([]);
+  });
+});
+
+describe('卡文開頭的特殊框', () => {
+  it('回合X次、開頭關鍵字、費用依序成框；費用框有圖示與數字', () => {
+    const boxes = lineBoxes(parseCardLine('(回合1次)[發_蓋2]：當我方追擊判定失敗時，額外翻 1 張卡做追擊判定。'));
+    expect(boxes.map((b) => [b.kind, b.label])).toEqual([['count', '回合1次'], ['tag', '發'], ['cost', '蓋2']]);
+    expect(boxes[2]).toMatchObject({ icon: '蓋', value: '2', source: '[蓋2]' });
+    const rage = lineBoxes(parseCardLine('[蓋1_怒3]：當回合開始時，回復1。'));
+    expect(rage.map((b) => [b.icon, b.value])).toEqual([['蓋', '1'], ['怒', '3']]);
+    expect(lineBoxes(parseCardLine('[發_蓋X]：抽X。'))[1]).toMatchObject({ icon: '蓋', value: 'X' });
+    expect(lineBoxes(parseCardLine('獲得【瞄準】。'))).toEqual([]);
+  });
+
+  it('每個框都對得上關鍵字說明，滑入時才有提示可以顯示', () => {
+    const problems: string[] = [];
+    for (const c of ALL_CARDS.filter((c) => c.text !== '' && (isCardEnabled(c) || c.id.startsWith('Ex卡-')))) {
+      for (const line of parseCardText(c.text)) {
+        if (line.kind !== 'line') continue;
+        for (const box of lineBoxes(line)) {
+          if (keywordsIn(box.source).length === 0) problems.push(`${c.name}：${box.source} 沒有關鍵字說明`);
+        }
+      }
     }
     expect(problems).toEqual([]);
   });

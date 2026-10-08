@@ -274,6 +274,22 @@ h1, h2, h3 { margin: 0 0 8px; }
   background: #0f1219; border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 6px 18px #000b;
   font-size: 12px; line-height: 1.5; color: #dfe5f6; display: grid; gap: 6px;
 }
+/* 卡文分段上色（撰寫規範）：特殊框、時機藍底、條件淡藍底並與時機相連 */
+.cx-line { margin: 2px 0; }
+.cx-header { color: var(--muted); font-size: 0.92em; }
+.cx-box {
+  display: inline-flex; align-items: center; gap: 2px; margin-right: 3px; padding: 0 5px; vertical-align: baseline;
+  border: 1px solid var(--cc, var(--accent)); border-radius: 4px; background: #0006; color: var(--cc, var(--accent));
+  font-size: 0.92em; font-weight: 700; line-height: 1.35; white-space: nowrap;
+}
+.cx-box:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.cx-box b { font-weight: 700; }
+.cx-box.cover { color: #8fb4ff; border-color: #8fb4ff; }
+.cx-box.rage { color: #ff8a78; border-color: #ff8a78; }
+.cx-icon { width: 1.05em; height: 1.05em; flex: none; }
+.cx-timing { background: rgba(59, 130, 246, .42); color: #eaf1ff; padding: 0 3px; border-radius: 3px; margin-right: 3px; }
+.cx-timing:has(+ .cx-cond) { border-radius: 3px 0 0 3px; margin-right: 0; }
+.cx-cond { background: rgba(59, 130, 246, .18); color: #dbe6ff; padding: 0 3px; border-radius: 0 3px 3px 0; margin-right: 3px; }
 .kwtip b { color: var(--accent); margin-right: 6px; }
 .kwtip .g { color: var(--muted); font-size: 11px; }
 .inspect .bigart {

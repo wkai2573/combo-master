@@ -131,3 +131,25 @@ export function checkCardText(text: string): string[] {
   for (const e of checkWording(text)) errors.push(e);
   return errors;
 }
+
+/** 一行開頭的一個特殊框：回合X次、開頭關鍵字或費用 */
+export interface CardBox {
+  kind: 'count' | 'tag' | 'cost';
+  /** 框上的文字，例如「回合1次」「發」「蓋2」 */
+  label: string;
+  /** 費用框用圖示取代文字：蓋或怒 */
+  icon?: '蓋' | '怒';
+  /** 費用框的數字，例如「2」「X」 */
+  value?: string;
+  /** 這個框對應的卡文寫法，用來查關鍵字說明，例如「[蓋2]」 */
+  source: string;
+}
+
+/** 把一行開頭的回合X次、開頭關鍵字、費用依序轉成特殊框 */
+export function lineBoxes(line: CardLine): CardBox[] {
+  const boxes: CardBox[] = [];
+  if (line.count) boxes.push({ kind: 'count', label: line.count.slice(1, -1), source: line.count });
+  for (const t of line.tags) boxes.push({ kind: 'tag', label: t, source: `[${t}]` });
+  for (const c of line.costs) boxes.push({ kind: 'cost', label: c, icon: c[0] as '蓋' | '怒', value: c.slice(1), source: `[${c}]` });
+  return boxes;
+}
