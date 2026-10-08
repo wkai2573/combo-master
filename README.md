@@ -52,7 +52,7 @@ npm run build      # 型別檢查＋打包
 
 ## 結構
 
-- `src/engine/`：規則引擎（不依賴介面與網路）。`game.ts` 回合流程、`combat.ts` 戰鬥、`scripts.ts` 各卡效果、`win.ts` 勝負。
+- `src/engine/`：規則引擎（不依賴介面與網路）。`game.ts` 回合流程、`combat.ts` 戰鬥、`effects.ts` 效果來源（各卡與角色的效果條目依職業放在 `sources/`）、`win.ts` 勝負。
 - `src/data/`：卡表（花色招式與角色來自 xlsx，其餘由卡表網頁同步）、預設牌組。
 - `src/deck/`：牌組驗證與儲存。
 - `src/net/`：PeerJS 連線與單機練習。
