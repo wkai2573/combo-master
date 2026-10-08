@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { APP_BUILT_AT, VERSION_LABEL, VERSION_SHORT, VERSION_TITLE } from '../../version';
+import { ChangelogModal } from '../components/ChangelogModal';
 import { Modal } from '../components/Modal';
 import { FLOW_CHART_URL } from '../flowChart';
 import type { LobbyMode } from './Lobby';
@@ -8,10 +9,11 @@ export type Route = 'home' | 'decks' | LobbyMode;
 
 export function Home({ go }: { go: (r: Route) => void }) {
   const [rules, setRules] = useState(false);
+  const [changelog, setChangelog] = useState(false);
   return (
     <div className="page home">
       <h1>
-        連擊大師 <span className="ver" title={VERSION_TITLE}>{VERSION_SHORT}</span>
+        連擊大師 <button className="ver verbtn" title={`${VERSION_TITLE}\n點一下看更新日誌`} onClick={() => setChangelog(true)}>{VERSION_SHORT}</button>
       </h1>
       <div className="muted">以連擊值接力出招的 1v1 卡牌對戰</div>
       <div className="muted verline" title={VERSION_TITLE}>{VERSION_LABEL}　建置於 {APP_BUILT_AT}</div>
@@ -21,8 +23,10 @@ export function Home({ go }: { go: (r: Route) => void }) {
         <button onClick={() => go('practice')}>單機練習（對戰機器人）</button>
         <button onClick={() => go('decks')}>組牌</button>
         <button onClick={() => setRules(true)}>規則說明</button>
+        <button onClick={() => setChangelog(true)}>更新日誌</button>
         <a className="btnlink" href={FLOW_CHART_URL} target="_blank" rel="noreferrer">戰鬥流程圖</a>
       </div>
+      {changelog && <ChangelogModal onClose={() => setChangelog(false)} />}
       {rules && (
         <Modal onClose={() => setRules(false)}>
           <div style={{ textAlign: 'left', maxWidth: 560, lineHeight: 1.7 }}>

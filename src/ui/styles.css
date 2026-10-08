@@ -58,6 +58,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .home { text-align: center; padding-top: 8vh; }
 .home h1 { font-size: 44px; letter-spacing: 6px; color: var(--accent); }
 .ver { font-size: 0.4em; letter-spacing: 1px; color: var(--muted); font-weight: 600; vertical-align: middle; border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px; cursor: help; }
+.ver.verbtn { background: transparent; cursor: pointer; }
 .topbar .ver { font-size: 12px; letter-spacing: 0; vertical-align: baseline; }
 .verline { font-size: 12px; margin-top: 4px; cursor: help; }
 .home .menu { display: grid; gap: 10px; max-width: 320px; margin: 28px auto 0; }
@@ -504,3 +505,13 @@ h1, h2, h3 { margin: 0 0 8px; }
   .combatarea .cols { flex-wrap: wrap; gap: 8px 24px; }
   .combatarea .mid { order: 3; flex: 1 1 100%; max-width: none; }
 }
+
+/* ───────── 更新日誌 ───────── */
+.changelog { text-align: left; width: min(520px, 100%); line-height: 1.7; }
+.changelog h4 { margin: 14px 0 4px; font-size: 15px; color: var(--accent); }
+.changelog ul { margin: 0; padding-left: 0; list-style: none; }
+.changelog li { margin-bottom: 4px; }
+.changelog .tag { display: inline-block; min-width: 2.6em; margin-right: 8px; padding: 0 6px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; text-align: center; }
+.changelog .tag.add { color: var(--good); border-color: var(--good); }
+.changelog .tag.change { color: var(--accent); border-color: var(--accent); }
+.changelog .tag.fix { color: var(--bad); border-color: var(--bad); }
