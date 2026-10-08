@@ -150,6 +150,17 @@ describe('播放：空檔', () => {
   });
 });
 
+describe('播放：沒有上一桌時的空檔', () => {
+  it('空檔顯示的是第一格的桌面，不能當成上一桌記起來：第一格沒有數值變化', () => {
+    const pb = new Playback();
+    const k = frames.findIndex((f) => f.fx.type !== 'deal');
+    const arrived = batch(1, [frames[k]]);
+    pb.settle(pb.present(arrived, final, 'normal')); // 空檔
+    pb.ingest(arrived, 'normal');
+    expect(pb.present(arrived, final, 'normal').changes).toBeUndefined();
+  });
+});
+
 describe('播放：數值變化', () => {
   it('播放中相對上一個顯示的桌面有變化；沒有播放時沒有', () => {
     const pb = new Playback();

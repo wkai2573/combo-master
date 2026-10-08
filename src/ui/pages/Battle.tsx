@@ -1,5 +1,5 @@
 import { FLOW_CHART_URL } from '../flowChart';
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { initialSpeed, SPEED_LABEL, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { InspectContext, InspectPanel, PinContext } from '../components/CardFace';
@@ -7,9 +7,6 @@ import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/B
 import { FlightLayer } from '../components/FlightLayer';
 import { PhaseBanner } from '../components/PhaseBanner';
 import { Spotlight } from '../components/Spotlight';
-import { flightTiming } from '../../engine/flights';
-import { statChanges } from '../../engine/stats';
-import type { GameView } from '../../engine/view';
 import { Modal } from '../components/Modal';
 import { ZoneViewer } from '../components/ZoneViewer';
 import { StepTracker } from '../components/StepTracker';
@@ -62,33 +59,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   };
 
   const final = st.view;
-  const { cur, skip, scale, lagging } = usePlayback(st.batch, speed);
-  // 上一個顯示的桌面：飛行與數值變化都是拿它和下一個影格比
-  const lastShown = useRef<GameView | null>(null);
-  // 播放動畫時顯示影格當下的桌面；播完才顯示最新的真實狀態與提示。
-  // 新的一批影格剛到、還沒開始播的空檔，維持上一個桌面（否則會閃出最終桌面，飛行也會倒著比）
-  const v = useMemo(
-    () =>
-      final && cur
-        ? { ...cur.frame.view, log: final.log.slice(0, cur.frame.logLen), prompt: null, waitingFor: null }
-        : lagging && lastShown.current
-          ? { ...lastShown.current, prompt: null, waitingFor: null }
-          : final && lagging && st.batch.frames[0]
-            ? { ...st.batch.frames[0].view, log: final.log.slice(0, st.batch.frames[0].logLen), prompt: null, waitingFor: null }
-            : final,
-    [final, cur, lagging, st.batch],
-  );
-
-  // 播放動畫時，這個影格與上一個顯示的桌面之間的數值變化（閃一下並顯示差值）
-  const changes = useMemo(
-    // 開局抽起始手牌不算生命變動
-    () => (cur && cur.frame.fx.type !== 'deal' && v && lastShown.current && lastShown.current !== v ? statChanges(lastShown.current, v) : undefined),
-    [v, cur],
-  );
-  useEffect(() => {
-    // 空檔維持的是上一個桌面，不要把它當成新的桌面記起來
-    if (!lagging) lastShown.current = v ?? null;
-  }, [v, lagging]);
+  const { presentation: pres, skip } = usePlayback(st.batch, final, speed);
+  const { view: v, changes, fx, fxKey, scale } = pres;
 
   // 窄螢幕沒有常駐的說明欄：固定一張卡的說明時自動打開說明抽屜
   const wideRef = useRef(wide);
@@ -118,7 +90,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   }, []);
 
   // 每次收到新狀態或換影格，就清掉上一個提示的選擇
-  useEffect(() => setSelected([]), [final, cur?.n]);
+  useEffect(() => setSelected([]), [final, fxKey]);
 
   const leave = () => {
     session.leave();
@@ -176,20 +148,14 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
 
   const zoneCards = zone ? v.players[zone.p][zone.z] : [];
   // 結束演出播完（或跳過）才顯示結果視窗；演出期間先讓勝負在桌面上呈現
-  const result = cur || v.winner === null ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
+  const result = !pres.settled || v.winner === null ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
   const outcomeOf = (p: PlayerId) => (v.winner === null ? undefined : v.winner === 'draw' ? 'draw' : v.winner === p ? 'win' : 'lose');
-  const fx = cur?.frame.fx;
-  const fxKey = cur?.n ?? 0;
-  const dmgFx = fx?.type === 'damage' ? fx.dmg : null;
-  // 第一張牌落進怒氣區的時候才震動、浮出傷害數字（這一批飛行的時序由傷害較多的那一方決定）
-  const hitOf = (p: PlayerId) => (dmgFx && dmgFx[p] > 0 ? { amount: dmgFx[p], key: fxKey, delay: flightTiming(Math.max(...dmgFx) - 1).ms * scale } : undefined);
-
   const shown = pinned ?? inspect;
   const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} />;
-  const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={hitOf(opp)} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
-  const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={hitOf(me)} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
-  const combat = <CombatArea v={v} fx={fx} caption={cur?.frame.caption} fxKey={fxKey} changes={changes} />;
-  const promptBar = cur ? (
+  const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={pres.hits[opp]} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
+  const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={pres.hits[me]} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
+  const combat = <CombatArea v={v} fx={fx} caption={pres.caption} fxKey={fxKey} changes={changes} />;
+  const promptBar = pres.playing ? (
     <div className="prompt wait">
       <span>動畫播放中…</span>
       <div className="btns"><button onClick={skip}>跳過動畫</button></div>
@@ -239,7 +205,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         {st.cheatOn[opp] && <div className="banner cheat">對手開啟了作弊模式：對手可以調整雙方的牌區</div>}
         <div className="main">
           {wide ? (
-            <div className={`board${cur ? ' playing' : ''}`}>
+            <div className={`board${pres.playing ? ' playing' : ''}`}>
               {oppBoard}
               <div className="midrow">
                 <div className="sidecol">{inspectPanel}</div>
@@ -251,7 +217,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
             </div>
           ) : (
             <>
-              <div className={`board${cur ? ' playing' : ''}`}>
+              <div className={`board${pres.playing ? ' playing' : ''}`}>
                 {oppBoard}
                 {combat}
                 {myBoard}
@@ -271,11 +237,11 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         </div>
 
         {session.cheat && cheatOn && cheatOpen && v.winner === null && (
-          <CheatPanel cheat={session.cheat} me={me} snapshotKey={final} locked={cur !== null || lagging} onClose={() => setCheatOpen(false)} />
+          <CheatPanel cheat={session.cheat} me={me} snapshotKey={final} locked={!pres.settled} onClose={() => setCheatOpen(false)} />
         )}
         <PhaseBanner fx={fx} n={fxKey} me={me} />
-        <Spotlight fx={fx} caption={cur?.frame.caption} n={fxKey} scale={scale} />
-        <FlightLayer view={v} fx={fx} playing={cur !== null} n={fxKey} scale={scale} />
+        <Spotlight fx={fx} caption={pres.caption} n={fxKey} scale={scale} />
+        <FlightLayer view={v} fx={fx} playing={pres.playing} n={fxKey} scale={scale} />
 
         {zone && !(zone.z === 'rage' && zone.p !== me) && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} exp={zone.z === 'exp'} anchor={zone.anchor} onClose={() => setZone(null)} />}
 

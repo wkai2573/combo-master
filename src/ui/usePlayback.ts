@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Frame } from '../engine/view';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import type { GameView } from '../engine/view';
+import { Playback, type Batch, type Presentation, type Speed } from './playback';
 
-export type Speed = 'normal' | 'fast' | 'off';
+export type { Speed } from './playback';
 export const SPEED_LABEL: Record<Speed, string> = { normal: '標準速度', fast: '快速', off: '關閉動畫' };
 /**
  * 速度的初始值：玩家選過的優先（連標準速度也算）；沒選過就看瀏覽器是否要求減少動態。
@@ -12,56 +13,33 @@ export function initialSpeed(stored: string | null, reducedMotion: boolean): Spe
   return reducedMotion ? 'off' : 'normal';
 }
 
-const SCALE: Record<Speed, number> = { normal: 1, fast: 0.45, off: 0 };
-
-export interface Playing {
-  frame: Frame;
-  /** 第幾個播放的影格（遞增；用來讓同樣的特效能重新播放） */
-  n: number;
-}
-
 /**
- * 依序播放引擎錄下的動畫影格。播放中 cur 為目前影格；播完（或跳過）為 null，
- * 此時介面改顯示最新的真實狀態與提示。
+ * 依序播放引擎錄下的動畫影格，回傳此刻的呈現。播放的規則都在 Playback，這裡只負責計時器與生命週期。
+ * batch 是最新收到的一批影格，final 是最新的真實狀態。
  */
-export function usePlayback(batch: { id: number; frames: Frame[] } | undefined, speed: Speed) {
-  const [cur, setCur] = useState<Playing | null>(null);
-  const queue = useRef<Frame[]>([]);
-  const playing = useRef(false);
+export function usePlayback(batch: Batch | undefined, final: GameView | null, speed: Speed) {
+  const [pb] = useState(() => new Playback());
+  const [version, bump] = useReducer((n: number) => n + 1, 0);
   const timer = useRef<number | undefined>(undefined);
-  const seen = useRef(0);
-  const counter = useRef(0);
-  const scale = useRef(SCALE[speed]);
-  scale.current = SCALE[speed];
+  const speedRef = useRef(speed);
+  speedRef.current = speed;
 
-  const step = useCallback(() => {
-    const f = queue.current.shift();
-    if (!f) {
-      playing.current = false;
-      setCur(null);
-      return;
-    }
-    setCur({ frame: f, n: ++counter.current });
-    timer.current = window.setTimeout(step, Math.max(150, f.ms * scale.current));
-  }, []);
+  // hold 是這一格要停留的毫秒；null 表示沒有開始新的一格（不動已經在跑的計時器）
+  const schedule = useCallback(
+    (hold: number | null) => {
+      if (hold !== null) timer.current = window.setTimeout(() => schedule(pb.advance(speedRef.current)), hold);
+      bump();
+    },
+    [pb],
+  );
 
   const skip = useCallback(() => {
     window.clearTimeout(timer.current);
-    queue.current = [];
-    playing.current = false;
-    setCur(null);
-  }, []);
+    pb.skip();
+    bump();
+  }, [pb]);
 
-  useEffect(() => {
-    if (!batch || batch.id === seen.current) return;
-    seen.current = batch.id;
-    if (scale.current === 0) return;
-    queue.current.push(...batch.frames);
-    if (!playing.current && queue.current.length > 0) {
-      playing.current = true;
-      step();
-    }
-  }, [batch, step]);
+  useEffect(() => schedule(pb.ingest(batch, speedRef.current)), [batch, pb, schedule]);
 
   // 切到「關閉動畫」時立刻結束目前的播放
   useEffect(() => {
@@ -72,14 +50,18 @@ export function usePlayback(batch: { id: number; frames: Frame[] } | undefined, 
   useEffect(
     () => () => {
       window.clearTimeout(timer.current);
-      queue.current = [];
-      playing.current = false;
-      seen.current = 0;
+      pb.reset();
     },
-    [],
+    [pb],
   );
 
-  // 新的一批影格已經到了，但還沒開始播（要等這次繪製之後的 effect）：這段空檔不能顯示最終桌面
-  const lagging = !!batch && batch.id !== seen.current && batch.frames.length > 0 && SCALE[speed] > 0;
-  return { cur, skip, scale: SCALE[speed], lagging };
+  const presentation: Presentation = useMemo(
+    // version 變了代表 Playback 的內部狀態變了，要重算
+    () => pb.present(batch, final, speed),
+    [pb, batch, final, speed, version],
+  );
+  // 渲染之後記下顯示的桌面，下一格的數值變化拿它來比
+  useEffect(() => pb.settle(presentation), [pb, presentation]);
+
+  return { presentation, skip };
 }
