@@ -1,5 +1,6 @@
-// 付費會觸發「被蓋成裏側」的效果，所以這裡匯入 effects；effects 經由 effectKit 又會用到這裡的 canPay、optionalPay。
-// 兩邊都只在函式本體裡用對方，載入順序不影響。
+// 付費會觸發「被蓋成裏側」的效果，所以這裡匯入 effects；effects 又會用到這裡的 canPay、optionalPay。
+// 兩邊只在函式本體裡用對方，且 effects 的預設實例延後到第一次使用才建立，所以載入順序不影響。
+// tests/moduleLoad.test.ts 守著這件事。
 import { fire } from './effects';
 import { activate, ask, confirm, data, discard, log, pname, settle, Z, type GameCtx, type Gen } from './ops';
 import type { CardInst, PlayerId } from './types';

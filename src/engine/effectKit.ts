@@ -1,12 +1,12 @@
-import { canPay, optionalPay, type Cost } from './cost';
-import { confirm, type GameCtx, type Gen } from './ops';
+import type { Cost } from './cost';
+import type { GameCtx, Gen } from './ops';
 import type { CardInst, PlayerId, ZoneName } from './types';
 import type { WindowEffect } from './window';
 
 /**
  * 效果來源（見 GLOSSARY）的型別與條目輔助函式。
- * 這個檔案只放條目要用到的東西，不含登記表與查詢實作（那些在 effects.ts），
- * 所以各職業的條目檔可以匯入它，而不會繞回引擎的其他部分。
+ * 這個檔案只放條目要用到的型別與常數，不含登記表與查詢實作（那些在 effects.ts）。
+ * 它沒有任何執行期匯入，所以各職業的條目檔不論誰先被載入，都能安全地匯入它。
  */
 
 // ───────────────────────── 常駐位置 ─────────────────────────
@@ -174,32 +174,6 @@ export interface EffectSource {
   asMove?: Partial<MoveRules>;
 }
 export const defineSource = (s: EffectSource): EffectSource => s;
-
-// ───────────────────────── 處理器的共通欄位 ─────────────────────────
-
-export function makeCtx(g: GameCtx, p: PlayerId, self: CardInst | null, here: () => boolean): Ctx {
-  return {
-    g, p, self, here,
-    effect(o, body) {
-      if (o.cost && !self) throw new Error(`效果「${o.label}」有費用，但沒有對應的卡`);
-      return {
-        label: o.label,
-        mandatory: o.mandatory,
-        mark: o.mark,
-        available: () => here() && (!o.when || o.when()) && (!o.cost || canPay(g, p, o.cost)),
-        *run(confirmed) {
-          if (o.cost) {
-            if (!(yield* optionalPay(g, p, self!, o.cost, !confirmed))) return;
-          } else if (o.confirm && !confirmed && !(yield* confirm(g, p, o.confirm))) {
-            return;
-          }
-          const r = body();
-          if (r) yield* r;
-        },
-      };
-    },
-  };
-}
 
 // ───────────────────────── 回合狀態槽 ─────────────────────────
 

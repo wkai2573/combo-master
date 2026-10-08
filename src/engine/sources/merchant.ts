@@ -1,8 +1,8 @@
 import { hasExpEffect } from '../../data/expEffect';
 import { canPay, chooseX, faceUpExp, pay } from '../cost';
 import { defineSource } from '../effectKit';
-import { activate, awakened, chooseCards, confirm, data, draw, log, move, pname, recover, settle, Z, type Gen } from '../ops';
-import { other, type CardInst } from '../types';
+import { activate, awakened, chooseCards, confirm, data, draw, log, move, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
+import { other, type CardInst, type PlayerId } from '../types';
 
 // 招財貓（商人）：[蓋2] 爆發時，額外抽 1
 export const 招財貓 = defineSource({
@@ -119,7 +119,7 @@ export const 高利貸 = defineSource({
 });
 
 /** 蓋反應：強制，自己錄發動與步驟影格，所以結算完不再補錄 */
-const coverReaction = (id: string, text: string, react: (g: Parameters<typeof recover>[0], p: 0 | 1) => Gen | void) =>
+const coverReaction = (id: string, text: string, react: (g: GameCtx, p: PlayerId) => Gen | void) =>
   defineSource({
     id,
     at: 'exp',

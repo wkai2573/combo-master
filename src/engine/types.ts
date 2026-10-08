@@ -57,7 +57,7 @@ export interface GameState {
   log: string[];
   winner: PlayerId | 'draw' | null;
   winReason: string;
-  /** 各玩家上次偵測時是否處於覺醒狀態；由未覺醒變成覺醒才算進入覺醒（見 awakeningEffects） */
+  /** 各玩家上次偵測時是否處於覺醒狀態；由未覺醒變成覺醒才算進入覺醒（見效果來源模組的覺醒偵測） */
   awakeSeen: [boolean, boolean];
   /** 卡片擁有的回合狀態（效果來源的狀態槽），每位玩家一份，回合開始清空 */
   slots: [Record<string, unknown>, Record<string, unknown>];

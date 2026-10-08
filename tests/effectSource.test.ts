@@ -336,6 +336,18 @@ describe('回合狀態槽', () => {
   });
 });
 
+describe('狀態槽的鍵', () => {
+  it('各條目檔匯出的狀態槽，鍵不重複，否則兩張卡會悄悄共用同一份狀態', async () => {
+    const mods = await Promise.all([
+      import('../src/engine/sources/swordsman'), import('../src/engine/sources/thief'), import('../src/engine/sources/archer'),
+      import('../src/engine/sources/mage'), import('../src/engine/sources/merchant'), import('../src/engine/sources/common'),
+    ]);
+    const keys = mods.flatMap((m) => Object.values(m)).flatMap((v) => (v && typeof v === 'object' && 'of' in v && 'key' in v ? [(v as { key: string }).key] : []));
+    expect(keys.length).toBeGreaterThan(5);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
 describe('型別', () => {
   it('條目的常駐位置必填', () => {
     // @ts-expect-error 沒有 at 是編譯錯誤

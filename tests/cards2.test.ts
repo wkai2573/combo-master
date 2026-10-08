@@ -6,6 +6,7 @@ import { getCard } from '../src/data/cards';
 import { atkOf, defOf, drive, names, pick, scenario, setZones } from './helpers';
 import { Explosion狀態 } from '../src/engine/sources/mage';
 import { 伏擊狀態, 塗毒狀態, 順手牽羊狀態 } from '../src/engine/sources/thief';
+import { 二連矢狀態 } from '../src/engine/sources/archer';
 import { 凡骨狀態 } from '../src/engine/sources/swordsman';
 import { 狙擊印記狀態 } from '../src/engine/sources/archer';
 
@@ -122,13 +123,14 @@ describe('瞄準：次數與等級', () => {
       p1: { hand: ['黑桃9'] },
     });
     狙擊印記狀態.of(g, 0).up = 1;
+    二連矢狀態.of(g, 0).plus = 1; // 追擊 2 次：第二次判定前，用過的瞄準不能再用
     pick(g, '黑桃9');
     expect(g.pending!.title).toContain('LV2');
     pick(g, '使用');
     pick(g, '牌組底'); // 抽到的黑桃8 是手中唯一一張，自動選它
     expect(g.pending?.title ?? '').not.toContain('瞄準'); // 本回合的瞄準用完了
     expect(Z(g, 0, 'deck').at(-1)!.id).toBe('黑桃8');
-    expect(g.state.flags.pursuitSuccess[0]).toBe(1); // 新的牌頂黑桃1 在範圍 7~9 外
+    expect(g.state.flags.pursuitSuccess[0]).toBe(2); // 兩次判定都在範圍 7~9 外
   });
 });
 
@@ -420,6 +422,20 @@ describe('新卡（第二批）', () => {
     expect(Explosion狀態.read(no, 0).skip).toBe(false);
     expect(Z(no, 0, 'exp').filter((c) => c.covered)).toHaveLength(0);
     expect(Z(no, 1, 'discard')).toHaveLength(0);
+  });
+
+  it('塗毒：先手出招時付費發動，歸還時中毒落入出招較少的一方；不發動就沒有中毒', () => {
+    const setup = () => scenario({ chars: ['刺客', '勇者'], first: 0, p0: { hand: ['塗毒', '黑桃2'], exp: ['黑桃3'] }, p1: { hand: [] } });
+    const yes = setup();
+    pick(yes, '塗毒');
+    pick(yes, '發動');
+    expect(Z(yes, 0, 'exp')[0].covered).toBe(true);
+    expect(names(yes, 1, 'exp')).toContain('Ex卡-中毒'); // 我方出招 1 張、對方 0 張，中毒落入對方
+    const no = setup();
+    pick(no, '塗毒');
+    pick(no, '不發動');
+    expect(names(no, 1, 'exp')).not.toContain('Ex卡-中毒');
+    expect(names(no, 0, 'exp')).not.toContain('Ex卡-中毒');
   });
 
   it('塗毒：歸還時 [Ex卡-中毒] 移入出招卡較少的一方，相同時落入對方；離開經驗區就移除遊戲', () => {

@@ -1,10 +1,11 @@
-import { awakened, order, Z, type GameCtx, type Gen } from './ops';
+import { canPay, optionalPay } from './cost';
+import { awakened, confirm, order, Z, type GameCtx, type Gen } from './ops';
 import {
-  EVENT_TITLES, makeCtx, NO_MOVE_RULES, SUBJECTS,
-  type EffectSource, type EventKey, type FireArgList, type FireArgs, type MoveRules, type Offer, type Place,
+  EVENT_TITLES, NO_MOVE_RULES, SUBJECTS,
+  type Ctx, type EffectSource, type EventKey, type FireArgList, type FireArgs, type MoveRules, type Offer, type Place,
   type QueryArgs, type QueryContribution, type QueryKey, type Queries,
 } from './effectKit';
-import { ALL_SOURCES } from './sources';
+import { allSources } from './sources';
 import type { CardInst, PlayerId } from './types';
 import { triggerWindow, type WindowEffect } from './window';
 
@@ -16,6 +17,32 @@ import { triggerWindow, type WindowEffect } from './window';
  * - moveRules：招式的靜態修正
  * - hasEffect：這個卡名或角色名有沒有實作效果
  */
+
+// ───────────────────────── 處理器的共通欄位 ─────────────────────────
+
+export function makeCtx(g: GameCtx, p: PlayerId, self: CardInst | null, here: () => boolean): Ctx {
+  return {
+    g, p, self, here,
+    effect(o, body) {
+      if (o.cost && !self) throw new Error(`效果「${o.label}」有費用，但沒有對應的卡`);
+      return {
+        label: o.label,
+        mandatory: o.mandatory,
+        mark: o.mark,
+        available: () => here() && (!o.when || o.when()) && (!o.cost || canPay(g, p, o.cost)),
+        *run(confirmed) {
+          if (o.cost) {
+            if (!(yield* optionalPay(g, p, self!, o.cost, !confirmed))) return;
+          } else if (o.confirm && !confirmed && !(yield* confirm(g, p, o.confirm))) {
+            return;
+          }
+          const r = body();
+          if (r) yield* r;
+        },
+      };
+    },
+  };
+}
 
 // 窗口選單的順序：裝備、經驗、角色，再依登記順序，與遷移前相同
 const PLACE_ORDER: Place[] = ['gear', 'exp', 'char', 'combat', 'pursuit', 'lasting', 'buff', 'hand', 'deck', 'discard', 'rage'];
@@ -91,7 +118,14 @@ export interface Effects {
 
 export function createEffects(sources: readonly EffectSource[]): Effects {
   const registry = createRegistry(sources);
-  const listeners = (kind: 'on' | 'ask', key: string) => registry.ordered.filter((s) => s[kind]?.[key as never]);
+  // 各時機、各查詢有哪些條目，登記後不會變，第一次問到時建立
+  const indexed = new Map<string, EffectSource[]>();
+  const listeners = (kind: 'on' | 'ask', key: string): EffectSource[] => {
+    const k = `${kind}:${key}`;
+    let list = indexed.get(k);
+    if (!list) indexed.set(k, (list = registry.ordered.filter((s) => s[kind]?.[key as never])));
+    return list;
+  };
 
   /** awakeSeen 的邊緣偵測：由未覺醒變成覺醒才算進入覺醒。每次呼叫都會更新偵測狀態 */
   function awakeningEdge(g: GameCtx, p: PlayerId): boolean {
@@ -174,8 +208,17 @@ export function createEffects(sources: readonly EffectSource[]): Effects {
   return { windowEffects, fire, fireEach, query, moveRules, hasEffect: registry.has } as unknown as Effects;
 }
 
-const effects = createEffects(ALL_SOURCES);
+/**
+ * 預設實例綁定 sources 的登記表。第一次使用時才建立，不在模組載入時建立：
+ * 條目檔會匯入 cost，而 cost 又會匯入這裡，載入時就建立會踩到還沒載入完的條目。
+ */
+let shared: Effects | undefined;
+const effects = (): Effects => (shared ??= createEffects(allSources()));
 
-export const { windowEffects, fire, fireEach, query, moveRules } = effects;
+export const windowEffects: Effects['windowEffects'] = (g, p, key, ...arg) => effects().windowEffects(g, p, key, ...arg);
+export const fire: Effects['fire'] = (g, p, key, ...arg) => effects().fire(g, p, key, ...arg);
+export const fireEach: Effects['fireEach'] = (g, key, ...arg) => effects().fireEach(g, key, ...arg);
+export const query: Effects['query'] = (g, p, key, ...args) => effects().query(g, p, key, ...args);
+export const moveRules: Effects['moveRules'] = (cardId) => effects().moveRules(cardId);
 /** 這個卡名或角色名有沒有實作效果，涵蓋招式、裝備、增益與角色 */
-export const hasEffect = (id: string): boolean => effects.hasEffect(id);
+export const hasEffect = (id: string): boolean => effects().hasEffect(id);
