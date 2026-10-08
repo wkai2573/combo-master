@@ -1,7 +1,7 @@
 import { hasExpEffect } from '../../data/expEffect';
 import { canPay, chooseX, faceUpExp, pay } from '../cost';
 import { defineSource } from '../effectKit';
-import { activate, awakened, chooseCards, confirm, data, draw, log, move, pname, Z } from '../ops';
+import { activate, awakened, chooseCards, confirm, data, draw, log, move, pname, recover, settle, Z, type Gen } from '../ops';
 import { other, type CardInst } from '../types';
 
 // 招財貓（商人）：[蓋2] 爆發時，額外抽 1
@@ -118,4 +118,27 @@ export const 高利貸 = defineSource({
   },
 });
 
-export const MERCHANT_SOURCES = [招財貓, 商人, 交涉, 即時停損, 高利貸];
+/** 蓋反應：強制，自己錄發動與步驟影格，所以結算完不再補錄 */
+const coverReaction = (id: string, text: string, react: (g: Parameters<typeof recover>[0], p: 0 | 1) => Gen | void) =>
+  defineSource({
+    id,
+    at: 'exp',
+    on: {
+      onCovered: (c) => c.effect({ label: `【${id}】被蓋成裏側：${text}`, mandatory: true, mark: false }, function* () {
+        log(c.g, `【${data(c.self!).name}】被蓋成裏側`);
+        activate(c.g, c.p, c.self!, `【${data(c.self!).name}】被蓋成裏側，效果發動`);
+        const r = react(c.g, c.p);
+        if (r) yield* r;
+        settle(c.g);
+      }),
+    },
+  });
+
+// 低價買進（商人）：[經] 此卡被蓋成裏側時，回復 3
+export const 低價買進 = coverReaction('低價買進', '回復 3', (g, p) => void recover(g, p, 3));
+// 高價賣出（商人）：[經] 此卡被蓋成裏側時，抽 1
+export const 高價賣出 = coverReaction('高價賣出', '抽 1', function* (g, p) {
+  yield* draw(g, p, 1);
+});
+
+export const MERCHANT_SOURCES = [招財貓, 商人, 交涉, 即時停損, 高利貸, 低價買進, 高價賣出];

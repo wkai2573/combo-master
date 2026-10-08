@@ -170,22 +170,15 @@ export function* damageStep(g: GameCtx): Gen {
   checkWin(g);
 }
 
-export function returnStep(g: GameCtx): void {
+export function* returnStep(g: GameCtx): Gen {
   g.state.phase = '歸還';
   for (const p of order(g)) {
     // 戰鬥區由最底到最頂，最後是追擊卡
     for (const c of [...Z(g, p, 'combat'), ...Z(g, p, 'pursuit')]) move(g, c, 'exp');
   }
   // 塗毒：歸還時，把 [Ex卡-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
-  const f = g.state.flags;
-  for (const owner of f.poisonQ) {
-    const mine = f.played[owner];
-    const theirs = f.played[other(owner)];
-    const target = mine < theirs ? owner : other(owner);
-    newCard(g, 'Ex卡-中毒', target, 'exp');
-    log(g, `【塗毒】[Ex卡-中毒]移入${pname(g, target)}的經驗區`);
-  }
-  f.poisonQ = [];
+  yield* fireEach(g, 'afterReturn');
+  g.state.flags.poisonQ = [];
   mark(g, '招式與追擊卡依序放入經驗區', { type: 'return' });
 }
 
@@ -247,6 +240,6 @@ export function* combatPhase(g: GameCtx): Gen {
 
   if (!straightToDamage) yield* pursuitPhase(g);
   yield* damageStep(g);
-  returnStep(g);
+  yield* returnStep(g);
   yield* fireEach(g, 'onAwaken'); // 歸還讓經驗區增加，可能進入覺醒
 }

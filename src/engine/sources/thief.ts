@@ -1,6 +1,6 @@
 import { canPay, chooseX, pay } from '../cost';
-import { defineSource } from '../effectKit';
-import { activate, chooseCards, data, discard, draw, log, Z } from '../ops';
+import { defineSource, lasting } from '../effectKit';
+import { activate, chooseCards, data, discard, draw, log, newCard, pname, Z } from '../ops';
 import { other } from '../types';
 
 // 伏擊（盜賊）：[先] 此回合我方總攻擊 +4
@@ -66,6 +66,17 @@ export const 塗毒 = defineSource({
       c.g.state.flags.poisonQ.push(c.p);
       log(c.g, '【塗毒】歸還時，[Ex卡-中毒]將移入經驗區');
     }),
+    // 歸還時卡已經離開戰鬥區，所以要明寫 lasting；是否發動看塗毒留下的記號
+    afterReturn: lasting((c) => c.g.state.flags.poisonQ.filter((owner) => owner === c.p).map((owner) =>
+      // 歸還的影格已經涵蓋這張卡的出現，所以不另外補錄
+      c.effect({ label: '【塗毒】Ex卡-中毒移入經驗區', mandatory: true, mark: false }, () => {
+        const f = c.g.state.flags;
+        const mine = f.played[owner];
+        const theirs = f.played[other(owner)];
+        const target = mine < theirs ? owner : other(owner);
+        newCard(c.g, 'Ex卡-中毒', target, 'exp');
+        log(c.g, `【塗毒】[Ex卡-中毒]移入${pname(c.g, target)}的經驗區`);
+      }))),
   },
 });
 

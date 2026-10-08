@@ -7,13 +7,17 @@
 
 **Blocked by（被誰阻擋）：** 04
 
-**Status：** ready-for-agent
+**Status：** resolved
 
-- [ ] 蓋反應的說明文字與錄影格方式與遷移前相同，`covered.test.ts`、`frames.test.ts` 通過
-- [ ] 同一次蓋到多張有蓋反應的卡，窗口行為與遷移前相同
-- [ ] `returnStep` 改成 Gen，並在測試輔助檔新增把沒有提示的 Gen 跑完的函式；`cards2.test.ts` 與其他同步呼叫處改用它
-- [ ] 塗毒的歸屬判定測試保留：出招較少者受毒，相同時落入對方
-- [ ] `COVER_REACTIONS` 與 `CardScript.onCovered` 已刪除，`ops.ts`、`cost.ts` 沒有蓋反應的卡名比對
-- [ ] 現有測試全部通過，沒有新增行為
-- [ ] 型別檢查、單元測試與機器人壓測通過
-- [ ] 純內部重構，依版本號維護規範不升版
+- [x] 蓋反應的說明文字與錄影格方式與遷移前相同，`covered.test.ts`、`frames.test.ts` 通過
+- [x] 同一次蓋到多張有蓋反應的卡，窗口行為與遷移前相同
+- [x] `returnStep` 改成 Gen，並在測試輔助檔新增把沒有提示的 Gen 跑完的函式；`cards2.test.ts` 與其他同步呼叫處改用它
+- [x] 塗毒的歸屬判定測試保留：出招較少者受毒，相同時落入對方
+- [x] `COVER_REACTIONS` 與 `CardScript.onCovered` 已刪除，`ops.ts`、`cost.ts` 沒有蓋反應的卡名比對
+- [x] 現有測試全部通過，沒有新增行為
+- [x] 型別檢查、單元測試與機器人壓測通過
+- [x] 純內部重構，依版本號維護規範不升版
+
+## Answer
+
+純內部重構，不升版，維持 v0.22.2。`cost.ts` 與 `effects.ts` 之間有付費與蓋反應造成的雙向匯入，兩邊只在函式本體裡使用對方，已在 `cost.ts` 註明。塗毒的歸還處理設為 `mark: false`，歸還的影格不變。機器人壓測勝率與遷移前一致。

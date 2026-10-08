@@ -4,7 +4,7 @@ import { discard, Z } from '../src/engine/ops';
 import { optionalPay, pay } from '../src/engine/cost';
 import { scripts } from '../src/engine/scripts';
 import { getCard } from '../src/data/cards';
-import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
+import { atkOf, defOf, drive, names, pick, scenario, setZones } from './helpers';
 
 const filler = Array(20).fill('黑桃2') as string[];
 
@@ -423,13 +423,13 @@ describe('新卡（第二批）', () => {
     const g = scenario();
     g.state.flags.poisonQ = [0];
     g.state.flags.played = [1, 2];
-    returnStep(g);
+    drive(returnStep(g));
     expect(names(g, 0, 'exp')).toContain('Ex卡-中毒');
 
     const t = scenario();
     t.state.flags.poisonQ = [0];
     t.state.flags.played = [2, 2];
-    returnStep(t);
+    drive(returnStep(t));
     expect(names(t, 1, 'exp')).toContain('Ex卡-中毒');
 
     const poison = Z(t, 1, 'exp').find((c) => c.id === 'Ex卡-中毒')!;
