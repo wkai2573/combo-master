@@ -74,8 +74,8 @@ describe('商人', () => {
       p1: { hand: [] },
     });
     pick(g, '黑桃5');
-    pick(g, '不發動');
-    pick(g, '發動');
+    // 調整順序與加入手牌兩個效果同時可發動：進爆發窗口，自己選要發哪個（詳見 window.test.ts）
+    pick(g, '【商人】覺醒：將 1 張表側經驗加入手牌');
     pick(g, '黑桃4');
     expect(names(g, 0, 'hand')).toContain('黑桃4');
 

@@ -3,6 +3,7 @@ import {
   activate, ask, awakened, canPay, chooseCards, confirm, COVER_REACTIONS, data, directHit, discard, draw, faceUpExp, isFirst, Z, log, move,
   optionalPay, order, pay, pname, recover, type Gen, type GameCtx,
 } from './ops';
+import type { WindowEffect } from './window';
 import { other, type CardInst, type PlayerId } from './types';
 
 /**
@@ -285,35 +286,45 @@ export function* onPassEffects(g: GameCtx, p: PlayerId): Gen {
 }
 
 /**
- * 商人爆發後：可以調整表側經驗的順序（蓋X 從最前面開始蓋）；覺醒後還可以把 1 張表側的經驗卡加入手牌。
+ * 商人爆發後的效果（進爆發窗口）：
+ * - 調整表側經驗的順序（蓋X 從最前面開始蓋，裏側的卡位置不動）
+ * - 覺醒後：把 1 張表側經驗加入手牌
  */
-export function* merchantAfterBurst(g: GameCtx, p: PlayerId): Gen {
-  if (g.state.players[p].charId !== '商人') return;
-  const exp = Z(g, p, 'exp');
-  const faceUp = exp.filter((c) => !c.covered);
-  if (faceUp.length >= 2 && (yield* confirm(g, p, '【商人】要調整表側經驗的順序嗎？'))) {
-    const rest = [...faceUp];
-    const order_: CardInst[] = [];
-    while (rest.length > 1) {
-      const [c] = yield* chooseCards(g, p, `【商人】選擇排在第 ${order_.length + 1} 位的表側經驗（最前面的最先被蓋）`, rest, 1, 1);
-      order_.push(c);
-      rest.splice(rest.indexOf(c), 1);
-    }
-    order_.push(...rest);
-    const slots = exp.map((c, i) => (c.covered ? -1 : i)).filter((i) => i >= 0);
-    order_.forEach((c, k) => {
-      exp[slots[k]] = c;
-    });
-    log(g, `【商人】${pname(g, p)} 調整了表側經驗的順序`);
-  }
-  if (awakened(g, p)) {
-    const pool = Z(g, p, 'exp').filter((c) => !c.covered);
-    if (pool.length > 0 && (yield* confirm(g, p, '【商人】覺醒：要將 1 張表側經驗加入手牌嗎？'))) {
-      const [pick] = yield* chooseCards(g, p, '【商人】選擇 1 張表側經驗加入手牌', pool, 1, 1);
-      if (pick) {
-        move(g, pick, 'hand');
-        log(g, `【商人】${pname(g, p)} 將經驗【${data(pick).name}】加入手牌`);
-      }
-    }
-  }
+export function merchantBurstEffects(g: GameCtx, p: PlayerId): WindowEffect[] {
+  if (g.state.players[p].charId !== '商人') return [];
+  return [
+    {
+      label: '【商人】調整表側經驗的順序',
+      available: () => faceUpExp(g, p).length >= 2,
+      *run(confirmed) {
+        if (!confirmed && !(yield* confirm(g, p, '【商人】要調整表側經驗的順序嗎？'))) return;
+        const exp = Z(g, p, 'exp');
+        const rest = faceUpExp(g, p);
+        const order_: CardInst[] = [];
+        while (rest.length > 1) {
+          const [c] = yield* chooseCards(g, p, `【商人】選擇排在第 ${order_.length + 1} 位的表側經驗（最前面的最先被蓋）`, rest, 1, 1);
+          order_.push(c);
+          rest.splice(rest.indexOf(c), 1);
+        }
+        order_.push(...rest);
+        const slots = exp.map((c, i) => (c.covered ? -1 : i)).filter((i) => i >= 0);
+        order_.forEach((c, k) => {
+          exp[slots[k]] = c;
+        });
+        log(g, `【商人】${pname(g, p)} 調整了表側經驗的順序`);
+      },
+    },
+    {
+      label: '【商人】覺醒：將 1 張表側經驗加入手牌',
+      available: () => awakened(g, p) && faceUpExp(g, p).length > 0,
+      *run(confirmed) {
+        if (!confirmed && !(yield* confirm(g, p, '【商人】覺醒：要將 1 張表側經驗加入手牌嗎？'))) return;
+        const [pick] = yield* chooseCards(g, p, '【商人】選擇 1 張表側經驗加入手牌', faceUpExp(g, p), 1, 1);
+        if (pick) {
+          move(g, pick, 'hand');
+          log(g, `【商人】${pname(g, p)} 將經驗【${data(pick).name}】加入手牌`);
+        }
+      },
+    },
+  ];
 }

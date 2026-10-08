@@ -215,11 +215,13 @@ export function* pay(g: GameCtx, p: PlayerId, cost: Cost): Gen {
   }
 }
 
-/** 可選的費用發動：付得起才詢問，同意就扣費並回傳 true */
-export function* optionalPay(g: GameCtx, p: PlayerId, card: CardInst, cost: Cost): Gen<boolean> {
+/** 可選的費用發動：付得起才詢問，同意就扣費並回傳 true。askFirst 為 false 時（已在觸發窗口選定）不再詢問 */
+export function* optionalPay(g: GameCtx, p: PlayerId, card: CardInst, cost: Cost, askFirst = true): Gen<boolean> {
   if (!canPay(g, p, cost)) return false;
-  const ok = yield* confirm(g, p, `是否發動【${data(card).name}】？（${costText(cost)}）`);
-  if (!ok) return false;
+  if (askFirst) {
+    const ok = yield* confirm(g, p, `是否發動【${data(card).name}】？（${costText(cost)}）`);
+    if (!ok) return false;
+  }
   const text = `${pname(g, p)} 發動【${data(card).name}】（${costText(cost)}）`;
   log(g, text);
   activate(g, p, card, text);

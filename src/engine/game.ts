@@ -1,8 +1,9 @@
 import { getCharacter } from '../data/cards';
 import { combatPhase } from './combat';
-import { merchantAfterBurst, turnStartEffects } from './scripts';
+import { merchantBurstEffects, turnStartEffects } from './scripts';
+import { triggerWindow, type WindowEffect } from './window';
 import {
-  ask, awakened, cardOpt, data, draw, drawPlain, GameOver, log, mark, move, newCard,
+  ask, awakened, canPay, cardOpt, data, draw, drawPlain, GameOver, log, mark, move, newCard,
   markIfLogged, optionalPay, order, pname, settle, toExp, Z, type Gen,
 } from './ops';
 import { Rng } from './rng';
@@ -247,14 +248,23 @@ function* burstPhase(g: Game): Gen {
     log(g, `${pname(g, p)} 爆發：將【${data(card).name}】放入經驗區`);
     yield* draw(g, p, 2);
     mark(g, `${pname(g, p)} 爆發：1 張手牌放入經驗區，抽 2`, { type: 'info' });
+    // 爆發後的觸發窗口：招財貓、商人的調整順序、商人覺醒的加入手牌，由玩家選要發哪個、先發哪個
+    const effects: WindowEffect[] = [];
     // 招財貓：[蓋2] 爆發時，額外抽 1
     const cat = Z(g, p, 'gear').find((c) => c.id === '招財貓');
-    if (cat && (yield* optionalPay(g, p, cat, { cover: 2 }))) {
-      yield* draw(g, p, 1);
-      log(g, `【招財貓】${pname(g, p)} 爆發時額外抽 1`);
-      mark(g, g.state.log[g.state.log.length - 1], { type: 'info' });
+    if (cat) {
+      effects.push({
+        label: '【招財貓】爆發時，抽 1（蓋2）',
+        available: () => canPay(g, p, { cover: 2 }),
+        *run(confirmed) {
+          if (!(yield* optionalPay(g, p, cat, { cover: 2 }, !confirmed))) return;
+          yield* draw(g, p, 1);
+          log(g, `【招財貓】${pname(g, p)} 爆發時額外抽 1`);
+        },
+      });
     }
-    yield* markIfLogged(g, () => merchantAfterBurst(g, p));
+    effects.push(...merchantBurstEffects(g, p));
+    yield* triggerWindow(g, p, '爆發後', effects);
   }
   checkWin(g);
 }

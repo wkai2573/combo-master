@@ -33,7 +33,7 @@ export function PromptPanel({ prompt, selected, onPick, onSubmit }: Props) {
         {btnOpts.map((o) => (
           <button
             key={o.key}
-            className={o.key === 'yes' || o.key === 'pass' ? '' : 'primary'}
+            className={o.key === 'yes' || o.key === 'pass' || o.key === 'end' ? '' : 'primary'}
             onClick={() => (single ? onSubmit([o.key]) : onPick(o.key))}
           >
             {o.label}
