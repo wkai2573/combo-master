@@ -35,6 +35,12 @@ function referenced(g: Game): Set<number> {
   return out;
 }
 
+/** 開關作弊模式也寫進紀錄，讓雙方事後對得上 */
+export function cheatSwitch(g: Game, by: PlayerId, on: boolean): void {
+  checkPlayers(by, by);
+  log(g, `【作弊】${pname(g, by)} ${on ? '開啟' : '關閉'}作弊模式`);
+}
+
 export const CHEAT_ZONE_LABEL: Record<CheatViewZone, string> = { hand: '手牌', deck: '牌組', rage: '怒氣區', discard: '棄牌區', exp: '經驗區' };
 
 /** 連線時參數來自對方的訊息：不合法的玩家編號、卡名、卡片編號一律當成拒絕，不讓它變成執行期錯誤 */
@@ -64,7 +70,10 @@ export function cheatRemove(g: Game, by: PlayerId, target: PlayerId, uid: number
 
 export function cheatReorder(g: Game, by: PlayerId, target: PlayerId, zone: CheatZone, uids: number[]): void {
   checkPlayers(by, target);
-  if (!(CHEAT_ZONES as readonly string[]).includes(zone)) throw new Error(`${CHEAT_ZONE_LABEL[zone as CheatViewZone] ?? zone}不能調整順序`);
+  if (!(CHEAT_ZONES as readonly string[]).includes(zone)) {
+    const known = typeof zone === 'string' && Object.hasOwn(CHEAT_ZONE_LABEL, zone);
+    throw new Error(known ? `${CHEAT_ZONE_LABEL[zone as CheatViewZone]}不能調整順序` : '牌區不合法');
+  }
   if (!Array.isArray(uids) || uids.some((u) => typeof u !== 'number')) throw new Error('順序不合法');
   const cards = Z(g, target, zone as ZoneName);
   const byUid = new Map(cards.map((c) => [c.uid, c]));

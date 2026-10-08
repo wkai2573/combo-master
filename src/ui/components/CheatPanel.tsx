@@ -44,10 +44,20 @@ export function CheatPanel({ cheat, me, snapshotKey, locked, onClose }: {
   const frozen = useRef(live);
   if (!locked) frozen.current = live;
   const snap = locked ? frozen.current : live;
+  // 訪客剛開啟作弊時，房主的檢視還在路上
+  if (!snap) {
+    return (
+      <div className="cheatpanel" role="dialog" aria-label="作弊面板">
+        <div className="cheathead"><b>作弊面板</b><span className="muted">讀取中…</span><span className="spacer" /><button onClick={onClose}>關閉</button></div>
+      </div>
+    );
+  }
   const opp: PlayerId = me === 0 ? 1 : 0;
   const side = (p: PlayerId) => (p === me ? '我方' : '對手');
 
-  const run = (err: string | null, ok: string) => setMsg(err ? { ok: false, text: err } : { ok: true, text: ok });
+  // 操作的結果（訪客要等房主回覆）：被拒絕時顯示原因
+  const run = (result: Promise<string | null>, ok: string) =>
+    result.then((err) => setMsg(err ? { ok: false, text: err } : { ok: true, text: ok }));
 
   const pool = CHEAT_POOL.filter((c) => (!cls || c.cls === cls) && (!query.trim() || c.name.includes(query.trim())));
   const hand = snap[target].hand;

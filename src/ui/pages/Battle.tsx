@@ -36,11 +36,13 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const zoneRef = useRef(zone);
   zoneRef.current = zone;
   const [copied, setCopied] = useState(false);
-  // 作弊模式：開關只存在這個畫面，離開或下一局都會回到關閉
-  const [cheatOn, setCheatOn] = useState(false);
+  // 作弊模式：開關記在連線層（對方才看得到提示），離開或下一局都會回到關閉；面板的開合只是這個畫面的事
   const [cheatOpen, setCheatOpen] = useState(false);
   const cheatOpenRef = useRef(cheatOpen);
   cheatOpenRef.current = cheatOpen;
+  // 面板跟著連線層確認過的開關走：開啟被確認才打開，關閉就收起（房主沒回應或遊戲已結束時不會憑空彈出）
+  const cheatOnState = st.cheatOn[session.me];
+  useEffect(() => setCheatOpen(cheatOnState), [cheatOnState]);
   const [speed, setSpeedState] = useState<Speed>(() => {
     let stored: string | null = null;
     try {
@@ -159,6 +161,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
 
   const me = v.me;
   const opp: PlayerId = me === 0 ? 1 : 0;
+  const cheatOn = st.cheatOn[me];
   const prompt = v.prompt;
   const waitingOpp = !prompt && v.waitingFor === opp && v.winner === null;
 
@@ -216,7 +219,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           )}
           {session.cheat && (
             <>
-              <button className={cheatOn ? 'on' : ''} aria-pressed={cheatOn} title="開啟後可以隨意加入手牌、移除手牌、調整牌堆順序" onClick={() => { setCheatOn(!cheatOn); setCheatOpen(!cheatOn); }}>作弊模式</button>
+              <button className={cheatOn ? 'on' : ''} aria-pressed={cheatOn} title="開啟後可以隨意加入手牌、移除手牌、調整牌堆順序" onClick={() => session.cheat?.setOn(!cheatOn)}>作弊模式</button>
               {cheatOn && <button className={cheatOpen ? 'on' : ''} aria-pressed={cheatOpen} onClick={() => setCheatOpen(!cheatOpen)}>作弊面板</button>}
             </>
           )}
@@ -233,6 +236,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           </div>
         )}
         {cheatOn && <div className="banner cheat">作弊模式開啟中：這一局的結果不具參考價值</div>}
+        {st.cheatOn[opp] && <div className="banner cheat">對手開啟了作弊模式：對手可以調整雙方的牌區</div>}
         <div className="main">
           {wide ? (
             <div className={`board${cur ? ' playing' : ''}`}>

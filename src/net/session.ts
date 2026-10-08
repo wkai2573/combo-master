@@ -6,9 +6,10 @@ import { Game } from '../engine/game';
 import { Rng } from '../engine/rng';
 import { frameFor, viewFor, type Frame, type GameView } from '../engine/view';
 import type { PlayerId } from '../engine/types';
+import { CheatHub } from './cheatHub';
 import {
   FORFEIT_AFTER_S, OFFLINE_AFTER_MS, PING_EVERY_MS, peerIdOf, randomRoomCode,
-  type ClientMsg, type DeckPayload, type HostMsg,
+  type CheatOp, type ClientMsg, type DeckPayload, type HostMsg,
 } from './protocol';
 
 export type SessionStatus = 'connecting' | 'waiting' | 'playing' | 'over' | 'error';
@@ -24,17 +25,24 @@ export interface SessionState {
   forfeitIn: number | null;
   /** 最新一批要播放的動畫影格（id 每次遞增，介面據此判斷是否有新的一批） */
   batch: { id: number; frames: Frame[] };
+  /** 各玩家是否開啟作弊模式（索引為玩家編號）；對方開啟時畫面頂端會提示 */
+  cheatOn: [boolean, boolean];
+  /** 訪客收到的作弊檢視（只有自己開啟作弊時房主才會附上）；單機與房主直接讀引擎，用不到 */
+  cheatSnap: CheatSnapshot | null;
 }
 
 /**
- * 作弊操作：回傳 null 表示成功，否則是被拒絕的原因。
- * target 是被操作的玩家（可以是自己或對方）。沒有這組操作的連線方式，作弊面板不會出現。
+ * 作弊操作：結果是 null 表示成功，否則是被拒絕的原因（訪客的操作要等房主回覆，所以是非同步）。
+ * target 是被操作的玩家（可以是自己或對方）。
  */
 export interface CheatApi {
-  snapshot(): CheatSnapshot;
-  add(target: PlayerId, cardId: string): string | null;
-  remove(target: PlayerId, uid: number): string | null;
-  reorder(target: PlayerId, zone: CheatZone, uids: number[]): string | null;
+  /** 開關自己的作弊模式 */
+  setOn(on: boolean): void;
+  /** 作弊檢視；還沒收到（或沒開啟）時是 null */
+  snapshot(): CheatSnapshot | null;
+  add(target: PlayerId, cardId: string): Promise<string | null>;
+  remove(target: PlayerId, uid: number): Promise<string | null>;
+  reorder(target: PlayerId, zone: CheatZone, uids: number[]): Promise<string | null>;
 }
 
 export interface Session {
@@ -46,11 +54,30 @@ export interface Session {
   leave(): void;
 }
 
+/** 三種連線方式共用的作弊介面：run 執行一個操作並回報結果，closed 為 true 時一律拒絕 */
+function makeCheatApi(parts: {
+  setOn(on: boolean): void;
+  snapshot(): CheatSnapshot | null;
+  run(op: CheatOp): Promise<string | null>;
+  closed(): boolean;
+}): CheatApi {
+  const run = (op: CheatOp) => (parts.closed() ? Promise.resolve('已離開遊戲') : parts.run(op));
+  return {
+    setOn: (on) => {
+      if (!parts.closed()) parts.setOn(on);
+    },
+    snapshot: parts.snapshot,
+    add: (target, cardId) => run({ k: 'add', target, cardId }),
+    remove: (target, uid) => run({ k: 'remove', target, uid }),
+    reorder: (target, zone, uids) => run({ k: 'reorder', target, zone, uids }),
+  };
+}
+
 abstract class Base implements Session {
   abstract readonly me: PlayerId;
   protected s: SessionState = {
     status: 'connecting', view: null, message: '', opponentOnline: true, forfeitIn: null,
-    batch: { id: 0, frames: [] },
+    batch: { id: 0, frames: [] }, cheatOn: [false, false], cheatSnap: null,
   };
   private batchId = 0;
   protected nextBatch(frames: Frame[]) {
@@ -79,16 +106,26 @@ export class LocalSession extends Base {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private closed = false;
 
-  readonly cheat: CheatApi = {
-    snapshot: () => this.game.cheatSnapshot(),
-    add: (target, cardId) => this.cheatOp(() => this.game.cheatAdd(0, target, cardId)),
-    remove: (target, uid) => this.cheatOp(() => this.game.cheatRemove(0, target, uid)),
-    reorder: (target, zone, uids) => this.cheatOp(() => this.game.cheatReorder(0, target, zone, uids)),
-  };
+  private hub: CheatHub;
+
+  readonly cheat: CheatApi = makeCheatApi({
+    setOn: (on) => {
+      this.hub.setOn(0, on);
+      this.publish();
+    },
+    snapshot: () => this.hub.snapshotFor(0),
+    run: async (op) => {
+      const err = this.hub.apply(0, op);
+      if (!err) this.publish();
+      return err;
+    },
+    closed: () => this.closed,
+  });
 
   constructor(mine: DeckPayload, theirs: DeckPayload) {
     super();
     this.game = new Game({ decks: [mine, theirs], animate: true });
+    this.hub = new CheatHub(this.game);
     this.sync();
   }
 
@@ -103,17 +140,13 @@ export class LocalSession extends Base {
     this.sync();
   }
 
-  private cheatOp(op: () => void): string | null {
-    if (this.closed) return '已離開遊戲';
-    try {
-      op();
-    } catch (e) {
-      return (e as Error).message;
-    }
-    // 只更新畫面：不重設機器人的出招計時，連續作弊也不會讓它一直等
+  /** 只更新畫面：不重設機器人的出招計時，連續作弊也不會讓它一直等 */
+  private publish() {
     const g = this.game;
-    this.set({ status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '', batch: this.nextBatch(g.drainFrames().map((f) => frameFor(f, 0))) });
-    return null;
+    this.set({
+      status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '', cheatOn: [...this.hub.on],
+      batch: this.nextBatch(g.drainFrames().map((f) => frameFor(f, 0))),
+    });
   }
 
   private sync() {
@@ -145,12 +178,27 @@ export class HostSession extends Base {
   private peer: Peer | undefined;
   private conn: DataConnection | undefined;
   private game: Game | undefined;
+  private hub: CheatHub | undefined;
   private guestSeen = 0;
   private offlineTimer: ReturnType<typeof setInterval> | undefined;
   private watchTimer: ReturnType<typeof setInterval> | undefined;
   private forfeitLeft: number | null = null;
   private left = false;
   private attempts = 0;
+
+  readonly cheat: CheatApi = makeCheatApi({
+    setOn: (on) => {
+      this.hub?.setOn(0, on);
+      this.pushViews();
+    },
+    snapshot: () => this.hub?.snapshotFor(0) ?? null,
+    run: async (op) => {
+      const err = this.hub ? this.hub.apply(0, op) : '遊戲還沒開始';
+      if (!err) this.pushViews();
+      return err;
+    },
+    closed: () => this.left,
+  });
 
   constructor(private deck: DeckPayload) {
     super();
@@ -205,7 +253,21 @@ export class HostSession extends Base {
         return;
       }
       this.game = new Game({ decks: [this.deck, msg.deck], animate: true });
+      this.hub = new CheatHub(this.game);
       this.pushViews();
+      return;
+    }
+    if (msg.t === 'cheat' && this.hub) {
+      // 操作者以連線身分為準：訪客只能開關自己的作弊模式
+      this.hub.setOn(1, !!msg.on);
+      this.pushViews();
+      return;
+    }
+    if (msg.t === 'cheatOp' && this.hub) {
+      const error = this.hub.apply(1, msg.op);
+      if (error) conn.send(this.viewMsg(this.game!, []));
+      else this.pushViews();
+      conn.send({ t: 'cheatResult', id: msg.id, error } satisfies HostMsg);
       return;
     }
     if (msg.t === 'submit' && this.game) {
@@ -214,7 +276,7 @@ export class HostSession extends Base {
       } catch (e) {
         // 多半是訪客的畫面過期：告知原因，並直接補送最新狀態
         conn.send({ t: 'reject', reason: (e as Error).message } satisfies HostMsg);
-        conn.send({ t: 'view', view: viewFor(this.game, 1), frames: [] } satisfies HostMsg);
+        conn.send(this.viewMsg(this.game, []));
         return;
       }
       this.pushViews();
@@ -225,13 +287,20 @@ export class HostSession extends Base {
     const g = this.game;
     if (!g) return;
     const raw = g.drainFrames();
+    const cheatOn: [boolean, boolean] = this.hub ? [...this.hub.on] : [false, false];
     this.set({
-      status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '',
+      status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '', cheatOn,
       batch: this.nextBatch(raw.map((f) => frameFor(f, 0))),
     });
-    if (this.conn?.open) {
-      this.conn.send({ t: 'view', view: viewFor(g, 1), frames: raw.map((f) => frameFor(f, 1)) } satisfies HostMsg);
-    }
+    if (this.conn?.open) this.conn.send(this.viewMsg(g, raw.map((f) => frameFor(f, 1))));
+  }
+
+  /** 送給訪客的視角訊息：每一條路徑都走這裡，作弊的開關與檢視才不會漏。檢視只附給開啟作弊的訪客 */
+  private viewMsg(g: Game, frames: Frame[]): HostMsg {
+    return {
+      t: 'view', view: viewFor(g, 1), frames,
+      cheatOn: this.hub ? [...this.hub.on] : [false, false], cheatSnap: this.hub?.snapshotFor(1) ?? null,
+    };
   }
 
   /** 每秒檢查訪客是否仍有回應；離線後倒數判負 */
@@ -299,6 +368,40 @@ export class GuestSession extends Base {
   private hostSeen = Date.now();
   private connectTimer: ReturnType<typeof setTimeout> | undefined;
   private watchTimer: ReturnType<typeof setInterval> | undefined;
+  private cheatSeq = 0;
+  private cheatWaiters = new Map<number, (error: string | null) => void>();
+
+  private left = false;
+
+  readonly cheat: CheatApi = makeCheatApi({
+    setOn: (on) => this.send({ t: 'cheat', on }),
+    snapshot: () => this.s.cheatSnap,
+    run: (op) => this.cheatOp(op),
+    closed: () => this.left,
+  });
+
+  /** 還在等房主回覆的作弊操作：連線中斷或離開時一併結束 */
+  private failCheatWaiters(reason: string) {
+    for (const done of this.cheatWaiters.values()) done(reason);
+    this.cheatWaiters.clear();
+  }
+
+  /** 傳給房主執行，等房主回報結果；連線中斷或太久沒回應就當成失敗 */
+  private cheatOp(op: CheatOp): Promise<string | null> {
+    if (!this.conn?.open) return Promise.resolve('與房主的連線中斷');
+    return new Promise((resolve) => {
+      const id = ++this.cheatSeq;
+      const timer = setTimeout(() => {
+        this.cheatWaiters.delete(id);
+        resolve('房主沒有回應');
+      }, 10_000);
+      this.cheatWaiters.set(id, (error) => {
+        clearTimeout(timer);
+        resolve(error);
+      });
+      this.send({ t: 'cheatOp', id, op });
+    });
+  }
 
   constructor(code: string, private deck: DeckPayload) {
     super();
@@ -340,13 +443,17 @@ export class GuestSession extends Base {
       if (msg.t === 'view') {
         this.set({
           status: msg.view.winner !== null ? 'over' : 'playing', view: msg.view, message: '', opponentOnline: true,
-          batch: this.nextBatch(msg.frames ?? []),
+          batch: this.nextBatch(msg.frames ?? []), cheatOn: msg.cheatOn ?? [false, false], cheatSnap: msg.cheatSnap ?? null,
         });
+      } else if (msg.t === 'cheatResult') {
+        this.cheatWaiters.get(msg.id)?.(msg.error);
+        this.cheatWaiters.delete(msg.id);
       } else if (msg.t === 'reject') {
         this.set({ message: msg.reason, ...(this.s.view ? {} : { status: 'error' as const }) });
       }
     });
     conn.on('close', () => {
+      this.failCheatWaiters('與房主的連線中斷');
       if (this.s.status !== 'over') this.fail('與房主的連線中斷');
     });
   }
@@ -360,6 +467,8 @@ export class GuestSession extends Base {
   }
 
   leave() {
+    this.left = true;
+    this.failCheatWaiters('已離開遊戲');
     clearInterval(this.pingTimer);
     clearInterval(this.watchTimer);
     clearTimeout(this.connectTimer);

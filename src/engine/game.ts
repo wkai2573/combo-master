@@ -1,5 +1,5 @@
 import { getCharacter } from '../data/cards';
-import { cheatAdd, cheatRemove, cheatReorder, cheatSnapshot, type CheatSnapshot, type CheatZone } from './cheat';
+import { cheatAdd, cheatRemove, cheatReorder, cheatSnapshot, cheatSwitch, type CheatSnapshot, type CheatZone } from './cheat';
 import { combatPhase } from './combat';
 import { awakenCheck, awakeningEffects, merchantBurstEffects, turnStartEffects } from './scripts';
 import { triggerWindow, type WindowEffect } from './window';
@@ -99,6 +99,11 @@ export class Game {
   /** 雙方所有牌區的完整內容（含對方手牌、牌組與裏側卡） */
   cheatSnapshot(): CheatSnapshot {
     return cheatSnapshot(this);
+  }
+
+  /** by 開啟或關閉作弊模式（只寫紀錄；開關本身由連線層記錄） */
+  cheatSwitch(by: PlayerId, on: boolean): void {
+    this.cheat(() => cheatSwitch(this, by, on));
   }
 
   /** by 把一張卡加入 target 的手牌（全卡池，不含 Ex 卡） */

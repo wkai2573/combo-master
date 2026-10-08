@@ -107,7 +107,8 @@ describe('作弊：調整牌區順序', () => {
     expect(() => g.cheatReorder(0, 0, 'deck', [a])).toThrow('內容');
     expect(() => g.cheatReorder(0, 0, 'deck', [a, a])).toThrow('內容');
     expect(() => g.cheatReorder(0, 0, 'deck', [a, 99999])).toThrow('內容');
-    expect(() => g.cheatReorder(0, 0, 'combat' as never, [])).toThrow('不能');
+    expect(() => g.cheatReorder(0, 0, 'combat' as never, [])).toThrow('牌區不合法');
+    expect(() => g.cheatReorder(0, 0, 'hand' as never, [])).toThrow('不能調整順序');
     expect(Z(g, 0, 'deck').map((c) => c.uid)).toEqual([a, b]);
   });
 });
