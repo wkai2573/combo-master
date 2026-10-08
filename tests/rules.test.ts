@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pursuitCount, resolveCombatStats, totalAtk, totalDef } from '../src/engine/combat';
+import { playables, pursuitCount, resolveCombatStats, totalAtk, totalDef } from '../src/engine/combat';
 import { draw, optionalPay, Z } from '../src/engine/ops';
 import { scripts } from '../src/engine/scripts';
 import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
@@ -32,6 +32,22 @@ describe('出招與範圍內', () => {
     expect(g.state.phase).toBe('反擊');
     expect(g.state.log.some((l) => l.includes('先手出招【黑桃5】'))).toBe(true);
     expect(g.state.log.some((l) => l.includes('起手'))).toBe(false);
+  });
+
+  it('戰鬥區只能出現一次重複：重複過之後，戰鬥區已有的連擊值都不能再出，新的連擊值照常可以', () => {
+    const g = scenario({
+      p0: { hand: ['紅心3', '方塊2', '梅花2', '黑桃9'], combat: ['黑桃8', '黑桃5', '梅花5', '黑桃3'] },
+      p1: { hand: [], combat: ['紅心2'] },
+    });
+    // 我方戰鬥區 8、5、5、3：5 已經重複過；範圍 2~3，第 2 張 3 不能出，新的 2 可以（兩張都是 2，所以不會被自動出招）
+    expect(playables(g, 0).map((c) => c.id)).toEqual(['方塊2', '梅花2']);
+
+    // 還沒重複過時，第一次重複可以
+    const first = scenario({
+      p0: { hand: ['紅心3', '方塊2', '梅花2', '黑桃9'], combat: ['黑桃8', '黑桃5', '黑桃3'] },
+      p1: { hand: [], combat: ['紅心2'] },
+    });
+    expect(playables(first, 0).map((c) => c.id)).toEqual(['紅心3', '方塊2', '梅花2']);
   });
 
   it('同連擊值可以重複打出 1 次（共 2 張），第 3 張起就不行', () => {

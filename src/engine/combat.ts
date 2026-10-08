@@ -26,14 +26,12 @@ export function inRange(g: GameCtx, p: PlayerId, c: CardInst): boolean {
 /** p 目前可以打出的招式（手牌） */
 export function playables(g: GameCtx, p: PlayerId): CardInst[] {
   const cands = Z(g, p, 'hand').filter((c) => data(c).kind === 'move');
-  // 戰鬥區已有「重複連擊值」（同值 2 張）時，就不能再打出同連擊值的卡
+  // 戰鬥區只能出現一次「重複連擊值」：已經有同值 2 張之後，戰鬥區裡有的連擊值都不能再打出
   const copies = new Map<number, number>();
   for (const c of Z(g, p, 'combat')) copies.set(data(c).combo, (copies.get(data(c).combo) ?? 0) + 1);
-  return cands.filter((c) => inRange(g, p, c) && (copies.get(data(c).combo) ?? 0) < MAX_SAME_COMBO);
+  const hasDuplicate = [...copies.values()].some((n) => n >= 2);
+  return cands.filter((c) => inRange(g, p, c) && !(hasDuplicate && copies.has(data(c).combo)));
 }
-
-/** 同一連擊值在自己的戰鬥區最多 2 張（第 1 次重複可以，已重複就不能再出） */
-const MAX_SAME_COMBO = 2;
 
 // ───────────────────────── 出招 ─────────────────────────
 
