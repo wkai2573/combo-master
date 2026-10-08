@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.25.2',
+    date: '2026-10-08',
+    items: [
+      { type: 'fix', text: '作弊面板牌區與商人排序：滑鼠移到可拖曳的卡片上，游標改成抓取的手（原本是放大鏡），拖動時變成抓住的手' },
+    ],
+  },
+  {
     version: '0.25.1',
     date: '2026-10-08',
     items: [

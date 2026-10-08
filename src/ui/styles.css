@@ -243,6 +243,8 @@ h1, h2, h3 { margin: 0 0 8px; }
 /* 可拖曳排序的清單（SortableList）：被拖的卡浮起並跟著游標，其他卡滑動補位 */
 .sortlist { position: relative; }
 .sortcell { position: relative; flex: none; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+/* 卡片自己的游標（放大鏡、手指）不蓋過外層：滑到可拖曳的卡上就是抓取手勢 */
+.sortlist .sortcell .card { cursor: inherit; }
 .sortcell.dragging { z-index: 6; cursor: grabbing; filter: drop-shadow(0 10px 10px #000c); }
 .sortcell img { -webkit-user-drag: none; }
 .sortlist.locked .sortcell { cursor: default; }
