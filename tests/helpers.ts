@@ -1,7 +1,7 @@
 import { getCard } from '../src/data/cards';
 import { Game } from '../src/engine/game';
 import { newCard, Z, data, type GameCtx } from '../src/engine/ops';
-import type { DeckSpec, GameSetup, PlayerId, ZoneName } from '../src/engine/types';
+import type { DeckSpec, GameSetup, PlayerId, StartPhase, ZoneName } from '../src/engine/types';
 import { Match } from '../src/net/match';
 import { presetDeck } from '../src/data/presetDecks';
 
@@ -31,7 +31,7 @@ export interface Scenario {
   /** 錄製動畫影格 */
   animate?: boolean;
   /** 指定起始階段 */
-  phase?: import('../src/engine/types').Phase;
+  phase?: StartPhase;
   /** 僅執行指定階段 */
   singlePhase?: boolean;
 }

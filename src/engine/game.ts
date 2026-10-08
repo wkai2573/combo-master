@@ -10,8 +10,8 @@ import { checkWin } from './win';
 import { diffFlights, flightsTotalMs } from './flights';
 import { viewFor, type GameView, type RawFrame } from './view';
 import {
-  FRAME_MS, other, type CardInst, type FrameFx, type GameSetup, type GameState, type Phase, type PlayerId, type PlayerState,
-  type Request, type TurnFlags, type ZoneName,
+  FRAME_MS, other, type CardInst, type FrameFx, type GameSetup, type GameState, type PlayerId, type PlayerState,
+  type Request, type StartPhase, type TurnFlags, type ZoneName,
 } from './types';
 
 /** 飛行播完後，影格再多停留一下 */
@@ -180,26 +180,9 @@ export class Game {
       s.passed = [false, false];
       log(g, `── 第 ${s.turn} 回合（先攻：${pname(g, s.first)}）──`);
 
-      const start = s.turn === 1 ? this.setup.startPhase : undefined;
-
-      if (!start || start === '重置') {
-        s.phase = '重置';
-        // 橫置狀態的卡改為重置狀態：目前沒有卡片使用橫置，保留階段供日後擴充
-        // 回合開始時的效果：家族相片、凡骨的意志、中毒
-        yield* markIfLogged(g, () => fireEach(g, 'turnStart'));
-        checkWin(g);
-      }
-      if (!start || start === '重置' || start === '先手' || start === '反擊' || start === '追擊' || start === '傷害' || start === '歸還') {
-        mark(g, `第 ${s.turn} 回合・戰鬥階段（先攻：${pname(g, s.first)}）`, { type: 'banner', kind: 'turn', turn: s.turn, first: s.first });
-        yield* combatPhase(g);
-      }
-      if (!start || start === '重置' || start === '先手' || start === '反擊' || start === '追擊' || start === '傷害' || start === '歸還' || start === '抽牌') {
-        yield* drawPhase(g);
-      }
-      if (!start || start === '重置' || start === '先手' || start === '反擊' || start === '追擊' || start === '傷害' || start === '歸還' || start === '抽牌' || start === '爆發') {
-        yield* burstPhase(g);
-      }
-      yield* buffPhase(g);
+      // 起始階段只適用於第 1 回合
+      const from = s.turn === 1 && this.setup.startPhase ? PHASES.findIndex((x) => x.start === this.setup.startPhase) : 0;
+      for (const step of PHASES.slice(from)) yield* step.run(this, true);
 
       s.phase = '回合結束';
       s.first = other(s.first);
@@ -208,32 +191,9 @@ export class Game {
     }
   }
 
-  private *runSinglePhase(phase: Phase): Gen {
-    const g = this;
-    const s = this.state;
-    switch (phase) {
-      case '重置':
-        s.phase = '重置';
-        yield* markIfLogged(g, () => fireEach(g, 'turnStart'));
-        break;
-      case '先手':
-      case '反擊':
-      case '追擊':
-      case '傷害':
-      case '歸還':
-        yield* combatPhase(g);
-        break;
-      case '抽牌':
-        yield* drawPhase(g);
-        break;
-      case '爆發':
-        yield* burstPhase(g);
-        break;
-      case '增益':
-        yield* buffPhase(g);
-        break;
-    }
-    checkWin(g);
+  private *runSinglePhase(phase: StartPhase): Gen {
+    yield* PHASES.find((x) => x.start === phase)!.run(this, false);
+    checkWin(this);
   }
 
   private setupGame(): void {
@@ -252,6 +212,34 @@ export class Game {
     mark(this, '雙方抽起始手牌', { type: 'deal' });
   }
 }
+
+// ───────────────────────── 階段表 ─────────────────────────
+
+/** 回合內的階段順序，只在這裡寫一次：完整對局從起點往後依序跑，單階段只跑起點那一項 */
+const PHASES: { start: StartPhase; run: (g: Game, full: boolean) => Gen }[] = [
+  {
+    start: '重置',
+    // 橫置狀態的卡改為重置狀態：目前沒有卡片使用橫置，保留階段供日後擴充
+    // 回合開始時的效果：家族相片、凡骨的意志、中毒
+    *run(g) {
+      g.state.phase = '重置';
+      yield* markIfLogged(g, () => fireEach(g, 'turnStart'));
+      checkWin(g);
+    },
+  },
+  {
+    start: '先手',
+    // 戰鬥階段整塊是一項：內部的反擊、追擊、傷害、歸還不能單獨進入
+    *run(g, full) {
+      const s = g.state;
+      if (full) mark(g, `第 ${s.turn} 回合・戰鬥階段（先攻：${pname(g, s.first)}）`, { type: 'banner', kind: 'turn', turn: s.turn, first: s.first });
+      yield* combatPhase(g);
+    },
+  },
+  { start: '抽牌', run: drawPhase },
+  { start: '爆發', run: burstPhase },
+  { start: '增益', run: buffPhase },
+];
 
 // ───────────────────────── 抽牌／爆發／增益階段 ─────────────────────────
 
