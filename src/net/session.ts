@@ -1,6 +1,7 @@
 import Peer, { type DataConnection } from 'peerjs';
 import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
+import type { CheatSnapshot, CheatZone } from '../engine/cheat';
 import { Game } from '../engine/game';
 import { Rng } from '../engine/rng';
 import { frameFor, viewFor, type Frame, type GameView } from '../engine/view';
@@ -25,8 +26,20 @@ export interface SessionState {
   batch: { id: number; frames: Frame[] };
 }
 
+/**
+ * 作弊操作：回傳 null 表示成功，否則是被拒絕的原因。
+ * target 是被操作的玩家（可以是自己或對方）。沒有這組操作的連線方式，作弊面板不會出現。
+ */
+export interface CheatApi {
+  snapshot(): CheatSnapshot;
+  add(target: PlayerId, cardId: string): string | null;
+  remove(target: PlayerId, uid: number): string | null;
+  reorder(target: PlayerId, zone: CheatZone, uids: number[]): string | null;
+}
+
 export interface Session {
   readonly me: PlayerId;
+  readonly cheat?: CheatApi;
   getState(): SessionState;
   subscribe(cb: () => void): () => void;
   submit(keys: string[]): void;
@@ -66,6 +79,13 @@ export class LocalSession extends Base {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private closed = false;
 
+  readonly cheat: CheatApi = {
+    snapshot: () => this.game.cheatSnapshot(),
+    add: (target, cardId) => this.cheatOp(() => this.game.cheatAdd(0, target, cardId)),
+    remove: (target, uid) => this.cheatOp(() => this.game.cheatRemove(0, target, uid)),
+    reorder: (target, zone, uids) => this.cheatOp(() => this.game.cheatReorder(0, target, zone, uids)),
+  };
+
   constructor(mine: DeckPayload, theirs: DeckPayload) {
     super();
     this.game = new Game({ decks: [mine, theirs], animate: true });
@@ -81,6 +101,19 @@ export class LocalSession extends Base {
       return;
     }
     this.sync();
+  }
+
+  private cheatOp(op: () => void): string | null {
+    if (this.closed) return '已離開遊戲';
+    try {
+      op();
+    } catch (e) {
+      return (e as Error).message;
+    }
+    // 只更新畫面：不重設機器人的出招計時，連續作弊也不會讓它一直等
+    const g = this.game;
+    this.set({ status: g.over ? 'over' : 'playing', view: viewFor(g, 0), message: '', batch: this.nextBatch(g.drainFrames().map((f) => frameFor(f, 0))) });
+    return null;
   }
 
   private sync() {

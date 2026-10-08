@@ -67,7 +67,7 @@ export const frameFor = (f: RawFrame, viewer: PlayerId): Frame => ({
 });
 
 const hide = (c: CardInst): CardView => ({ uid: c.uid, id: null, covered: c.covered, counters: c.counters });
-const show = (c: CardInst): CardView => ({ uid: c.uid, id: c.id, covered: c.covered, counters: c.counters });
+export const show = (c: CardInst): CardView => ({ uid: c.uid, id: c.id, covered: c.covered, counters: c.counters });
 
 function playerView(game: Game, p: PlayerId, viewer: PlayerId): PlayerView {
   const s: GameState = game.state;

@@ -1,4 +1,5 @@
 import { getCharacter } from '../data/cards';
+import { cheatAdd, cheatRemove, cheatReorder, cheatSnapshot, type CheatSnapshot, type CheatZone } from './cheat';
 import { combatPhase } from './combat';
 import { awakenCheck, awakeningEffects, merchantBurstEffects, turnStartEffects } from './scripts';
 import { triggerWindow, type WindowEffect } from './window';
@@ -89,6 +90,44 @@ export class Game {
     this.pending = null;
     log(this, `${pname(this, other(player))} 獲勝（${reason}）`);
     this.frame(`${pname(this, other(player))} 獲勝（${reason}）`, { type: 'gameEnd', winner: other(player) });
+  }
+
+  // ───────────────────────── 作弊 ─────────────────────────
+  // 不經過提示直接改桌面，用來快速建立想測的場面。操作被拒絕時丟出說明原因的錯誤，且不改動任何東西。
+  // 作弊不錄動畫影格；操作後重新檢查勝負（勝負已定就中斷流程）。
+
+  /** 雙方所有牌區的完整內容（含對方手牌、牌組與裏側卡） */
+  cheatSnapshot(): CheatSnapshot {
+    return cheatSnapshot(this);
+  }
+
+  /** by 把一張卡加入 target 的手牌（全卡池，不含 Ex 卡） */
+  cheatAdd(by: PlayerId, target: PlayerId, cardId: string): void {
+    this.cheat(() => cheatAdd(this, by, target, cardId));
+  }
+
+  /** by 把 target 的一張手牌移出遊戲 */
+  cheatRemove(by: PlayerId, target: PlayerId, uid: number): void {
+    this.cheat(() => cheatRemove(this, by, target, uid));
+  }
+
+  /** by 調整 target 某個牌區的順序；uids 是新的順序（牌組與怒氣區的第一張在最上方，經驗區的第一張在最前方） */
+  cheatReorder(by: PlayerId, target: PlayerId, zone: CheatZone, uids: number[]): void {
+    this.cheat(() => cheatReorder(this, by, target, zone, uids));
+  }
+
+  private cheat(op: () => void): void {
+    if (this.over) throw new Error('遊戲已結束，不能再使用作弊');
+    op();
+    // 作弊的變化不演動畫，之後的影格也不把它當成新的變化
+    this.touched = 0;
+    if (this.setup.animate) this.lastView = viewFor(this, 0, false);
+    try {
+      checkWin(this);
+    } catch (e) {
+      if (!(e instanceof GameOver)) throw e;
+      this.pending = null;
+    }
   }
 
   /** 玩家回應目前的提示（回應為被選擇的選項 key） */

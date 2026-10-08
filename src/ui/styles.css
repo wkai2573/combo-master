@@ -222,6 +222,24 @@ h1, h2, h3 { margin: 0 0 8px; }
 .result.win h1 { color: var(--good); } .result.lose h1 { color: var(--bad); }
 .banner { background: #4a1f1f; color: #ffd0d0; padding: 6px 14px; text-align: center; }
 .banner.info { background: #1f3a4a; color: #cfe8ff; }
+.banner.cheat { background: #4a3a12; color: #ffe28a; }
+
+/* ───────── 作弊面板：貼在畫面右下角，不遮住整個桌面 ───────── */
+.cheatpanel { position: fixed; z-index: 9; right: 8px; bottom: 8px; width: min(820px, calc(100vw - 16px)); max-height: 62vh; overflow: auto; background: var(--panel); border: 1px solid var(--accent); border-radius: 10px; padding: 8px 10px; box-shadow: 0 8px 24px #000b; display: grid; gap: 6px; align-content: start; }
+.cheathead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cheathead .spacer { flex: 1; }
+.cheattabs, .cheattarget { display: flex; gap: 4px; flex-wrap: wrap; }
+.cheattabs button.on, .cheattarget button.on { border-color: var(--accent); color: var(--accent); }
+.cheatnote { padding: 3px 8px; border-radius: 6px; background: var(--panel2); color: var(--muted); }
+.cheatnote.ok { color: var(--good); }
+.cheatnote.bad { color: var(--bad); }
+.cheatfilter { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.cheatgrid { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; }
+.cheatcell { display: grid; gap: 3px; justify-items: center; padding: 2px; border-radius: 6px; cursor: grab; }
+.cheatcell.dragging { opacity: .4; }
+.cheatcell:hover { background: var(--panel2); }
+.cheatmove { display: flex; gap: 4px; align-items: center; }
+.cheatmove button { padding: 0 6px; font-size: 11px; }
 .code { font-size: 40px; letter-spacing: 8px; font-weight: 800; color: var(--accent); text-align: center; }
 
 /* ───────── 組牌 ───────── */

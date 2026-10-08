@@ -14,6 +14,7 @@ import { Modal } from '../components/Modal';
 import { ZoneViewer } from '../components/ZoneViewer';
 import { StepTracker } from '../components/StepTracker';
 import { PromptPanel } from '../components/PromptPanel';
+import { CheatPanel } from '../components/CheatPanel';
 import { useWide } from '../useWide';
 import type { Session } from '../../net/session';
 import type { PlayerId } from '../../engine/types';
@@ -35,6 +36,11 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const zoneRef = useRef(zone);
   zoneRef.current = zone;
   const [copied, setCopied] = useState(false);
+  // 作弊模式：開關只存在這個畫面，離開或下一局都會回到關閉
+  const [cheatOn, setCheatOn] = useState(false);
+  const [cheatOpen, setCheatOpen] = useState(false);
+  const cheatOpenRef = useRef(cheatOpen);
+  cheatOpenRef.current = cheatOpen;
   const [speed, setSpeedState] = useState<Speed>(() => {
     let stored: string | null = null;
     try {
@@ -93,7 +99,13 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      // 在輸入框裡按 Esc 只離開輸入框，不連帶關掉面板
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
+        e.target.blur();
+        return;
+      }
       if (zoneRef.current) setZone(null);
+      else if (cheatOpenRef.current) setCheatOpen(false);
       else {
         setPinned(null);
         setDrawer(null);
@@ -202,6 +214,12 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
               <button className={drawer === 'log' ? 'on' : ''} aria-pressed={drawer === 'log'} onClick={() => setDrawer((d) => (d === 'log' ? null : 'log'))}>紀錄</button>
             </>
           )}
+          {session.cheat && (
+            <>
+              <button className={cheatOn ? 'on' : ''} aria-pressed={cheatOn} title="開啟後可以隨意加入手牌、移除手牌、調整牌堆順序" onClick={() => { setCheatOn(!cheatOn); setCheatOpen(!cheatOn); }}>作弊模式</button>
+              {cheatOn && <button className={cheatOpen ? 'on' : ''} aria-pressed={cheatOpen} onClick={() => setCheatOpen(!cheatOpen)}>作弊面板</button>}
+            </>
+          )}
           <a className="btnlink" href={FLOW_CHART_URL} target="_blank" rel="noreferrer" title="在新分頁開啟戰鬥流程圖">流程圖</a>
           <select value={speed} onChange={(e) => setSpeed(e.target.value as Speed)} title="動畫速度">
             {(Object.keys(SPEED_LABEL) as Speed[]).map((s) => <option key={s} value={s}>{SPEED_LABEL[s]}</option>)}
@@ -214,6 +232,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
             對手連線不穩或已離線{st.forfeitIn !== null ? `，${st.forfeitIn} 秒後將判你獲勝` : '…'}
           </div>
         )}
+        {cheatOn && <div className="banner cheat">作弊模式開啟中：這一局的結果不具參考價值</div>}
         <div className="main">
           {wide ? (
             <div className={`board${cur ? ' playing' : ''}`}>
@@ -247,6 +266,9 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           )}
         </div>
 
+        {session.cheat && cheatOn && cheatOpen && v.winner === null && (
+          <CheatPanel cheat={session.cheat} me={me} snapshotKey={final} locked={cur !== null || lagging} onClose={() => setCheatOpen(false)} />
+        )}
         <PhaseBanner fx={fx} n={fxKey} me={me} />
         <Spotlight fx={fx} caption={cur?.frame.caption} n={fxKey} scale={scale} />
         <FlightLayer view={v} fx={fx} playing={cur !== null} n={fxKey} scale={scale} />
