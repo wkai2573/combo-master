@@ -1,46 +1,50 @@
 import { describe, expect, it } from 'vitest';
-import { STEP_ORDER } from '../src/data/turnSteps';
+import { STEP_GROUPS, STEP_ORDER } from '../src/data/turnSteps';
 import type { Phase } from '../src/engine/types';
-import { buildFlowChart, CHART_W, highlightNode, MAX_CHARS, MAX_LINES, type FlowNode } from '../src/ui/flowChart';
+import { buildFlowChart, CHART_W, highlightNode, MAX_LINES, MAX_SUB_CHARS, MAX_TITLE_CHARS, type FlowNode } from '../src/ui/flowChart';
 
 const chart = buildFlowChart();
 const byId = new Map(chart.nodes.map((n) => [n.id, n]));
 const ALL_PHASES: Phase[] = ['設置', '重置', '先手', '反擊', '追擊', '傷害', '歸還', '抽牌', '爆發', '增益', '回合結束', '結束'];
 
 const overlap = (a: FlowNode, b: FlowNode) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+const laneOf = (n: FlowNode) => chart.lanes.find((l) => n.y >= l.y && n.y + n.h <= l.y + l.h);
 
 describe('流程圖主幹', () => {
-  it('節點與順序由共用步驟表產生，由上往下', () => {
+  it('主幹節點與順序由共用步驟表產生', () => {
     const spine = chart.nodes.filter((n) => n.phase);
     expect(spine.map((n) => n.phase)).toEqual(STEP_ORDER);
-    for (let i = 1; i < spine.length; i++) expect(spine[i].y).toBeGreaterThan(spine[i - 1].y + spine[i - 1].h);
   });
 
-  it('戰鬥階段的五個步驟畫在同一個分組之中', () => {
-    const battle = chart.groups.find((g) => g.label === '戰鬥階段');
-    expect(battle).toBeDefined();
-    for (const p of ['先手', '反擊', '追擊', '傷害', '歸還'] as Phase[]) {
-      const n = byId.get(p)!;
-      expect(n.y).toBeGreaterThanOrEqual(battle!.y);
-      expect(n.y + n.h).toBeLessThanOrEqual(battle!.y + battle!.h);
-    }
+  it('單一步驟的分組在第一條分區由左到右，多步驟的分組展開到下一條分區', () => {
+    const turnLane = chart.lanes[0];
+    const singles = STEP_GROUPS.filter((g) => g.steps.length === 1).map((g) => byId.get(g.steps[0].phase)!);
+    for (const n of singles) expect(laneOf(n), n.id).toBe(turnLane);
+    for (let i = 1; i < singles.length; i++) expect(singles[i].x, singles[i].id).toBeGreaterThan(singles[i - 1].x);
+
+    const multi = STEP_GROUPS.find((g) => g.steps.length > 1)!;
+    const steps = multi.steps.map((s) => byId.get(s.phase)!);
+    const lane = laneOf(steps[0])!;
+    expect(lane.label).toContain(`${multi.label}階段`);
+    for (const n of steps) expect(laneOf(n), n.id).toBe(lane);
+    for (let i = 1; i < steps.length; i++) expect(steps[i].x, steps[i].id).toBeGreaterThan(steps[i - 1].x);
+    // 展開的分組在第一條分區裡有一個對應的節點
+    expect(laneOf(byId.get(multi.label)!)).toBe(turnLane);
   });
 });
 
 describe('流程圖節點', () => {
-  it('每個節點的文字不超過行數與每行字數上限', () => {
+  it('每個節點是標題一行加說明一行，不超過字數上限', () => {
     for (const n of chart.nodes) {
-      expect(n.lines.length, n.id).toBeGreaterThan(0);
-      expect(n.lines.length, n.id).toBeLessThanOrEqual(MAX_LINES);
-      for (const line of n.lines) {
-        expect(line.trim(), n.id).not.toBe('');
-        expect([...line].length, `${n.id}：${line}`).toBeLessThanOrEqual(MAX_CHARS);
-      }
+      expect(n.lines.length, n.id).toBe(MAX_LINES);
+      expect([...n.lines[0]].length, `${n.id}：${n.lines[0]}`).toBeLessThanOrEqual(MAX_TITLE_CHARS);
+      expect([...n.lines[1]].length, `${n.id}：${n.lines[1]}`).toBeLessThanOrEqual(MAX_SUB_CHARS);
+      for (const line of n.lines) expect(line.trim(), n.id).not.toBe('');
     }
   });
 
   it('邊的標籤也要夠短', () => {
-    for (const e of chart.edges) if (e.label) expect([...e.label.text].length, e.label.text).toBeLessThanOrEqual(6);
+    for (const e of chart.edges) if (e.label) expect([...e.label.text].length, e.label.text).toBeLessThanOrEqual(12);
   });
 
   it('分支引用的階段都存在於 Phase，並且屬於回合主幹', () => {
@@ -51,11 +55,12 @@ describe('流程圖節點', () => {
     }
   });
 
-  it('所有節點都在設計寬度之內，彼此不重疊', () => {
+  it('所有節點都在設計寬度之內，彼此不重疊，並且落在某一條分區裡', () => {
     for (const n of chart.nodes) {
       expect(n.x, n.id).toBeGreaterThanOrEqual(0);
       expect(n.x + n.w, n.id).toBeLessThanOrEqual(CHART_W);
       expect(n.y + n.h, n.id).toBeLessThanOrEqual(chart.height);
+      expect(laneOf(n), `${n.id} 不在任何分區`).toBeDefined();
     }
     for (let i = 0; i < chart.nodes.length; i++) {
       for (let j = i + 1; j < chart.nodes.length; j++) {
@@ -64,11 +69,12 @@ describe('流程圖節點', () => {
     }
   });
 
-  it('邊連接的節點都存在', () => {
+  it('邊連接的節點都存在，且沒有重複的邊', () => {
     for (const e of chart.edges) {
       expect(byId.has(e.from), `${e.id} 起點`).toBe(true);
       expect(byId.has(e.to), `${e.id} 終點`).toBe(true);
     }
+    expect(new Set(chart.edges.map((e) => e.id)).size).toBe(chart.edges.length);
   });
 });
 
@@ -101,10 +107,9 @@ describe('流程圖邊線', () => {
 
   it('邊的標籤不壓到節點', () => {
     for (const e of chart.edges) {
-      if (!e.label || e.label.vertical) continue;
-      const w = [...e.label.text].length * 12;
-      const x = e.label.anchor === 'middle' ? e.label.x - w / 2 : e.label.x;
-      const box = { x, y: e.label.y - 11, w, h: 13 };
+      if (!e.label) continue;
+      const w = [...e.label.text].length * 11;
+      const box = { x: e.label.x - w / 2, y: e.label.y - 8, w, h: 14 };
       for (const n of chart.nodes) expect(hits([box.x, box.y, box.x + box.w, box.y + box.h], n), `${e.id} 的標籤壓到 ${n.id}`).toBe(false);
     }
   });
@@ -117,27 +122,31 @@ describe('流程圖內容與規則書一致', () => {
   it('先手：沒有可打出的招式時展示手牌，不算收招', () => {
     expect(text('show-hand')).toContain('展示手牌');
     expect(text('show-hand')).toContain('不算收招');
+    expect(chart.edges.some((e) => e.from === '先手' && e.to === 'show-hand')).toBe(true);
   });
 
-  it('反擊：後攻方第一個動作就收招時跳過追擊', () => {
-    expect(text('skip-chase')).toContain('跳過追擊');
-    expect(chart.edges.some((e) => e.from === 'skip-chase' && e.to === '傷害')).toBe(true);
+  it('反擊：後攻方第一個動作就收招時跳過追擊，直接進傷害計算', () => {
+    const skip = chart.edges.find((e) => e.from === '反擊' && e.to === '傷害');
+    expect(skip?.label?.text).toContain('跳過追擊');
   });
 
   it('追擊：分成成功與失敗，並標出一律失敗的情況', () => {
     expect(text('chase-hit')).toContain('成功');
     expect(text('chase-miss')).toContain('失敗');
-    expect(text('chase-always')).toContain('裝備或增益');
-    expect(text('chase-always')).toContain('無招式');
+    expect(text('chase-always')).toContain('裝備增益');
+    expect(text('chase-always')).toContain('沒招式');
     expect(labels).toContain('一律失敗');
+    expect(labels).toContain('不在範圍內');
+    expect(labels).toContain('在範圍內');
   });
 
-  it('勝負檢查是旁註，連到主幹，並說明重置與抽牌階段也會判負', () => {
-    expect(text('win-check')).toContain('重置');
-    expect(text('win-check')).toContain('抽牌');
-    expect(chart.edges.filter((e) => e.from === 'win-check' && STEP_ORDER.includes(e.to as Phase))).toHaveLength(1);
-    // 不從每個主幹節點各拉一條連到勝負檢查的邊
-    expect(chart.edges.filter((e) => e.to === 'win-check')).toHaveLength(0);
+  it('勝負檢查：分區標題說明每個步驟結束後都檢查，含重置與抽牌階段', () => {
+    const lane = chart.lanes.find((l) => l.label.includes('勝負判定'))!;
+    expect(lane.label).toContain('每個步驟結束後都檢查');
+    expect(lane.label).toContain('重置');
+    expect(lane.label).toContain('抽牌');
+    expect(lane.exception).toBe(true);
+    expect(laneOf(byId.get('win-check')!)).toBe(lane);
   });
 
   it('勝負：單方歸零落敗，同時歸零比手牌，再比怒氣區連擊值，終點是先翻完落敗、同時翻完才平手', () => {
@@ -149,6 +158,9 @@ describe('流程圖內容與規則書一致', () => {
     expect(text('tie-end')).toContain('同時翻完');
     expect(text('tie-end')).toContain('平手');
     expect(text('tie-end')).not.toContain('全部同值');
+    const ex = chart.lanes.filter((l) => l.exception);
+    expect(ex).toHaveLength(2);
+    expect(laneOf(byId.get('tie-end')!)).toBe(ex[1]);
   });
 });
 

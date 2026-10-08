@@ -517,41 +517,56 @@ h1, h2, h3 { margin: 0 0 8px; }
 .changelog .tag.fix { color: var(--bad); border-color: var(--bad); }
 
 /* ───────── 戰鬥流程圖（SVG，顏色全部取自上面的變數） ───────── */
-.flowchart { width: min(460px, calc(92vw - 34px)); text-align: left; }
-.flowchart .fchead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-.flowchart .fchead h3 { margin: 0; }
-.flowchart svg { display: block; width: 100%; height: auto; font-size: 13px; }
-.flowchart text { fill: var(--text); text-anchor: middle; font-family: inherit; }
-.flowchart marker path { fill: var(--muted); }
-.flowchart marker.fc-good path { fill: var(--good); }
-.flowchart marker.fc-bad path { fill: var(--bad); }
-.flowchart marker.fc-accent path { fill: var(--accent); }
-.fc-group rect { fill: none; stroke: var(--line); stroke-width: 1.5; }
-.flowchart .fc-group text { fill: var(--muted); font-size: 11px; letter-spacing: 2px; text-anchor: start; }
-.fc-edge { fill: none; stroke: var(--muted); stroke-width: 1.5; }
-.fc-edge.fc-good { stroke: var(--good); }
-.fc-edge.fc-bad { stroke: var(--bad); }
-.fc-edge.fc-accent { stroke: var(--accent); }
-.fc-edge.dashed, .fc-edge.fc-note { stroke-dasharray: 4 3; }
-.flowchart .fc-label { fill: var(--muted); font-size: 11.5px; paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
-.flowchart .fc-label.fc-good { fill: var(--good); }
-.flowchart .fc-label.fc-bad { fill: var(--bad); }
-.flowchart .fc-label.fc-accent { fill: var(--accent); }
-.fc-node rect { fill: var(--panel2); stroke: var(--line); stroke-width: 1.5; }
-.fc-node.fc-good rect { stroke: var(--good); }
-.fc-node.fc-bad rect { stroke: var(--bad); }
-.fc-node.fc-accent rect { stroke: var(--accent); }
-.fc-node.fc-note rect { fill: none; stroke: var(--muted); stroke-dasharray: 4 3; }
-.flowchart .fc-node text.title { font-weight: 700; }
-.flowchart .fc-node.fc-note text { fill: var(--muted); }
-/* 你在這裡：實心強調色，加上標籤，不只靠顏色區分 */
-.fc-node.here rect { fill: var(--accent); stroke: var(--accent); stroke-width: 2.5; }
-.flowchart .fc-node.here text { fill: var(--bg); }
-.fc-node.here .fc-here rect { fill: var(--bg); stroke: var(--accent); stroke-width: 1.5; animation: none; }
-.flowchart .fc-node.here .fc-here text { fill: var(--accent); font-size: 11px; font-weight: 700; }
+.flowchart { --fc-lane: color-mix(in srgb, var(--panel) 55%, var(--bg)); width: min(1120px, calc(92vw - 34px)); text-align: left; }
+.flowchart .fchead { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.flowchart .fchead h3 { margin: 0; margin-right: auto; }
+.flowchart .fchint { font-size: 12px; }
+/* 彈窗寬度夠放下整張圖才不需要提示 */
+@media (min-width: 1240px) { .flowchart .fchint { display: none; } }
+/* 設計寬度很寬：手機上固定最小寬度，在這個區塊內左右、上下捲動，標頭與關閉鍵不跟著捲走 */
+
+.flowchart .fcscroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.flowchart .fcscroll { overflow: auto; max-height: calc(94vh - 96px); max-height: calc(94dvh - 96px); border-radius: 10px; background: var(--bg); }
+.flowchart svg { display: block; width: 100%; min-width: 1100px; height: auto; font-size: 13px; }
+.flowchart text { font-family: inherit; fill: var(--text); }
+.fc-gridfill { fill: url(#fc-grid); }
+#fc-grid path { fill: none; stroke: var(--line); stroke-opacity: .35; stroke-width: .6; }
+.fc-lane > rect:first-child { fill: var(--fc-lane); stroke: var(--line); }
+.fc-lane .exframe { fill: color-mix(in srgb, var(--bad) 6%, transparent); stroke: var(--bad); stroke-opacity: .6; stroke-dasharray: 5 4; }
+.flowchart .fc-lane text { fill: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .4px; }
+.flowchart .fc-lane.ex text { fill: var(--bad); }
+
+/* 節點與邊：回合階段綠、戰鬥步驟黃、追擊成功綠、失敗與勝負紅、備註灰、條件分支紫 */
+.fc-n-turn, .fc-e-turn { --c: var(--good); }
+.fc-n-combat, .fc-e-combat { --c: var(--accent); }
+.fc-n-good, .fc-e-good { --c: var(--good); }
+.fc-n-bad, .fc-e-bad { --c: var(--bad); }
+.fc-n-note, .fc-e-plain { --c: var(--muted); }
+.fc-e-branch { --c: var(--combo); }
+.fc-node > rect:first-child { fill: color-mix(in srgb, var(--c) 22%, var(--panel)); stroke: var(--c); stroke-width: 1.5; }
+.fc-node .icon { fill: none; stroke: var(--c); stroke-width: 1.4; }
+.fc-node.dashed > rect:first-child { stroke-dasharray: 5 4; }
+.fc-n-note > rect:first-child { fill: var(--panel2); }
+.flowchart .fc-node .title { text-anchor: middle; font-size: 14px; font-weight: 700; }
+.flowchart .fc-node .sub { text-anchor: middle; font-size: 11px; fill: var(--muted); }
+.fc-edge { fill: none; stroke: var(--c); stroke-width: 1.6; }
+.fc-edge.dashed { stroke-dasharray: 5 4; }
+.flowchart marker polygon { fill: var(--c); }
+.flowchart .fc-label { text-anchor: middle; font-size: 11px; font-weight: 600; fill: var(--c); paint-order: stroke; stroke: var(--fc-lane); stroke-width: 4px; stroke-linejoin: round; }
+.flowchart .fc-e-plain.fc-label { fill: var(--muted); }
+
+/* 你在這裡：粗白框加標籤，不只靠顏色區分 */
+.fc-node.here > rect:first-child { stroke: var(--text); stroke-width: 3; }
+.fc-here rect { fill: var(--text); stroke: none; }
+.flowchart .fc-here text { text-anchor: middle; fill: var(--bg); font-size: 11px; font-weight: 700; }
 @media (prefers-reduced-motion: no-preference) {
-  .fc-node.here > rect { animation: fc-pulse 1.6s ease-in-out infinite; }
+  .fc-node.here > rect:first-child { animation: fc-pulse 1.6s ease-in-out infinite; }
 }
+@keyframes fc-pulse { 50% { stroke-opacity: .45; } }
+
+.fc-legend text { font-size: 11px; fill: var(--muted); }
+.flowchart .fc-legend .lg-title { font-size: 12px; font-weight: 700; fill: var(--text); }
+.fc-legend .fc-node > rect { stroke-width: 1; }
 /* 彈窗要蓋過對戰動畫層（聚光燈、飛牌、階段橫幅） */
 .overlay:has(.flowchart) { z-index: 70; }
-@keyframes fc-pulse { 50% { stroke-width: 5; stroke-opacity: .55; } }
+.overlay:has(.flowchart) .modal { max-height: 94vh; }

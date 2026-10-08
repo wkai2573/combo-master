@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.24.1',
+    date: '2026-10-08',
+    items: [
+      { type: 'change', text: '戰鬥流程圖改成橫向分區版面，依序分成回合階段、戰鬥階段、追擊結果、勝負判定與同時歸零加賽；手機上可在彈窗內左右、上下拖曳查看' },
+      { type: 'fix', text: '對戰中開著流程圖時，不會再被聚光燈與飛牌動畫蓋住' },
+    ],
+  },
+  {
     version: '0.24.0',
     date: '2026-10-08',
     items: [
