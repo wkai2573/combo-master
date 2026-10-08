@@ -205,7 +205,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'hand')).toHaveLength(3); // 剩 2 張＋抽 1，放 1 張到牌組底，再加抽牌階段抽 1
   });
 
-  it('冰霜護甲：[發_蓋2] 回復 X（X＝裏側經驗數），再捨棄 2 張裏側經驗', () => {
+  it('冰霜護甲：[發_蓋2] 回復 X（X＝裏側經驗數），再捨棄 3 張裏側經驗', () => {
     const g = scenario({
       chars: ['法師', '勇者'],
       p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'], rage: Array(5).fill('黑桃1') },
@@ -213,22 +213,48 @@ describe('新卡（第二批）', () => {
     });
     pick(g, '冰霜護甲');
     pick(g, '發動');
-    // 裏側卡對擁有者顯示牌面，直接看著牌面選出 黑桃5、黑桃6
-    pick(g, '黑桃5', '黑桃6');
+    // 蓋2 之後 4 張都是裏側；裏側卡對擁有者顯示牌面，直接看著牌面選出 3 張
+    expect(g.pending!.options).toHaveLength(4);
+    pick(g, '黑桃5', '黑桃6', '黑桃4');
     expect(Z(g, 0, 'rage')).toHaveLength(1); // 回復 4
-    expect(names(g, 0, 'discard')).toEqual(expect.arrayContaining(['黑桃5', '黑桃6']));
-    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(2);
+    expect(names(g, 0, 'discard').sort()).toEqual(['黑桃4', '黑桃5', '黑桃6']);
+    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃3']);
   });
 
-  it('盾擊：[頂] 總攻擊 +X，X＝戰鬥區防禦力 ≧ 4 的卡片張數', () => {
-    const g = scenario();
-    const ids = ['黑桃1', '梅花1', '盾擊'];
+  it('冰霜護甲：裏側經驗不足 3 張就全捨棄，不詢問', () => {
+    const g = scenario({
+      chars: ['法師', '勇者'],
+      p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4'], rage: Array(5).fill('黑桃1') },
+      p1: { hand: [] },
+    });
+    pick(g, '冰霜護甲');
+    pick(g, '發動');
+    expect(names(g, 0, 'discard').sort()).toEqual(['黑桃3', '黑桃4']);
+    expect(names(g, 0, 'exp')).not.toContain('黑桃3'); // 兩張都被捨棄（之後歸還的冰霜護甲自己進了經驗區）
+    expect(Z(g, 0, 'rage')).toHaveLength(3); // 回復 2
+  });
+
+  it('盾擊：[頂] 戰鬥區每張招式卡的原始攻擊力若小於原始防禦力，該卡的攻擊力改為原始防禦力', () => {
+    const g = scenario({ chars: ['刺客', '勇者'] });
+    const ids = ['梅花1', '黑桃9', '盾擊'];
+    expect(atkOf('梅花1')).toBeLessThan(defOf('梅花1')); // 攻擊力小於防禦力：會被補到防禦力
+    expect(atkOf('黑桃9')).toBeGreaterThan(defOf('黑桃9')); // 攻擊力較大：不變
     setZones(g, 0, { combat: ids });
-    const x = ids.filter((id) => defOf(id) >= 4).length;
-    expect(x).toBeGreaterThanOrEqual(2);
-    expect(totalAtk(g, 0)).toBe(ids.reduce((n, id) => n + atkOf(id), 0) + x);
-    setZones(g, 0, { combat: ['盾擊', '黑桃1'] }); // 不在最上方就沒有
-    expect(totalAtk(g, 0)).toBe(atkOf('盾擊') + atkOf('黑桃1'));
+    const lifted = ids.reduce((n, id) => n + Math.max(atkOf(id), defOf(id)), 0);
+    expect(totalAtk(g, 0)).toBe(lifted);
+    expect(lifted).toBeGreaterThan(ids.reduce((n, id) => n + atkOf(id), 0));
+    // 防禦力不受影響
+    expect(totalDef(g, 0)).toBe(ids.reduce((n, id) => n + defOf(id), 0));
+  });
+
+  it('盾擊：不在最上方就沒有效果；追擊卡不算；其餘加成在補攻擊力之後照算', () => {
+    const g = scenario({ chars: ['刺客', '勇者'] });
+    setZones(g, 0, { combat: ['盾擊', '梅花1'] });
+    expect(totalAtk(g, 0)).toBe(atkOf('盾擊') + atkOf('梅花1'));
+    setZones(g, 0, { combat: ['梅花1', '盾擊'], pursuit: ['梅花1'] });
+    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + atkOf('梅花1')); // 追擊的梅花1 照原本的攻擊力
+    g.state.flags.atkBonus[0] = 3;
+    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + atkOf('梅花1') + 3);
   });
 
   it('即時停損：[發_蓋4] 先手步驟打出後雙方立即收招，沒有反擊步驟也不做追擊判定', () => {
@@ -261,11 +287,11 @@ describe('新卡（第二批）', () => {
     expect(pursuitCount(g, 0)).toBe(2);
   });
 
-  it('凡骨的意志：回合開始時強制蓋 1，總攻擊與總防禦各加戰鬥區白板卡數量', () => {
+  it('凡骨的意志：回合開始時需蓋前 2 張表側經驗，總攻擊與總防禦各加戰鬥區白板卡數量', () => {
     // scenario 開局時已經跑過第一回合的回合開始效果
-    const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['黑桃3', '凡骨的意志'] } });
+    const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['黑桃3', '黑桃4', '凡骨的意志'] } });
     expect(g.state.flags.vanillaBoost[0]).toBe(1);
-    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃3']);
+    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃3', '黑桃4']);
     const ids = ['黑桃1', '黑桃2', '伏擊'];
     setZones(g, 0, { combat: ids, exp: [] });
     g.state.flags.vanillaBoost[0] = 1;
@@ -274,9 +300,9 @@ describe('新卡（第二批）', () => {
   });
 
   it('凡骨的意志：蓋是照順序蓋，最前面就是自己時會蓋到自己；效果照常發動，之後被蓋住就無效', () => {
-    const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['凡骨的意志', '黑桃3'] } });
+    const g = scenario({ chars: ['商人', '刺客'], p0: { exp: ['凡骨的意志', '黑桃3', '黑桃4'] } });
     expect(g.state.flags.vanillaBoost[0]).toBe(1);
-    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['凡骨的意志']);
+    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['凡骨的意志', '黑桃3']);
     expect(g.state.log.join('\n')).toContain('蓋到自己');
     // 下個回合：它已經被蓋住，不能再發動，也不會去蓋黑桃3
     const nextTurn = scenario({
@@ -289,7 +315,14 @@ describe('新卡（第二批）', () => {
     expect(Z(nextTurn, 0, 'exp')[1].covered).toBe(false);
   });
 
-  it('凡骨的意志：它是唯一的正面經驗卡時，蓋 1 就是蓋自己，仍會生效', () => {
+  it('凡骨的意志：表側經驗剛好 2 張，兩張都蓋（包含自己），仍會生效', () => {
+    const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['黑桃3', '~黑桃4', '凡骨的意志'] } });
+    // 表側只有黑桃3 與它自己
+    expect(g.state.flags.vanillaBoost[0]).toBe(1);
+    expect(Z(g, 0, 'exp').map((c) => c.covered)).toEqual([true, true, true]);
+  });
+
+  it('凡骨的意志：它是唯一的表側經驗時，蓋 1 就是蓋自己，仍會生效', () => {
     const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['凡骨的意志'] } });
     expect(g.state.flags.vanillaBoost[0]).toBe(1);
     expect(Z(g, 0, 'exp')[0].covered).toBe(true);

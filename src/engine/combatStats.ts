@@ -9,7 +9,8 @@ export const ASSASSIN_CAP = 5;
 export interface CombatStatsBreakdown {
   combatZoneAtk: number;
   combatZoneDef: number;
-  topBonusAtk: number;
+  /** 盾擊把攻擊力補到原始防禦力的總增加量 */
+  shieldLift: number;
   pursuitAtk: number;
   pursuitDef: number;
   flagBonusAtk: number;
@@ -82,18 +83,22 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
   const combatZone = Z(g, p, 'combat');
   let combatZoneAtk = 0;
   let combatZoneDef = 0;
+  let shieldLift = 0;
+
+  // [頂] 盾擊：位於最上方時，戰鬥區每張招式卡的攻擊力至少是它的原始防禦力（先補，再套用其他加成與修正）
+  const lift = combatZone.length > 0 && !!scripts[combatZone[combatZone.length - 1].id]?.liftAtkToDef;
 
   combatZone.forEach((c, i) => {
     const isTop = i === combatZone.length - 1;
     const sc = scripts[c.id];
     const atkMod = isTop ? sc?.atkMod ?? 0 : 0;
     const defMod = isTop ? sc?.defMod ?? 0 : 0;
-    combatZoneAtk += Math.max(0, data(c).atk + atkMod);
+    const printedAtk = data(c).atk;
+    const atk = lift ? Math.max(printedAtk, data(c).def) : printedAtk;
+    shieldLift += atk - printedAtk;
+    combatZoneAtk += Math.max(0, atk + atkMod);
     combatZoneDef += Math.max(0, data(c).def + defMod);
   });
-
-  const topCard = combatZone[combatZone.length - 1];
-  const topBonusAtk = scripts[topCard?.id ?? '']?.topAtkBonus?.(g, p) ?? 0;
 
   let pursuitAtk = 0;
   let pursuitDef = 0;
@@ -108,7 +113,7 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
   const vanillaBonus = g.state.flags.vanillaBoost[p] * vanillaCount(g, p);
 
   // 基礎攻擊力（未加角色被動前）
-  let baseAtk = combatZoneAtk + topBonusAtk + pursuitAtk + flagBonusAtk + vanillaBonus;
+  let baseAtk = combatZoneAtk + pursuitAtk + flagBonusAtk + vanillaBonus;
   baseAtk = Math.max(0, baseAtk);
 
   let baseDef = Math.max(0, combatZoneDef + pursuitDef + flagBonusDef + vanillaBonus);
@@ -141,7 +146,7 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
     breakdown: {
       combatZoneAtk,
       combatZoneDef,
-      topBonusAtk,
+      shieldLift,
       pursuitAtk,
       pursuitDef,
       flagBonusAtk,

@@ -24,8 +24,8 @@ export interface CardScript {
   onPursuitCard?: (g: GameCtx, p: PlayerId, card: CardInst) => Gen;
   /** [經] 此卡在經驗區被蓋成裏側時 */
   onCovered?: (g: GameCtx, p: PlayerId, card: CardInst) => Gen;
-  /** [頂] 依場面加成的總攻擊（盾擊） */
-  topAtkBonus?: (g: GameCtx, p: PlayerId) => number;
+  /** [頂] 作為最上方招式時，戰鬥區每張招式卡的攻擊力至少是它的原始防禦力（盾擊） */
+  liftAtkToDef?: boolean;
   /** [追] 成為追擊卡時，我方總防禦 +N */
   pursuitDefBonus?: number;
   /** [追] 成為追擊卡時，我方總攻擊 +N */
@@ -97,19 +97,19 @@ export const scripts: Record<string, CardScript> = {
       log(g, `【交涉】抽 ${x}，並將 ${put.length} 張手牌放到牌組底`);
     },
   },
-  // 冰霜護甲（法師）：[發_蓋2] 回復X，再捨棄我方 2 張裏側經驗。X = 我方裏側經驗的張數
+  // 冰霜護甲（法師）：[發_蓋2] 回復X，再捨棄我方 3 張裏側經驗。X = 我方裏側經驗的張數；不足 3 張就全捨棄
   冰霜護甲: {
     *onPlay(g, p, card) {
       if (!(yield* optionalPay(g, p, card, { cover: 2 }))) return;
       const covered = Z(g, p, 'exp').filter((c) => c.covered);
       recover(g, p, covered.length);
-      const drop = yield* chooseCards(g, p, '【冰霜護甲】選擇 2 張裏側經驗捨棄', covered, 2, 2);
+      const drop = yield* chooseCards(g, p, '【冰霜護甲】選擇 3 張裏側經驗捨棄', covered, 3, 3);
       for (const c of drop) discard(g, c);
       log(g, `【冰霜護甲】回復 ${covered.length}，捨棄 ${drop.length} 張裏側經驗`);
     },
   },
-  // 盾擊（劍士）：[頂] 我方總攻擊 +X。X = 我方戰鬥區防禦力 ≧ 4 的卡片張數
-  盾擊: { topAtkBonus: (g, p) => Z(g, p, 'combat').filter((c) => data(c).def >= 4).length },
+  // 盾擊（劍士）：[頂] 我方戰鬥區的招式卡，若原始攻擊力小於原始防禦力，則該卡的攻擊力改為原始防禦力
+  盾擊: { liftAtkToDef: true },
   // 即時停損（商人）：[發_蓋4] 此卡打出後雙方立即收招
   即時停損: {
     *onPlay(g, p, card) {
@@ -126,7 +126,7 @@ export const scripts: Record<string, CardScript> = {
       log(g, '【二連矢】追擊+1');
     },
   },
-  // 凡骨的意志（劍士）：[經] 回合開始時強制蓋 1，此回合總攻擊 +X、總防禦 +X（見 turnStartEffects）
+  // 凡骨的意志（劍士）：[經] 回合開始時需蓋前 2 張表側經驗，此回合總攻擊 +X、總防禦 +X（見 turnStartEffects）
   凡骨的意志: {},
   // 卸除鎧甲（盜賊）：[發_蓋2] 選擇對方 1 張裝備或增益卡，送入棄牌區
   卸除鎧甲: {
@@ -241,7 +241,7 @@ function* chooseX(g: GameCtx, p: PlayerId, card: CardInst, max: number, label: s
 /**
  * 回合開始時的效果（先攻方先處理）：
  * - 家族相片：[蓋1_怒3] 回復 1
- * - 凡骨的意志：強制蓋 1，此回合總攻擊 +X、總防禦 +X（X = 戰鬥區白板卡數）
+ * - 凡骨的意志：蓋前 2 張表側經驗（不足就全蓋），此回合總攻擊 +X、總防禦 +X（X = 戰鬥區白板卡數）
  * - 中毒：我方後攻的回合開始時，直擊我方 3
  */
 export function* turnStartEffects(g: GameCtx): Gen {
@@ -251,13 +251,16 @@ export function* turnStartEffects(g: GameCtx): Gen {
       if (yield* optionalPay(g, p, photo, { cover: 1, rage: 3 })) recover(g, p, 1);
     }
     for (const card of Z(g, p, 'exp').filter((c) => c.id === '凡骨的意志' && !c.covered)) {
-      // 前面的費用（例如家族相片）已經把它蓋住，就無效
-      if (card.covered || !canPay(g, p, { cover: 1 })) continue;
-      // 蓋的是最前面的正面卡，不分是不是它自己；蓋到自己時效果仍照付費後發動，但之後它被蓋住就無效
+      // 前面的效果（例如家族相片）已經把它蓋住，就無效
+      if (card.covered) continue;
+      // 蓋是效果處理而非費用：蓋最前面的表側經驗 2 張，不足就全蓋，不分是不是它自己；
+      // 蓋到自己時這回合的加成照給，但之後它是裏側就無效
+      const n = Math.min(2, faceUpExp(g, p).length);
+      if (n === 0) continue;
       activate(g, p, card);
-      yield* payCover(g, p, 1);
+      yield* payCover(g, p, n);
       f.vanillaBoost[p]++;
-      log(g, `【凡骨的意志】${pname(g, p)} 強制蓋 1${card.covered ? '（蓋到自己，之後無效）' : ''}，此回合總攻擊與總防禦各加上戰鬥區白板卡的數量`);
+      log(g, `【凡骨的意志】${pname(g, p)} 蓋前 ${n} 張表側經驗${card.covered ? '（蓋到自己，之後無效）' : ''}，此回合總攻擊與總防禦各加上戰鬥區白板卡的數量`);
     }
     if (!isFirst(g, p)) {
       const poisons = Z(g, p, 'exp').filter((x) => x.id === 'Ex卡-中毒' && !x.covered).length;

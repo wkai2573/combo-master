@@ -41,7 +41,7 @@ describe('裏側卡的視角', () => {
     g.drainFrames();
     pick(g, '冰霜護甲');
     pick(g, '發動');
-    g.submit(g.pending!.player, g.pending!.options.slice(0, 2).map((o) => o.key));
+    g.submit(g.pending!.player, g.pending!.options.slice(0, 3).map((o) => o.key));
     const frames = g.drainFrames();
     expect(frames.length).toBeGreaterThan(0);
     let covered = 0;
@@ -75,11 +75,11 @@ describe('裏側卡的視角', () => {
     const covered = new Set(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.uid));
     expect(req.options.every((o) => covered.has(o.uid!))).toBe(true);
 
-    pick(g, '黑桃5', '黑桃6');
+    pick(g, '黑桃5', '黑桃6', '黑桃4');
     const dropped = Z(g, 0, 'discard').map((c) => data(c).name);
-    expect(dropped.sort()).toEqual(['黑桃5', '黑桃6']);
+    expect(dropped.sort()).toEqual(['黑桃4', '黑桃5', '黑桃6']);
     for (const viewer of [0, 1] as const) {
-      expect(viewFor(g, viewer).players[0].discard.map((c) => c.id).sort()).toEqual(['黑桃5', '黑桃6']);
+      expect(viewFor(g, viewer).players[0].discard.map((c) => c.id).sort()).toEqual(['黑桃4', '黑桃5', '黑桃6']);
     }
   });
 
