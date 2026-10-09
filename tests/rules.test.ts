@@ -99,12 +99,12 @@ describe('戰鬥流程與傷害', () => {
     const g = scenario({ p0: { hand: ['黑桃5'] }, p1: { hand: ['黑桃9'] } });
     pick(g, '黑桃9');
     // 牌頂皆為黑桃1（連擊值 1，不在 5~9 內）→ 雙方追擊成功
-    // 玩家0：黑桃5＋追擊卡黑桃1；玩家1（刺客，每次成功 +1）：黑桃9＋追擊卡黑桃1
+    // 玩家0：黑桃5＋追擊卡黑桃1；玩家1（刺客）：黑桃9＋追擊卡黑桃1，追擊成功時把 Ex-流血 放進玩家0 的經驗區，玩家0 總防禦 −1
     const atk0 = atkOf('黑桃5') + atkOf('黑桃1');
-    const atk1 = atkOf('黑桃9') + atkOf('黑桃1') + 1;
-    expect(Z(g, 0, 'rage')).toHaveLength(atk1 - defOf('黑桃5'));
+    const atk1 = atkOf('黑桃9') + atkOf('黑桃1');
+    expect(Z(g, 0, 'rage')).toHaveLength(atk1 - (defOf('黑桃5') - 1));
     expect(Z(g, 1, 'rage')).toHaveLength(atk0 - defOf('黑桃9'));
-    expect(names(g, 0, 'exp')).toEqual(['黑桃5', '黑桃1']); // 招式在前、追擊卡在後
+    expect(names(g, 0, 'exp')).toEqual(['Ex-流血', '黑桃5', '黑桃1']); // 追擊時放進來的流血在前，歸還的招式在前、追擊卡在後
     expect(names(g, 1, 'exp')).toEqual(['黑桃9', '黑桃1']);
   });
 

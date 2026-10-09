@@ -33,6 +33,8 @@ export interface Events {
   afterReturn: Record<never, never>;
   /** flipExtra：額外翻 1 張牌做追擊判定，以回呼傳入，條目不必匯入戰鬥模組 */
   afterPursuitFail: { flipExtra: () => Gen<boolean> };
+  /** 追擊判定成功、該卡成為追擊卡之後；角色與常駐效果用它，卡自己的 [追] 效果用主體型的 onPursuitCard */
+  onPursuitSuccess: { card: CardInst };
   /** 主體型：只問主體那張卡自己的條目，不看它所在的區域 */
   onOpen: { card: CardInst };
   onPlay: { card: CardInst };
@@ -57,6 +59,7 @@ export const EVENT_TITLES: Record<EventKey, string> = {
   onOpen: '先手出招時',
   onPlay: '打出時',
   onPursuitCard: '成為追擊卡時',
+  onPursuitSuccess: '追擊成功時',
   onCovered: '被蓋成裏側',
 };
 

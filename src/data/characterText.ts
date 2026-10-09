@@ -9,8 +9,8 @@ export const characterText: Record<string, { text: string; awakenText: string }>
     awakenText: '（取代）總攻擊達 10 以上時，總攻擊 +3。',
   },
   刺客: {
-    text: '此回合每次我方追擊判定成功，總攻擊 +1，上限為 +5。',
-    awakenText: '（取代）此回合每次追擊判定成功，總攻擊 +2，上限為 +5。',
+    text: '追擊成功時，將 1 張 [Ex-流血] 加入對方經驗區。',
+    awakenText: '（追加）追擊成功時，將 1 張 [Ex-中毒] 加入對方經驗區。',
   },
   商人: {
     text: '爆發後，可以調整我方表側經驗的順序。',

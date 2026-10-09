@@ -23,7 +23,8 @@ export function* becomePursuitCard(g: GameCtx, p: PlayerId, card: CardInst): Gen
   log(g, `追擊成功：【${data(card).name}】成為追擊卡`);
   mark(g, `追擊成功！【${data(card).name}】成為追擊卡（攻擊 +${data(card).atk}）`,
     { type: 'flipResult', player: p, cardId: card.id, ok: true });
-  yield* fire(g, p, 'onPursuitCard', { card });
+  // 追擊成功時：角色與常駐效果，和該卡自己的 [追] 效果進同一個窗口
+  yield* fire(g, p, ['onPursuitSuccess', 'onPursuitCard'], { card });
 }
 
 /** 對 card 做追擊判定。回傳是否成功。 */

@@ -3,9 +3,6 @@ import { defineSource, lasting, slot } from '../effectKit';
 import { activate, awakened, chooseCards, data, discard, draw, isFirst, log, newCard, pname, topOfZone, Z } from '../ops';
 import { other } from '../types';
 
-/** 刺客「追擊判定成功」加成的總上限 */
-export const ASSASSIN_CAP = 5;
-
 // ───────────────────────── 卡片 ─────────────────────────
 
 /** 伏擊給的這回合總攻擊加成 */
@@ -127,15 +124,21 @@ export const 二刀連擊 = defineSource({
 
 // ───────────────────────── 角色 ─────────────────────────
 
-// 刺客：追擊判定成功的次數加成總攻擊，覺醒時加倍，上限 ASSASSIN_CAP
+// 刺客：追擊成功時，將 1 張 [Ex-流血] 加入對方經驗區；覺醒（追加）再加 1 張 [Ex-中毒]。沒有次數上限，放在對方經驗區最後方，表側
 export const 刺客 = defineSource({
   id: '刺客',
   at: 'char',
-  ask: {
-    combatBonus: (c) => {
-      const mult = awakened(c.g, c.p) ? 2 : 1;
-      return { atk: Math.min(ASSASSIN_CAP, mult * c.g.state.flags.pursuitSuccess[c.p]) };
-    },
+  on: {
+    onPursuitSuccess: (c) => c.effect({ label: '【刺客】追擊成功：Ex-流血加入對方經驗區', mandatory: true }, () => {
+      const foe = other(c.p);
+      newCard(c.g, 'Ex-流血', foe, 'exp');
+      if (awakened(c.g, c.p)) {
+        newCard(c.g, 'Ex-中毒', foe, 'exp');
+        log(c.g, `【刺客】追擊成功，[Ex-流血]與[Ex-中毒]加入${pname(c.g, foe)}的經驗區`);
+      } else {
+        log(c.g, `【刺客】追擊成功，[Ex-流血]加入${pname(c.g, foe)}的經驗區`);
+      }
+    }),
   },
 });
 

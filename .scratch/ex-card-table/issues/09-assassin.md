@@ -4,7 +4,11 @@
 
 **Blocked by（被誰阻擋）：** 03、05
 
-**Status：** ready-for-agent
+**Status：** resolved
 
-- [ ] 行為測試
-- [ ] 升版並補更新日誌
+- [x] 行為測試
+- [x] 升版並補更新日誌
+
+## Answer
+
+已於 v0.31.0 生效。新時機「追擊成功時」（`onPursuitSuccess`）讓角色與常駐效果能聽到追擊成功，和卡自己的 [追] 效果進同一個窗口；刺客改成放 Ex-流血（覺醒再加 Ex-中毒），ASSASSIN_CAP 與總攻擊加成移除。測試在 `tests/assassin.test.ts`。

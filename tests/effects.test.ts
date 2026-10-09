@@ -77,20 +77,4 @@ describe('裝備、角色', () => {
     expect(Z(g, 0, 'hand')).toHaveLength(2); // 抽牌階段正常抽 1，加上覺醒額外抽 1
     expect(Z(g, 0, 'rage')).toHaveLength(1);
   });
-
-  it('刺客：每次追擊判定成功攻擊 +1（覺醒 +2），合計最多 +5', () => {
-    const g = scenario({ chars: ['刺客', '勇者'] });
-    const base = atkOf('黑桃1');
-    const attack = () => totalAtk(g, 0);
-    g.state.flags.pursuitSuccess[0] = 2;
-    setZones(g, 0, { moves: ['黑桃1'] });
-    expect(attack()).toBe(base + 2);
-    g.state.flags.pursuitSuccess[0] = 7; // 超過上限
-    expect(attack()).toBe(base + 5);
-    setZones(g, 0, { moves: ['黑桃1'], exp: Array(8).fill('黑桃1') }); // 覺醒
-    g.state.flags.pursuitSuccess[0] = 2;
-    expect(attack()).toBe(base + 4);
-    g.state.flags.pursuitSuccess[0] = 4;
-    expect(attack()).toBe(base + 5);
-  });
 });

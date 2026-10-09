@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.31.0',
+    date: '2026-10-09',
+    items: [
+      { type: 'change', text: '刺客改版：追擊成功時，將 1 張 Ex-流血（我方總防禦 −1）加入對方經驗區，沒有次數上限；覺醒後同一次追擊成功再加 1 張 Ex-中毒（每回合開始直擊 1）。原本的「追擊成功次數加總攻擊，上限 +5」移除' },
+    ],
+  },
+  {
     version: '0.30.2',
     date: '2026-10-09',
     items: [

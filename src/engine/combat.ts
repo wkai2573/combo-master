@@ -7,7 +7,7 @@ import { fire, fireEach, moveRules, query } from './effects';
 import { checkWin } from './win';
 import { other, type CardInst, type PlayerId } from './types';
 import {
-  ASSASSIN_CAP, resolveCombatStats, totalAtk, totalDef, type CombatStats, type CombatStatsBreakdown,
+  resolveCombatStats, totalAtk, totalDef, type CombatStats, type CombatStatsBreakdown,
 } from './combatStats';
 
 // ───────────────────────── 範圍內／可出招判定 ─────────────────────────
@@ -39,7 +39,7 @@ export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: bool
 
 // ───────────────────────── 總攻擊／總防禦 ─────────────────────────
 
-export { ASSASSIN_CAP, resolveCombatStats, totalAtk, totalDef, type CombatStats, type CombatStatsBreakdown };
+export { resolveCombatStats, totalAtk, totalDef, type CombatStats, type CombatStatsBreakdown };
 
 // ───────────────────────── 追擊 ─────────────────────────
 

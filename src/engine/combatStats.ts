@@ -3,8 +3,6 @@ import { moveRules, query } from './effects';
 import { combatZone, data, Z, type GameCtx } from './ops';
 import type { CardInst, PlayerId } from './types';
 
-export { ASSASSIN_CAP } from './sources/thief';
-
 export interface CombatStatsBreakdown {
   combatZoneAtk: number;
   combatZoneDef: number;
