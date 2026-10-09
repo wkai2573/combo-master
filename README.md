@@ -35,7 +35,7 @@ npm run build      # 型別檢查＋打包
 
 卡片、角色的數值在「連擊大師卡表」網頁（Claude 的 Artifact，只有擁有者能開）上調整，可以新增卡片。調完請 Claude 同步：Claude 用 `ArtifactData` 把資料讀成 JSON，再執行 `npm run table -- <資料夾>`，產生 `src/data/cardTable.json`（既有卡的數值覆蓋、角色數值、新增的卡、永久編號）。`src/data/cards.ts` 會把它疊在 xlsx 產生的資料上，所以重跑 `npm run data` 不會洗掉。
 
-卡表頁面標題旁有頁面版本（例如 `v1.2`），下方顯示「遊戲已同步到 vX.Y.Z」，那是每次同步後由 Claude 寫進資料庫的 `meta/sync`；頁面上「尚未同步的改動」（黃框，旁邊是「原」值）是拿每筆資料的 `base`（基準值）和現值比對。所以同步完成後，Claude 要把有差異的資料的 `base` 一併重設成現值，黃框才會消失；`base.name` 不可動，它是遊戲內部 id（見 `docs/規則詮釋.md`）。
+卡表頁面標題旁有頁面版本（例如 `v1.2`），下方顯示「遊戲已同步到 vX.Y.Z」，那是每次同步後由 Claude 寫進資料庫的 `meta/sync`；頁面上「尚未同步的改動」（黃框，旁邊是「原」值）是拿每筆資料的 `base`（基準值）和現值比對。所以同步完成後，Claude 要把有差異的資料的 `base` 一併重設成現值，黃框才會消失；`base.name` 不可動，它是遊戲內部 id（見 `docs/規則詮釋.md`），改過名的卡改把 `syncedName` 寫成現在的卡名，卡名那一格的黃框才會消失。
 
 卡表有「Ex卡」分頁（在「卡片」分區，編號前綴 X）：Ex 卡是效果產生的臨時卡，只有卡名、特徵、效果三個欄位，可以新增、刪除與編輯，是 Ex 卡的唯一來源。卡名必須以 `Ex-` 開頭，內部 id 固定為新增時的卡名；同步時 `exCards` 一併寫進 `cardTable.json`，並檢查卡文引用的 `[Ex-卡名]` 都存在。新增一種 Ex 卡仍要引擎有對應實作（`src/engine/sources/common.ts`）。
 
