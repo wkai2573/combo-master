@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isExCardId } from '../src/data/exCards';
 import { ALL_CARDS, ALL_CHARACTERS, getCard, PLAYABLE_CARDS } from '../src/data/cards';
 import { ENABLED_EFFECT_CARDS, isCardEnabled, isVanilla } from '../src/data/enabledCards';
 import { presetDeck, PRESET_CHARACTER_IDS } from '../src/data/presetDecks';
@@ -13,7 +14,7 @@ describe('卡表資料', () => {
   });
 
   it('招式連擊值在 1~9', () => {
-    for (const c of ALL_CARDS.filter((c) => c.kind === 'move' && !c.id.startsWith('Ex卡-'))) {
+    for (const c of ALL_CARDS.filter((c) => c.kind === 'move' && !isExCardId(c.id))) {
       expect(c.combo, c.id).toBeGreaterThanOrEqual(1);
       expect(c.combo, c.id).toBeLessThanOrEqual(9);
     }
@@ -42,7 +43,7 @@ describe('卡表資料', () => {
   });
 
   it('Ex 卡不能放進牌組', () => {
-    expect(PLAYABLE_CARDS.some((c) => c.id.startsWith('Ex卡-'))).toBe(false);
+    expect(PLAYABLE_CARDS.some((c) => isExCardId(c.id))).toBe(false);
   });
 
   it('卡表新卡的職業與文字', () => {
@@ -82,7 +83,7 @@ describe('卡表永久編號', () => {
     const owners = (prefix: RegExp) => entries.filter(([u]) => prefix.test(u)).map(([, id]) => id);
     const cards = owners(/^[AEB]/), chars = owners(/^C/), kws = owners(/^K/);
     for (const list of [cards, chars, kws]) expect(new Set(list).size).toBe(list.length);
-    expect(new Set(cards)).toEqual(new Set(ALL_CARDS.filter((c) => !c.id.startsWith('Ex卡-')).map((c) => c.id)));
+    expect(new Set(cards)).toEqual(new Set(ALL_CARDS.filter((c) => !isExCardId(c.id)).map((c) => c.id)));
     expect(new Set(chars)).toEqual(new Set(ALL_CHARACTERS.map((c) => c.id)));
     expect(new Set(kws)).toEqual(new Set(table.keywords.map((k) => k.name)));
   });

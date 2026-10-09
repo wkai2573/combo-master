@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isExCardId } from '../src/data/exCards';
 import { ALL_CARDS, ALL_CHARACTERS } from '../src/data/cards';
 import { checkCardText, checkWording, lineBoxes, parseCardLine, parseCardText } from '../src/data/cardText';
 import { isCardEnabled } from '../src/data/enabledCards';
@@ -87,7 +88,7 @@ describe('卡片文字規範檢查：不符規範的寫法會被指出', () => {
 describe('全部卡片與角色文字都符合撰寫規範', () => {
   it('每張開放的卡與 Ex 卡的卡文：句型符合、沒有舊用語', () => {
     const problems: string[] = [];
-    for (const c of ALL_CARDS.filter((c) => c.text !== '' && (isCardEnabled(c) || c.id.startsWith('Ex卡-')))) {
+    for (const c of ALL_CARDS.filter((c) => c.text !== '' && (isCardEnabled(c) || isExCardId(c.id)))) {
       for (const e of checkCardText(c.text)) problems.push(`${c.name}：${e}`);
     }
     expect(problems).toEqual([]);
@@ -115,7 +116,7 @@ describe('卡文開頭的特殊框', () => {
 
   it('每個框都對得上關鍵字說明，滑入時才有提示可以顯示', () => {
     const problems: string[] = [];
-    for (const c of ALL_CARDS.filter((c) => c.text !== '' && (isCardEnabled(c) || c.id.startsWith('Ex卡-')))) {
+    for (const c of ALL_CARDS.filter((c) => c.text !== '' && (isCardEnabled(c) || isExCardId(c.id)))) {
       for (const line of parseCardText(c.text)) {
         if (line.kind !== 'line') continue;
         for (const box of lineBoxes(line)) {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isExCardId } from '../src/data/exCards';
 import { ALL_CARDS } from '../src/data/cards';
 import { CHEAT_POOL } from '../src/engine/cheat';
 import { Z } from '../src/engine/ops';
@@ -10,8 +11,8 @@ const uidOf = (g: ReturnType<typeof scenario>, p: 0 | 1, z: Parameters<typeof Z>
 
 describe('作弊：卡池', () => {
   it('全卡池就是所有卡，不含 Ex 卡（未開放的卡也在裡面）', () => {
-    expect(CHEAT_POOL.map((c) => c.id)).toEqual(ALL_CARDS.filter((c) => !c.id.startsWith('Ex卡-')).map((c) => c.id));
-    expect(CHEAT_POOL.some((c) => c.id.startsWith('Ex卡-'))).toBe(false);
+    expect(CHEAT_POOL.map((c) => c.id)).toEqual(ALL_CARDS.filter((c) => !isExCardId(c.id)).map((c) => c.id));
+    expect(CHEAT_POOL.some((c) => isExCardId(c.id))).toBe(false);
     expect(CHEAT_POOL.length).toBeGreaterThan(36);
   });
 });

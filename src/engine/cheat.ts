@@ -1,4 +1,5 @@
 import { ALL_CARDS } from '../data/cards';
+import { isExCardId } from '../data/exCards';
 import type { CardData } from '../data/types';
 import { data, log, newCard, pname, Z } from './ops';
 import { show, type CardView } from './view';
@@ -6,7 +7,7 @@ import type { CardInst, PlayerId, ZoneName } from './types';
 import type { Game } from './game';
 
 /** 作弊能加入手牌的卡：全卡池，含未開放的卡，不含 Ex 卡 */
-export const CHEAT_POOL: CardData[] = ALL_CARDS.filter((c) => !c.id.startsWith('Ex卡-'));
+export const CHEAT_POOL: CardData[] = ALL_CARDS.filter((c) => !isExCardId(c.id));
 
 /** 可以檢視並調整順序的牌區；戰鬥區、裝備、增益不動 */
 export const CHEAT_ZONES = ['deck', 'rage', 'discard', 'exp'] as const;
@@ -52,7 +53,7 @@ function checkPlayers(by: unknown, target: unknown): void {
 /** by 為操作者，target 為被操作的玩家；拒絕時丟出說明原因的錯誤，且不改動任何東西 */
 function checkPoolCard(cardId: unknown): asserts cardId is string {
   if (typeof cardId !== 'string') throw new Error('卡名不合法');
-  if (cardId.startsWith('Ex卡-')) throw new Error('Ex 卡不能用作弊加入');
+  if (isExCardId(cardId)) throw new Error('Ex 卡不能用作弊加入');
   if (!CHEAT_POOL.some((c) => c.id === cardId)) throw new Error(`卡池裡沒有「${cardId}」`);
 }
 

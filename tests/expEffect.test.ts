@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isExCardId } from '../src/data/exCards';
 import { ALL_CARDS, getCard } from '../src/data/cards';
 import { isCardEnabled } from '../src/data/enabledCards';
 import { createEffects, hasExpEffect } from '../src/engine/effects';
@@ -42,7 +43,7 @@ describe('經驗效果：登記表的查詢', () => {
 });
 
 describe('經驗效果：卡文與登記表一致', () => {
-  const cards = ALL_CARDS.filter((c) => isCardEnabled(c) || c.id.startsWith('Ex卡-'));
+  const cards = ALL_CARDS.filter((c) => isCardEnabled(c) || isExCardId(c.id));
 
   it('有開放的卡與 Ex 卡可以對照', () => {
     expect(cards.length).toBeGreaterThan(20);

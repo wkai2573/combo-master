@@ -1,3 +1,4 @@
+import { isExCardId } from '../data/exCards';
 import type { CardData, ClassName } from '../data/types';
 
 /** 卡面底色與標籤看卡種：招式、裝備、增益、Ex 卡各一色 */
@@ -14,7 +15,7 @@ export const CLASS_COLOR: Record<ClassName, string> = {
 };
 
 /** Ex 卡是效果生成的臨時卡，不屬於任何職業 */
-const isEx = (c: CardData): boolean => c.id.startsWith('Ex卡-');
+const isEx = (c: CardData): boolean => isExCardId(c.id);
 
 export function cardColor(c: CardData): string {
   return isEx(c) ? KIND_COLOR.ex : KIND_COLOR[c.kind];

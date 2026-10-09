@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isExCardId } from '../src/data/exCards';
 import { ALL_CHARACTERS, PLAYABLE_CARDS } from '../src/data/cards';
 import { keywordsIn, KEYWORDS, segmentsOf } from '../src/data/keywords';
 
@@ -39,7 +40,7 @@ describe('關鍵字', () => {
     const texts = [...PLAYABLE_CARDS.map((c) => c.text), ...ALL_CHARACTERS.flatMap((c) => [c.text, c.awakenText])];
     for (const t of texts) {
       for (const m of t.matchAll(/\[([^\]]+)\]/g)) {
-        if (m[1].startsWith('Ex卡-')) continue; // Ex 卡的卡名
+        if (isExCardId(m[1])) continue; // Ex 卡的卡名
         for (const part of m[1].split('_')) {
           expect(defined.has(part.replace(/\d+/g, 'X')), `關鍵字「${part}」（出自：${t}）沒有定義`).toBe(true);
         }

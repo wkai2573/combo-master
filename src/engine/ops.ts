@@ -1,4 +1,5 @@
 import { getCard, getCharacter } from '../data/cards';
+import { isExCardId } from '../data/exCards';
 import type { CardData } from '../data/types';
 import type { Rng } from './rng';
 import { faceVisibleTo } from './visibility';
@@ -97,7 +98,7 @@ export function move(g: GameCtx, card: CardInst, to: ZoneName, pos: 'top' | 'bot
   const i = from.indexOf(card);
   if (i >= 0) from.splice(i, 1);
   // Ex 卡（臨時額外卡）離開經驗區時移除遊戲
-  if (card.id.startsWith('Ex卡-') && card.zone === 'exp' && to !== 'exp') return;
+  if (isExCardId(card.id) && card.zone === 'exp' && to !== 'exp') return;
   card.zone = to;
   card.covered = false;
   const dest = Z(g, card.owner, to);
