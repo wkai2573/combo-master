@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.28.2',
+    date: '2026-10-09',
+    items: [
+      { type: 'add', text: '戰績頁新增回合數圖表：看幾回合結束的場次各有多少，並列出平均、最短、最長回合數；點角色對戰表的一格，可以看該組合的回合數' },
+    ],
+  },
+  {
     version: '0.28.1',
     date: '2026-10-09',
     items: [

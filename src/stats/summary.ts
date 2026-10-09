@@ -67,3 +67,35 @@ export function matchupTable(records: BattleRecord[], chars: string[]): Cell[][]
 
 /** 因為版本太舊而只計入回合數圖表的場數 */
 export const legacyCount = (records: BattleRecord[]): number => records.filter((r) => !countsForWinRate(r)).length;
+
+/** 回合數圖表的範圍：不給是全部；給一個角色是該角色出場（不分哪一邊）；給兩個角色是這組對戰（兩個方向合併） */
+export type TurnScope = { a: string; b?: string };
+
+export interface TurnStats {
+  /** 從最短到最長的每個回合數各幾場，中間沒有場次的回合數補 0 */
+  histogram: { turns: number; games: number }[];
+  games: number;
+  avg: number;
+  min: number;
+  max: number;
+}
+
+const inScope = (r: BattleRecord, scope: TurnScope | undefined): boolean => {
+  if (!scope) return true;
+  const { a, b } = scope;
+  if (b === undefined) return r.mine === a || r.theirs === a;
+  return (r.mine === a && r.theirs === b) || (r.mine === b && r.theirs === a);
+};
+
+/** 回合數分布與平均、最短、最長；舊版本的戰績也計入（回合數不受勝負規則影響）。沒有場次時回傳 null */
+export function turnStats(records: BattleRecord[], scope?: TurnScope): TurnStats | null {
+  const turns = records.filter((r) => inScope(r, scope)).map((r) => r.turns);
+  if (turns.length === 0) return null;
+  const min = Math.min(...turns);
+  const max = Math.max(...turns);
+  const counts = new Map<number, number>();
+  for (const t of turns) counts.set(t, (counts.get(t) ?? 0) + 1);
+  const histogram = [];
+  for (let t = min; t <= max; t++) histogram.push({ turns: t, games: counts.get(t) ?? 0 });
+  return { histogram, games: turns.length, avg: turns.reduce((n, t) => n + t, 0) / turns.length, min, max };
+}

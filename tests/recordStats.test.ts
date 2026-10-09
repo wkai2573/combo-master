@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BattleRecord } from '../src/stats/records';
-import { compareVersion, filterByOpponent, legacyCount, matchup, matchupTable, MIN_WIN_RATE_VERSION } from '../src/stats/summary';
+import { compareVersion, filterByOpponent, legacyCount, matchup, matchupTable, MIN_WIN_RATE_VERSION, turnStats } from '../src/stats/summary';
 
 const V = MIN_WIN_RATE_VERSION;
 const rec = (mine: string, theirs: string, outcome: BattleRecord['outcome'], over: Partial<BattleRecord> = {}): BattleRecord => ({
@@ -73,5 +73,48 @@ describe('角色對戰表', () => {
     expect(t[1][0]).toMatchObject({ lose: 1, rate: 0 });
     expect(t[0][0]).toMatchObject({ games: 1, rate: null });
     expect(t[1][1].games).toBe(0);
+  });
+});
+
+describe('回合數統計', () => {
+  const turns = (...ts: number[]) => ts.map((t) => rec('勇者', '刺客', 'win', { turns: t }));
+
+  it('沒有場次是 null', () => {
+    expect(turnStats([])).toBeNull();
+    expect(turnStats(turns(4), { a: '法師' })).toBeNull();
+  });
+
+  it('分布從最短到最長，中間沒有場次的回合數補 0，並算出平均、最短、最長', () => {
+    const s = turnStats(turns(3, 3, 5, 8))!;
+    expect(s.histogram).toEqual([
+      { turns: 3, games: 2 }, { turns: 4, games: 0 }, { turns: 5, games: 1 },
+      { turns: 6, games: 0 }, { turns: 7, games: 0 }, { turns: 8, games: 1 },
+    ]);
+    expect(s).toMatchObject({ games: 4, avg: 4.75, min: 3, max: 8 });
+  });
+
+  it('不給範圍涵蓋全部紀錄，舊版本也計入', () => {
+    const list = [...turns(4), rec('勇者', '刺客', 'win', { turns: 6, version: '0.1.0' })];
+    expect(turnStats(list)!.games).toBe(2);
+  });
+
+  it('角色組合不分方向，兩個方向合併；其他組合不算', () => {
+    const list = [
+      rec('勇者', '刺客', 'win', { turns: 4 }), rec('刺客', '勇者', 'win', { turns: 6 }),
+      rec('勇者', '法師', 'win', { turns: 9 }),
+    ];
+    expect(turnStats(list, { a: '勇者', b: '刺客' })).toMatchObject({ games: 2, avg: 5, min: 4, max: 6 });
+    expect(turnStats(list, { a: '刺客', b: '勇者' })!.games).toBe(2);
+  });
+
+  it('同角色對打的組合只算雙方都是該角色的場次，每場只算一次', () => {
+    const list = [rec('勇者', '勇者', 'win', { turns: 5 }), rec('勇者', '刺客', 'win', { turns: 7 })];
+    expect(turnStats(list, { a: '勇者', b: '勇者' })!.games).toBe(1);
+  });
+
+  it('只給一個角色是該角色出場的場次，不分哪一邊', () => {
+    const list = [rec('勇者', '刺客', 'win', { turns: 4 }), rec('刺客', '勇者', 'win', { turns: 6 }), rec('法師', '刺客', 'win', { turns: 9 })];
+    expect(turnStats(list, { a: '勇者' })!.games).toBe(2);
+    expect(turnStats(list, { a: '刺客' })!.games).toBe(3);
   });
 });
