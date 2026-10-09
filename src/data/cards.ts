@@ -1,7 +1,6 @@
 import cardsJson from './generated/cards.json';
 import charsJson from './generated/characters.json';
 import { characterText } from './characterText';
-import { EX_CARDS } from './exCards';
 import tableJson from './cardTable.json';
 import { isCardEnabled } from './enabledCards';
 import type { CardData, CharacterData } from './types';
@@ -10,6 +9,7 @@ const table = tableJson as {
   overrides: Record<string, Partial<CardData>>;
   chars: Record<string, Partial<CharacterData>>;
   added: CardData[];
+  exCards: CardData[];
 };
 
 /**
@@ -23,7 +23,7 @@ export const ALL_CARDS: CardData[] = [
     ...table.overrides[c.id],
   })),
   ...table.added,
-  ...EX_CARDS,
+  ...table.exCards,
 ];
 
 /** 目前開放使用的卡（組牌卡池與牌組驗證以此為準；引擎仍能處理全部卡片） */

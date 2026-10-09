@@ -7,7 +7,7 @@ import { buildCardTable, type Doc, type TableDocs } from '../scripts/tableSync';
 const base = {
   cards: baseCards as CardData[],
   chars: baseChars as CharacterData[],
-  hasEffect: (id: string) => id === '有實作的新卡',
+  hasEffect: (id: string) => id === '有實作的新卡' || id === 'Ex-測試',
 };
 const spade1 = (baseCards as CardData[])[0];
 
@@ -97,5 +97,52 @@ describe('卡表同步', () => {
     });
     expect(table.keywords).toEqual([{ name: 'a', group: '標籤', desc: '一' }, { name: 'b', group: '名詞', desc: '二' }]);
     expect(notes).toContain('關鍵字說明待確認用語：b');
+  });
+});
+
+describe('卡表同步：Ex 卡區域', () => {
+  const LEAVE = '當此卡離開經驗區時，移除遊戲。';
+  const ex = (over: Doc = {}): Doc => ({ order: 1, uid: 'X1', name: 'Ex-測試', traits: ['毒'], text: `[經]：我方總防禦 −1。\n${LEAVE}`, ...over });
+
+  it('輸出 Ex 卡：招式、共用、攻守連擊為 0，編號 X 指向內部 id', () => {
+    const { table, notes } = build({ exCards: [ex()] });
+    expect(table.exCards).toEqual([
+      { id: 'Ex-測試', name: 'Ex-測試', kind: 'move', cls: '共用', traits: ['毒'], atk: 0, def: 0, combo: 0, expReq: 0, text: `[經]：我方總防禦 −1。\n${LEAVE}` },
+    ]);
+    expect(table.uids.X1).toBe('Ex-測試');
+    expect(notes).toEqual([]);
+  });
+
+  it('沒有 Ex卡 集合的舊資料視為空', () => {
+    expect(build({}).table.exCards).toEqual([]);
+  });
+
+  it('依 order 排序；改名只改顯示，id 固定為新增時的卡名並提醒', () => {
+    const { table, notes } = build({
+      exCards: [
+        ex({ order: 2, uid: 'X2', name: 'Ex-乙', base: { name: 'Ex-甲' } }),
+        ex({ order: 1, uid: 'X1' }),
+      ],
+    });
+    expect(table.exCards.map((c) => [c.id, c.name])).toEqual([['Ex-測試', 'Ex-測試'], ['Ex-甲', 'Ex-乙']]);
+    expect(table.uids.X2).toBe('Ex-甲');
+    expect(notes.some((n) => n.includes('Ex 卡名已改'))).toBe(true);
+  });
+
+  it('卡名不以 Ex- 開頭就報錯', () => {
+    expect(() => build({ exCards: [ex({ name: '測試' })] })).toThrow('Ex-');
+  });
+
+  it('缺「離開經驗區就移除遊戲」或沒實作效果只提醒', () => {
+    const { notes } = build({ exCards: [ex({ text: '[經]：我方總防禦 −1。' }), ex({ order: 2, uid: 'X2', name: 'Ex-未實作' })] });
+    expect(notes.some((n) => n.includes(LEAVE) && n.includes('Ex-測試'))).toBe(true);
+    expect(notes).toContain('Ex 卡尚未實作效果：Ex-未實作');
+  });
+
+  it('卡、角色、Ex 卡的文字引用不存在的 Ex 卡就報錯，存在則通過', () => {
+    expect(() => build({ exCards: [ex()], cards: [spade({ text: '[發]：將 [Ex-不存在] 移入對方經驗區。' })] })).toThrow('Ex-不存在');
+    expect(() => build({ exCards: [ex()], chars: [{ uid: 'C1', name: '勇者', hp: 50, expReq: 8, cls: '劍士', awakenText: '追加：[Ex-不存在]' }] })).toThrow('Ex-不存在');
+    expect(() => build({ exCards: [ex({ text: `[Ex-不存在]\n${LEAVE}` })] })).toThrow('Ex-不存在');
+    expect(() => build({ exCards: [ex()], cards: [spade({ text: '[發]：將 [Ex-測試] 移入對方經驗區。' })] })).not.toThrow();
   });
 });

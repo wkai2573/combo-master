@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isExCardId } from '../src/data/exCards';
+import { EX_LEAVE_RULE, isExCardId } from '../src/data/exCards';
+import { hasEffect } from '../src/engine/effects';
 import { ALL_CARDS, ALL_CHARACTERS, getCard, PLAYABLE_CARDS } from '../src/data/cards';
 import { ENABLED_EFFECT_CARDS, isCardEnabled, isVanilla } from '../src/data/enabledCards';
 import { presetDeck, PRESET_CHARACTER_IDS } from '../src/data/presetDecks';
@@ -64,9 +65,9 @@ describe('卡表永久編號', () => {
   const table = tableJson as { uids: Record<string, string>; keywords: Array<{ name: string }> };
   const entries = Object.entries(table.uids);
 
-  it('編號格式：招式 A、裝備 E、增益 B、角色 C、關鍵字 K，後面接數字', () => {
+  it('編號格式：招式 A、裝備 E、增益 B、角色 C、關鍵字 K、Ex 卡 X，後面接數字', () => {
     expect(entries.length).toBeGreaterThan(0);
-    for (const [uid] of entries) expect(uid, uid).toMatch(/^[AEBCK]\d+$/);
+    for (const [uid] of entries) expect(uid, uid).toMatch(/^[AEBCKX]\d+$/);
   });
 
   it('每個編號都指到存在的卡、角色或關鍵字，且它們不共用編號', () => {
@@ -81,9 +82,10 @@ describe('卡表永久編號', () => {
 
   it('同一個 id 在同一類只有一個編號；每張卡、每位角色、每個關鍵字都有編號', () => {
     const owners = (prefix: RegExp) => entries.filter(([u]) => prefix.test(u)).map(([, id]) => id);
-    const cards = owners(/^[AEB]/), chars = owners(/^C/), kws = owners(/^K/);
-    for (const list of [cards, chars, kws]) expect(new Set(list).size).toBe(list.length);
+    const cards = owners(/^[AEB]/), chars = owners(/^C/), kws = owners(/^K/), exs = owners(/^X/);
+    for (const list of [cards, chars, kws, exs]) expect(new Set(list).size).toBe(list.length);
     expect(new Set(cards)).toEqual(new Set(ALL_CARDS.filter((c) => !isExCardId(c.id)).map((c) => c.id)));
+    expect(new Set(exs)).toEqual(new Set(ALL_CARDS.filter((c) => isExCardId(c.id)).map((c) => c.id)));
     expect(new Set(chars)).toEqual(new Set(ALL_CHARACTERS.map((c) => c.id)));
     expect(new Set(kws)).toEqual(new Set(table.keywords.map((k) => k.name)));
   });

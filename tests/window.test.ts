@@ -281,10 +281,10 @@ describe('觸發窗口：回合開始', () => {
     expect(g.pending!.player).toBe(1);
     expect(labels(g)).toHaveLength(2);
     expect(labels(g).every((l) => l.startsWith('【強制】'))).toBe(true);
-    pick(g, '【強制】【中毒】直擊 3');
+    pick(g, '【強制】【中毒】直擊 1');
     expect(g.pending).toBeNull(); // 剩下的凡骨強制效果直接處理
     expect(凡骨狀態.read(g, 1).uids).toHaveLength(1);
-    expect(Z(g, 1, 'discard')).toHaveLength(3);
+    expect(Z(g, 1, 'discard')).toHaveLength(1);
   });
 
   it('凡骨的意志先發，把中毒蓋住：中毒不再發動', () => {

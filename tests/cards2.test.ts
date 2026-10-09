@@ -519,12 +519,26 @@ describe('新卡（第二批）', () => {
     expect(Z(t, 1, 'exp').some((c) => c.id === 'Ex-中毒')).toBe(false);
   });
 
-  it('中毒：我方後攻的回合開始時，直擊我方 3；先攻時不會', () => {
+  it('中毒：回合開始時直擊我方 1，不分先後攻；裏側時不發動', () => {
     const g = scenario({ phase: '重置', singlePhase: true, p1: { exp: ['Ex-中毒'] } });
-    expect(Z(g, 1, 'deck')).toHaveLength(17);
+    expect(Z(g, 1, 'deck')).toHaveLength(19);
 
     const f = scenario({ first: 1, phase: '重置', singlePhase: true, p1: { exp: ['Ex-中毒'] } });
-    expect(Z(f, 1, 'deck')).toHaveLength(20);
+    expect(Z(f, 1, 'deck')).toHaveLength(19);
+
+    const covered = scenario({ phase: '重置', singlePhase: true, p1: { exp: ['~Ex-中毒'] } });
+    expect(Z(covered, 1, 'deck')).toHaveLength(20);
+  });
+
+  it('流血：表側時我方總防禦 −1，多張疊加，裏側時無效', () => {
+    const def = (exp: string[]) => {
+      const g = scenario({ phase: '重置', singlePhase: true, p1: { exp, moves: ['梅花1'] } });
+      return totalDef(g, 1);
+    };
+    const none = def([]);
+    expect(def(['Ex-流血'])).toBe(none - 1);
+    expect(def(['Ex-流血', 'Ex-流血'])).toBe(none - 2);
+    expect(def(['~Ex-流血'])).toBe(none);
   });
 
   it('家族相片：回合開始時 [蓋1_怒3] 回復 1', () => {
