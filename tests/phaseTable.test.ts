@@ -31,6 +31,13 @@ describe('階段表：完整對局從任一起點開始，之前的階段不會�
     expect(title(g)).toContain('先手步驟');
   });
 
+  it('先攻每回合交換，但開局先攻方一直記著', () => {
+    const g = scenario({ ...hands, first: 1, phase: '增益' });
+    expect(g.state.turn).toBe(2);
+    expect(g.state.first).toBe(0);
+    expect(g.state.openingFirst).toBe(1);
+  });
+
   it('起始階段只適用於第 1 回合，第 2 回合從頭開始', () => {
     const g = scenario({ ...hands, phase: '爆發' });
     pass(g); // 先攻方不爆發

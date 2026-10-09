@@ -66,7 +66,7 @@ export class Game {
     this.rng = new Rng(setup.seed);
     this.state = {
       players: [emptyPlayer(0, setup.decks[0].charId), emptyPlayer(1, setup.decks[1].charId)],
-      first: 0, turn: 0, phase: '設置', flags: emptyFlags(), passed: [false, false],
+      first: 0, openingFirst: 0, turn: 0, phase: '設置', flags: emptyFlags(), passed: [false, false],
       log: [], winner: null, winReason: '', cheated: false, forfeited: false, awakeSeen: [false, false], slots: [{}, {}],
     };
     this.it = this.run();
@@ -221,6 +221,7 @@ export class Game {
     }
     mark(this, '雙方牌組洗牌', { type: 'shuffle' });
     s.first = this.setup.first ?? (this.rng.int(2) as PlayerId);
+    s.openingFirst = s.first;
     log(this, `先攻：${pname(this, s.first)}`);
     for (const p of [0, 1] as PlayerId[]) {
       drawPlain(this, p, 5 + query(this, p, 'openingDraw'));

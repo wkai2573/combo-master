@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ALL_CHARACTERS } from '../../data/cards';
 import { clearRecords, listRecords } from '../../stats/records';
-import { characterSummary, filterByOpponent, legacyCount, matchupTable, turnStats, type Cell, type OpponentFilter } from '../../stats/summary';
+import { characterSeats, characterSummary, filterByOpponent, legacyCount, matchupTable, seatStats, turnStats, unseatedCount, type Cell, type OpponentFilter, type SeatStats } from '../../stats/summary';
 import { Modal } from '../components/Modal';
 import { TurnChart } from '../components/TurnChart';
 
@@ -11,8 +11,8 @@ const CHARS = ALL_CHARACTERS.filter((c) => !c.pending).map((c) => c.id);
 /** 四捨五入但不把 99.6% 顯示成 100%、也不把 0.4% 顯示成 0%：滿分與零分只留給真的全勝與全敗 */
 const percent = (rate: number) => `${rate === 0 ? 0 : rate === 1 ? 100 : Math.min(99, Math.max(1, Math.round(rate * 100)))}%`;
 
-type Tab = 'table' | 'char' | 'turns';
-const TABS: [Tab, string][] = [['table', '角色對戰表'], ['char', '單看角色'], ['turns', '回合數圖表']];
+type Tab = 'table' | 'char' | 'seat' | 'turns';
+const TABS: [Tab, string][] = [['table', '角色對戰表'], ['char', '單看角色'], ['seat', '先後攻'], ['turns', '回合數圖表']];
 
 function CellView({ cell, picked, onPick }: { cell: Cell; picked: boolean; onPick: () => void }) {
   if (cell.games === 0) return <td className="rcell none">—</td>;
@@ -43,6 +43,23 @@ function RowCells({ cell, mirror = false }: { cell: Cell; mirror?: boolean }) {
   );
 }
 
+/** 先攻與後攻兩列；先後攻沒有同角色對打（已排除），所以每格都有勝負平 */
+function SeatTable({ seats, label }: { seats: SeatStats; label: string }) {
+  return (
+    <div className="rtable-wrap">
+      <table className="rtable">
+        <thead>
+          <tr><th>{label}</th><th>勝率</th><th>場數</th><th>勝</th><th>負</th><th>平</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>先攻</th><RowCells cell={seats.first} /></tr>
+          <tr><th>後攻</th><RowCells cell={seats.second} /></tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function Records({ onBack }: { onBack: () => void }) {
   const [records, setRecords] = useState(listRecords);
   const [filter, setFilter] = useState<OpponentFilter>('all');
@@ -54,6 +71,10 @@ export function Records({ onBack }: { onBack: () => void }) {
   const shown = useMemo(() => filterByOpponent(records, filter), [records, filter]);
   const table = useMemo(() => matchupTable(shown, CHARS), [shown]);
   const legacy = legacyCount(shown);
+  const unseated = unseatedCount(shown);
+  const charUnseated = unseatedCount(shown, char);
+  const seats = useMemo(() => seatStats(shown), [shown]);
+  const charSeat = useMemo(() => characterSeats(shown, char), [shown, char]);
   const pairStats = useMemo(() => (pair ? turnStats(shown, { a: pair[0], b: pair[1] }) : null), [shown, pair]);
   const allStats = useMemo(() => turnStats(shown), [shown]);
   const summary = useMemo(() => characterSummary(shown, char, CHARS), [shown, char]);
@@ -110,9 +131,21 @@ export function Records({ onBack }: { onBack: () => void }) {
                 ))}
               </tbody>
             </table>
+            <SeatTable seats={charSeat} label={`${char} 的身分`} />
+            <div className="muted" style={{ fontSize: 12 }}>
+              先攻、後攻指整場開局隨機決定的那一次，不含同角色對打。{charUnseated > 0 && `另有 ${charUnseated} 場沒有先後攻資料（舊版本的紀錄，或連線時房主的版本較舊），不計入。`}
+            </div>
             <b>{char} 出場的回合數</b>
             <TurnChart stats={charStats} />
             {legacy > 0 && <div className="muted" style={{ fontSize: 12 }}>另有 {legacy} 場舊版本紀錄只計入回合數，不進勝率。</div>}
+          </>
+        ) : tab === 'seat' ? (
+          <>
+            <div className="muted" style={{ fontSize: 12 }}>
+              先攻、後攻指整場開局隨機決定的那一次（之後每回合會交換）。不管你是哪一邊，統計開局先攻方與後攻方各贏幾場，兩邊互補。勝率 = 勝 ÷（勝 + 負），平手不計；不含同角色對打。
+            </div>
+            <SeatTable seats={seats} label="身分" />
+            {unseated > 0 && <div className="muted" style={{ fontSize: 12 }}>另有 {unseated} 場沒有先後攻資料（舊版本的紀錄，或連線時房主的版本較舊），不計入。</div>}
           </>
         ) : tab === 'turns' ? (
           <>

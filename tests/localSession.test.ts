@@ -120,7 +120,7 @@ describe('單機練習：戰績', () => {
     const v = s.getState().view!;
     const expected = v.winner === 'draw' ? 'draw' : v.winner === 0 ? 'win' : 'lose';
     expect(listRecords()).toEqual([
-      { version: expect.any(String), opponent: 'cpu', mine: '勇者', theirs: '刺客', outcome: expected, turns: v.turn },
+      { version: expect.any(String), opponent: 'cpu', mine: '勇者', theirs: '刺客', outcome: expected, turns: v.turn, first: v.openingFirst === 0 },
     ]);
   });
 

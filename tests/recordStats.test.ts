@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BattleRecord } from '../src/stats/records';
-import { characterSummary, compareVersion, filterByOpponent, legacyCount, matchup, matchupTable, MIN_WIN_RATE_VERSION, turnStats } from '../src/stats/summary';
+import { characterSeats, characterSummary, compareVersion, filterByOpponent, legacyCount, matchup, matchupTable, MIN_WIN_RATE_VERSION, seatStats, turnStats, unseatedCount } from '../src/stats/summary';
 
 const V = MIN_WIN_RATE_VERSION;
 const rec = (mine: string, theirs: string, outcome: BattleRecord['outcome'], over: Partial<BattleRecord> = {}): BattleRecord => ({
@@ -144,5 +144,63 @@ describe('單看角色', () => {
   it('舊版本不進總勝率；沒有場次時總勝率是 null', () => {
     const s = characterSummary([rec('勇者', '刺客', 'win', { version: '0.1.0' })], '勇者', chars);
     expect(s.total).toMatchObject({ games: 0, rate: null });
+  });
+});
+
+describe('先攻與後攻勝率', () => {
+  it('站在對局角度：不管我是誰，開局先攻方贏就算先攻方一勝；兩邊互補', () => {
+    const list = [
+      rec('勇者', '刺客', 'win', { first: true }), // 先攻方贏
+      rec('勇者', '刺客', 'lose', { first: false }), // 對手先攻，對手贏：先攻方贏
+      rec('勇者', '刺客', 'lose', { first: true }), // 先攻方輸
+      rec('法師', '刺客', 'win', { first: false }), // 後攻方贏
+      rec('法師', '刺客', 'win', { first: true }), // 先攻方贏
+    ];
+    const s = seatStats(list);
+    expect(s.first).toEqual({ win: 3, lose: 2, draw: 0, games: 5, rate: 0.6 });
+    expect(s.second).toEqual({ win: 2, lose: 3, draw: 0, games: 5, rate: 0.4 });
+  });
+
+  it('平手不進分母但算場數', () => {
+    const s = seatStats([rec('勇者', '刺客', 'win', { first: true }), rec('勇者', '刺客', 'draw', { first: false })]);
+    expect(s.first).toEqual({ win: 1, lose: 0, draw: 1, games: 2, rate: 1 });
+    expect(s.second).toEqual({ win: 0, lose: 1, draw: 1, games: 2, rate: 0 });
+  });
+
+  it('同角色對打、沒有先後攻資料、舊版本的場次都不算', () => {
+    const list = [
+      rec('勇者', '勇者', 'win', { first: true }),
+      rec('勇者', '刺客', 'win'),
+      rec('勇者', '刺客', 'win', { first: true, version: '0.1.0' }),
+    ];
+    expect(seatStats(list).first.games).toBe(0);
+    expect(seatStats(list).first.rate).toBeNull();
+  });
+
+  it('被排除的舊紀錄場數：夠新的版本、非同角色、但沒有先後攻資料', () => {
+    const list = [
+      rec('勇者', '刺客', 'win'),
+      rec('勇者', '刺客', 'win', { first: false }),
+      rec('勇者', '勇者', 'win'),
+      rec('勇者', '刺客', 'win', { version: '0.1.0' }),
+    ];
+    expect(unseatedCount(list)).toBe(1);
+    expect(unseatedCount(list, '勇者')).toBe(1);
+    expect(unseatedCount(list, '法師')).toBe(0);
+  });
+
+  it('單看角色：該角色先攻、後攻時的勝率，我用它或對手用它兩個方向合併', () => {
+    const list = [
+      rec('勇者', '刺客', 'win', { first: true }), // 勇者先攻贏
+      rec('刺客', '勇者', 'win', { first: false }), // 勇者先攻（對手後攻），勇者輸
+      rec('勇者', '法師', 'win', { first: false }), // 勇者後攻贏
+      rec('法師', '勇者', 'win', { first: true }), // 勇者後攻，勇者輸
+      rec('勇者', '刺客', 'lose', { first: false }), // 勇者後攻輸
+      rec('勇者', '勇者', 'win', { first: true }), // 同角色不算
+      rec('勇者', '刺客', 'win'), // 沒有資料不算
+    ];
+    const s = characterSeats(list, '勇者');
+    expect(s.first).toEqual({ win: 1, lose: 1, draw: 0, games: 2, rate: 0.5 });
+    expect(s.second).toEqual({ win: 1, lose: 2, draw: 0, games: 3, rate: 1 / 3 });
   });
 });

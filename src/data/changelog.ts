@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.28.5',
+    date: '2026-10-09',
+    items: [
+      { type: 'add', text: '戰績新增先攻與後攻勝率：新的「先後攻」分頁看整體，單看角色也列出該角色先攻、後攻時的勝率。先攻、後攻指整場開局隨機決定的那一次，不含同角色對打；這個版本之前的紀錄沒有先後攻資料，不計入' },
+    ],
+  },
+  {
     version: '0.28.4',
     date: '2026-10-09',
     items: [

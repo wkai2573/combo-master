@@ -6,7 +6,7 @@ export type Outcome = 'win' | 'lose' | 'draw';
 
 /**
  * 戰績：每場正常結束的對局留下的一筆結果，都是玩家自己的視角。
- * 只記這六個欄位，不記時間、勝負原因與牌組。
+ * 只記這幾個欄位，不記時間、勝負原因與牌組。
  */
 export interface BattleRecord {
   /** 對局當時的遊戲版本號，統計時用來排除規則已變動的舊紀錄 */
@@ -19,6 +19,8 @@ export interface BattleRecord {
   outcome: Outcome;
   /** 最終回合數 */
   turns: number;
+  /** 我是不是開局（第 1 回合）的先攻方；沒有這個欄位的舊紀錄不進先後攻統計 */
+  first?: boolean;
 }
 
 const KEY = 'lianji.records.v1';
@@ -26,14 +28,17 @@ const KEY = 'lianji.records.v1';
 /**
  * 對局結束時的視角轉成戰績。還沒結束、因離線或認輸結束、對局期間有人開過作弊的對局不留紀錄，回傳 null。
  * 訪客收到的視角若來自舊版房主，沒有這兩個旗標：當成不知道，一樣不記。
+ * 舊版房主的視角也沒有開局先攻：照樣記，只是不帶 first。
  */
 export function recordFromView(view: GameView, opponent: Opponent, version: string): BattleRecord | null {
   if (view.winner === null || view.forfeited !== false || view.cheated !== false) return null;
   const outcome: Outcome = view.winner === 'draw' ? 'draw' : view.winner === view.me ? 'win' : 'lose';
   const them = view.me === 0 ? 1 : 0;
-  return {
+  const record: BattleRecord = {
     version, opponent, mine: view.players[view.me].charId, theirs: view.players[them].charId, outcome, turns: view.turn,
   };
+  if (view.openingFirst === 0 || view.openingFirst === 1) record.first = view.openingFirst === view.me;
+  return record;
 }
 
 const isRecord = (r: unknown): r is BattleRecord => {
@@ -43,7 +48,8 @@ const isRecord = (r: unknown): r is BattleRecord => {
     && (o.opponent === 'cpu' || o.opponent === 'player')
     && typeof o.mine === 'string' && typeof o.theirs === 'string'
     && (o.outcome === 'win' || o.outcome === 'lose' || o.outcome === 'draw')
-    && typeof o.turns === 'number' && Number.isInteger(o.turns) && o.turns >= 0;
+    && typeof o.turns === 'number' && Number.isInteger(o.turns) && o.turns >= 0
+    && (o.first === undefined || typeof o.first === 'boolean');
 };
 
 /** 讀不到、資料損毀、格式不符的筆數都當成沒有 */

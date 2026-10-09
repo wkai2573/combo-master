@@ -52,6 +52,8 @@ export type StartPhase = '重置' | '先手' | '抽牌' | '爆發' | '增益';
 export interface GameState {
   players: [PlayerState, PlayerState];
   first: PlayerId;
+  /** 開局（第 1 回合）的先攻方；先攻每回合交換，所以結束時的 first 不能反推它 */
+  openingFirst: PlayerId;
   turn: number;
   phase: Phase;
   flags: TurnFlags;

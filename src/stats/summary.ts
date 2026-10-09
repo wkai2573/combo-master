@@ -85,6 +85,47 @@ export function matchupTable(records: BattleRecord[], chars: string[]): Cell[][]
   return chars.map((a) => chars.map((b) => matchup(records, a, b)));
 }
 
+/** 先後攻統計的對象：勝負規則沒變的版本、非同角色對打 */
+const seatEligible = (r: BattleRecord): boolean => countsForWinRate(r) && r.mine !== r.theirs;
+
+/** 先後攻統計用得上的戰績：符合對象，而且有開局先攻資料 */
+const seated = (r: BattleRecord): r is BattleRecord & { first: boolean } => seatEligible(r) && r.first !== undefined;
+
+export interface SeatStats {
+  /** 開局先攻方的戰績；勝負平都是先攻方的視角 */
+  first: Cell;
+  /** 開局後攻方的戰績，與 first 互補 */
+  second: Cell;
+}
+
+/**
+ * 全體的先攻與後攻勝率：站在對局角度，不管記錄者是誰，統計開局先攻方與後攻方各贏幾場。
+ * 同角色對打不算；沒有先後攻資料的舊紀錄不算（數量見 unseatedCount）。
+ */
+export function seatStats(records: BattleRecord[]): SeatStats {
+  const first: Tally = { win: 0, lose: 0, draw: 0 };
+  for (const r of records) {
+    if (seated(r)) first[r.first ? r.outcome : flip(r.outcome)]++;
+  }
+  return { first: cellOf(first, false), second: cellOf({ win: first.lose, lose: first.win, draw: first.draw }, false) };
+}
+
+/** 單看角色的先攻與後攻勝率：該角色開局先攻時、後攻時的戰績。我用它或對手用它的場次兩個方向合併 */
+export function characterSeats(records: BattleRecord[], char: string): SeatStats {
+  const first: Tally = { win: 0, lose: 0, draw: 0 };
+  const second: Tally = { win: 0, lose: 0, draw: 0 };
+  for (const r of records) {
+    if (!seated(r)) continue;
+    if (r.mine === char) (r.first ? first : second)[r.outcome]++;
+    else if (r.theirs === char) (r.first ? second : first)[flip(r.outcome)]++;
+  }
+  return { first: cellOf(first, false), second: cellOf(second, false) };
+}
+
+/** 符合先後攻統計的對象，卻因為沒有先後攻資料而被排除的場數；給角色時只算該角色出場的 */
+export const unseatedCount = (records: BattleRecord[], char?: string): number =>
+  records.filter((r) => seatEligible(r) && r.first === undefined && (char === undefined || r.mine === char || r.theirs === char)).length;
+
 /** 因為版本太舊而只計入回合數圖表的場數 */
 export const legacyCount = (records: BattleRecord[]): number => records.filter((r) => !countsForWinRate(r)).length;
 

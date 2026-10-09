@@ -222,7 +222,7 @@ describe('房主：戰績', () => {
     expect(listRecords()).toEqual([
       {
         version: expect.any(String), opponent: 'player', mine: '勇者', theirs: '刺客',
-        outcome: v.winner === 'draw' ? 'draw' : v.winner === 0 ? 'win' : 'lose', turns: v.turn,
+        outcome: v.winner === 'draw' ? 'draw' : v.winner === 0 ? 'win' : 'lose', turns: v.turn, first: v.openingFirst === 0,
       },
     ]);
   });

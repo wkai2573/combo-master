@@ -33,6 +33,8 @@ export interface GameView {
   me: PlayerId;
   players: [PlayerView, PlayerView];
   first: PlayerId;
+  /** 開局的先攻方；舊版房主送來的視角沒有這個欄位 */
+  openingFirst?: PlayerId;
   turn: number;
   phase: Phase;
   log: string[];
@@ -104,6 +106,7 @@ export function viewFor(game: Game, viewer: PlayerId, withLog = true): GameView 
     me: viewer,
     players: [playerView(game, 0, viewer), playerView(game, 1, viewer)],
     first: s.first,
+    openingFirst: s.openingFirst,
     turn: s.turn,
     phase: s.phase,
     log: withLog ? s.log.slice() : [],
