@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.32.2',
+    date: '2026-10-09',
+    items: [
+      { type: 'add', text: '新卡開放：財富管理（商人招式）：[發_蓋1] 必須將牌組上方 3 張卡以裏側放入經驗區；[經] 被蓋為裏側時，必須選擇 2 張經驗放回牌組底（表側裏側皆可，可含自己；Ex 卡直接移除遊戲）。牌組不足 3 張不能發動' },
+    ],
+  },
+  {
     version: '0.32.1',
     date: '2026-10-09',
     items: [

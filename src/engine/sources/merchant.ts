@@ -1,6 +1,6 @@
 import { canPay, chooseX, faceUpExp, pay } from '../cost';
 import { hasExpEffect } from '../effects';
-import { defineSource } from '../effectKit';
+import { defineSource, type EffectSource } from '../effectKit';
 import { activate, awakened, chooseCards, confirm, data, draw, log, move, orderCards, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
 import { other, type PlayerId } from '../types';
 
@@ -116,12 +116,13 @@ export const 高利貸 = defineSource({
 });
 
 /** 蓋反應：強制，自己錄發動與步驟影格，所以結算完不再補錄 */
-const coverReaction = (id: string, text: string, react: (g: GameCtx, p: PlayerId) => Gen | void) =>
+const coverReaction = (id: string, text: string, react: (g: GameCtx, p: PlayerId) => Gen | void, extraOn: EffectSource['on'] = {}) =>
   defineSource({
     id,
     at: 'exp',
     on: {
-      onCovered: (c) => c.effect({ label: `【${id}】被蓋成裏側：${text}`, mandatory: true, mark: false }, function* () {
+      ...extraOn,
+      onCovered: (c) => c.effect({ label: `【${data(c.self!).name}】被蓋成裏側：${text}`, mandatory: true, mark: false }, function* () {
         log(c.g, `【${data(c.self!).name}】被蓋成裏側`);
         activate(c.g, c.p, c.self!, `【${data(c.self!).name}】被蓋成裏側，效果發動`);
         const r = react(c.g, c.p);
@@ -138,4 +139,29 @@ export const 高價賣出 = coverReaction('高價賣出', '抽 1', function* (g,
   yield* draw(g, p, 1);
 });
 
-export const MERCHANT_SOURCES = [招財貓, 商人, 交涉, 即時停損, 高利貸, 低價買進, 高價賣出];
+// 財富管理（id 投資，商人）：
+//   [發_蓋1] 必須將牌組上方 3 張卡以裏側放入經驗區（牌組不足 3 張不能發動；放在經驗區最後方；牌組就是生命值，放完剩 0 張就落敗）
+//   [經] 當此卡被蓋為裏側時，必須選擇 2 張經驗放回牌組底（表側裏側都可以，可含此卡；不足 2 張全放回；Ex 卡離開經驗區就移除遊戲，不會進牌組）
+export const 財富管理 = coverReaction(
+  '投資',
+  '選擇 2 張經驗放回牌組底',
+  function* (g, p) {
+    const back = yield* chooseCards(g, p, '【財富管理】選擇 2 張經驗放回牌組底', Z(g, p, 'exp'), 2, 2);
+    for (const card of back) move(g, card, 'deck', 'bottom');
+    log(g, `【財富管理】${pname(g, p)} 將 ${back.length} 張經驗放回牌組底`);
+  },
+  {
+    onPlay: (c) => c.effect(
+      { label: '【財富管理】將牌組上方 3 張卡以裏側放入經驗區（蓋1）', cost: { cover: 1 }, when: () => Z(c.g, c.p, 'deck').length >= 3 },
+      () => {
+        for (const card of Z(c.g, c.p, 'deck').slice(0, 3)) {
+          move(c.g, card, 'exp');
+          card.covered = true;
+        }
+        log(c.g, `【財富管理】${pname(c.g, c.p)} 將牌組上方 3 張卡以裏側放入經驗區`);
+      },
+    ),
+  },
+);
+
+export const MERCHANT_SOURCES = [招財貓, 商人, 交涉, 即時停損, 高利貸, 低價買進, 高價賣出, 財富管理];
