@@ -6,6 +6,7 @@ export function TurnChart({ stats }: { stats: TurnStats | null }) {
   const top = Math.max(...stats.histogram.map((h) => h.games));
   return (
     <div className="turnchart">
+      <div className="tc-scroll">
       <div className="tc-bars" role="img" aria-label={`回合數分布，共 ${stats.games} 場`}>
         {stats.histogram.map((h) => (
           <div key={h.turns} className="tc-col" title={`${h.turns} 回合：${h.games} 場`}>
@@ -14,6 +15,7 @@ export function TurnChart({ stats }: { stats: TurnStats | null }) {
             <span className="tc-x">{h.turns}</span>
           </div>
         ))}
+      </div>
       </div>
       <div className="muted tc-axis">橫軸：回合數　縱軸：場數</div>
       <div className="tc-sum">

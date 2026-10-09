@@ -25,9 +25,10 @@ const KEY = 'lianji.records.v1';
 
 /**
  * 對局結束時的視角轉成戰績。還沒結束、因離線或認輸結束、對局期間有人開過作弊的對局不留紀錄，回傳 null。
+ * 訪客收到的視角若來自舊版房主，沒有這兩個旗標：當成不知道，一樣不記。
  */
 export function recordFromView(view: GameView, opponent: Opponent, version: string): BattleRecord | null {
-  if (view.winner === null || view.forfeited || view.cheated) return null;
+  if (view.winner === null || view.forfeited !== false || view.cheated !== false) return null;
   const outcome: Outcome = view.winner === 'draw' ? 'draw' : view.winner === view.me ? 'win' : 'lose';
   const them = view.me === 0 ? 1 : 0;
   return {

@@ -111,10 +111,14 @@ const inScope = (r: BattleRecord, scope: TurnScope | undefined): boolean => {
 export function turnStats(records: BattleRecord[], scope?: TurnScope): TurnStats | null {
   const turns = records.filter((r) => inScope(r, scope)).map((r) => r.turns);
   if (turns.length === 0) return null;
-  const min = Math.min(...turns);
-  const max = Math.max(...turns);
+  let min = turns[0];
+  let max = turns[0];
   const counts = new Map<number, number>();
-  for (const t of turns) counts.set(t, (counts.get(t) ?? 0) + 1);
+  for (const t of turns) {
+    if (t < min) min = t;
+    if (t > max) max = t;
+    counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
   const histogram = [];
   for (let t = min; t <= max; t++) histogram.push({ turns: t, games: counts.get(t) ?? 0 });
   return { histogram, games: turns.length, avg: turns.reduce((n, t) => n + t, 0) / turns.length, min, max };

@@ -8,7 +8,8 @@ import { TurnChart } from '../components/TurnChart';
 const FILTERS: [OpponentFilter, string][] = [['all', '全部'], ['cpu', '電腦'], ['player', '玩家']];
 const CHARS = ALL_CHARACTERS.filter((c) => !c.pending).map((c) => c.id);
 
-const percent = (rate: number) => `${Math.round(rate * 100)}%`;
+/** 四捨五入但不把 99.6% 顯示成 100%、也不把 0.4% 顯示成 0%：滿分與零分只留給真的全勝與全敗 */
+const percent = (rate: number) => `${rate === 0 ? 0 : rate === 1 ? 100 : Math.min(99, Math.max(1, Math.round(rate * 100)))}%`;
 
 type Tab = 'table' | 'char' | 'turns';
 const TABS: [Tab, string][] = [['table', '角色對戰表'], ['char', '單看角色'], ['turns', '回合數圖表']];

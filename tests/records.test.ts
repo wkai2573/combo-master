@@ -32,6 +32,13 @@ describe('戰績：從結束的視角產生', () => {
     expect(recordFromView(viewOf({ forfeited: true }), 'player', '1.0.0')).toBeNull();
     expect(recordFromView(viewOf({ cheated: true }), 'cpu', '1.0.0')).toBeNull();
   });
+
+  it('舊版房主送來的視角沒有離線與作弊旗標，無法確定就不記', () => {
+    const old = viewOf() as unknown as Record<string, unknown>;
+    delete old.cheated;
+    delete old.forfeited;
+    expect(recordFromView(old as unknown as GameView, 'player', '1.0.0')).toBeNull();
+  });
 });
 
 function fakeStorage() {

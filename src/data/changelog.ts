@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.28.4',
+    date: '2026-10-09',
+    items: [
+      { type: 'fix', text: '戰績頁：勝率不再把接近滿分四捨五入成 100%（只有全勝才顯示 100%）；回合數圖表遇到特別長的對局時可以左右捲動，不會超出版面' },
+      { type: 'fix', text: '連線對戰時，如果房主的版本比較舊、無法確定對局有沒有開過作弊，這場不記入戰績' },
+    ],
+  },
+  {
     version: '0.28.3',
     date: '2026-10-09',
     items: [
