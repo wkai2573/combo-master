@@ -95,7 +95,7 @@ describe('作弊中樞：訪客的操作', () => {
     expect(hub.apply(1, { k: 'remove', target: 0, uid: uid(g, 0, '黑桃1') })).toContain('提示');
     expect(hub.apply(1, { k: 'remove', target: 0, uid: 99999 })).toContain('手牌');
     expect(hub.apply(1, { k: 'reorder', target: 0, zone: 'deck', uids: [1] })).toContain('內容');
-    expect(hub.apply(1, { k: 'add', target: 0, cardId: 'Ex卡-中毒' })).toContain('Ex');
+    expect(hub.apply(1, { k: 'add', target: 0, cardId: 'Ex-中毒' })).toContain('Ex');
     expect(hub.apply(1, { k: 'add', target: 7 as never, cardId: '黑桃9' })).toContain('玩家');
     expect(hub.apply(1, { k: 'nope' } as never)).toContain('不合法');
     expect(hub.apply(1, undefined as never)).toContain('不合法');

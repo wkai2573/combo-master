@@ -275,7 +275,7 @@ describe('觸發窗口：回合開始', () => {
       phase: '重置',
       singlePhase: true,
       p0: { exp: ['黑桃1'] },
-      p1: { exp: ['Ex卡-中毒', '黑桃3', '凡骨的意志'] },
+      p1: { exp: ['Ex-中毒', '黑桃3', '凡骨的意志'] },
     });
     // 玩家0 先攻：先處理玩家0（沒有效果），再到玩家1 的窗口
     expect(g.pending!.player).toBe(1);
@@ -294,7 +294,7 @@ describe('觸發窗口：回合開始', () => {
       phase: '重置',
       singlePhase: true,
       p0: { exp: ['黑桃1'] },
-      p1: { exp: ['Ex卡-中毒', '黑桃3', '凡骨的意志'] },
+      p1: { exp: ['Ex-中毒', '黑桃3', '凡骨的意志'] },
     });
     pick(g, labels(g).find((l) => l.includes('凡骨的意志'))!);
     expect(Z(g, 1, 'exp').map((c) => c.covered)).toEqual([true, true, false]);

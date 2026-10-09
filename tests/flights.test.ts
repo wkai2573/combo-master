@@ -214,7 +214,7 @@ describe('卡片飛行', () => {
     const [left] = gone.players[0].exp.splice(0, 1);
     expect(diffFlights(before, gone)).toMatchObject([{ uid: left.uid, from: 'exp', to: 'gone', faceUpFrom: true }]);
     const spawned = structuredClone(before);
-    spawned.players[0].exp.push({ uid: 9999, id: 'Ex卡-中毒', covered: false, counters: 0 });
+    spawned.players[0].exp.push({ uid: 9999, id: 'Ex-中毒', covered: false, counters: 0 });
     expect(diffFlights(before, spawned)).toMatchObject([{ uid: 9999, from: 'spawn', to: 'exp' }]);
   });
 

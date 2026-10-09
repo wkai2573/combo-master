@@ -16,7 +16,7 @@ const norm = (s: string) => s.replace(/\d+/g, 'X');
 
 /**
  * 帶有可變部分的名稱要用樣式比對：「OO升級X」（OO＝2 字的技能名、X＝數字）、「(回合X次)」。
- * 「Ex卡-卡名」只是命名規則的說明，不比對。
+ * 「Ex-卡名」只是命名規則的說明，不比對。
  */
 const isSpecial = (name: string) => !name.includes('卡名') && (name.includes('OO') || /X(?!$)/.test(name));
 const specials: Array<[RegExp, string, Keyword]> = SHOWN.filter((k) => isSpecial(k.name)).map((k) => {

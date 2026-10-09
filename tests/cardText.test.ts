@@ -54,7 +54,7 @@ describe('卡片文字句型：切成各段', () => {
   });
 
   it('多行卡文逐行切；轉述別張卡的標題行是 header', () => {
-    const lines = parseCardText('[先_蓋1]：當歸還時，將 [Ex卡-中毒] 移入出招卡較少那方的經驗區。\n[Ex卡-中毒]：\n[經]：當我方後攻的回合開始時，直擊我方3。\n當此卡離開經驗區時，移除遊戲。');
+    const lines = parseCardText('[先_蓋1]：當歸還時，將 [Ex-中毒] 移入出招卡較少那方的經驗區。\n[Ex-中毒]：\n[經]：當我方後攻的回合開始時，直擊我方3。\n當此卡離開經驗區時，移除遊戲。');
     expect(lines.map((l) => l.kind)).toEqual(['line', 'header', 'line', 'line']);
     expect(lines[2].tags).toEqual(['經']);
     expect(lines[3].timing).toBe('當此卡離開經驗區時，');

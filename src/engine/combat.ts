@@ -168,7 +168,7 @@ export function* returnStep(g: GameCtx): Gen {
     // 招式卡疊由最底到最頂，最後是追擊卡疊
     for (const c of combatZone(g, p)) move(g, c, 'exp');
   }
-  // 塗毒：歸還時，把 [Ex卡-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
+  // 塗毒：歸還時，把 [Ex-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
   yield* fireEach(g, 'afterReturn');
   mark(g, '招式與追擊卡依序放入經驗區', { type: 'return' });
 }

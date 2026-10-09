@@ -20,7 +20,7 @@ describe('卡面顏色：外框看職業，底色看卡種', () => {
   });
 
   it('Ex 卡外框與底色都是 Ex 青色，不看職業', () => {
-    const ex = getCard('Ex卡-中毒');
+    const ex = getCard('Ex-中毒');
     expect(cardBorderColor(ex)).toBe(KIND_COLOR.ex);
     expect(cardColor(ex)).toBe(KIND_COLOR.ex);
   });

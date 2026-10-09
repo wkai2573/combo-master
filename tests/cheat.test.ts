@@ -32,7 +32,7 @@ describe('作弊：加入手牌', () => {
 
   it('Ex 卡與不存在的卡被拒絕，手牌不變', () => {
     const g = scenario({ p0: { hand: ['黑桃1', '黑桃6'] } });
-    expect(() => g.cheatAdd(0, 0, 'Ex卡-中毒')).toThrow('Ex');
+    expect(() => g.cheatAdd(0, 0, 'Ex-中毒')).toThrow('Ex');
     expect(() => g.cheatAdd(0, 0, '不存在的卡')).toThrow('不存在');
     expect(names(g, 0, 'hand')).toEqual(['黑桃1', '黑桃6']);
   });
@@ -169,7 +169,7 @@ describe('作弊：加卡到牌區', () => {
 
   it('Ex 卡、不存在的卡與手牌等不能排序的牌區被拒絕，內容不變', () => {
     const g = scenario({ p0: { hand: ['黑桃1', '黑桃6'], deck: ['黑桃2'] }, p1: { hand: [] } });
-    expect(() => g.cheatInsert(0, 0, 'deck', 'Ex卡-中毒')).toThrow('Ex');
+    expect(() => g.cheatInsert(0, 0, 'deck', 'Ex-中毒')).toThrow('Ex');
     expect(() => g.cheatInsert(0, 0, 'deck', '不存在的卡')).toThrow('不存在');
     expect(() => g.cheatInsert(0, 0, 'hand' as never, '黑桃5')).toThrow('不能');
     expect(() => g.cheatInsert(0, 0, 'moves' as never, '黑桃5')).toThrow('牌區不合法');

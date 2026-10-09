@@ -1,19 +1,19 @@
 import type { CardData } from './types';
 
 /** Ex 卡的卡名（也是 id）前綴 */
-export const EX_PREFIX = 'Ex卡-';
+export const EX_PREFIX = 'Ex-';
 
 /** 這張卡是不是 Ex 卡 */
 export const isExCardId = (id: string): boolean => id.startsWith(EX_PREFIX);
 
 /**
  * Ex 卡：臨時額外卡，由其他卡片的效果生成，不在牌組裡，也不能組進牌組。
- * （卡表的關鍵字「Ex卡-卡名」）
+ * （卡表的關鍵字「Ex-卡名」）
  */
 export const EX_CARDS: CardData[] = [
   {
-    id: 'Ex卡-中毒',
-    name: 'Ex卡-中毒',
+    id: 'Ex-中毒',
+    name: 'Ex-中毒',
     kind: 'move',
     cls: '共用',
     traits: ['毒'],

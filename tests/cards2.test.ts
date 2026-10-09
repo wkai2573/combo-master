@@ -492,38 +492,38 @@ describe('新卡（第二批）', () => {
     pick(yes, '塗毒');
     pick(yes, '發動');
     expect(Z(yes, 0, 'exp')[0].covered).toBe(true);
-    expect(names(yes, 1, 'exp')).toContain('Ex卡-中毒'); // 我方出招 1 張、對方 0 張，中毒落入對方
+    expect(names(yes, 1, 'exp')).toContain('Ex-中毒'); // 我方出招 1 張、對方 0 張，中毒落入對方
     const no = setup();
     pick(no, '塗毒');
     pick(no, '不發動');
-    expect(names(no, 1, 'exp')).not.toContain('Ex卡-中毒');
-    expect(names(no, 0, 'exp')).not.toContain('Ex卡-中毒');
+    expect(names(no, 1, 'exp')).not.toContain('Ex-中毒');
+    expect(names(no, 0, 'exp')).not.toContain('Ex-中毒');
   });
 
-  it('塗毒：歸還時 [Ex卡-中毒] 移入出招卡較少的一方，相同時落入對方；離開經驗區就移除遊戲', () => {
+  it('塗毒：歸還時 [Ex-中毒] 移入出招卡較少的一方，相同時落入對方；離開經驗區就移除遊戲', () => {
     const g = scenario();
     塗毒狀態.of(g, 0).armed = 1;
     g.state.flags.played = [1, 2];
     drive(returnStep(g));
-    expect(names(g, 0, 'exp')).toContain('Ex卡-中毒');
+    expect(names(g, 0, 'exp')).toContain('Ex-中毒');
 
     const t = scenario();
     塗毒狀態.of(t, 0).armed = 1;
     t.state.flags.played = [2, 2];
     drive(returnStep(t));
-    expect(names(t, 1, 'exp')).toContain('Ex卡-中毒');
+    expect(names(t, 1, 'exp')).toContain('Ex-中毒');
 
-    const poison = Z(t, 1, 'exp').find((c) => c.id === 'Ex卡-中毒')!;
+    const poison = Z(t, 1, 'exp').find((c) => c.id === 'Ex-中毒')!;
     discard(t, poison);
-    expect(Z(t, 1, 'discard').some((c) => c.id === 'Ex卡-中毒')).toBe(false);
-    expect(Z(t, 1, 'exp').some((c) => c.id === 'Ex卡-中毒')).toBe(false);
+    expect(Z(t, 1, 'discard').some((c) => c.id === 'Ex-中毒')).toBe(false);
+    expect(Z(t, 1, 'exp').some((c) => c.id === 'Ex-中毒')).toBe(false);
   });
 
   it('中毒：我方後攻的回合開始時，直擊我方 3；先攻時不會', () => {
-    const g = scenario({ phase: '重置', singlePhase: true, p1: { exp: ['Ex卡-中毒'] } });
+    const g = scenario({ phase: '重置', singlePhase: true, p1: { exp: ['Ex-中毒'] } });
     expect(Z(g, 1, 'deck')).toHaveLength(17);
 
-    const f = scenario({ first: 1, phase: '重置', singlePhase: true, p1: { exp: ['Ex卡-中毒'] } });
+    const f = scenario({ first: 1, phase: '重置', singlePhase: true, p1: { exp: ['Ex-中毒'] } });
     expect(Z(f, 1, 'deck')).toHaveLength(20);
   });
 

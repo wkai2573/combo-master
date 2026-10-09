@@ -24,10 +24,10 @@ describe('經驗效果：登記表的查詢', () => {
   it('放在經驗區的條目才算，其他位置、沒有條目的都不算', () => {
     expect(hasExpEffect('低價買進')).toBe(true);
     expect(hasExpEffect('復仇之嚎')).toBe(true);
-    expect(hasExpEffect('Ex卡-中毒')).toBe(true);
+    expect(hasExpEffect('Ex-中毒')).toBe(true);
     expect(hasExpEffect('火球')).toBe(false);
     expect(hasExpEffect('高利貸')).toBe(false); // 文字裡引用 [經]，但它不是經驗效果
-    expect(hasExpEffect('塗毒')).toBe(false); // 內嵌 Ex卡-中毒 的 [經]，不算它自己的
+    expect(hasExpEffect('塗毒')).toBe(false); // 內嵌 Ex-中毒 的 [經]，不算它自己的
     expect(hasExpEffect('紅心5')).toBe(false);
   });
 

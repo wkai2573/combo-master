@@ -1,9 +1,9 @@
 import { defineSource } from '../effectKit';
 import { directHit, isFirst, log, pname } from '../ops';
 
-// Ex卡-中毒：[經] 當我方後攻的回合開始時，直擊我方 3，強制
-export const Ex卡中毒 = defineSource({
-  id: 'Ex卡-中毒',
+// Ex-中毒：[經] 當我方後攻的回合開始時，直擊我方 3，強制
+export const Ex中毒 = defineSource({
+  id: 'Ex-中毒',
   at: 'exp',
   on: {
     turnStart: (c) => {
@@ -22,4 +22,4 @@ export const Ex卡中毒 = defineSource({
   },
 });
 
-export const COMMON_SOURCES = [Ex卡中毒];
+export const COMMON_SOURCES = [Ex中毒];

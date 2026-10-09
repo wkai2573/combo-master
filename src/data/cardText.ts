@@ -10,7 +10,7 @@ const TAGS = new Set(['先', '追', '發', '頂', '經']);
 const COST = /^(?:蓋|怒)(?:\d+|X)$/;
 
 export interface CardLine {
-  /** header：轉述別張卡的標題行，例如「[Ex卡-中毒]：」；line：一般的一行 */
+  /** header：轉述別張卡的標題行，例如「[Ex-中毒]：」；line：一般的一行 */
   kind: 'line' | 'header';
   raw: string;
   /** 回合X次，例如「(回合1次)」 */
