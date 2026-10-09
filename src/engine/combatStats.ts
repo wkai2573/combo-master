@@ -1,6 +1,6 @@
 import { isVanilla } from '../data/enabledCards';
 import { moveRules, query } from './effects';
-import { data, Z, type GameCtx } from './ops';
+import { combatZone, data, Z, type GameCtx } from './ops';
 import type { PlayerId } from './types';
 
 export { ASSASSIN_CAP } from './sources/thief';
@@ -27,21 +27,21 @@ export interface CombatStats {
 
 /** 我方戰鬥區白板卡（無特徵、無效果的招式）數量 */
 export function vanillaCount(g: GameCtx, p: PlayerId): number {
-  return Z(g, p, 'moves').filter((c) => isVanilla(data(c))).length;
+  return combatZone(g, p).filter((c) => isVanilla(data(c))).length;
 }
 
 /** 完整結算該玩家目前的攻守數據與明細 */
 export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
-  const combatZone = Z(g, p, 'moves');
+  const moves = Z(g, p, 'moves');
   let combatZoneAtk = 0;
   let combatZoneDef = 0;
   let shieldLift = 0;
 
-  // [頂] 盾擊：位於最上方時，戰鬥區每張招式卡的攻擊力至少是它的原始防禦力（先補，再套用其他加成與修正）
-  const lift = combatZone.length > 0 && moveRules(combatZone[combatZone.length - 1].id).liftAtkToDef;
+  // [頂] 盾擊：位於招式卡疊最上方時，戰鬥區（含追擊卡疊）每張招式卡的攻擊力至少是它的原始防禦力（先補，再套用其他加成與修正）
+  const lift = moves.length > 0 && moveRules(moves[moves.length - 1].id).liftAtkToDef;
 
-  combatZone.forEach((c, i) => {
-    const isTop = i === combatZone.length - 1;
+  moves.forEach((c, i) => {
+    const isTop = i === moves.length - 1;
     const rules = moveRules(c.id);
     const atkMod = isTop ? rules.topAtk : 0;
     const defMod = isTop ? rules.topDef : 0;
@@ -56,7 +56,10 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
   let pursuitDef = 0;
   for (const c of Z(g, p, 'pursuit')) {
     const rules = moveRules(c.id);
-    pursuitAtk += data(c).atk + rules.pursuitAtk;
+    const printedAtk = data(c).atk;
+    const atk = lift ? Math.max(printedAtk, data(c).def) : printedAtk;
+    shieldLift += atk - printedAtk;
+    pursuitAtk += atk + rules.pursuitAtk;
     pursuitDef += rules.pursuitDef;
   }
 

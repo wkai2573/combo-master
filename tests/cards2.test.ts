@@ -295,14 +295,14 @@ describe('新卡（第二批）', () => {
     expect(totalDef(g, 0)).toBe(ids.reduce((n, id) => n + defOf(id), 0));
   });
 
-  it('盾擊：不在最上方就沒有效果；追擊卡不算；其餘加成在補攻擊力之後照算', () => {
+  it('盾擊：不在最上方就沒有效果；追擊卡疊的招式卡也會補；其餘加成在補攻擊力之後照算', () => {
     const g = scenario({ chars: ['刺客', '勇者'] });
     setZones(g, 0, { moves: ['盾擊', '梅花1'] });
     expect(totalAtk(g, 0)).toBe(atkOf('盾擊') + atkOf('梅花1'));
     setZones(g, 0, { moves: ['梅花1', '盾擊'], pursuit: ['梅花1'] });
-    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + atkOf('梅花1')); // 追擊的梅花1 照原本的攻擊力
+    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + defOf('梅花1')); // 追擊卡疊的梅花1 也補到防禦力
     伏擊狀態.of(g, 0).atk = 3;
-    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + atkOf('梅花1') + 3);
+    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + defOf('梅花1') + 3);
   });
 
   it('即時停損：[發_蓋4] 先手步驟打出後雙方立即收招，沒有反擊步驟也不做追擊判定', () => {

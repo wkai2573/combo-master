@@ -1,5 +1,5 @@
 import { defineSource, lasting, slot } from '../effectKit';
-import { activate, awakened, chooseCards, data, directHit, discard, draw, log, move, pname, recover, Z } from '../ops';
+import { activate, awakened, chooseCards, combatZone, data, directHit, discard, draw, log, move, pname, recover, Z } from '../ops';
 import { other } from '../types';
 
 // 冰與雷之曲（法師）：[蓋3] 收招時，戰鬥區的卡合計具有「冰」「電」兩個特徵時，抽 1、回復 1；
@@ -9,7 +9,7 @@ export const 冰與雷之曲 = defineSource({
   at: 'gear',
   on: {
     onPass: (c) => {
-      const has = (traits: string[]) => Z(c.g, c.p, 'moves').some((card) => data(card).traits.some((t) => traits.includes(t)));
+      const has = (traits: string[]) => combatZone(c.g, c.p).some((card) => data(card).traits.some((t) => traits.includes(t)));
       return c.effect(
         { label: '【冰與雷之曲】抽 1，回復 1（蓋3）', cost: { cover: 3 }, when: () => has(['冰']) && has(['電']) },
         function* () {
@@ -75,10 +75,10 @@ export const 電弧 = defineSource({
   at: 'moves',
   on: {
     onPlay: (c) => c.effect(
-      { label: '【電弧】抽 X，再放 X 張手牌到牌組底', mandatory: true, when: () => Z(c.g, other(c.p), 'moves').length > 0 },
+      { label: '【電弧】抽 X，再放 X 張手牌到牌組底', mandatory: true, when: () => combatZone(c.g, other(c.p)).length > 0 },
       function* () {
         const { g, p } = c;
-        const x = Z(g, other(p), 'moves').length;
+        const x = combatZone(g, other(p)).length;
         activate(g, p, c.self!);
         yield* draw(g, p, x);
         const put = yield* chooseCards(g, p, `【電弧】選擇 ${x} 張手牌放到牌組底`, Z(g, p, 'hand'), x, x);
