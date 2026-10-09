@@ -67,7 +67,7 @@ export class Game {
     this.state = {
       players: [emptyPlayer(0, setup.decks[0].charId), emptyPlayer(1, setup.decks[1].charId)],
       first: 0, turn: 0, phase: '設置', flags: emptyFlags(), passed: [false, false],
-      log: [], winner: null, winReason: '', awakeSeen: [false, false], slots: [{}, {}],
+      log: [], winner: null, winReason: '', cheated: false, forfeited: false, awakeSeen: [false, false], slots: [{}, {}],
     };
     this.it = this.run();
     this.advance(undefined);
@@ -82,6 +82,7 @@ export class Game {
     if (this.over) return;
     this.state.winner = other(player);
     this.state.winReason = reason;
+    this.state.forfeited = true;
     this.state.phase = '結束';
     this.pending = null;
     log(this, `${pname(this, other(player))} 獲勝（${reason}）`);

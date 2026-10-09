@@ -3,6 +3,8 @@ import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
 import type { CheatSnapshot, CheatZone } from '../engine/cheat';
 import { Rng } from '../engine/rng';
+import { addRecord, recordFromView, type Opponent } from '../stats/records';
+import { APP_VERSION } from '../version';
 import type { Frame, GameView } from '../engine/view';
 import type { PlayerId } from '../engine/types';
 import { peerTransport, type HostLink, type HostTransport, type Room } from './hostTransport';
@@ -84,6 +86,9 @@ function makeCheatApi(parts: {
 
 abstract class Base implements Session {
   abstract readonly me: PlayerId;
+  /** 這場對局的對手類型，結束時寫進戰績 */
+  protected abstract readonly opponent: Opponent;
+  private recorded = false;
   protected s: SessionState = {
     status: 'connecting', view: null, message: '', opponentOnline: true, forfeitIn: null,
     batch: { id: 0, frames: [] }, cheatOn: [false, false], cheatSnap: null,
@@ -107,7 +112,15 @@ abstract class Base implements Session {
   }
   protected set(patch: Partial<SessionState>) {
     this.s = { ...this.s, ...patch };
+    this.recordIfOver();
     this.subs.forEach((f) => f());
+  }
+  /** 對局第一次進入結束狀態時留下戰績；離線判負、作弊過的對局由 recordFromView 排除 */
+  private recordIfOver() {
+    if (this.recorded || this.s.status !== 'over' || !this.s.view) return;
+    this.recorded = true;
+    const record = recordFromView(this.s.view, this.opponent, APP_VERSION);
+    if (record) addRecord(record);
   }
   abstract submit(keys: string[]): void;
   abstract leave(): void;
@@ -117,6 +130,7 @@ abstract class Base implements Session {
 
 export class LocalSession extends Base {
   readonly me: PlayerId = 0;
+  protected readonly opponent = 'cpu' as const;
   private match: Match;
   private rng = new Rng();
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -178,6 +192,7 @@ export class LocalSession extends Base {
 
 export class HostSession extends Base {
   readonly me: PlayerId = 0;
+  protected readonly opponent = 'player' as const;
   private room: Room | undefined;
   private link: HostLink | undefined;
   private match: Match | undefined;
@@ -348,6 +363,7 @@ function viewMsg(seat: SeatUpdate): HostMsg {
 
 export class GuestSession extends Base {
   readonly me: PlayerId = 1;
+  protected readonly opponent = 'player' as const;
   private peer: Peer;
   private conn: DataConnection | undefined;
   private pingTimer: ReturnType<typeof setInterval> | undefined;

@@ -38,6 +38,7 @@ function referenced(g: Game): Set<number> {
 /** 開關作弊模式也寫進紀錄，讓雙方事後對得上 */
 export function cheatSwitch(g: Game, by: PlayerId, on: boolean): void {
   checkPlayers(by, by);
+  if (on) g.state.cheated = true;
   log(g, `【作弊】${pname(g, by)} ${on ? '開啟' : '關閉'}作弊模式`);
 }
 

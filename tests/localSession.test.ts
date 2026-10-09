@@ -1,16 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { presetDeck } from '../src/data/presetDecks';
 import { LocalSession } from '../src/net/session';
+import { listRecords } from '../src/stats/records';
 
 // 時間固定在 1：亂數種子是現在時間，這樣玩家先攻，而且第一次出招後輪到機器人
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(1);
+  const data = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (k: string) => data.get(k) ?? null,
+    setItem: (k: string, v: string) => void data.set(k, v),
+    removeItem: (k: string) => void data.delete(k),
+  });
 });
 const sessions: LocalSession[] = [];
 afterEach(() => {
   sessions.splice(0).forEach((s) => s.leave());
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 function start() {
@@ -92,5 +100,52 @@ describe('單機練習', () => {
     expect(await s.cheat!.add(0, '黑桃9')).toBe('已離開遊戲');
     expect(s.getState().batch.id).toBe(id);
     expect(s.getState().cheatOn).toEqual([false, false]);
+  });
+});
+
+/** 玩家一律選第一個選項，機器人照時間出招，直到對局結束 */
+function playToEnd(s: LocalSession) {
+  for (let i = 0; i < 5000 && s.getState().status !== 'over'; i++) {
+    if (s.getState().view!.prompt) playFirst(s);
+    else vi.advanceTimersByTime(900);
+  }
+  expect(s.getState().status).toBe('over');
+}
+
+describe('單機練習：戰績', () => {
+  it('對局正常打完留下一筆戰績：對手是電腦，欄位對得上最終畫面', () => {
+    const s = start();
+    expect(listRecords()).toEqual([]);
+    playToEnd(s);
+    const v = s.getState().view!;
+    const expected = v.winner === 'draw' ? 'draw' : v.winner === 0 ? 'win' : 'lose';
+    expect(listRecords()).toEqual([
+      { version: expect.any(String), opponent: 'cpu', mine: '勇者', theirs: '刺客', outcome: expected, turns: v.turn },
+    ]);
+  });
+
+  it('結束後再有更新也不會重複記錄', () => {
+    const s = start();
+    playToEnd(s);
+    s.submit(['x']);
+    vi.advanceTimersByTime(5000);
+    expect(listRecords()).toHaveLength(1);
+  });
+
+  it('對局期間開過作弊（即使後來關掉）就不記錄', () => {
+    const s = start();
+    s.cheat!.setOn(true);
+    s.cheat!.setOn(false);
+    playToEnd(s);
+    expect(s.getState().view!.cheated).toBe(true);
+    expect(listRecords()).toEqual([]);
+  });
+
+  it('中途離開不記錄', () => {
+    const s = start();
+    playFirst(s);
+    s.leave();
+    vi.advanceTimersByTime(5000);
+    expect(listRecords()).toEqual([]);
   });
 });

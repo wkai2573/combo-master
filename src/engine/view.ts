@@ -38,6 +38,10 @@ export interface GameView {
   log: string[];
   winner: PlayerId | 'draw' | null;
   winReason: string;
+  /** 對局期間是否有任何一方開過作弊模式 */
+  cheated: boolean;
+  /** 是否因玩家離線或認輸而結束 */
+  forfeited: boolean;
   /** 需要我回應的提示 */
   prompt: Request | null;
   /** 正在等待哪位玩家（我或對手）；遊戲結束為 null */
@@ -105,6 +109,8 @@ export function viewFor(game: Game, viewer: PlayerId, withLog = true): GameView 
     log: withLog ? s.log.slice() : [],
     winner: s.winner,
     winReason: s.winReason,
+    cheated: s.cheated,
+    forfeited: s.forfeited,
     prompt: pending && pending.player === viewer ? pending : null,
     waitingFor: pending ? pending.player : null,
   };

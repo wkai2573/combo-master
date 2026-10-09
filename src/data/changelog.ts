@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.28.0',
+    date: '2026-10-09',
+    items: [
+      { type: 'add', text: '新增「戰績」：單機練習與連線對戰正常打完，會在這個瀏覽器自動記下結果，首頁可以查看總場數與勝負平，也能清除全部紀錄' },
+      { type: 'add', text: '對手離線被判負、中途離開、對局期間有人開過作弊模式的對局，不會記入戰績' },
+    ],
+  },
+  {
     version: '0.27.3',
     date: '2026-10-09',
     items: [

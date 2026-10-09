@@ -2,14 +2,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { presetDeck } from '../src/data/presetDecks';
 import { FORFEIT_AFTER_S, OFFLINE_AFTER_MS, type HostMsg } from '../src/net/protocol';
 import { HostSession } from '../src/net/session';
+import { listRecords } from '../src/stats/records';
 import { FakeTransport } from './fakeTransport';
 
 // 房主有定時器（心跳偵測、離線倒數），一律用假計時器
-beforeEach(() => void vi.useFakeTimers());
+beforeEach(() => {
+  vi.useFakeTimers();
+  const data = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (k: string) => data.get(k) ?? null,
+    setItem: (k: string, v: string) => void data.set(k, v),
+    removeItem: (k: string) => void data.delete(k),
+  });
+});
 const hosts: HostSession[] = [];
 afterEach(() => {
   hosts.splice(0).forEach((h) => h.leave());
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 function open() {
@@ -188,5 +198,57 @@ describe('房主：訪客離線', () => {
     guest.drop();
     expect(host.getState().opponentOnline).toBe(false);
     expect(host.getState().forfeitIn).toBe(FORFEIT_AFTER_S);
+  });
+});
+
+/** 雙方都選第一個選項，直到對局結束 */
+function playToEnd(host: HostSession, guest: ReturnType<typeof start>['guest']) {
+  for (let i = 0; i < 5000 && host.getState().status !== 'over'; i++) {
+    const mine = host.getState().view!.prompt;
+    if (mine) host.submit([mine.options[0].key]);
+    else {
+      const theirs = lastView(guest.sent).view.prompt!;
+      guest.say({ t: 'submit', keys: [theirs.options[0].key] });
+    }
+  }
+  expect(host.getState().status).toBe('over');
+}
+
+describe('房主：戰績', () => {
+  it('對局正常打完留下一筆戰績，對手是玩家', () => {
+    const { host, guest } = start();
+    playToEnd(host, guest);
+    const v = host.getState().view!;
+    expect(listRecords()).toEqual([
+      {
+        version: expect.any(String), opponent: 'player', mine: '勇者', theirs: '刺客',
+        outcome: v.winner === 'draw' ? 'draw' : v.winner === 0 ? 'win' : 'lose', turns: v.turn,
+      },
+    ]);
+  });
+
+  it('對手離線被判負不記錄，送給訪客的視角標明是離線結束', () => {
+    const { host, guest } = start();
+    vi.advanceTimersByTime(OFFLINE_AFTER_MS + 1000 + FORFEIT_AFTER_S * 1000);
+    expect(host.getState().status).toBe('over');
+    expect(host.getState().view!.forfeited).toBe(true);
+    expect(lastView(guest.sent).view.forfeited).toBe(true);
+    expect(listRecords()).toEqual([]);
+  });
+
+  it('訪客開過作弊，這場雙方都不記錄，視角也帶著作弊旗標', () => {
+    const { host, guest } = start();
+    guest.say({ t: 'cheat', on: true });
+    guest.say({ t: 'cheat', on: false });
+    expect(host.getState().view!.cheated).toBe(true);
+    expect(lastView(guest.sent).view.cheated).toBe(true);
+    playToEnd(host, guest);
+    expect(listRecords()).toEqual([]);
+  });
+
+  it('房主中途離開不記錄', () => {
+    const { host } = start();
+    host.leave();
+    expect(listRecords()).toEqual([]);
   });
 });

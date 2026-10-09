@@ -5,7 +5,7 @@ import { FlowChartModal } from '../components/FlowChartModal';
 import { Modal } from '../components/Modal';
 import type { LobbyMode } from './Lobby';
 
-export type Route = 'home' | 'decks' | LobbyMode;
+export type Route = 'home' | 'decks' | 'records' | LobbyMode;
 
 export function Home({ go }: { go: (r: Route) => void }) {
   const [rules, setRules] = useState(false);
@@ -23,6 +23,7 @@ export function Home({ go }: { go: (r: Route) => void }) {
         <button onClick={() => go('join')}>加入房間</button>
         <button onClick={() => go('practice')}>單機練習（對戰機器人）</button>
         <button onClick={() => go('decks')}>組牌</button>
+        <button onClick={() => go('records')}>戰績</button>
         <button onClick={() => setRules(true)}>規則說明</button>
         <button onClick={() => setChangelog(true)}>更新日誌</button>
         <button onClick={() => setFlow(true)}>戰鬥流程圖</button>

@@ -60,6 +60,10 @@ export interface GameState {
   log: string[];
   winner: PlayerId | 'draw' | null;
   winReason: string;
+  /** 對局期間是否有任何一方開過作弊模式；開過就不會因為關閉而清除 */
+  cheated: boolean;
+  /** 是否因為玩家離線或認輸而結束（不是靠勝負規則分出的結果） */
+  forfeited: boolean;
   /** 各玩家上次偵測時是否處於覺醒狀態；由未覺醒變成覺醒才算進入覺醒（見效果來源模組的覺醒偵測） */
   awakeSeen: [boolean, boolean];
   /** 卡片擁有的回合狀態（效果來源的狀態槽），每位玩家一份，回合開始清空 */
