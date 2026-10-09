@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cardOpt, Z, data } from '../src/engine/ops';
 import { frameFor, viewFor } from '../src/engine/view';
-import { pick, scenario } from './helpers';
+import { armorScenario, pick, scenario } from './helpers';
 
 // 裏側的經驗卡只對擁有者顯示牌面（ADR 0003）：測試放在玩家視角（viewFor／影格／提示）這道接縫上
 const exp = (g: ReturnType<typeof scenario>, viewer: 0 | 1, owner: 0 | 1 = 0) => viewFor(g, viewer).players[owner].exp;
@@ -32,14 +32,9 @@ describe('裏側卡的視角', () => {
   });
 
   it('動畫影格也一樣：擁有者視角的影格帶裏側卡牌面，對手視角的影格不帶', () => {
-    const g = scenario({
-      animate: true,
-      chars: ['法師', '勇者'],
-      p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'], rage: Array(5).fill('黑桃1') },
-      p1: { hand: [] },
-    });
+    const g = armorScenario({ exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'] }, { animate: true });
     g.drainFrames();
-    pick(g, '冰霜護甲');
+    pick(g, '黑桃9');
     pick(g, '發動');
     g.submit(g.pending!.player, g.pending!.options.slice(0, 3).map((o) => o.key));
     const frames = g.drainFrames();
@@ -56,12 +51,8 @@ describe('裏側卡的視角', () => {
   });
 
   it('冰霜護甲：選裏側卡的提示帶牌面與卡名，擁有者看著牌面選；被捨棄進棄牌區後雙方都看得到', () => {
-    const g = scenario({
-      chars: ['法師', '勇者'],
-      p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'], rage: Array(5).fill('黑桃1') },
-      p1: { hand: [] },
-    });
-    pick(g, '冰霜護甲');
+    const g = armorScenario({ exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'] });
+    pick(g, '黑桃9');
     pick(g, '發動');
     const req = g.pending!;
     expect(req.options).toHaveLength(4);
@@ -93,14 +84,10 @@ describe('裏側卡的視角', () => {
   });
 
   it('遊戲紀錄不洩漏裏側卡的卡名', () => {
-    const g = scenario({
-      chars: ['法師', '勇者'],
-      p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'], rage: Array(5).fill('黑桃1') },
-      p1: { hand: [] },
-    });
-    pick(g, '冰霜護甲');
+    const g = armorScenario({ exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'] });
+    pick(g, '黑桃9');
     pick(g, '發動');
-    // 此時四張都是裏側：選之前的紀錄不能有它們的卡名（冰霜護甲與打出的黑桃2 本身是公開的）
+    // 此時四張都是裏側：選之前的紀錄不能有它們的卡名（冰霜護甲與對方打出的黑桃9 本身是公開的）
     const log = g.state.log.join('\n');
     for (const name of ['黑桃3', '黑桃4', '黑桃5', '黑桃6']) expect(log).not.toContain(name);
   });

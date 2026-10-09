@@ -39,7 +39,10 @@ export interface TurnFlags {
   played: [number, number];
   opened: boolean;
   pursuitSuccess: [number, number];
+  /** 實際承受的傷害（放進怒氣區的張數就是這個數字，被減免後的數字） */
   damageTaken: [number, number];
+  /** 傷害計算時窗口期間，雙方將要承受的傷害；窗口裡的效果可以減少它，窗口結束才真正放進怒氣區 */
+  damagePending: [number, number];
 }
 
 export type Phase =

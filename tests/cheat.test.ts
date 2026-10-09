@@ -3,7 +3,7 @@ import { isExCardId } from '../src/data/exCards';
 import { ALL_CARDS } from '../src/data/cards';
 import { CHEAT_POOL } from '../src/engine/cheat';
 import { Z } from '../src/engine/ops';
-import { names, pick, scenario } from './helpers';
+import { armorScenario, names, pick, scenario } from './helpers';
 
 // 先攻方第一個提示是「選一張手牌出招」，手牌至少 2 張才不會自動出招；測試都停在這個提示上
 const uidOf = (g: ReturnType<typeof scenario>, p: 0 | 1, z: Parameters<typeof Z>[2], name: string) =>
@@ -88,16 +88,14 @@ describe('作弊：調整牌區順序', () => {
   });
 
   it('經驗區的順序影響蓋X：移到最前面的先被蓋', () => {
-    const g = scenario({
-      chars: ['法師', '勇者'],
-      p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5'], rage: Array(5).fill('黑桃1') },
-      p1: { hand: [] },
-    });
+    const g = armorScenario({ exp: ['黑桃3', '黑桃4', '黑桃5'] });
     const [a, b, c] = Z(g, 0, 'exp').map((x) => x.uid);
     g.cheatReorder(0, 0, 'exp', [c, a, b]);
-    pick(g, '冰霜護甲');
+    pick(g, '黑桃9');
     pick(g, '發動');
-    // 蓋2 蓋到最前面的兩張（黑桃5、黑桃3），只有這兩張被捨棄
+    // 蓋2 蓋到最前面的兩張（黑桃5、黑桃3），能捨棄的只有這兩張
+    expect(g.pending!.options.map((o) => o.label).sort()).toEqual(['黑桃3', '黑桃5']);
+    pick(g, '黑桃3', '黑桃5');
     expect(names(g, 0, 'discard').sort()).toEqual(['黑桃3', '黑桃5']);
     expect(names(g, 0, 'exp')).toContain('黑桃4');
   });
@@ -202,12 +200,8 @@ describe('作弊：翻面經驗卡', () => {
   });
 
   it('提示選項裡的經驗卡不能翻面', () => {
-    const g = scenario({
-      chars: ['法師', '勇者'],
-      p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'], rage: Array(5).fill('黑桃1') },
-      p1: { hand: [] },
-    });
-    pick(g, '冰霜護甲');
+    const g = armorScenario({ exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'] });
+    pick(g, '黑桃9');
     pick(g, '發動');
     expect(() => g.cheatFlip(0, 0, uidOf(g, 0, 'exp', '黑桃5'))).toThrow('提示');
     expect(Z(g, 0, 'exp')[2].covered).toBe(true);
@@ -236,12 +230,8 @@ describe('作弊：不能動目前提示引用的卡', () => {
   });
 
   it('提示選項裡的經驗卡不能被挪動位置；其他牌區仍可調整', () => {
-    const g = scenario({
-      chars: ['法師', '勇者'],
-      p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'], rage: Array(5).fill('黑桃1'), deck: ['黑桃7', '黑桃8', '黑桃9'] },
-      p1: { hand: [] },
-    });
-    pick(g, '冰霜護甲');
+    const g = armorScenario({ exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'], deck: ['黑桃7', '黑桃8', '黑桃9', ...Array(20).fill('黑桃1')] });
+    pick(g, '黑桃9');
     pick(g, '發動');
     const exp = Z(g, 0, 'exp').map((c) => c.uid);
     expect(() => g.cheatReorder(0, 0, 'exp', [...exp].reverse())).toThrow('提示');

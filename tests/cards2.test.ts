@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { aimLimit, pursuitCount, returnStep, totalAtk, totalDef } from '../src/engine/combat';
-import { discard, Z } from '../src/engine/ops';
+import { discard, newCard, Z } from '../src/engine/ops';
 import { cover, optionalPay, pay } from '../src/engine/cost';
 import { getCard } from '../src/data/cards';
-import { atkOf, defOf, drive, liftedAtkOf, names, pick, scenario, setZones } from './helpers';
+import { armorScenario, atkOf, defOf, drive, liftedAtkOf, names, pick, scenario, setZones } from './helpers';
 import { Explosion狀態 } from '../src/engine/sources/mage';
 import { 伏擊狀態, 塗毒狀態, 順手牽羊狀態 } from '../src/engine/sources/thief';
 import { 二連矢狀態 } from '../src/engine/sources/archer';
@@ -197,7 +197,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'hand')).toHaveLength(before + 1);
   });
 
-  it('復仇之嚎：[經_怒3] 傷害計算後，若受到的傷害大於造成的，可以蓋怒氣 3 再把怒氣區上方 1 張加入手牌', () => {
+  it('復仇之嚎：[經_怒3] 傷害計算時，若受到的傷害大於造成的，可以付怒氣 3 再把怒氣區上方 1 張加入手牌', () => {
     const g = scenario({ p0: { hand: ['黑桃1'], exp: ['復仇之嚎'], rage: Array(8).fill('黑桃1') }, p1: { hand: ['黑桃9'] } });
     伏擊狀態.of(g, 1).atk = 3; // 對方多 3 點總攻擊：受到的傷害大於造成的
     pick(g, '黑桃9');
@@ -205,7 +205,8 @@ describe('新卡（第二批）', () => {
     const rage = Z(g, 0, 'rage').length;
     const hand = Z(g, 0, 'hand').length;
     pick(g, '發動');
-    expect(Z(g, 0, 'rage')).toHaveLength(rage - 3 - 1);
+    // 窗口時傷害還沒放進怒氣區：付 3 取 1，之後這回合的傷害才放進去
+    expect(Z(g, 0, 'rage')).toHaveLength(rage - 3 - 1 + g.state.flags.damageTaken[0]);
     expect(Z(g, 0, 'hand')).toHaveLength(hand + 2); // 怒氣區上方 1 張＋之後抽牌階段抽 1
   });
 
@@ -253,33 +254,56 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'hand')).toHaveLength(3); // 剩 2 張＋抽 1，放 1 張到牌組底，再加抽牌階段抽 1
   });
 
-  it('冰霜護甲：[發_蓋2] 回復 X（X＝裏側經驗數），再捨棄 3 張裏側經驗', () => {
-    const g = scenario({
-      chars: ['法師', '勇者'],
-      p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'], rage: Array(5).fill('黑桃1') },
-      p1: { hand: [] },
-    });
-    pick(g, '冰霜護甲');
+  it('冰霜護甲：[頂_蓋2] 傷害計算時，捨棄 X 張裏側經驗，減少受到的 X 點傷害；剛蓋成裏側的卡也能捨棄', () => {
+    const g = armorScenario({ exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'] });
+    pick(g, '黑桃9');
+    expect(g.pending!.title).toContain('冰霜護甲');
+    const dmg = g.state.flags.damagePending[0];
+    expect(dmg).toBeGreaterThanOrEqual(3);
+    const rage = Z(g, 0, 'rage').length;
+    expect(rage).toBe(5); // 窗口期間傷害還沒放進怒氣區
     pick(g, '發動');
     // 蓋2 之後 4 張都是裏側；裏側卡對擁有者顯示牌面，直接看著牌面選出 3 張
     expect(g.pending!.options).toHaveLength(4);
+    expect(g.pending!.max).toBe(4);
     pick(g, '黑桃5', '黑桃6', '黑桃4');
-    expect(Z(g, 0, 'rage')).toHaveLength(1); // 回復 4
     expect(names(g, 0, 'discard').sort()).toEqual(['黑桃4', '黑桃5', '黑桃6']);
     expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃3']);
+    expect(g.state.flags.damageTaken[0]).toBe(dmg - 3);
+    expect(Z(g, 0, 'rage')).toHaveLength(rage + dmg - 3);
   });
 
-  it('冰霜護甲：裏側經驗不足 3 張就全捨棄，不詢問', () => {
-    const g = scenario({
-      chars: ['法師', '勇者'],
-      p0: { hand: ['冰霜護甲', '黑桃2'], exp: ['黑桃3', '黑桃4'], rage: Array(5).fill('黑桃1') },
-      p1: { hand: [] },
-    });
-    pick(g, '冰霜護甲');
+  it('冰霜護甲：X 至少 1，最多是將受到的傷害與裏側經驗張數中較小的', () => {
+    const g = armorScenario({ exp: ['黑桃3', '黑桃4', '~黑桃5', '~黑桃6'] });
+    pick(g, '黑桃9');
+    g.state.flags.damagePending[0] = 2; // 將受到 2 點傷害，裏側經驗蓋2 之後有 4 張
     pick(g, '發動');
-    expect(names(g, 0, 'discard').sort()).toEqual(['黑桃3', '黑桃4']);
-    expect(names(g, 0, 'exp')).not.toContain('黑桃3'); // 兩張都被捨棄（之後歸還的冰霜護甲自己進了經驗區）
-    expect(Z(g, 0, 'rage')).toHaveLength(3); // 回復 2
+    expect(g.pending!.min).toBe(1);
+    expect(g.pending!.max).toBe(2);
+    pick(g, '黑桃5');
+    expect(g.state.flags.damageTaken[0]).toBe(1);
+    expect(names(g, 0, 'discard')).toEqual(['黑桃5']);
+  });
+
+  it('冰霜護甲：不在招式卡疊最上方、付不起蓋2 都不能發動', () => {
+    const covered = (g: ReturnType<typeof armorScenario>) => String(g.pending?.title ?? '').includes('冰霜護甲');
+    const notTop = armorScenario({ exp: ['黑桃3', '黑桃4'] });
+    newCard(notTop, '黑桃2', 0, 'moves'); // 蓋在冰霜護甲上面
+    pick(notTop, '黑桃9');
+    expect(covered(notTop)).toBe(false);
+
+    const noPay = armorScenario({ exp: ['黑桃3', '~黑桃4'] }); // 表側只有 1 張，付不起蓋2
+    pick(noPay, '黑桃9');
+    expect(covered(noPay)).toBe(false);
+  });
+
+  it('冰霜護甲：被捨棄的 Ex 卡直接移除遊戲，不進棄牌區；直擊不被減免', () => {
+    const g = armorScenario({ exp: ['黑桃3', '黑桃4', '~Ex-中毒'] });
+    pick(g, '黑桃9');
+    pick(g, '發動');
+    pick(g, 'Ex-中毒');
+    expect(names(g, 0, 'discard')).toEqual([]);
+    expect(Z(g, 0, 'exp').some((c) => c.id === 'Ex-中毒')).toBe(false);
   });
 
   it('盾擊：[頂] 戰鬥區每張招式卡的原始攻擊力若小於原始防禦力，該卡的攻擊力改為原始防禦力', () => {

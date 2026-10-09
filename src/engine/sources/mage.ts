@@ -1,5 +1,5 @@
 import { defineSource, lasting, slot } from '../effectKit';
-import { activate, awakened, chooseCards, combatZone, data, directHit, discard, draw, log, move, pname, recover, Z } from '../ops';
+import { activate, awakened, chooseCards, combatZone, data, directHit, discard, draw, log, move, pname, recover, topOfZone, Z } from '../ops';
 import { other } from '../types';
 
 // 冰與雷之曲（法師）：[蓋3] 收招時，戰鬥區的卡合計具有「冰」「電」兩個特徵時，抽 1、回復 1；
@@ -53,19 +53,30 @@ export const Explosion = defineSource({
   ask: { skipDrawPhase: lasting((c) => Explosion狀態.read(c.g, c.p).skip) },
 });
 
-// 冰霜護甲（法師）：[發_蓋2] 回復X，再捨棄我方 3 張裏側經驗。X = 我方裏側經驗的張數；不足 3 張就全捨棄
+// 冰霜護甲（法師）：[頂_蓋2] 傷害計算時，捨棄我方 X 張裏側經驗，減少受到的 X 點傷害。X 最大為將受到的傷害
+// 此卡要在招式卡疊最上方、將受到的傷害至少 1、付得起蓋2 才能發動。蓋2 先付，剛蓋成裏側的卡也算裏側經驗；
+// X 至少 1，最多是將受到的傷害與我方裏側經驗張數中較小的；只減傷害計算的傷害，直擊不受影響
 export const 冰霜護甲 = defineSource({
   id: '冰霜護甲',
   at: 'moves',
   on: {
-    onPlay: (c) => c.effect({ label: '【冰霜護甲】回復X，捨棄 3 張裏側經驗（蓋2）', cost: { cover: 2 } }, function* () {
-      const { g, p } = c;
-      const covered = Z(g, p, 'exp').filter((card) => card.covered);
-      recover(g, p, covered.length);
-      const drop = yield* chooseCards(g, p, '【冰霜護甲】選擇 3 張裏側經驗捨棄', covered, 3, 3);
-      for (const card of drop) discard(g, card);
-      log(g, `【冰霜護甲】回復 ${covered.length}，捨棄 ${drop.length} 張裏側經驗`);
-    }),
+    onDamage: (c) => c.effect(
+      {
+        label: '【冰霜護甲】捨棄 X 張裏側經驗，減少受到的 X 點傷害（蓋2）',
+        cost: { cover: 2 },
+        when: () => topOfZone(c.g, c.p) === c.self && c.g.state.flags.damagePending[c.p] >= 1,
+      },
+      function* () {
+        const { g, p } = c;
+        const pending = g.state.flags.damagePending;
+        const covered = Z(g, p, 'exp').filter((card) => card.covered);
+        activate(g, p, c.self!);
+        const drop = yield* chooseCards(g, p, '【冰霜護甲】選擇要捨棄的裏側經驗，每張減少 1 點傷害', covered, 1, Math.min(pending[p], covered.length));
+        for (const card of drop) discard(g, card);
+        pending[p] -= drop.length;
+        log(g, `【冰霜護甲】${pname(g, p)} 捨棄 ${drop.length} 張裏側經驗，減少 ${drop.length} 點傷害`);
+      },
+    ),
   },
 });
 

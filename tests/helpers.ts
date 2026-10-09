@@ -4,6 +4,7 @@ import { newCard, Z, data, type GameCtx } from '../src/engine/ops';
 import type { DeckSpec, GameSetup, PlayerId, StartPhase, ZoneName } from '../src/engine/types';
 import { Match } from '../src/net/match';
 import { presetDeck } from '../src/data/presetDecks';
+import { 伏擊狀態 } from '../src/engine/sources/thief';
 
 type Zones = Partial<Record<ZoneName, string[]>>;
 
@@ -100,3 +101,19 @@ export const atkOf = (id: string) => getCard(id).atk;
 export const defOf = (id: string) => getCard(id).def;
 /** 盾擊在最上方時，戰鬥區的招式卡攻擊力至少是原始防禦力 */
 export const liftedAtkOf = (id: string) => Math.max(getCard(id).atk, getCard(id).def);
+
+/**
+ * 冰霜護甲的情境：玩家 0（法師）已打出冰霜護甲在最上方，玩家 1（勇者）手上有黑桃9，總攻擊另加 3，
+ * 停在玩家 1 的反擊步驟。pick(g, '黑桃9') 之後，玩家 0 就在傷害計算時的窗口，可以發動冰霜護甲。
+ * p0 是玩家 0 的牌區（手牌預設只有冰霜護甲）。
+ */
+export function armorScenario(p0: Zones = {}, extra: Partial<Scenario> = {}): Game {
+  const g = scenario({
+    chars: ['法師', '勇者'],
+    p0: { hand: ['冰霜護甲'], rage: Array(5).fill('黑桃1'), ...p0 },
+    p1: { hand: ['黑桃9'] },
+    ...extra,
+  });
+  伏擊狀態.of(g, 1).atk = 3;
+  return g;
+}

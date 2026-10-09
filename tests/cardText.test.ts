@@ -36,10 +36,10 @@ describe('卡片文字句型：切成各段', () => {
     expect(l.costs).toEqual(['蓋X']);
     expect(l.timing).toBe('');
     expect(l.effect).toBe('抽X，此回合我方總防禦 −X。X最大為2。');
-    const both = parseCardLine('[經_怒3]：當傷害計算後，且對方給予的傷害 > 我方給予的傷害，將怒氣區上方 1 張卡加入手牌。');
+    const both = parseCardLine('[經_怒3]：當傷害計算時，且對方給予的傷害 > 我方給予的傷害，將怒氣區上方 1 張卡加入手牌。');
     expect(both.tags).toEqual(['經']);
     expect(both.costs).toEqual(['怒3']);
-    expect(both.timing).toBe('當傷害計算後，');
+    expect(both.timing).toBe('當傷害計算時，');
     expect(both.condition).toBe('且對方給予的傷害 > 我方給予的傷害，');
   });
 

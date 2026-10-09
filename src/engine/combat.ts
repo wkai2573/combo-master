@@ -144,21 +144,24 @@ export function* damageStep(g: GameCtx): Gen {
   const atk: [number, number] = [s0.atk, s1.atk];
   const def: [number, number] = [s0.def, s1.def];
   mark(g, '攻守拼招：對方總攻擊 − 我方總防禦 ＝ 傷害', { type: 'calc', atk, def, dmg });
+  // 傷害計算時：傷害算出來了、還沒放進怒氣區。進觸發窗口，先攻方先處理完自己的窗口再換後攻方；
+  // 窗口裡的效果直接改 damagePending，先發動的效果會影響後面的條件，例如減免了傷害，復仇之嚎的比較也跟著變
+  g.state.flags.damagePending = [dmg[0], dmg[1]];
+  yield* markIfLogged(g, function* (): Gen {
+    yield* fireEach(g, 'onDamage');
+  });
+  const final = g.state.flags.damagePending;
   for (const p of order(g)) {
-    g.state.flags.damageTaken[p] = dmg[p];
-    takeDamage(g, p, dmg[p]);
+    g.state.flags.damageTaken[p] = final[p];
+    takeDamage(g, p, final[p]);
   }
   mark(
     g,
-    dmg[0] + dmg[1] === 0
+    final[0] + final[1] === 0
       ? '雙方都沒有受到傷害'
-      : [0, 1].filter((p) => dmg[p] > 0).map((p) => `${pname(g, p as PlayerId)} 受到 ${dmg[p]} 傷害（牌組放入怒氣區）`).join('　'),
-    { type: 'damage', dmg },
+      : [0, 1].filter((p) => final[p] > 0).map((p) => `${pname(g, p as PlayerId)} 受到 ${final[p]} 傷害（牌組放入怒氣區）`).join('　'),
+    { type: 'damage', dmg: [final[0], final[1]] },
   );
-  yield* markIfLogged(g, function* (): Gen {
-    // 經驗區中表側的 [經] 卡：傷害計算後的效果，進觸發窗口，先攻方先處理
-    yield* fireEach(g, 'afterDamage', (p) => ({ dealt: dmg[other(p)], taken: dmg[p] }));
-  });
   checkWin(g);
 }
 

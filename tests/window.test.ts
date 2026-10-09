@@ -318,7 +318,7 @@ describe('觸發窗口：回合開始', () => {
   });
 });
 
-describe('觸發窗口：傷害計算後', () => {
+describe('觸發窗口：傷害計算時', () => {
   const hit = (exp: string[]) =>
     scenario({ p0: { hand: ['黑桃1'], exp, rage: Array(12).fill('黑桃1') }, p1: { hand: ['黑桃9'] } });
 
@@ -326,17 +326,17 @@ describe('觸發窗口：傷害計算後', () => {
     const g = hit(['復仇之嚎', '復仇之嚎']);
     伏擊狀態.of(g, 1).atk = 3; // 對方多 3 點總攻擊：受到的傷害大於造成的
     pick(g, '黑桃9');
-    expect(g.pending!.title).toContain('傷害計算後');
+    expect(g.pending!.title).toContain('傷害計算時');
     const REV = '【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）';
     // 文字相同的效果註明卡所在的位置，並帶卡的 uid 讓畫面亮起對應的卡
     expect(labels(g)).toEqual([`${REV}（經驗區第 1 張）`, `${REV}（經驗區第 2 張）`, '結束（不再發動）']);
     expect(g.pending!.options.map((o) => o.uid)).toEqual([...Z(g, 0, 'exp').map((c) => c.uid), undefined]);
     const rage = Z(g, 0, 'rage').length;
     pick(g, `${REV}（經驗區第 2 張）`);
-    expect(Z(g, 0, 'rage')).toHaveLength(rage - 4);
+    expect(Z(g, 0, 'rage')).toHaveLength(rage - 4); // 窗口期間傷害還沒放進怒氣區
     expect(g.pending!.title).toContain('復仇之嚎'); // 剩下一張：原本的確認
     pick(g, '不發動');
-    expect(Z(g, 0, 'rage')).toHaveLength(rage - 4);
+    expect(Z(g, 0, 'rage')).toHaveLength(rage - 4 + g.state.flags.damageTaken[0]);
   });
 
   it('傷害沒有大於造成的傷害，就沒有窗口', () => {

@@ -208,16 +208,29 @@ describe('fire', () => {
     drive(createEffects([only]).fire(g, 0, 'onPlay', { card: Z(g, 0, 'moves')[0] }));
   });
 
-  it('fireEach 先攻方先，參數可依玩家而異', () => {
+  it('fireEach 先攻方先，處理器讀得到窗口當下的狀態', () => {
     const seen: string[] = [];
     const src = defineSource({
       id: '黑桃1', at: 'lasting',
-      on: { afterDamage: (c) => c.effect({ label: 'D', mandatory: true }, () => void seen.push(`${c.p}:${c.dealt}/${c.taken}`)) },
+      on: { onDamage: (c) => c.effect({ label: 'D', mandatory: true }, () => void seen.push(`${c.p}:${c.g.state.flags.damagePending[c.p]}`)) },
     });
     const fx = createEffects([src]);
     const g = scenario({ first: 1 });
-    drive(fx.fireEach(g, 'afterDamage', (p) => ({ dealt: p + 1, taken: 5 })));
-    expect(seen).toEqual(['1:2/5', '0:1/5']);
+    g.state.flags.damagePending = [7, 9];
+    drive(fx.fireEach(g, 'onDamage'));
+    expect(seen).toEqual(['1:9', '0:7']);
+  });
+
+  it('fireEach 的參數可依玩家而異', () => {
+    const seen: string[] = [];
+    const src = defineSource({
+      id: '黑桃1', at: 'lasting',
+      on: { afterPursuitFail: (c) => c.effect({ label: 'F', mandatory: true }, function* () { seen.push(`${c.p}:${yield* c.flipExtra()}`); }) },
+    });
+    const fx = createEffects([src]);
+    const g = scenario({ first: 0 });
+    drive(fx.fireEach(g, 'afterPursuitFail', (p) => ({ flipExtra: function* () { return p === 0; } })));
+    expect(seen).toEqual(['0:true', '1:false']);
   });
 });
 

@@ -52,15 +52,21 @@ export const 凡骨的意志 = defineSource({
   ask: { vanillaBoost: (c) => (c.self && 凡骨狀態.read(c.g, c.p).uids.includes(c.self.uid) ? 1 : 0) },
 });
 
-// 復仇之嚎（劍士）：[經_怒3] 傷害計算後，若對方給予的傷害 > 我方給予的傷害，將怒氣區上方 1 張卡加入手牌
+// 復仇之嚎（劍士）：[經_怒3] 傷害計算時，若對方給予的傷害 > 我方給予的傷害，將怒氣區上方 1 張卡加入手牌
+// 傷害計算時還沒把這回合的傷害放進怒氣區，所以取的是原本就在怒氣區的卡；要有至少 4 張才能發動（怒3 之後還要有卡可取）。
+// 「給予的傷害」讀窗口當下的數字：先發動的減免會讓後面的比較跟著變
 export const 復仇之嚎 = defineSource({
   id: '復仇之嚎',
   at: 'exp',
   on: {
-    afterDamage: (c) => {
-      if (c.taken <= c.dealt) return null;
+    onDamage: (c) => {
+      const pending = () => c.g.state.flags.damagePending;
       return c.effect(
-        { label: '【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）', cost: { rage: 3 } },
+        {
+          label: '【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）',
+          cost: { rage: 3 },
+          when: () => pending()[c.p] > pending()[other(c.p)] && Z(c.g, c.p, 'rage').length >= 4,
+        },
         () => {
           const top = Z(c.g, c.p, 'rage')[0];
           if (!top) return;
