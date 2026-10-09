@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.28.1',
+    date: '2026-10-09',
+    items: [
+      { type: 'add', text: '戰績頁新增角色對戰表：縱軸是我的角色、橫軸是對手角色，每格顯示勝率與場數，可切換對手是電腦或玩家' },
+    ],
+  },
+  {
     version: '0.28.0',
     date: '2026-10-09',
     items: [

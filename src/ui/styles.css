@@ -54,6 +54,17 @@ h1, h2, h3 { margin: 0 0 8px; }
 /* ───────── 頁面框架 ───────── */
 .page { max-width: 1400px; margin: 0 auto; padding: 16px; }
 .page.narrow { max-width: 560px; }
+.page.records { max-width: 860px; }
+.rtable-wrap { overflow-x: auto; }
+.rtable { border-collapse: collapse; width: 100%; min-width: 560px; text-align: center; }
+.rtable th, .rtable td { border: 1px solid var(--line); padding: 6px 4px; }
+.rtable th { background: var(--panel); font-weight: 600; }
+.rcell { display: table-cell; line-height: 1.35; }
+.rcell b, .rcell span { display: block; }
+.rcell span { font-size: 11px; }
+.rcell.good b { color: var(--good); }
+.rcell.bad b { color: var(--bad); }
+.rcell.none { color: var(--muted); }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
 .home { text-align: center; padding-top: 8vh; }
 .home h1 { font-size: 44px; letter-spacing: 6px; color: var(--accent); }
