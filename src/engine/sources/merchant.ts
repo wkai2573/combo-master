@@ -24,26 +24,28 @@ export const 招財貓 = defineSource({
  * - 調整表側經驗的順序（蓋X 從最前面開始蓋，裏側的卡位置不動）
  * - 覺醒後：把 1 張表側經驗加入手牌
  */
+/** 可以放到最前方的表側經驗：已經在經驗區最前方的那張不用選 */
+const frontCandidates = (g: GameCtx, p: PlayerId) => faceUpExp(g, p).filter((card) => card !== Z(g, p, 'exp')[0]);
+
+// 商人：爆發後，可以將 1 張表側經驗放到最前方；覺醒（追加）可以將 1 張表側經驗加入手牌
 export const 商人 = defineSource({
   id: '商人',
   at: 'char',
   on: {
     afterBurst: ({ g, p }) => [
       {
-        label: '【商人】調整表側經驗的順序',
-        available: () => faceUpExp(g, p).length >= 2,
+        label: '【商人】將 1 張表側經驗放到最前方',
+        available: () => frontCandidates(g, p).length > 0,
         *run(confirmed) {
-          if (!confirmed && !(yield* confirm(g, p, '【商人】要調整表側經驗的順序嗎？'))) return;
+          if (!confirmed && !(yield* confirm(g, p, '【商人】要將 1 張表側經驗放到最前方嗎？'))) return;
+          const [pick] = yield* chooseCards(g, p, '【商人】選擇 1 張表側經驗放到經驗區最前方', frontCandidates(g, p), 1, 1);
+          // 提示等待期間經驗區可能被作弊改動：選到的卡已經不是表側經驗就不處理
           const exp = Z(g, p, 'exp');
-          const asked = yield* orderCards(g, p, '【商人】排列表側經驗的順序（最前面的最先被蓋）', faceUpExp(g, p));
-          // 提示等待期間經驗區可能被作弊改動：只排現在還是表側的卡，新出現的表側卡接在後面
-          const now = faceUpExp(g, p);
-          const order_ = [...asked.filter((c) => now.includes(c)), ...now.filter((c) => !asked.includes(c))];
-          const slots = exp.map((card, i) => (card.covered ? -1 : i)).filter((i) => i >= 0);
-          order_.forEach((card, k) => {
-            exp[slots[k]] = card;
-          });
-          log(g, `【商人】${pname(g, p)} 調整了表側經驗的順序`);
+          if (!pick || pick.covered || !exp.includes(pick)) return;
+          exp.splice(exp.indexOf(pick), 1);
+          exp.unshift(pick);
+          g.touched++;
+          log(g, `【商人】${pname(g, p)} 將經驗【${data(pick).name}】放到經驗區最前方`);
         },
       },
       {

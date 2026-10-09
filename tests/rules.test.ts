@@ -190,12 +190,23 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(totalAtk(g, 0)).toBe(ids.reduce((n, id) => n + atkOf(id), 0) + 2);
   });
 
-  it('後人：後攻時總防禦 +1，覺醒後連追擊卡防禦也計算', () => {
+  it('後人：後攻時總防禦 +1；覺醒後每張追擊卡若為白板卡，其防禦也計入總防禦，否則總防禦 +2', () => {
     const g = scenario({ chars: ['勇者', '後人'], first: 0 });
     setZones(g, 1, { moves: ['黑桃1'], pursuit: ['黑桃3'] });
-    expect(totalDef(g, 1)).toBe(defOf('黑桃1') + 1);
-    setZones(g, 1, { moves: ['黑桃1'], pursuit: ['黑桃3'], exp: Array(8).fill('黑桃1') });
-    expect(totalDef(g, 1)).toBe(defOf('黑桃1') + defOf('黑桃3') + 1);
+    expect(totalDef(g, 1)).toBe(defOf('黑桃1') + 1); // 未覺醒：追擊卡的防禦不計
+    const awake = Array(8).fill('黑桃1');
+    setZones(g, 1, { moves: ['黑桃1'], pursuit: ['黑桃3'], exp: awake });
+    expect(totalDef(g, 1)).toBe(defOf('黑桃1') + defOf('黑桃3') + 1); // 白板追擊卡：防禦計入
+    setZones(g, 1, { moves: ['黑桃1'], pursuit: ['伏擊'], exp: awake });
+    expect(totalDef(g, 1)).toBe(defOf('黑桃1') + 1 + 2); // 非白板追擊卡：防禦不計，總防禦 +2
+    setZones(g, 1, { moves: ['黑桃1'], pursuit: ['黑桃3', '伏擊', '地雷陷阱'], exp: awake });
+    expect(totalDef(g, 1)).toBe(defOf('黑桃1') + defOf('黑桃3') + 1 + 2 + 2); // 每張各自判定
+  });
+
+  it('後人：先攻的回合沒有這些加成', () => {
+    const g = scenario({ chars: ['後人', '勇者'], first: 0 });
+    setZones(g, 0, { moves: ['黑桃1'], pursuit: ['伏擊'], exp: Array(8).fill('黑桃1') });
+    expect(totalDef(g, 0)).toBe(defOf('黑桃1'));
   });
 
   it('戒備打擊（劍士）：[頂] 總攻擊 +1、總防禦 +2，只有在最上方時才算', () => {

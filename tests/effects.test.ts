@@ -67,14 +67,4 @@ describe('裝備、角色', () => {
     expect(Z(g, 0, 'hand')).toHaveLength(7);
     expect(Z(g, 1, 'hand')).toHaveLength(5);
   });
-
-  it('法師覺醒：抽牌階段額外抽 1（牌組）', () => {
-    const g = scenario({
-      chars: ['法師', '勇者'],
-      p0: { hand: ['黑桃5'], exp: many('黑桃1', 8), rage: ['黑桃2'] },
-      p1: { hand: [] },
-    });
-    expect(Z(g, 0, 'hand')).toHaveLength(2); // 抽牌階段正常抽 1，加上覺醒額外抽 1
-    expect(Z(g, 0, 'rage')).toHaveLength(1);
-  });
 });

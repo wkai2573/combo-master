@@ -13,7 +13,7 @@ export const characterText: Record<string, { text: string; awakenText: string }>
     awakenText: '（追加）追擊成功時，將 1 張 [Ex-中毒] 加入對方經驗區。',
   },
   商人: {
-    text: '爆發後，可以調整我方表側經驗的順序。',
+    text: '爆發後，可以將 1 張表側經驗放到最前方。',
     awakenText: '（追加）爆發後，可以將 1 張表側經驗加入手牌。',
   },
   遊俠: {
@@ -22,7 +22,7 @@ export const characterText: Record<string, { text: string; awakenText: string }>
   },
   法師: {
     text: '起始手牌為 7 張（一般角色 5 張）。',
-    awakenText: '（追加）抽牌階段，額外抽1。',
+    awakenText: '（追加）當我方覺醒時，可以抽1。',
   },
   先人: {
     text: '我方先攻的回合，總攻擊 +X。X＝我方本回合出招張數 − 1。',
@@ -30,6 +30,6 @@ export const characterText: Record<string, { text: string; awakenText: string }>
   },
   後人: {
     text: '我方後攻的回合，總防禦 +1。',
-    awakenText: '（追加）我方後攻的回合，追擊卡的防禦也計入總防禦。',
+    awakenText: '（追加）我方後攻的回合，每張追擊卡若為白板卡，其防禦也計入總防禦，否則總防禦 +2。',
   },
 };

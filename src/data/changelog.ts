@@ -21,6 +21,15 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.31.1',
+    date: '2026-10-09',
+    items: [
+      { type: 'change', text: '商人：爆發後改成「可以將 1 張表側經驗放到最前方」，不再是整列重新排序' },
+      { type: 'change', text: '法師：覺醒改成「當我方覺醒時，可以抽 1」，取代原本抽牌階段額外抽 1' },
+      { type: 'change', text: '後人覺醒：後攻回合，每張追擊卡若為白板卡，其防禦也計入總防禦，否則總防禦 +2（原本是所有追擊卡的防禦都計入）' },
+    ],
+  },
+  {
     version: '0.31.0',
     date: '2026-10-09',
     items: [

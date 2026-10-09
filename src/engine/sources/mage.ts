@@ -101,13 +101,21 @@ export const 電弧 = defineSource({
 // 力量爆破（法師）：[頂] 我方總攻擊 -3；[追] 此卡追擊判定失敗
 export const 力量爆破 = defineSource({ id: '力量爆破', at: 'moves', asMove: { topAtk: -3, pursuitFails: true } });
 
-// 法師：開局多抽 2；覺醒時抽牌階段多抽 1
+// 法師：開局多抽 2；覺醒（追加）當我方覺醒時，可以抽 1
 export const 法師 = defineSource({
   id: '法師',
   at: 'char',
+  on: {
+    onAwaken: (c) => c.effect(
+      { label: '【法師】覺醒：抽 1', confirm: '【法師】覺醒：要抽 1 張嗎？' },
+      function* () {
+        yield* draw(c.g, c.p, 1);
+        log(c.g, `【法師】${pname(c.g, c.p)} 覺醒時抽 1`);
+      },
+    ),
+  },
   ask: {
     openingDraw: () => 2,
-    drawPhaseExtra: (c) => (awakened(c.g, c.p) ? 1 : 0),
   },
 });
 

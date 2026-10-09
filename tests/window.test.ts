@@ -11,7 +11,7 @@ import { 凡骨狀態 } from '../src/engine/sources/swordsman';
 const labels = (g: ReturnType<typeof scenario>) => g.pending!.options.map((o) => o.label);
 
 const CAT = '【招財貓】爆發時，抽 1（蓋2）';
-const ORDER = '【商人】調整表側經驗的順序';
+const ORDER = '【商人】將 1 張表側經驗放到最前方';
 const TAKE = '【商人】覺醒：將 1 張表側經驗加入手牌';
 const END = '結束（不再發動）';
 
@@ -39,19 +39,19 @@ describe('觸發窗口：爆發後', () => {
     pick(g, CAT);
     expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃1', '黑桃2']);
     expect(Z(g, 0, 'hand')).toHaveLength(3); // 爆發抽 2，招財貓再抽 1
-    expect(g.pending!.title).toContain('調整表側經驗的順序'); // 只剩一個：原本的確認
+    expect(g.pending!.title).toContain('放到最前方'); // 只剩一個：原本的確認
     expect(labels(g)).toEqual(['發動', '不發動']);
   });
 
-  it('先調整順序再發招財貓，蓋到的卡不一樣', () => {
+  it('先把表側經驗放到最前方再發招財貓，蓋到的卡不一樣', () => {
     const g = burst();
     pick(g, '黑桃3');
     pick(g, ORDER);
-    pick(g, '黑桃4', '黑桃3', '黑桃2', '黑桃1');
-    expect(names(g, 0, 'exp')).toEqual(['黑桃4', '黑桃3', '黑桃2', '黑桃1']);
+    pick(g, '黑桃3');
+    expect(names(g, 0, 'exp')).toEqual(['黑桃3', '黑桃1', '黑桃2', '黑桃4']);
     expect(g.pending!.title).toContain('招財貓');
     pick(g, '發動');
-    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃4', '黑桃3']);
+    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃3', '黑桃1']);
   });
 
   it('可以選擇結束，什麼都不發', () => {
@@ -75,8 +75,8 @@ describe('觸發窗口：爆發後', () => {
     const g = burst(['黑桃1', '黑桃2', '黑桃4', '黑桃5']);
     pick(g, '黑桃3');
     pick(g, ORDER);
-    pick(g, '黑桃3', '黑桃5', '黑桃4', '黑桃2', '黑桃1');
-    // 順序調整完：剩招財貓一個，選單不會再出現調整順序
+    pick(g, '黑桃5');
+    // 放到最前方之後：剩招財貓一個，選單不會再出現這個效果
     expect(g.pending!.title).toContain('招財貓');
   });
 

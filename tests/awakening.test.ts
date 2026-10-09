@@ -73,6 +73,28 @@ describe('覺醒時的效果（遊俠：可以抽 2）', () => {
   });
 });
 
+describe('覺醒時的效果（法師：可以抽 1）', () => {
+  it('爆發讓經驗區達到覺醒經驗時，法師可以選擇抽 1；不再有抽牌階段額外抽牌', () => {
+    const g = scenario({ chars: ['法師', '勇者'], phase: '爆發', singlePhase: true, p0: { hand: ['黑桃3'], exp: exp(7) }, p1: { hand: [] } });
+    pick(g, '黑桃3'); // 經驗區 8 張＝覺醒；爆發本身抽 2
+    expect(g.pending!.title).toContain('覺醒');
+    expect(labels(g)).toEqual(['發動', '不發動']);
+    expect(Z(g, 0, 'hand')).toHaveLength(2);
+    pick(g, '發動');
+    expect(Z(g, 0, 'hand')).toHaveLength(3);
+  });
+
+  it('選擇不發動就不抽；已經覺醒的狀態下抽牌階段不會多抽', () => {
+    const g = scenario({ chars: ['法師', '勇者'], phase: '爆發', singlePhase: true, p0: { hand: ['黑桃3'], exp: exp(7) }, p1: { hand: [] } });
+    pick(g, '黑桃3');
+    pick(g, '不發動');
+    expect(Z(g, 0, 'hand')).toHaveLength(2);
+
+    const awake = scenario({ chars: ['法師', '勇者'], p0: { hand: ['黑桃5'], exp: exp(8), rage: ['黑桃2'] }, p1: { hand: [] } });
+    expect(Z(awake, 0, 'hand')).toHaveLength(1); // 抽牌階段只抽 1，沒有額外抽牌
+  });
+});
+
 describe('進入覺醒的偵測', () => {
   it('每次由未覺醒變成覺醒都算一次；退出覺醒後再次達標會再觸發', () => {
     const g = scenario({ chars: ['遊俠', '勇者'], p0: { exp: exp(0) } });

@@ -1,6 +1,7 @@
 import { faceUpExp, pay } from '../cost';
 import { defineSource, slot } from '../effectKit';
 import { activate, awakened, data, directHit, isFirst, log, move, pname, recover, Z } from '../ops';
+import { isVanilla } from '../../data/enabledCards';
 import { other } from '../types';
 
 // 家族相片（劍士）：[蓋1_怒2] 回合開始時，回復 1，可選
@@ -103,17 +104,23 @@ export const 勇者 = defineSource({
   ask: { combatBonus: (c, { baseAtk }) => ({ atk: baseAtk >= (awakened(c.g, c.p) ? 10 : 15) ? 3 : 0 }) },
 });
 
-// 後人：後攻回合總防禦 +1；覺醒時追擊卡的防禦力也計入總防禦
+// 後人：後攻回合總防禦 +1；覺醒（追加）後攻回合，每張追擊卡若為白板卡，其防禦也計入總防禦，否則總防禦 +2
 export const 後人 = defineSource({
   id: '後人',
   at: 'char',
   ask: {
     combatBonus: (c) => {
       if (isFirst(c.g, c.p)) return {};
-      const pursuitDef = awakened(c.g, c.p) ? Z(c.g, c.p, 'pursuit').reduce((n, card) => n + data(card).def, 0) : 0;
-      return { def: 1, pursuitDef };
+      let pursuitDef = 0;
+      let extra = 0;
+      if (awakened(c.g, c.p)) {
+        for (const card of Z(c.g, c.p, 'pursuit')) {
+          if (isVanilla(data(card))) pursuitDef += data(card).def;
+          else extra += 2;
+        }
+      }
+      return { def: 1 + extra, pursuitDef };
     },
   },
 });
-
 export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊, 戒備打擊, 盾擊, 勇者, 後人];
