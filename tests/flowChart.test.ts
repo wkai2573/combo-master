@@ -149,18 +149,15 @@ describe('流程圖內容與規則書一致', () => {
     expect(laneOf(byId.get('win-check')!)).toBe(lane);
   });
 
-  it('勝負：單方歸零落敗，同時歸零比手牌，再比怒氣區連擊值，終點是先翻完落敗、同時翻完才平手', () => {
+  it('勝負：單方歸零落敗，同時歸零比手牌，手牌相同直接平手', () => {
     expect(text('lose')).toContain('落敗');
     expect(text('tie-hand')).toContain('手牌');
-    expect(text('tie-rage')).toContain('怒氣區');
-    expect(text('tie-rage')).toContain('同值續翻');
-    expect(text('tie-end')).toContain('先翻完');
-    expect(text('tie-end')).toContain('同時翻完');
-    expect(text('tie-end')).toContain('平手');
-    expect(text('tie-end')).not.toContain('全部同值');
+    expect(text('tie-hand')).toContain('平手');
+    expect(byId.has('tie-rage')).toBe(false);
+    expect(byId.has('tie-end')).toBe(false);
     const ex = chart.lanes.filter((l) => l.exception);
     expect(ex).toHaveLength(2);
-    expect(laneOf(byId.get('tie-end')!)).toBe(ex[1]);
+    expect(laneOf(byId.get('tie-hand')!)).toBe(ex[1]);
   });
 });
 

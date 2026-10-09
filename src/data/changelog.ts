@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.27.3',
+    date: '2026-10-09',
+    items: [
+      { type: 'change', text: '雙方牌組同時歸零時，手牌多者獲勝；手牌張數相同直接平手，不再洗怒氣區翻牌比連擊值' },
+    ],
+  },
+  {
     version: '0.27.2',
     date: '2026-10-09',
     items: [

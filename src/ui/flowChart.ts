@@ -213,11 +213,11 @@ export function buildFlowChart(): FlowChart {
   // 成功的邊最後畫，三條邊共用的那一段垂直線才會維持綠色
   edge('追擊', 'chase-hit', `M${cx('追擊')},${botY('追擊')} V${nodeY(2)}`, 'good', { label: ['不在範圍內', cx('追擊') + 38, laneY(2) + 3] });
 
-  // 勝負：每個步驟結束都檢查，分區標題說明包含重置與抽牌階段；單方歸零落敗，同時歸零進入加賽
+  // 勝負：每個步驟結束都檢查，分區標題說明包含重置與抽牌階段；單方歸零落敗，同時歸零比手牌
   const dmg = colAt('傷害');
   branch('lose', '傷害', dmg - 1, 3, ['牌組歸零者落敗', '只有一方歸零'], 'bad');
   branch('win-check', '傷害', dmg, 3, ['勝負檢查', '每個步驟結束都檢查'], 'bad');
-  branch('tie', '傷害', dmg + 1, 3, ['雙方同時歸零', '進入加賽判定'], 'bad');
+  branch('tie', '傷害', dmg + 1, 3, ['雙方同時歸零', '進入手牌比較'], 'bad');
   edge('傷害', 'win-check', `M${cx('傷害')},${botY('傷害')} V${nodeY(3)}`, 'bad', {
     dashed: true,
     label: ['隨時檢查', cx('傷害') + 28, (laneY(2) + laneY(3)) / 2 + 28],
@@ -231,26 +231,16 @@ export function buildFlowChart(): FlowChart {
     label: ['同時歸零', (colX(dmg) + NW + colX(dmg + 1)) / 2, nodeCy(3) - 6],
   });
 
-  // 加賽：先比手牌張數，再逐張翻怒氣區比連擊值，一方先翻完落敗，雙方同時翻完才平手
-  branch('tie-hand', '傷害', dmg + 1, 4, ['比手牌張數', '手牌多者獲勝'], 'bad');
-  branch('tie-rage', '傷害', dmg, 4, ['比怒氣區連擊值', '大者勝，同值續翻'], 'bad');
-  branch('tie-end', '傷害', dmg - 1, 4, ['先翻完者落敗', '同時翻完才平手'], 'bad');
+  // 同時歸零：比手牌張數，手牌多者獲勝，手牌相同直接平手
+  branch('tie-hand', '傷害', dmg + 1, 4, ['比手牌張數', '多者獲勝，相同則平手'], 'bad');
   edge('tie', 'tie-hand', `M${colCx(dmg + 1)},${nodeY(3) + NH} V${nodeY(4)}`, 'bad', { dashed: true });
-  edge('tie-hand', 'tie-rage', `M${colX(dmg + 1)},${nodeCy(4)} H${colX(dmg) + NW}`, 'bad', {
-    dashed: true,
-    label: ['手牌相同', (colX(dmg + 1) + colX(dmg) + NW) / 2, nodeCy(4) - 6],
-  });
-  edge('tie-rage', 'tie-end', `M${colX(dmg)},${nodeCy(4)} H${colX(dmg - 1) + NW}`, 'bad', {
-    dashed: true,
-    label: ['翻完', (colX(dmg) + colX(dmg - 1) + NW) / 2, nodeCy(4) - 6],
-  });
 
   const lanes: FlowLane[] = [
     ['01 / 回合階段', false],
     [`02 / ${STEP_GROUPS[battle].label}階段`, false],
     ['03 / 追擊結果', false],
     ['EX / 勝負判定（每個步驟結束後都檢查，含重置與抽牌階段）', true],
-    ['EX / 同時歸零加賽', true],
+    ['EX / 同時歸零比手牌', true],
   ].map(([label, exception], k) => ({ label: label as string, exception: exception as boolean, x: LANE_X, y: laneY(k), w: LANE_W, h: LANE_H }));
 
   return { width: CHART_W, height: laneY(4) + LANE_H + EXTRA_BOTTOM, lanes, nodes, edges, legendY: laneY(4) + LANE_H + 18 };

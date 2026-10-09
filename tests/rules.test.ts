@@ -138,38 +138,23 @@ describe('同時歸零的勝負', () => {
     expect(g.state.winReason).toContain('手牌');
   });
 
-  it('手牌相同則比怒氣區翻牌的連擊值', () => {
+  it('手牌相同直接平手，不比怒氣區', () => {
     const g = scenario({
       p0: { deck: [], hand: ['黑桃1'], rage: ['黑桃2', '黑桃9'] },
       p1: { deck: [], hand: ['黑桃1'], rage: ['黑桃3', '黑桃1'] },
     });
-    // 洗牌順序隨機，但 p0 的牌必為 {2,9}、p1 為 {3,1}，不論順序最終都會分出勝負
-    expect(g.state.winner === 0 || g.state.winner === 1).toBe(true);
     expect(g.over).toBe(true);
-  });
-
-  it('連擊值同值就繼續翻，全部翻完仍同則平手', () => {
-    const g = scenario({
-      p0: { deck: [], hand: ['黑桃1'], rage: ['黑桃5', '紅心5'] },
-      p1: { deck: [], hand: ['黑桃1'], rage: ['梅花5', '方塊5'] },
-    });
     expect(g.state.winner).toBe('draw');
+    expect(g.state.winReason).toContain('手牌');
+    expect(g.state.phase).toBe('結束');
   });
 
-  it('連擊值都同值但怒氣區較少、先翻完者落敗', () => {
+  it('手牌相同時怒氣區張數不同也一樣平手', () => {
     const g = scenario({
       p0: { deck: [], hand: ['黑桃1'], rage: ['黑桃5', '紅心5'] },
       p1: { deck: [], hand: ['黑桃1'], rage: ['梅花5'] },
     });
-    expect(g.state.winner).toBe(0);
-  });
-
-  it('怒氣區連擊值大者勝', () => {
-    const g = scenario({
-      p0: { deck: [], hand: ['黑桃1'], rage: ['黑桃9'] },
-      p1: { deck: [], hand: ['黑桃1'], rage: ['黑桃2'] },
-    });
-    expect(g.state.winner).toBe(0);
+    expect(g.state.winner).toBe('draw');
   });
 });
 
