@@ -147,17 +147,17 @@ describe('卡片飛行', () => {
 
   it('對手出招：牌從對手手牌飛到戰鬥區，途中翻成正面；自己出招則全程正面', () => {
     // 玩家 1 打出黑桃9：玩家 0 視角看不到他手牌的牌面，玩家 1 自己看得到
-    const theirs = flightsInto('play', 0).find((f) => f.owner === 1 && f.to === 'combat')!;
+    const theirs = flightsInto('play', 0).find((f) => f.owner === 1 && f.to === 'moves')!;
     expect(theirs.from).toBe('hand');
     expect(theirs.id).toBe('黑桃9');
     expect([theirs.faceUpFrom, theirs.faceUpTo]).toEqual([false, true]);
-    const own = flightsInto('play', 1).find((f) => f.owner === 1 && f.to === 'combat')!;
+    const own = flightsInto('play', 1).find((f) => f.owner === 1 && f.to === 'moves')!;
     expect([own.faceUpFrom, own.faceUpTo]).toEqual([true, true]);
   });
 
   it('歸還：招式與追擊卡依序飛進經驗區，同一位玩家的牌不會同時出發', () => {
     const flights = flightsInto('return', 0).filter((f) => f.owner === 0 && f.to === 'exp');
-    expect(flights.map((f) => f.from)).toEqual(['combat', 'pursuit']);
+    expect(flights.map((f) => f.from)).toEqual(['moves', 'pursuit']);
     expect(flights.map((f) => f.order)).toEqual([0, 1]);
   });
 

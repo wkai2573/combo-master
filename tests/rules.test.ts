@@ -37,16 +37,16 @@ describe('出招與範圍內', () => {
 
   it('戰鬥區只能出現一次重複：重複過之後，戰鬥區已有的連擊值都不能再出，新的連擊值照常可以', () => {
     const g = scenario({
-      p0: { hand: ['紅心3', '方塊2', '梅花2', '黑桃9'], combat: ['黑桃8', '黑桃5', '梅花5', '黑桃3'] },
-      p1: { hand: [], combat: ['紅心2'] },
+      p0: { hand: ['紅心3', '方塊2', '梅花2', '黑桃9'], moves: ['黑桃8', '黑桃5', '梅花5', '黑桃3'] },
+      p1: { hand: [], moves: ['紅心2'] },
     });
     // 我方戰鬥區 8、5、5、3：5 已經重複過；範圍 2~3，第 2 張 3 不能出，新的 2 可以（兩張都是 2，所以不會被自動出招）
     expect(playables(g, 0).map((c) => c.id)).toEqual(['方塊2', '梅花2']);
 
     // 還沒重複過時，第一次重複可以
     const first = scenario({
-      p0: { hand: ['紅心3', '方塊2', '梅花2', '黑桃9'], combat: ['黑桃8', '黑桃5', '黑桃3'] },
-      p1: { hand: [], combat: ['紅心2'] },
+      p0: { hand: ['紅心3', '方塊2', '梅花2', '黑桃9'], moves: ['黑桃8', '黑桃5', '黑桃3'] },
+      p1: { hand: [], moves: ['紅心2'] },
     });
     expect(playables(first, 0).map((c) => c.id)).toEqual(['紅心3', '方塊2', '梅花2']);
   });
@@ -189,36 +189,36 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(sum(big)).toBeGreaterThanOrEqual(15);
     expect(sum(mid)).toBeGreaterThanOrEqual(10);
     expect(sum(mid)).toBeLessThan(15);
-    setZones(g, 0, { combat: big });
+    setZones(g, 0, { moves: big });
     expect(totalAtk(g, 0)).toBe(sum(big) + 3);
-    setZones(g, 0, { combat: mid });
+    setZones(g, 0, { moves: mid });
     expect(totalAtk(g, 0)).toBe(sum(mid));
-    setZones(g, 0, { combat: mid, exp: Array(8).fill('黑桃1') });
+    setZones(g, 0, { moves: mid, exp: Array(8).fill('黑桃1') });
     expect(totalAtk(g, 0)).toBe(sum(mid) + 3);
   });
 
   it('先人：先攻時攻擊 +（出招張數 - 1）', () => {
     const g = scenario({ chars: ['先人', '勇者'] });
     const ids = ['黑桃1', '黑桃2', '黑桃3'];
-    setZones(g, 0, { combat: ids });
+    setZones(g, 0, { moves: ids });
     g.state.flags.played[0] = 3;
     expect(totalAtk(g, 0)).toBe(ids.reduce((n, id) => n + atkOf(id), 0) + 2);
   });
 
   it('後人：後攻時總防禦 +1，覺醒後連追擊卡防禦也計算', () => {
     const g = scenario({ chars: ['勇者', '後人'], first: 0 });
-    setZones(g, 1, { combat: ['黑桃1'], pursuit: ['黑桃3'] });
+    setZones(g, 1, { moves: ['黑桃1'], pursuit: ['黑桃3'] });
     expect(totalDef(g, 1)).toBe(defOf('黑桃1') + 1);
-    setZones(g, 1, { combat: ['黑桃1'], pursuit: ['黑桃3'], exp: Array(8).fill('黑桃1') });
+    setZones(g, 1, { moves: ['黑桃1'], pursuit: ['黑桃3'], exp: Array(8).fill('黑桃1') });
     expect(totalDef(g, 1)).toBe(defOf('黑桃1') + defOf('黑桃3') + 1);
   });
 
   it('戒備打擊（劍士）：[頂] 總攻擊 +2、總防禦 +2，只有在最上方時才算', () => {
     const g = scenario();
-    setZones(g, 0, { combat: ['黑桃1', '戒備打擊'] });
+    setZones(g, 0, { moves: ['黑桃1', '戒備打擊'] });
     expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('戒備打擊') + 2);
     expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('戒備打擊') + 2);
-    setZones(g, 0, { combat: ['戒備打擊', '黑桃1'] });
+    setZones(g, 0, { moves: ['戒備打擊', '黑桃1'] });
     expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('戒備打擊'));
     expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('戒備打擊'));
   });
@@ -238,25 +238,25 @@ describe('角色效果（總攻擊／總防禦）', () => {
 
   it('魅影射擊（弓箭手）：[追] 成為追擊卡時，我方總防禦 +4', () => {
     const g = scenario();
-    setZones(g, 0, { combat: ['黑桃1'], pursuit: ['魅影射擊'] });
+    setZones(g, 0, { moves: ['黑桃1'], pursuit: ['魅影射擊'] });
     expect(totalDef(g, 0)).toBe(defOf('黑桃1') + 4);
-    setZones(g, 0, { combat: ['黑桃1'], pursuit: ['黑桃2'] });
+    setZones(g, 0, { moves: ['黑桃1'], pursuit: ['黑桃2'] });
     expect(totalDef(g, 0)).toBe(defOf('黑桃1'));
   });
 
   it('地雷陷阱（弓箭手）：[追] 成為追擊卡時，我方總攻擊 +3（含卡本身的攻擊）', () => {
     const g = scenario({ chars: ['遊俠', '勇者'] });
-    setZones(g, 0, { combat: ['黑桃1'], pursuit: ['地雷陷阱'] });
+    setZones(g, 0, { moves: ['黑桃1'], pursuit: ['地雷陷阱'] });
     expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('地雷陷阱') + 3);
   });
 
   it('二刀連擊（盜賊）：[頂] 戰鬥區只有此卡時追擊 +1', () => {
     const g = scenario();
-    setZones(g, 0, { combat: ['二刀連擊'] });
+    setZones(g, 0, { moves: ['二刀連擊'] });
     expect(pursuitCount(g, 0)).toBe(2);
-    setZones(g, 0, { combat: ['黑桃1', '二刀連擊'] });
+    setZones(g, 0, { moves: ['黑桃1', '二刀連擊'] });
     expect(pursuitCount(g, 0)).toBe(1);
-    setZones(g, 0, { combat: ['黑桃1'] });
+    setZones(g, 0, { moves: ['黑桃1'] });
     expect(pursuitCount(g, 0)).toBe(1);
   });
 
@@ -289,7 +289,7 @@ describe('戰鬥結算深模組 (resolveCombatStats)', () => {
   it('正確結算攻守數值並提供詳細的 breakdown 明細', () => {
     const g = scenario({ chars: ['勇者', '後人'], first: 0 });
     // 玩家 0 (勇者)：戰鬥區出 黑桃1、黑桃9，追擊 地雷陷阱 (+3 atk)
-    setZones(g, 0, { combat: ['黑桃1', '黑桃9'], pursuit: ['地雷陷阱'] });
+    setZones(g, 0, { moves: ['黑桃1', '黑桃9'], pursuit: ['地雷陷阱'] });
     const s0 = resolveCombatStats(g, 0);
     const expectedBase0 = atkOf('黑桃1') + atkOf('黑桃9') + atkOf('地雷陷阱') + 3;
     expect(s0.atk).toBe(expectedBase0 + (expectedBase0 >= 15 ? 3 : 0));
@@ -297,7 +297,7 @@ describe('戰鬥結算深模組 (resolveCombatStats)', () => {
     expect(s0.breakdown.pursuitAtk).toBe(atkOf('地雷陷阱') + 3);
 
     // 玩家 1 (後人，後攻未覺醒)：防禦 +1
-    setZones(g, 1, { combat: ['黑桃1'], pursuit: ['黑桃3'] });
+    setZones(g, 1, { moves: ['黑桃1'], pursuit: ['黑桃3'] });
     const s1 = resolveCombatStats(g, 1);
     expect(s1.def).toBe(defOf('黑桃1') + 1);
     expect(s1.breakdown.charBonusDef).toBe(1);

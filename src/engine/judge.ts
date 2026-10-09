@@ -6,10 +6,10 @@ import { other, type CardInst, type PlayerId } from './types';
 
 // ───────────────────────── 範圍內／追擊判定 ─────────────────────────
 
-/** 該卡是否在 p 的「範圍內」：雙方戰鬥區最後一張招式的連擊值（含）之間 */
+/** 該卡是否在 p 的「範圍內」：雙方招式卡疊最後一張招式的連擊值（含）之間 */
 export function inRange(g: GameCtx, p: PlayerId, c: CardInst): boolean {
-  const mine = Z(g, p, 'combat');
-  const opp = Z(g, other(p), 'combat');
+  const mine = Z(g, p, 'moves');
+  const opp = Z(g, other(p), 'moves');
   if (mine.length === 0 || opp.length === 0) return true;
   const m = data(mine[mine.length - 1]).combo;
   const o = data(opp[opp.length - 1]).combo;

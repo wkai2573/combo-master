@@ -82,11 +82,11 @@ describe('裝備、角色', () => {
     const base = atkOf('黑桃1');
     const attack = () => totalAtk(g, 0);
     g.state.flags.pursuitSuccess[0] = 2;
-    setZones(g, 0, { combat: ['黑桃1'] });
+    setZones(g, 0, { moves: ['黑桃1'] });
     expect(attack()).toBe(base + 2);
     g.state.flags.pursuitSuccess[0] = 7; // 超過上限
     expect(attack()).toBe(base + 5);
-    setZones(g, 0, { combat: ['黑桃1'], exp: Array(8).fill('黑桃1') }); // 覺醒
+    setZones(g, 0, { moves: ['黑桃1'], exp: Array(8).fill('黑桃1') }); // 覺醒
     g.state.flags.pursuitSuccess[0] = 2;
     expect(attack()).toBe(base + 4);
     g.state.flags.pursuitSuccess[0] = 4;

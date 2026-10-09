@@ -42,7 +42,7 @@ describe('作弊：加入手牌', () => {
     pick(g, '黑桃1');
     expect(g.pending!.player).toBe(1);
     pick(g, '黑桃9');
-    expect(names(g, 1, 'combat')).toEqual(['黑桃9']);
+    expect(names(g, 1, 'moves')).toEqual(['黑桃9']);
   });
 });
 
@@ -107,7 +107,7 @@ describe('作弊：調整牌區順序', () => {
     expect(() => g.cheatReorder(0, 0, 'deck', [a])).toThrow('內容');
     expect(() => g.cheatReorder(0, 0, 'deck', [a, a])).toThrow('內容');
     expect(() => g.cheatReorder(0, 0, 'deck', [a, 99999])).toThrow('內容');
-    expect(() => g.cheatReorder(0, 0, 'combat' as never, [])).toThrow('牌區不合法');
+    expect(() => g.cheatReorder(0, 0, 'moves' as never, [])).toThrow('牌區不合法');
     expect(() => g.cheatReorder(0, 0, 'hand' as never, [])).toThrow('不能調整順序');
     expect(Z(g, 0, 'deck').map((c) => c.uid)).toEqual([a, b]);
   });
@@ -137,7 +137,7 @@ describe('作弊：刪除牌區的卡', () => {
     expect(() => g.cheatDelete(0, 0, 'discard', uidOf(g, 0, 'deck', '黑桃2'))).toThrow('已經不在');
     expect(() => g.cheatDelete(0, 0, 'deck', 99999)).toThrow('已經不在');
     expect(() => g.cheatDelete(0, 0, 'hand' as never, uidOf(g, 0, 'hand', '黑桃1'))).toThrow('不能');
-    expect(() => g.cheatDelete(0, 0, 'combat' as never, 1)).toThrow('牌區不合法');
+    expect(() => g.cheatDelete(0, 0, 'moves' as never, 1)).toThrow('牌區不合法');
     expect(names(g, 0, 'deck')).toEqual(['黑桃2']);
   });
 });
@@ -171,7 +171,7 @@ describe('作弊：加卡到牌區', () => {
     expect(() => g.cheatInsert(0, 0, 'deck', 'Ex卡-中毒')).toThrow('Ex');
     expect(() => g.cheatInsert(0, 0, 'deck', '不存在的卡')).toThrow('不存在');
     expect(() => g.cheatInsert(0, 0, 'hand' as never, '黑桃5')).toThrow('不能');
-    expect(() => g.cheatInsert(0, 0, 'combat' as never, '黑桃5')).toThrow('牌區不合法');
+    expect(() => g.cheatInsert(0, 0, 'moves' as never, '黑桃5')).toThrow('牌區不合法');
     expect(names(g, 0, 'deck')).toEqual(['黑桃2']);
     expect(names(g, 0, 'hand')).toEqual(['黑桃1', '黑桃6']);
   });

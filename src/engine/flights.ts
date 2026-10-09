@@ -40,7 +40,7 @@ export function fromSpotlight(prevFx: FrameFx | undefined, curFx: FrameFx | unde
 }
 
 /** 影格裡看得到每張卡的區域（牌組只有張數，沒有卡片） */
-const VISIBLE_ZONES = ['hand', 'discard', 'rage', 'exp', 'combat', 'pursuit', 'gear', 'buff'] as const;
+const VISIBLE_ZONES = ['hand', 'discard', 'rage', 'exp', 'moves', 'pursuit', 'gear', 'buff'] as const;
 type VisibleZone = (typeof VISIBLE_ZONES)[number];
 
 /** spawn：憑空出現（例如 Ex 卡）；gone：離開遊戲 */
@@ -96,7 +96,7 @@ export function diffFlights(prev: GameView, next: GameView): Flight[] {
   const nth = new Map<string, number>();
   const push = (f: Omit<Flight, 'order'>) => {
     // 同一組依序出發。招式與追擊卡都算「桌面上的牌」，歸還時先後飛進經驗區
-    const key = `${f.owner}|${f.from === 'pursuit' ? 'combat' : f.from}|${f.to}`;
+    const key = `${f.owner}|${f.from === 'pursuit' ? 'moves' : f.from}|${f.to}`;
     const order = nth.get(key) ?? 0;
     nth.set(key, order + 1);
     out.push({ ...f, order });

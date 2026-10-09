@@ -109,9 +109,9 @@ export interface QueryArgs {
 /** 條目對查詢的貢獻：數值與布林同結果型別，物件型可只填部分欄位 */
 export type QueryContribution = { [K in QueryKey]: Queries[K] extends object ? Partial<Queries[K]> : Queries[K] };
 
-/** 招式在戰鬥區與追擊區的靜態修正，沒有條目時全為預設 */
+/** 招式在招式卡疊與追擊卡疊的靜態修正，沒有條目時全為預設 */
 export interface MoveRules {
-  /** 作為戰鬥區最上方招式時的攻擊力、防禦力修正 */
+  /** 作為招式卡疊最上方招式時的攻擊力、防禦力修正 */
   topAtk: number;
   topDef: number;
   /** 作為最上方招式時，戰鬥區每張招式的攻擊力至少是它的原始防禦力 */

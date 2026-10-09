@@ -16,7 +16,7 @@ export function faceVisibleTo(card: CardInst, viewer: PlayerId): boolean {
     case 'exp':
       return mine || !card.covered;
     case 'discard':
-    case 'combat':
+    case 'moves':
     case 'pursuit':
     case 'gear':
     case 'buff':

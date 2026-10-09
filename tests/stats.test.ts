@@ -36,7 +36,7 @@ describe('數值變化', () => {
     const ret = frames.findIndex((f) => f.fx.type === 'return');
     const before = frames[ret - 1].view.players;
     const c = statChanges(frames[ret - 1].view, frames[ret].view);
-    expect(c.exp).toEqual([before[0].combat.length + before[0].pursuit.length, before[1].combat.length + before[1].pursuit.length]);
+    expect(c.exp).toEqual([before[0].moves.length + before[0].pursuit.length, before[1].moves.length + before[1].pursuit.length]);
   });
 
   it('增益的持續時間指示物變動，依卡片實體編號列出差值', () => {

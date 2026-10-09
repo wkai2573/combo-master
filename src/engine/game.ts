@@ -17,7 +17,7 @@ import {
 /** 飛行播完後，影格再多停留一下 */
 const FLY_BUFFER_MS = 120;
 
-const ZONES: ZoneName[] = ['deck', 'hand', 'discard', 'rage', 'exp', 'combat', 'pursuit', 'gear', 'buff'];
+const ZONES: ZoneName[] = ['deck', 'hand', 'discard', 'rage', 'exp', 'moves', 'pursuit', 'gear', 'buff'];
 
 function emptyFlags(): TurnFlags {
   return {

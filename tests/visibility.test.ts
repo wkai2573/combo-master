@@ -13,7 +13,7 @@ const BUFF = '黑桃9';
 // 玩家 0 的各區域各放一張；經驗區另外放一張裏側的
 const g = scenario({
   p0: {
-    hand: ['黑桃1', '黑桃8'], rage: ['黑桃2'], discard: ['黑桃3'], combat: ['黑桃4'], pursuit: ['黑桃5'],
+    hand: ['黑桃1', '黑桃8'], rage: ['黑桃2'], discard: ['黑桃3'], moves: ['黑桃4'], pursuit: ['黑桃5'],
     exp: ['黑桃6', '~黑桃7'], buff: [BUFF], gear: [GEAR],
   },
 });
@@ -40,7 +40,7 @@ describe('牌面可見性', () => {
   });
 
   it('棄牌區、戰鬥區、追擊卡、裝備、增益是公開的', () => {
-    for (const zone of ['discard', 'combat', 'pursuit', 'gear', 'buff'] as const) {
+    for (const zone of ['discard', 'moves', 'pursuit', 'gear', 'buff'] as const) {
       expect(faceVisibleTo(card(zone), 0)).toBe(true);
       expect(faceVisibleTo(card(zone), 1)).toBe(true);
     }
@@ -49,7 +49,7 @@ describe('牌面可見性', () => {
   it('視角用這條規則：每個區域、每位觀看者，視角裡的牌面有無都與判斷一致', () => {
     for (const viewer of [0, 1] as const) {
       const pv = viewFor(g, viewer).players[0];
-      for (const zone of ['hand', 'rage', 'exp', 'discard', 'combat', 'pursuit', 'gear', 'buff'] as const) {
+      for (const zone of ['hand', 'rage', 'exp', 'discard', 'moves', 'pursuit', 'gear', 'buff'] as const) {
         expect(pv[zone].length).toBeGreaterThan(0);
         pv[zone].forEach((c, i) => expect(c.id !== null).toBe(faceVisibleTo(Z(g, 0, zone)[i], viewer)));
       }

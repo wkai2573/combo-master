@@ -45,7 +45,7 @@ export const 二連矢 = defineSource({
 // 狙擊蓄力（弓箭手）：[發_蓋4] 抽2，再選擇 1 張手牌放到牌組頂
 export const 狙擊蓄力 = defineSource({
   id: '狙擊蓄力',
-  at: 'combat',
+  at: 'moves',
   on: {
     onPlay: (c) => c.effect({ label: '【狙擊蓄力】抽 2，再放 1 張手牌到牌組頂（蓋4）', cost: { cover: 4 } }, function* () {
       yield* draw(c.g, c.p, 2);
@@ -64,7 +64,7 @@ export const 狙擊印記狀態 = slot('狙擊印記', () => ({ up: 0 }));
 // 狙擊印記（弓箭手）：[先] 此回合我方的瞄準升級 1
 export const 狙擊印記 = defineSource({
   id: '狙擊印記',
-  at: 'combat',
+  at: 'moves',
   on: {
     onOpen: (c) => c.effect({ label: '【狙擊印記】此回合瞄準升級 1', mandatory: true }, () => {
       狙擊印記狀態.of(c.g, c.p).up++;

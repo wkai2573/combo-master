@@ -9,7 +9,7 @@ export const 冰與雷之曲 = defineSource({
   at: 'gear',
   on: {
     onPass: (c) => {
-      const has = (traits: string[]) => Z(c.g, c.p, 'combat').some((card) => data(card).traits.some((t) => traits.includes(t)));
+      const has = (traits: string[]) => Z(c.g, c.p, 'moves').some((card) => data(card).traits.some((t) => traits.includes(t)));
       return c.effect(
         { label: '【冰與雷之曲】抽 1，回復 1（蓋3）', cost: { cover: 3 }, when: () => has(['冰']) && has(['電']) },
         function* () {
@@ -25,7 +25,7 @@ export const 冰與雷之曲 = defineSource({
 // 火球（法師）：[先_蓋3] 對方直擊 2
 export const 火球 = defineSource({
   id: '火球',
-  at: 'combat',
+  at: 'moves',
   on: {
     onOpen: (c) => c.effect(
       { label: '【火球】對方直擊 2（蓋3）', cost: { cover: 3 } },
@@ -40,7 +40,7 @@ export const Explosion狀態 = slot('Explosion!', () => ({ skip: false }));
 // Explosion!（法師）：[先_蓋8] 對方直擊 5，然後我方收招，並跳過我方下個抽牌階段
 export const Explosion = defineSource({
   id: 'Explosion!',
-  at: 'combat',
+  at: 'moves',
   on: {
     onOpen: (c) => c.effect({ label: '【Explosion!】對方直擊 5，我方收招，跳過抽牌階段（蓋8）', cost: { cover: 8 } }, () => {
       const { g, p } = c;
@@ -56,7 +56,7 @@ export const Explosion = defineSource({
 // 冰霜護甲（法師）：[發_蓋2] 回復X，再捨棄我方 3 張裏側經驗。X = 我方裏側經驗的張數；不足 3 張就全捨棄
 export const 冰霜護甲 = defineSource({
   id: '冰霜護甲',
-  at: 'combat',
+  at: 'moves',
   on: {
     onPlay: (c) => c.effect({ label: '【冰霜護甲】回復X，捨棄 3 張裏側經驗（蓋2）', cost: { cover: 2 } }, function* () {
       const { g, p } = c;
@@ -72,13 +72,13 @@ export const 冰霜護甲 = defineSource({
 // 電弧（法師）：[發] 抽X，再將 X 張手牌放到牌組底。X = 對方戰鬥區的招式數量
 export const 電弧 = defineSource({
   id: '電弧',
-  at: 'combat',
+  at: 'moves',
   on: {
     onPlay: (c) => c.effect(
-      { label: '【電弧】抽 X，再放 X 張手牌到牌組底', mandatory: true, when: () => Z(c.g, other(c.p), 'combat').length > 0 },
+      { label: '【電弧】抽 X，再放 X 張手牌到牌組底', mandatory: true, when: () => Z(c.g, other(c.p), 'moves').length > 0 },
       function* () {
         const { g, p } = c;
-        const x = Z(g, other(p), 'combat').length;
+        const x = Z(g, other(p), 'moves').length;
         activate(g, p, c.self!);
         yield* draw(g, p, x);
         const put = yield* chooseCards(g, p, `【電弧】選擇 ${x} 張手牌放到牌組底`, Z(g, p, 'hand'), x, x);
@@ -90,7 +90,7 @@ export const 電弧 = defineSource({
 });
 
 // 力量爆破（法師）：[頂] 我方總攻擊 -3；[追] 此卡追擊判定失敗
-export const 力量爆破 = defineSource({ id: '力量爆破', at: 'combat', asMove: { topAtk: -3, pursuitFails: true } });
+export const 力量爆破 = defineSource({ id: '力量爆破', at: 'moves', asMove: { topAtk: -3, pursuitFails: true } });
 
 // 法師：開局多抽 2；覺醒時抽牌階段多抽 1
 export const 法師 = defineSource({

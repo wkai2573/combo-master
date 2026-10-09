@@ -14,7 +14,7 @@ export const 伏擊狀態 = slot('伏擊', () => ({ atk: 0 }));
 // 伏擊（盜賊）：[先] 此回合我方總攻擊 +4
 export const 伏擊 = defineSource({
   id: '伏擊',
-  at: 'combat',
+  at: 'moves',
   on: {
     onOpen: (c) => c.effect({ label: '【伏擊】此回合總攻擊 +4', mandatory: true }, () => {
       activate(c.g, c.p, c.self!);
@@ -31,7 +31,7 @@ export const 順手牽羊狀態 = slot('順手牽羊', () => ({ def: 0 }));
 // 順手牽羊（盜賊）：[發_蓋X] 抽X，此回合我方總防禦 -X。X 最大為 2
 export const 順手牽羊 = defineSource({
   id: '順手牽羊',
-  at: 'combat',
+  at: 'moves',
   on: {
     onPlay: (c) => c.effect(
       { label: '【順手牽羊】蓋 X 張經驗，抽 X，此回合總防禦 −X', when: () => canPay(c.g, c.p, { cover: 1 }) },
@@ -52,7 +52,7 @@ export const 順手牽羊 = defineSource({
 // 卸除鎧甲（盜賊）：[發_蓋2] 選擇對方 1 張裝備或增益卡，送入棄牌區
 export const 卸除鎧甲 = defineSource({
   id: '卸除鎧甲',
-  at: 'combat',
+  at: 'moves',
   on: {
     onPlay: (c) => {
       const targets = () => [...Z(c.g, other(c.p), 'gear'), ...Z(c.g, other(c.p), 'buff')];
@@ -76,7 +76,7 @@ export const 塗毒狀態 = slot('塗毒', () => ({ armed: 0 }));
 // 塗毒（盜賊）：[先_蓋1] 歸還時，將 [Ex卡-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
 export const 塗毒 = defineSource({
   id: '塗毒',
-  at: 'combat',
+  at: 'moves',
   on: {
     onOpen: (c) => c.effect({ label: '【塗毒】歸還時，Ex卡-中毒移入經驗區（蓋1）', cost: { cover: 1 } }, () => {
       塗毒狀態.of(c.g, c.p).armed++;
@@ -124,8 +124,8 @@ export const 幸運兔腳 = defineSource({
 // 二刀連擊（盜賊）：[頂] 戰鬥區只有此卡時，追擊 +1
 export const 二刀連擊 = defineSource({
   id: '二刀連擊',
-  at: 'combat',
-  ask: { pursuitBonus: (c) => (Z(c.g, c.p, 'combat').length === 1 ? 1 : 0) },
+  at: 'moves',
+  ask: { pursuitBonus: (c) => (Z(c.g, c.p, 'moves').length === 1 ? 1 : 0) },
 });
 
 // ───────────────────────── 角色 ─────────────────────────

@@ -27,12 +27,12 @@ export interface CombatStats {
 
 /** 我方戰鬥區白板卡（無特徵、無效果的招式）數量 */
 export function vanillaCount(g: GameCtx, p: PlayerId): number {
-  return Z(g, p, 'combat').filter((c) => isVanilla(data(c))).length;
+  return Z(g, p, 'moves').filter((c) => isVanilla(data(c))).length;
 }
 
 /** 完整結算該玩家目前的攻守數據與明細 */
 export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
-  const combatZone = Z(g, p, 'combat');
+  const combatZone = Z(g, p, 'moves');
   let combatZoneAtk = 0;
   let combatZoneDef = 0;
   let shieldLift = 0;

@@ -176,7 +176,7 @@ describe('瞄準：次數與等級', () => {
 describe('新卡（第二批）', () => {
   it('力量爆破：[頂] 總攻擊 −3，[追] 追擊判定失敗', () => {
     const g = scenario();
-    setZones(g, 0, { combat: ['力量爆破'] });
+    setZones(g, 0, { moves: ['力量爆破'] });
     expect(totalAtk(g, 0)).toBe(atkOf('力量爆破') - 3);
   });
 
@@ -287,7 +287,7 @@ describe('新卡（第二批）', () => {
     const ids = ['梅花1', '黑桃9', '盾擊'];
     expect(atkOf('梅花1')).toBeLessThan(defOf('梅花1')); // 攻擊力小於防禦力：會被補到防禦力
     expect(atkOf('黑桃9')).toBeGreaterThan(defOf('黑桃9')); // 攻擊力較大：不變
-    setZones(g, 0, { combat: ids });
+    setZones(g, 0, { moves: ids });
     const lifted = ids.reduce((n, id) => n + Math.max(atkOf(id), defOf(id)), 0);
     expect(totalAtk(g, 0)).toBe(lifted);
     expect(lifted).toBeGreaterThan(ids.reduce((n, id) => n + atkOf(id), 0));
@@ -297,9 +297,9 @@ describe('新卡（第二批）', () => {
 
   it('盾擊：不在最上方就沒有效果；追擊卡不算；其餘加成在補攻擊力之後照算', () => {
     const g = scenario({ chars: ['刺客', '勇者'] });
-    setZones(g, 0, { combat: ['盾擊', '梅花1'] });
+    setZones(g, 0, { moves: ['盾擊', '梅花1'] });
     expect(totalAtk(g, 0)).toBe(atkOf('盾擊') + atkOf('梅花1'));
-    setZones(g, 0, { combat: ['梅花1', '盾擊'], pursuit: ['梅花1'] });
+    setZones(g, 0, { moves: ['梅花1', '盾擊'], pursuit: ['梅花1'] });
     expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + atkOf('梅花1')); // 追擊的梅花1 照原本的攻擊力
     伏擊狀態.of(g, 0).atk = 3;
     expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + atkOf('梅花1') + 3);
@@ -331,7 +331,7 @@ describe('新卡（第二批）', () => {
 
   it('二刀連擊：戰鬥區只有此卡時追擊 +1', () => {
     const g = scenario();
-    setZones(g, 0, { combat: ['二刀連擊'] });
+    setZones(g, 0, { moves: ['二刀連擊'] });
     expect(pursuitCount(g, 0)).toBe(2);
   });
 
@@ -341,7 +341,7 @@ describe('新卡（第二批）', () => {
     const baseDef = ids.reduce((n, id) => n + defOf(id), 0);
     // 戰鬥區放 3 張招式，其中 2 張是白板卡；scenario 開局時已經跑過第一回合的回合開始效果
     const play = (exp: string[], phase?: boolean) =>
-      scenario({ chars: ['商人', '刺客'], p0: { exp, combat: ids }, ...(phase ? { phase: '重置', singlePhase: true } : {}) });
+      scenario({ chars: ['商人', '刺客'], p0: { exp, moves: ids }, ...(phase ? { phase: '重置', singlePhase: true } : {}) });
     const coveredIds = (g: ReturnType<typeof scenario>) => Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id);
 
     it('回合開始時需蓋前 2 張表側經驗，總攻擊與總防禦各加戰鬥區白板卡數量', () => {
@@ -387,7 +387,7 @@ describe('新卡（第二批）', () => {
 
     it('蓋掉另一張 [經] 卡，那張立即失效：它在窗口裡消失，不會發動', () => {
       // 位置：[黑桃3, 凡骨B, 凡骨A]；A 先發會蓋黑桃3 與 B，B 就不能再發動，A 的加成照給
-      const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['黑桃3', '凡骨的意志', '凡骨的意志'], combat: ids } });
+      const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['黑桃3', '凡骨的意志', '凡骨的意志'], moves: ids } });
       const [, , a] = Z(g, 0, 'exp');
       expect(g.pending!.options.map((o) => o.uid)).toEqual([Z(g, 0, 'exp')[1].uid, a.uid]);
       expect(g.pending!.options.map((o) => o.label.slice(-10))).toEqual(['（經驗區第 2 張）', '（經驗區第 3 張）']);
@@ -544,7 +544,7 @@ describe('新卡（第二批）', () => {
     const g = scenario({
       phase: '先手',
       singlePhase: true,
-      p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], combat: ['冰霜護甲', '電弧'], rage: ['黑桃4'] },
+      p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], moves: ['冰霜護甲', '電弧'], rage: ['黑桃4'] },
       p1: { hand: ['黑桃9'] },
     });
     pick(g, '黑桃1');
@@ -559,7 +559,7 @@ describe('新卡（第二批）', () => {
     const only = scenario({
       phase: '先手',
       singlePhase: true,
-      p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], combat: ['冰霜護甲'] },
+      p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], moves: ['冰霜護甲'] },
       p1: { hand: ['黑桃9'] },
     });
     pick(only, '黑桃1');
@@ -683,11 +683,11 @@ describe('冰與雷之曲：戰鬥區的卡合計具有冰與電兩個特徵', (
       card.traits.splice(0, card.traits.length, ...saved);
     }
   };
-  const song = (combat: string[]) => {
+  const song = (moves: string[]) => {
     const g = scenario({
       phase: '先手',
       singlePhase: true,
-      p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], combat, rage: ['黑桃4'] },
+      p0: { hand: ['黑桃1', '黑桃2'], gear: ['冰與雷之曲'], exp: ['黑桃1', '黑桃2', '黑桃3'], moves, rage: ['黑桃4'] },
       p1: { hand: ['黑桃9'] },
     });
     pick(g, '黑桃1');

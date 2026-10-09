@@ -46,7 +46,7 @@ export function makeCtx(g: GameCtx, p: PlayerId, self: CardInst | null, here: ()
 }
 
 // 窗口選單的順序：裝備、經驗、角色，再依登記順序，與遷移前相同
-const PLACE_ORDER: Place[] = ['gear', 'exp', 'char', 'combat', 'pursuit', 'lasting', 'buff', 'hand', 'deck', 'discard', 'rage'];
+const PLACE_ORDER: Place[] = ['gear', 'exp', 'char', 'moves', 'pursuit', 'lasting', 'buff', 'hand', 'deck', 'discard', 'rage'];
 
 export interface Registry {
   /** 依常駐位置、再依登記順序排列 */

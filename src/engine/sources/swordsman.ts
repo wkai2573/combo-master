@@ -75,7 +75,7 @@ export const 復仇之嚎 = defineSource({
 // 熔岩之擊（劍士）：[發_怒3] 對方直擊 1
 export const 熔岩之擊 = defineSource({
   id: '熔岩之擊',
-  at: 'combat',
+  at: 'moves',
   on: {
     onPlay: (c) => c.effect(
       { label: '【熔岩之擊】對方直擊 1（怒3）', cost: { rage: 3 } },
@@ -85,10 +85,10 @@ export const 熔岩之擊 = defineSource({
 });
 
 // 戒備打擊（劍士）：[頂] 我方總攻擊 +2，總防禦 +2
-export const 戒備打擊 = defineSource({ id: '戒備打擊', at: 'combat', asMove: { topAtk: 2, topDef: 2 } });
+export const 戒備打擊 = defineSource({ id: '戒備打擊', at: 'moves', asMove: { topAtk: 2, topDef: 2 } });
 
 // 盾擊（劍士）：[頂] 我方戰鬥區的招式卡，若原始攻擊力小於原始防禦力，則該卡的攻擊力改為原始防禦力
-export const 盾擊 = defineSource({ id: '盾擊', at: 'combat', asMove: { liftAtkToDef: true } });
+export const 盾擊 = defineSource({ id: '盾擊', at: 'moves', asMove: { liftAtkToDef: true } });
 
 // 勇者：戰鬥結算前的基礎攻擊達到門檻時，總攻擊 +3；覺醒時門檻較低
 export const 勇者 = defineSource({

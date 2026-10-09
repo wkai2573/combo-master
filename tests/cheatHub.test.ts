@@ -109,7 +109,7 @@ describe('作弊中樞：訪客的操作', () => {
     pick(g, '黑桃1');
     expect(g.pending!.player).toBe(1);
     pick(g, '黑桃9');
-    expect(names(g, 1, 'combat')).toEqual(['黑桃9']);
+    expect(names(g, 1, 'moves')).toEqual(['黑桃9']);
   });
 });
 

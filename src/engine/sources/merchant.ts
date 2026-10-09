@@ -65,7 +65,7 @@ export const 商人 = defineSource({
 // 交涉（商人）：[發_蓋X] 抽X，再將 X 張手牌放到牌組底。X 最大為 3
 export const 交涉 = defineSource({
   id: '交涉',
-  at: 'combat',
+  at: 'moves',
   on: {
     onPlay: (c) => c.effect(
       { label: '【交涉】蓋 X 張經驗，抽 X，再放 X 張手牌到牌組底', when: () => canPay(c.g, c.p, { cover: 1 }) },
@@ -87,7 +87,7 @@ export const 交涉 = defineSource({
 // 即時停損（商人）：[發_蓋4] 此卡打出後雙方立即收招
 export const 即時停損 = defineSource({
   id: '即時停損',
-  at: 'combat',
+  at: 'moves',
   on: {
     onPlay: (c) => c.effect({ label: '【即時停損】雙方立即收招（蓋4）', cost: { cover: 4 } }, () => {
       c.g.state.passed = [true, true];
@@ -99,7 +99,7 @@ export const 即時停損 = defineSource({
 // 高利貸（商人）：[發] 對方蓋X。X = 對方帶 [經] 的表側經驗張數
 export const 高利貸 = defineSource({
   id: '高利貸',
-  at: 'combat',
+  at: 'moves',
   on: {
     onPlay: (c) => {
       const foe = other(c.p);

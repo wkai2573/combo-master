@@ -40,7 +40,7 @@ describe('卡離場後仍要生效的查詢', () => {
   });
 
   it('狙擊印記、伏擊、順手牽羊、Explosion!：卡離開戰鬥區後，這回合的效果仍然算', () => {
-    const g = scenario({ p0: { combat: [] } });
+    const g = scenario({ p0: { moves: [] } });
     狙擊印記狀態.of(g, 0).up = 1;
     伏擊狀態.of(g, 0).atk = 4;
     順手牽羊狀態.of(g, 0).def = -2;

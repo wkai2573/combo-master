@@ -55,6 +55,9 @@ export type Gen<T = void> = Generator<Request, T, string[]>;
 
 export const P = (g: GameCtx, p: PlayerId): PlayerState => g.state.players[p];
 export const Z = (g: GameCtx, p: PlayerId, z: ZoneName): CardInst[] => g.state.players[p].zones[z];
+
+/** 戰鬥區＝招式卡疊加追擊卡疊（招式卡疊在前，各自由底到頂）。卡效果提到「戰鬥區」時用它；規則本身只看招式卡疊的地方直接用 Z(g, p, 'moves') */
+export const combatZone = (g: GameCtx, p: PlayerId): CardInst[] => [...Z(g, p, 'moves'), ...Z(g, p, 'pursuit')];
 export const data = (c: CardInst): CardData => getCard(c.id);
 export const charOf = (g: GameCtx, p: PlayerId) => getCharacter(P(g, p).charId);
 export const isFirst = (g: GameCtx, p: PlayerId) => g.state.first === p;
@@ -99,7 +102,7 @@ export function move(g: GameCtx, card: CardInst, to: ZoneName, pos: 'top' | 'bot
   card.covered = false;
   const dest = Z(g, card.owner, to);
   const topIsFront = to === 'deck' || to === 'rage';
-  const topIsEnd = to === 'combat';
+  const topIsEnd = to === 'moves';
   if (topIsFront) {
     if (pos === 'top') dest.unshift(card);
     else dest.push(card);
@@ -225,6 +228,6 @@ export function takeDamage(g: GameCtx, p: PlayerId, n: number): number {
 }
 
 export function topOfZone(g: GameCtx, p: PlayerId): CardInst | undefined {
-  const z = Z(g, p, 'combat');
+  const z = Z(g, p, 'moves');
   return z[z.length - 1];
 }

@@ -15,9 +15,9 @@ import {
 /** p 目前可以打出的招式（手牌） */
 export function playables(g: GameCtx, p: PlayerId): CardInst[] {
   const cands = Z(g, p, 'hand').filter((c) => data(c).kind === 'move');
-  // 戰鬥區只能出現一次「重複連擊值」：已經有同值 2 張之後，戰鬥區裡有的連擊值都不能再打出
+  // 招式卡疊只能出現一次「重複連擊值」：已經有同值 2 張之後，招式卡疊裡有的連擊值都不能再打出
   const copies = new Map<number, number>();
-  for (const c of Z(g, p, 'combat')) copies.set(data(c).combo, (copies.get(data(c).combo) ?? 0) + 1);
+  for (const c of Z(g, p, 'moves')) copies.set(data(c).combo, (copies.get(data(c).combo) ?? 0) + 1);
   const hasDuplicate = [...copies.values()].some((n) => n >= 2);
   return cands.filter((c) => inRange(g, p, c) && !(hasDuplicate && copies.has(data(c).combo)));
 }
@@ -25,7 +25,7 @@ export function playables(g: GameCtx, p: PlayerId): CardInst[] {
 // ───────────────────────── 出招 ─────────────────────────
 
 export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: boolean): Gen {
-  move(g, card, 'combat', 'top');
+  move(g, card, 'moves', 'top');
   g.state.flags.played[p]++;
   log(g, `${pname(g, p)} ${opening ? '先手出招' : '出招'}【${data(card).name}】`);
   const cd = data(card);
@@ -165,8 +165,8 @@ export function* damageStep(g: GameCtx): Gen {
 export function* returnStep(g: GameCtx): Gen {
   g.state.phase = '歸還';
   for (const p of order(g)) {
-    // 戰鬥區由最底到最頂，最後是追擊卡
-    for (const c of [...Z(g, p, 'combat'), ...Z(g, p, 'pursuit')]) move(g, c, 'exp');
+    // 招式卡疊由最底到最頂，最後是追擊卡疊
+    for (const c of [...Z(g, p, 'moves'), ...Z(g, p, 'pursuit')]) move(g, c, 'exp');
   }
   // 塗毒：歸還時，把 [Ex卡-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
   yield* fireEach(g, 'afterReturn');

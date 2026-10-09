@@ -95,8 +95,8 @@ describe('窗口效果的收集', () => {
     const a = defineSource({ id: '黑桃1', at: 'gear', on: { onPlay: (c) => c.effect({ label: 'A' }, () => void played.push('A')) } });
     const b = defineSource({ id: '黑桃2', at: 'gear', on: { onPlay: (c) => c.effect({ label: 'B' }, noop) } });
     const fx = createEffects([a, b]);
-    const g = scenario({ p0: { combat: ['黑桃1'] } });
-    const card = Z(g, 0, 'combat')[0];
+    const g = scenario({ p0: { moves: ['黑桃1'] } });
+    const card = Z(g, 0, 'moves')[0];
     const es = fx.windowEffects(g, 0, 'onPlay', { card });
     expect(labels(es)).toEqual(['A']);
     expect(es[0].available()).toBe(true);
@@ -180,15 +180,15 @@ describe('fire', () => {
   it('先手出招同時是先手出招時與打出時，兩者的效果進同一個窗口，玩家自己選順序', () => {
     const order: string[] = [];
     const src = defineSource({
-      id: '黑桃4', at: 'combat',
+      id: '黑桃4', at: 'moves',
       on: {
         onOpen: (c) => c.effect({ label: 'O' }, () => void order.push('O')),
         onPlay: (c) => c.effect({ label: 'P' }, () => void order.push('P')),
       },
     });
     const fx = createEffects([src]);
-    const g = scenario({ p0: { combat: ['黑桃4'] } });
-    const card = Z(g, 0, 'combat')[0];
+    const g = scenario({ p0: { moves: ['黑桃4'] } });
+    const card = Z(g, 0, 'moves')[0];
     const gen = fx.fire(g, 0, ['onOpen', 'onPlay'], { card });
     const r = gen.next([]);
     const req = r.value as { title: string; options: { label: string }[] };
@@ -201,11 +201,11 @@ describe('fire', () => {
 
   it('一個時機只有一個效果，且玩家沒有選擇的餘地時，不多出任何提示', () => {
     const only = defineSource({
-      id: '黑桃4', at: 'combat',
+      id: '黑桃4', at: 'moves',
       on: { onPlay: (c) => c.effect({ label: 'P', mandatory: true }, noop) },
     });
-    const g = scenario({ p0: { combat: ['黑桃4'] } });
-    drive(createEffects([only]).fire(g, 0, 'onPlay', { card: Z(g, 0, 'combat')[0] }));
+    const g = scenario({ p0: { moves: ['黑桃4'] } });
+    drive(createEffects([only]).fire(g, 0, 'onPlay', { card: Z(g, 0, 'moves')[0] }));
   });
 
   it('fireEach 先攻方先，參數可依玩家而異', () => {
@@ -293,7 +293,7 @@ describe('查詢', () => {
   });
 
   it('查詢無副作用：連續兩次結算同一局面，整個狀態不變', () => {
-    const g = scenario({ p0: { combat: ['黑桃9'], pursuit: ['黑桃1'], gear: [], exp: ['黑桃1'] } });
+    const g = scenario({ p0: { moves: ['黑桃9'], pursuit: ['黑桃1'], gear: [], exp: ['黑桃1'] } });
     const before = JSON.stringify(g.state);
     resolveCombatStats(g, 0);
     resolveCombatStats(g, 1);
@@ -308,7 +308,7 @@ describe('moveRules', () => {
   });
 
   it('有條目的卡把宣告的欄位蓋在預設上', () => {
-    const fx = createEffects([defineSource({ id: '黑桃1', at: 'combat', asMove: { topAtk: 2, liftAtkToDef: true } })]);
+    const fx = createEffects([defineSource({ id: '黑桃1', at: 'moves', asMove: { topAtk: 2, liftAtkToDef: true } })]);
     expect(fx.moveRules('黑桃1')).toEqual({ ...NO_MOVE_RULES, topAtk: 2, liftAtkToDef: true });
   });
 });

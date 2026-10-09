@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.26.1',
+    date: '2026-10-09',
+    items: [
+      { type: 'change', text: '用語整理：打出的招式那一疊叫「招式卡疊」，追擊成功的卡那一疊叫「追擊卡疊」，兩疊合起來才是「戰鬥區」；窗口選單、首頁規則說明與流程圖的用字跟著改' },
+    ],
+  },
+  {
     version: '0.26.0',
     date: '2026-10-09',
     items: [

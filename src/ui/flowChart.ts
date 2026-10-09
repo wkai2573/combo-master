@@ -198,7 +198,7 @@ export function buildFlowChart(): FlowChart {
 
   // 追擊判定的結果
   const chase = colAt('追擊');
-  branch('chase-always', '追擊', chase - 2, 2, ['一律失敗', '裝備增益，或戰鬥區沒招式'], 'bad', true);
+  branch('chase-always', '追擊', chase - 2, 2, ['一律失敗', '裝備增益，或沒招式'], 'bad', true);
   branch('chase-miss', '追擊', chase - 1, 2, ['追擊失敗', '該卡加入手牌'], 'bad');
   branch('chase-hit', '追擊', chase, 2, ['追擊成功', '成為追擊卡，計入攻擊'], 'good');
   const e1 = laneY(2) + 18;

@@ -7,11 +7,11 @@ export const other = (p: PlayerId): PlayerId => (p === 0 ? 1 : 0);
  * 區域與順序約定：
  * - deck / rage：index 0 為最上方
  * - exp：index 0 為最前方（蓋X 從最前面的正面卡開始蓋）
- * - combat：index 0 為最底，最後一張為最上方（[頂] 所指的卡）
+ * - moves：index 0 為最底，最後一張為最上方（[頂] 所指的卡）
  */
 export type ZoneName =
   | 'deck' | 'hand' | 'discard' | 'rage' | 'exp'
-  | 'combat' | 'pursuit' | 'gear' | 'buff';
+  | 'moves' | 'pursuit' | 'gear' | 'buff';
 
 export interface CardInst {
   uid: number;

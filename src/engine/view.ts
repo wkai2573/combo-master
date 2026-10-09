@@ -18,7 +18,7 @@ export interface PlayerView {
   discard: CardView[];
   rage: CardView[];
   exp: CardView[];
-  combat: CardView[];
+  moves: CardView[];
   pursuit: CardView[];
   gear: CardView[];
   buff: CardView[];
@@ -82,7 +82,7 @@ function playerView(game: Game, p: PlayerId, viewer: PlayerId): PlayerView {
     discard: list('discard'),
     rage: list('rage'),
     exp: list('exp'),
-    combat: list('combat'),
+    moves: list('moves'),
     pursuit: list('pursuit'),
     gear: list('gear'),
     buff: list('buff'),

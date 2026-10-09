@@ -97,7 +97,7 @@ describe('動畫影格', () => {
     const zoneUids = (v: ReturnType<typeof viewFor>) =>
       v.players.map((pv) => ({
         deck: pv.deckCount,
-        zones: (['hand', 'discard', 'rage', 'exp', 'combat', 'pursuit', 'gear', 'buff'] as const).map((z) => pv[z].map((c) => `${c.uid}${c.covered ? '~' : ''}`)),
+        zones: (['hand', 'discard', 'rage', 'exp', 'moves', 'pursuit', 'gear', 'buff'] as const).map((z) => pv[z].map((c) => `${c.uid}${c.covered ? '~' : ''}`)),
       }));
     const ids = PRESET_CHARACTER_IDS;
     for (let seed = 1; seed <= 12; seed++) {
@@ -132,7 +132,7 @@ describe('動畫影格', () => {
     const fx = frames[at].fx;
     expect(fx.type === 'activate' && [fx.player, fx.cardId]).toEqual([0, '火球']);
     // 那張牌就是戰鬥區最上方的火球
-    const fireball = frames[at].view.players[0].combat.at(-1)!;
+    const fireball = frames[at].view.players[0].moves.at(-1)!;
     expect(fx.type === 'activate' && fx.uid).toBe(fireball.uid);
     // 發動時還沒付費、效果還沒生效
     expect(frames[at].view.players[0].exp.some((c) => c.covered)).toBe(false);

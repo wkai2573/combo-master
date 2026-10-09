@@ -188,8 +188,8 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
 }
 
 function rangeText(v: GameView): string {
-  const mine = v.players[v.me].combat;
-  const opp = v.players[v.me === 0 ? 1 : 0].combat;
+  const mine = v.players[v.me].moves;
+  const opp = v.players[v.me === 0 ? 1 : 0].moves;
   if (mine.length === 0 || opp.length === 0) return '範圍：任意連擊值';
   const a = getCard(mine[mine.length - 1].id!).combo;
   const b = getCard(opp[opp.length - 1].id!).combo;
@@ -202,22 +202,22 @@ const sumOf = (cards: CardView[], key: 'atk' | 'def') =>
 /** 一方的戰鬥區：卡片往下疊（最新的在最下面且完整顯示），上面幾張只露出「攻／連擊／守」 */
 /** 卡面合計與實際總攻防不同時的說明 */
 function statNote(pv: PlayerView): string | null {
-  const rawAtk = sumOf(pv.combat, 'atk') + sumOf(pv.pursuit, 'atk');
-  const rawDef = sumOf(pv.combat, 'def');
+  const rawAtk = sumOf(pv.moves, 'atk') + sumOf(pv.pursuit, 'atk');
+  const rawDef = sumOf(pv.moves, 'def');
   if (pv.atk === rawAtk && pv.def === rawDef) return null;
   const diff = (shown: number, raw: number) => (shown === raw ? '' : `（含效果 ${shown > raw ? '+' : ''}${shown - raw}）`);
   return `卡面合計 ${rawAtk} ／ ${rawDef}${diff(pv.atk, rawAtk)}`;
 }
 
 function StackColumn({ pv, label, mine, fx, delta, k, notes }: { pv: PlayerView; label: string; mine: boolean; fx?: FrameFx; delta?: { atk: number; def: number }; k: number; /** 備註放在總攻防下方（寬螢幕版改放中央欄，避免疊牌區高度跳動） */ notes: boolean }) {
-  const cards = [...pv.combat, ...pv.pursuit];
+  const cards = [...pv.moves, ...pv.pursuit];
   return (
     <div className={`col ${mine ? 'mine' : 'opp'}`}>
       <h4>{label}</h4>
       <div className="vstack" style={{ ['--n1' as string]: Math.max(cards.length - 1, 1) }}>
         {cards.map((c, i) => (
           <CardFace
-            key={c.uid} uid={c.uid} id={c.id} size="md" pursuit={i >= pv.combat.length}
+            key={c.uid} uid={c.uid} id={c.id} size="md" pursuit={i >= pv.moves.length}
             fresh={fx?.type === 'play' && fx.uid === c.uid}
           />
         ))}
