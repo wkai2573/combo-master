@@ -1,4 +1,5 @@
 import { defineSource, lasting, slot } from '../effectKit';
+import { faceUpExp } from '../cost';
 import { activate, awakened, chooseCards, combatZone, data, directHit, discard, draw, log, move, pname, recover, topOfZone, Z } from '../ops';
 import { other } from '../types';
 
@@ -119,4 +120,34 @@ export const 法師 = defineSource({
   },
 });
 
-export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 法師];
+/** 【元素】：火、冰、電三種特徵的統稱，毒不算（說明寫在卡表的關鍵字區塊） */
+export const ELEMENT_TRAITS = ['火', '冰', '電'];
+
+// 元素法典（id 星界法典，法師飾品）：[蓋3] 當我方收招時，且我方戰鬥區有【元素】特徵時，
+// 從表側經驗選擇 1 張有相同【元素】特徵的卡加入手牌。戰鬥區含招式卡疊與追擊卡疊；只能拿 1 張；
+// 蓋3 先付，所以可選的是付完之後仍是表側的經驗；沒有符合的卡就不能發動
+export const 元素法典 = defineSource({
+  id: '星界法典',
+  at: 'gear',
+  on: {
+    onPass: (c) => {
+      const present = () => new Set(combatZone(c.g, c.p).flatMap((card) => data(card).traits.filter((t) => ELEMENT_TRAITS.includes(t))));
+      const candidates = (afterCover: boolean) => {
+        const elements = present();
+        const pool = faceUpExp(c.g, c.p);
+        return (afterCover ? pool.slice(3) : pool).filter((card) => data(card).traits.some((t) => elements.has(t)));
+      };
+      return c.effect(
+        { label: '【元素法典】將 1 張相同【元素】特徵的表側經驗加入手牌（蓋3）', cost: { cover: 3 }, when: () => candidates(true).length > 0 },
+        function* () {
+          const [pick] = yield* chooseCards(c.g, c.p, '【元素法典】選擇 1 張有相同【元素】特徵的表側經驗加入手牌', candidates(false), 1, 1);
+          if (!pick) return;
+          move(c.g, pick, 'hand');
+          log(c.g, `【元素法典】${pname(c.g, c.p)} 將經驗【${data(pick).name}】加入手牌`);
+        },
+      );
+    },
+  },
+});
+
+export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 元素法典, 法師];

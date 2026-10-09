@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.32.1',
+    date: '2026-10-09',
+    items: [
+      { type: 'add', text: '新卡開放：元素法典（法師飾品，經驗需求 8）：[蓋3] 當我方收招時，且我方戰鬥區有【元素】特徵時，從表側經驗選擇 1 張有相同【元素】特徵的卡加入手牌。只能拿 1 張' },
+      { type: 'add', text: '新關鍵字【元素】：火、冰、電三種特徵的統稱，毒不算' },
+    ],
+  },
+  {
     version: '0.32.0',
     date: '2026-10-09',
     items: [
