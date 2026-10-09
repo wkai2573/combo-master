@@ -47,35 +47,29 @@ function Box({ box }: { box: CardBox }) {
 /**
  * 卡片效果文字，依撰寫規範分段上色：回合X次、開頭關鍵字、費用用特殊框（蓋與怒用圖示），
  * 時機綠底、條件藍底並與時機相連，效果無底色，效果裡的動作關鍵字維持黃字底線與滑入提示。
- * 多行卡文每行各自上色；轉述別張卡的標題行不上色。
+ * 多行卡文每行各自上色。引用 Ex 卡寫 [Ex-卡名]，用關鍵字的黃字底線標示，滑入時顯示那張 Ex 卡的特徵與效果。
  */
 export function CardText({ text }: { text: string }) {
   return (
     <>
-      {parseCardText(text).map((line, i) =>
-        line.kind === 'header' ? (
-          <div key={i} className="cx-line cx-header">
-            <KeywordText text={line.raw} />
-          </div>
-        ) : (
-          <div key={i} className="cx-line">
-            {lineBoxes(line).map((b, j) => (
-              <Box key={j} box={b} />
-            ))}
-            {line.timing && (
-              <span className="cx-timing">
-                <KeywordText text={line.timing} />
-              </span>
-            )}
-            {line.condition && (
-              <span className="cx-cond">
-                <KeywordText text={line.condition} />
-              </span>
-            )}
-            <KeywordText text={line.effect} />
-          </div>
-        ),
-      )}
+      {parseCardText(text).map((line, i) => (
+        <div key={i} className="cx-line">
+          {lineBoxes(line).map((b, j) => (
+            <Box key={j} box={b} />
+          ))}
+          {line.timing && (
+            <span className="cx-timing">
+              <KeywordText text={line.timing} />
+            </span>
+          )}
+          {line.condition && (
+            <span className="cx-cond">
+              <KeywordText text={line.condition} />
+            </span>
+          )}
+          <KeywordText text={line.effect} />
+        </div>
+      ))}
     </>
   );
 }

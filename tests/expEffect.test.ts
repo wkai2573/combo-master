@@ -9,15 +9,12 @@ import { expEffectActive } from '../src/ui/components/CardFace';
 
 const view = (id: string | null, covered = false) => ({ uid: 1, id, covered, counters: 0 });
 
-// 卡文裡轉述別張卡（例如 Ex 卡）的說明，會以單獨一行「[卡名]：」開頭；那之後的 [經] 屬於別張卡
-const EMBEDDED_HEADER = /^\[(?!(?:先|追|發|頂|經)\])[^\]]+\]：\s*$/m;
 // 行首的標籤組：可有前綴 (回合X次)，例如 [經]、[經_怒3]、(回合1次)[經_蓋2]
 const LINE_TAGS = /^(?:\([^)]*\))?\[([^\]]+)\]：/;
 
 /** 卡文是否有某一行以 [經] 標籤開頭。卡文是外部權威，這裡只用來對照登記表，執行期不讀卡文 */
 function textSaysExpEffect(cardId: string): boolean {
-  const own = getCard(cardId).text.split(EMBEDDED_HEADER)[0];
-  return own.split('\n').some((line) => LINE_TAGS.exec(line.trim())?.[1].split('_').includes('經'));
+  return getCard(cardId).text.split('\n').some((line) => LINE_TAGS.exec(line.trim())?.[1].split('_').includes('經'));
 }
 
 describe('經驗效果：登記表的查詢', () => {
@@ -27,7 +24,7 @@ describe('經驗效果：登記表的查詢', () => {
     expect(hasExpEffect('Ex-中毒')).toBe(true);
     expect(hasExpEffect('火球')).toBe(false);
     expect(hasExpEffect('高利貸')).toBe(false); // 文字裡引用 [經]，但它不是經驗效果
-    expect(hasExpEffect('塗毒')).toBe(false); // 內嵌 Ex-中毒 的 [經]，不算它自己的
+    expect(hasExpEffect('塗毒')).toBe(false); // 只引用 Ex-中毒，它的 [經] 不算塗毒自己的
     expect(hasExpEffect('紅心5')).toBe(false);
   });
 

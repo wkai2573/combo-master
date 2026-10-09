@@ -9,7 +9,6 @@ describe('卡片文字句型：切成各段', () => {
   it('規範範例一：費用、時機、條件、效果各自切開，接起來等於原文', () => {
     const raw = '[蓋3]：當我方收招時，且我方戰鬥區的卡共有特徵「冰」「雷」，抽1，回復1。';
     const l = parseCardLine(raw);
-    expect(l.kind).toBe('line');
     expect(l.count).toBe('');
     expect(l.bracket).toBe('[蓋3]：');
     expect(l.costs).toEqual(['蓋3']);
@@ -53,12 +52,16 @@ describe('卡片文字句型：切成各段', () => {
     expect([plain.bracket, plain.timing, plain.condition, plain.effect]).toEqual(['', '', '', '獲得【瞄準】。']);
   });
 
-  it('多行卡文逐行切；轉述別張卡的標題行是 header', () => {
-    const lines = parseCardText('[先_蓋1]：當歸還時，將 [Ex-中毒] 移入出招卡較少那方的經驗區。\n[Ex-中毒]：\n[經]：當我方後攻的回合開始時，直擊我方3。\n當此卡離開經驗區時，移除遊戲。');
-    expect(lines.map((l) => l.kind)).toEqual(['line', 'header', 'line', 'line']);
-    expect(lines[2].tags).toEqual(['經']);
-    expect(lines[3].timing).toBe('當此卡離開經驗區時，');
+  it('多行卡文逐行切，每一行各自成一組', () => {
+    const lines = parseCardText('[頂]：我方總攻擊 −3。\n[追]：此卡追擊判定失敗。\n[經]：當此卡被蓋為裏側時，回復1。');
+    expect(lines.map((l) => l.tags)).toEqual([['頂'], ['追'], ['經']]);
+    expect(lines[2].timing).toBe('當此卡被蓋為裏側時，');
     expect(lines.every((l) => l.errors.length === 0)).toBe(true);
+  });
+
+  it('引用 Ex 卡只寫 [Ex-卡名]，不再有轉述別張卡的標題行', () => {
+    expect(parseCardLine('[發_蓋2]：當歸還時，將 [Ex-中毒] 移入對方的經驗區。').errors).toEqual([]);
+    expect(checkCardText('[Ex-中毒]：\n[經]：當回合開始時，直擊我方1。').join()).toContain('不是開頭關鍵字或費用');
   });
 });
 
@@ -118,7 +121,6 @@ describe('卡文開頭的特殊框', () => {
     const problems: string[] = [];
     for (const c of ALL_CARDS.filter((c) => c.text !== '' && (isCardEnabled(c) || isExCardId(c.id)))) {
       for (const line of parseCardText(c.text)) {
-        if (line.kind !== 'line') continue;
         for (const box of lineBoxes(line)) {
           if (keywordsIn(box.source).length === 0) problems.push(`${c.name}：${box.source} 沒有關鍵字說明`);
         }

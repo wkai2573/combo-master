@@ -10,8 +10,6 @@ const TAGS = new Set(['先', '追', '發', '頂', '經']);
 const COST = /^(?:蓋|怒)(?:\d+|X)$/;
 
 export interface CardLine {
-  /** header：轉述別張卡的標題行，例如「[Ex-中毒]：」；line：一般的一行 */
-  kind: 'line' | 'header';
   raw: string;
   /** 回合X次，例如「(回合1次)」 */
   count: string;
@@ -31,11 +29,10 @@ export interface CardLine {
   errors: string[];
 }
 
-const HEADER = /^\[([^\]]+)\]：$/;
 const HEAD = /^(\(回合(?:\d+|X)次\))?(\[[^\]]+\]：)?/;
 
-function emptyLine(raw: string, kind: CardLine['kind']): CardLine {
-  return { kind, raw, count: '', bracket: '', tags: [], costs: [], timing: '', condition: '', effect: '', errors: [] };
+function emptyLine(raw: string): CardLine {
+  return { raw, count: '', bracket: '', tags: [], costs: [], timing: '', condition: '', effect: '', errors: [] };
 }
 
 /** 切開一行：從 text 開頭取到第一個逗號（含逗號）。沒有逗號就整段取走 */
@@ -45,14 +42,7 @@ function takeClause(text: string): [string, string] {
 }
 
 export function parseCardLine(raw: string): CardLine {
-  const header = HEADER.exec(raw);
-  if (header) {
-    const parts = header[1].split('_');
-    const isHead = parts.every((p) => TAGS.has(p) || COST.test(p));
-    if (!isHead) return { ...emptyLine(raw, 'header'), bracket: raw };
-  }
-
-  const line = emptyLine(raw, 'line');
+  const line = emptyLine(raw);
   const head = HEAD.exec(raw)!;
   line.count = head[1] ?? '';
   line.bracket = head[2] ?? '';

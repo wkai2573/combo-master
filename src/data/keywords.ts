@@ -7,7 +7,16 @@ export interface Keyword {
   desc: string;
 }
 
-export const KEYWORDS: Keyword[] = (tableJson as { keywords?: Keyword[] }).keywords ?? [];
+const table = tableJson as { keywords?: Keyword[]; exCards?: Array<{ name: string; traits: string[]; text: string }> };
+export const KEYWORDS: Keyword[] = table.keywords ?? [];
+
+/** Ex 卡也像關鍵字：卡文只寫 [Ex-卡名]，滑過顯示它的特徵與效果，說明從卡表的 Ex卡 區域來 */
+export const EX_KEYWORDS: Keyword[] = (table.exCards ?? []).map((c) => ({
+  name: c.name,
+  group: 'Ex卡',
+  desc: [c.traits.length ? `特徵：${c.traits.join('、')}` : '', c.text].filter(Boolean).join('\n'),
+}));
+const exByName = new Map(EX_KEYWORDS.map((k) => [k.name, k]));
 
 /** 「書寫規範」只是寫卡的規定，不在遊戲裡當關鍵字顯示 */
 const SHOWN = KEYWORDS.filter((k) => k.group !== '書寫規範');
@@ -58,7 +67,9 @@ export function segmentsOf(text: string): Segment[] {
     const tok = m[0];
     let kws: Keyword[] = [];
     if (tok.startsWith('[')) {
-      kws = tok.slice(1, -1).split('_').map((p) => byName.get(norm(p))).filter((k): k is Keyword => !!k);
+      const inner = tok.slice(1, -1);
+      const ex = exByName.get(inner);
+      kws = ex ? [ex] : inner.split('_').map((p) => byName.get(norm(p))).filter((k): k is Keyword => !!k);
     } else if (tok.startsWith('【')) {
       const k = byName.get(tok.slice(1, -1));
       kws = k ? [k] : [];

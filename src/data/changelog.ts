@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.29.1',
+    date: '2026-10-09',
+    items: [
+      { type: 'change', text: '卡文提到 Ex 卡時只寫卡名，例如塗毒的 [Ex-中毒]：用黃字底線標示，滑過會顯示那張 Ex 卡的特徵與效果，卡片詳細視窗也會列出全文，不再把 Ex 卡的說明抄在卡文裡' },
+    ],
+  },
+  {
     version: '0.28.5',
     date: '2026-10-09',
     items: [

@@ -337,7 +337,6 @@ h1, h2, h3 { margin: 0 0 8px; }
 }
 /* 卡文分段上色（撰寫規範）：特殊框、時機綠底、條件藍底並與時機相連 */
 .cx-line { margin: 2px 0; }
-.cx-header { color: var(--muted); font-size: 0.92em; }
 .cx-box {
   display: inline-flex; align-items: center; gap: 2px; margin-right: 3px; padding: 0 5px; vertical-align: middle;
   border: 1px solid var(--cc, var(--accent)); border-radius: 4px; background: #0006; color: var(--cc, var(--accent));
@@ -351,6 +350,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .cx-timing { background: rgba(79, 201, 139, .32); color: #eafff4; padding: 0 3px; border-radius: 3px; margin-right: 3px; }
 .cx-timing:has(+ .cx-cond) { border-radius: 3px 0 0 3px; margin-right: 0; }
 .cx-cond { background: rgba(59, 130, 246, .32); color: #e4eeff; padding: 0 3px; border-radius: 0 3px 3px 0; margin-right: 3px; }
+.kwtip { white-space: pre-line; }
 .kwtip b { color: var(--accent); margin-right: 6px; }
 .kwtip .g { color: var(--muted); font-size: 11px; }
 .inspect .bigart {
@@ -363,6 +363,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .inspect .pinbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; padding: 3px 8px; font-size: 12px; color: #1b1405; background: var(--accent); border-radius: 6px; font-weight: 700; }
 .inspect .pinbar button { padding: 0 8px; font-size: 12px; background: #fff3; border-color: #1b140555; color: #1b1405; }
 .inspect .kwlist { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 12px; line-height: 1.55; color: var(--muted); display: grid; gap: 4px; }
+.inspect .kwlist { white-space: pre-line; }
 .inspect .kwlist b { color: var(--accent); }
 
 /* ───────── 牌堆與飛行圖層 ───────── */

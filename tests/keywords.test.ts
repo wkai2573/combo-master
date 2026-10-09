@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isExCardId } from '../src/data/exCards';
 import { ALL_CHARACTERS, PLAYABLE_CARDS } from '../src/data/cards';
-import { keywordsIn, KEYWORDS, segmentsOf } from '../src/data/keywords';
+import { EX_KEYWORDS, keywordsIn, KEYWORDS, segmentsOf } from '../src/data/keywords';
 
 const names = (text: string) => keywordsIn(text).map((k) => k.name);
 
@@ -25,6 +25,15 @@ describe('關鍵字', () => {
     expect(segs.filter((s) => s.kws.length > 0).map((s) => s.text)).toEqual(['[頂]', '總防禦']);
   });
 
+  it('引用 Ex 卡 [Ex-卡名] 像關鍵字：滑過顯示特徵與效果', () => {
+    const segs = segmentsOf('當歸還時，將 [Ex-中毒] 移入對方的經驗區。');
+    const ex = segs.find((s) => s.text === '[Ex-中毒]')!;
+    expect(ex.kws.map((k) => [k.name, k.group])).toEqual([['Ex-中毒', 'Ex卡']]);
+    expect(ex.kws[0].desc).toContain('特徵：毒');
+    expect(ex.kws[0].desc).toContain('直擊我方1');
+    expect(keywordsIn('將 [Ex-流血] 加入對方經驗區。').map((k) => k.name)).toEqual(['Ex-流血']);
+  });
+
   it('書寫規範不當關鍵字顯示', () => {
     expect(names('我方抽 1 張牌時。')).not.toContain('我方／對方／雙方');
   });
@@ -40,7 +49,10 @@ describe('關鍵字', () => {
     const texts = [...PLAYABLE_CARDS.map((c) => c.text), ...ALL_CHARACTERS.flatMap((c) => [c.text, c.awakenText])];
     for (const t of texts) {
       for (const m of t.matchAll(/\[([^\]]+)\]/g)) {
-        if (isExCardId(m[1])) continue; // Ex 卡的卡名
+        if (isExCardId(m[1])) {
+          expect(EX_KEYWORDS.some((k) => k.name === m[1]), `Ex 卡「${m[1]}」（出自：${t}）不存在`).toBe(true);
+          continue;
+        }
         for (const part of m[1].split('_')) {
           expect(defined.has(part.replace(/\d+/g, 'X')), `關鍵字「${part}」（出自：${t}）沒有定義`).toBe(true);
         }
