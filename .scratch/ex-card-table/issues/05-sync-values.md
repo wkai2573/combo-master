@@ -4,8 +4,12 @@
 
 **Blocked by（被誰阻擋）：** 03
 
-**Status：** ready-for-agent
+**Status：** resolved
 
-- [ ] cardTable.json 與線上卡表一致
-- [ ] 卡表 meta/sync 更新、base 重設
-- [ ] 升版並補更新日誌
+- [x] cardTable.json 與線上卡表一致
+- [x] 卡表 meta/sync 更新、base 重設
+- [x] 升版並補更新日誌
+
+## Answer
+
+已於 v0.29.2 生效。26 張卡的數值與經驗需求同步，4 張新卡（財富管理、元素法典、布甲、木棍）的資料進了快照但尚未開放。文字有差異的 11 張卡仍保留遊戲現有文字，由票 06 到 08 隨效果更新；卡表資料庫 `meta/sync` 與已同步欄位的 `base` 已重設，文字未同步的卡保留黃框。

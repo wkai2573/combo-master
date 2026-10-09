@@ -3,7 +3,7 @@ import { aimLimit, pursuitCount, returnStep, totalAtk, totalDef } from '../src/e
 import { discard, Z } from '../src/engine/ops';
 import { cover, optionalPay, pay } from '../src/engine/cost';
 import { getCard } from '../src/data/cards';
-import { atkOf, defOf, drive, names, pick, scenario, setZones } from './helpers';
+import { atkOf, defOf, drive, liftedAtkOf, names, pick, scenario, setZones } from './helpers';
 import { Explosion狀態 } from '../src/engine/sources/mage';
 import { 伏擊狀態, 塗毒狀態, 順手牽羊狀態 } from '../src/engine/sources/thief';
 import { 二連矢狀態 } from '../src/engine/sources/archer';
@@ -300,9 +300,9 @@ describe('新卡（第二批）', () => {
     setZones(g, 0, { moves: ['盾擊', '梅花1'] });
     expect(totalAtk(g, 0)).toBe(atkOf('盾擊') + atkOf('梅花1'));
     setZones(g, 0, { moves: ['梅花1', '盾擊'], pursuit: ['梅花1'] });
-    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + defOf('梅花1')); // 追擊卡疊的梅花1 也補到防禦力
+    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + liftedAtkOf('盾擊') + defOf('梅花1')); // 追擊卡疊的梅花1 也補到防禦力，盾擊自己也補
     伏擊狀態.of(g, 0).atk = 3;
-    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + defOf('梅花1') + 3);
+    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + liftedAtkOf('盾擊') + defOf('梅花1') + 3);
   });
 
   it('即時停損：[發_蓋4] 先手步驟打出後雙方立即收招，沒有反擊步驟也不做追擊判定', () => {

@@ -98,3 +98,5 @@ export const title = (g: Game) => g.pending?.title ?? '(無提示)';
 /** 卡片攻擊／防禦（直接讀卡表，數值調整時測試不用跟著改） */
 export const atkOf = (id: string) => getCard(id).atk;
 export const defOf = (id: string) => getCard(id).def;
+/** 盾擊在最上方時，戰鬥區的招式卡攻擊力至少是原始防禦力 */
+export const liftedAtkOf = (id: string) => Math.max(getCard(id).atk, getCard(id).def);

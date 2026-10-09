@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { totalAtk } from '../src/engine/combat';
 import type { Game } from '../src/engine/game';
 import { Z } from '../src/engine/ops';
+import { getCard } from '../src/data/cards';
 import { atkOf, names, pick, scenario, setZones } from './helpers';
 
 const many = (id: string, n: number) => Array(n).fill(id) as string[];
@@ -39,8 +40,8 @@ describe('回合流程', () => {
 describe('裝備、角色', () => {
   it('增益階段：經驗不足不能打出裝備；滿足後可打出且同部位只能 1 張', () => {
     const lack = scenario({
-      // 起始 6 張，打出的黑桃5 歸還後共 7 張，仍低於瞄準器需求 8
-      p0: { hand: ['黑桃5', '瞄準器'], exp: many('黑桃1', 6) },
+      // 打出的黑桃5 歸還後多 1 張，仍低於瞄準器的經驗需求
+      p0: { hand: ['黑桃5', '瞄準器'], exp: many('黑桃1', getCard('瞄準器').expReq - 2) },
       p1: { hand: [] },
     });
     let asked = false;
@@ -51,7 +52,7 @@ describe('裝備、角色', () => {
     expect(asked).toBe(false);
 
     const ok = scenario({
-      p0: { hand: ['黑桃5', '瞄準器'], exp: many('黑桃1', 8) },
+      p0: { hand: ['黑桃5', '瞄準器'], exp: many('黑桃1', getCard('瞄準器').expReq) },
       p1: { hand: [] },
     });
     for (let i = 0; i < 20 && ok.pending && !ok.pending.title.includes('增益階段'); i++) {

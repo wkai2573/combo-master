@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { playables, pursuitCount, totalAtk, totalDef } from '../src/engine/combat';
 import { inRange } from '../src/engine/judge';
 import { Z } from '../src/engine/ops';
-import { atkOf, defOf, pick, scenario, setZones } from './helpers';
+import { atkOf, defOf, liftedAtkOf, pick, scenario, setZones } from './helpers';
 
 const filler = Array(20).fill('黑桃2') as string[];
 
@@ -13,7 +13,7 @@ describe('卡效果的「戰鬥區」包含追擊卡疊', () => {
     expect(atkOf('梅花1')).toBeLessThan(defOf('梅花1'));
     setZones(g, 0, { moves: ['梅花1', '盾擊'], pursuit: ['梅花1'] });
     // 招式卡疊的梅花1 與追擊卡疊的梅花1 都補到防禦力
-    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + atkOf('盾擊') + defOf('梅花1'));
+    expect(totalAtk(g, 0)).toBe(defOf('梅花1') + liftedAtkOf('盾擊') + defOf('梅花1'));
   });
 
   it('盾擊：沒在招式卡疊最上方就沒有效果，追擊卡也不補', () => {
@@ -26,7 +26,7 @@ describe('卡效果的「戰鬥區」包含追擊卡疊', () => {
     const g = scenario({ chars: ['刺客', '勇者'] });
     expect(atkOf('黑桃9')).toBeGreaterThan(defOf('黑桃9'));
     setZones(g, 0, { moves: ['盾擊'], pursuit: ['黑桃9'] });
-    expect(totalAtk(g, 0)).toBe(atkOf('盾擊') + atkOf('黑桃9'));
+    expect(totalAtk(g, 0)).toBe(liftedAtkOf('盾擊') + atkOf('黑桃9'));
   });
 
   it('凡骨的意志：白板卡數量包含追擊卡疊', () => {

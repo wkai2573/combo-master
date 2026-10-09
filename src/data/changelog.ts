@@ -21,6 +21,38 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.29.2',
+    date: '2026-10-09',
+    items: [
+      { type: 'change', text: '魅影射擊：攻擊 4→5、防禦 4→1' },
+      { type: 'change', text: '地雷陷阱：防禦 5→4' },
+      { type: 'change', text: '戒備打擊：攻擊 4→3' },
+      { type: 'change', text: '復仇之嚎：攻擊 4→3' },
+      { type: 'change', text: '電弧：防禦 5→4' },
+      { type: 'change', text: '伏擊：攻擊 6→5' },
+      { type: 'change', text: '二刀連擊：攻擊 4→3、防禦 4→3、連擊值 1→6' },
+      { type: 'change', text: '低價買進：防禦 6→5' },
+      { type: 'change', text: '高價賣出：攻擊 6→5' },
+      { type: 'change', text: '狙擊印記：攻擊 5→4' },
+      { type: 'change', text: '順手牽羊：防禦 5→4' },
+      { type: 'change', text: '交涉：攻擊 4→3' },
+      { type: 'change', text: '冰霜護甲：攻擊 2→1' },
+      { type: 'change', text: '盾擊：攻擊 4→2' },
+      { type: 'change', text: '即時停損：防禦 5→4' },
+      { type: 'change', text: '二連矢：防禦 6→5' },
+      { type: 'change', text: '凡骨的意志：攻擊 3→2、防禦 5→2' },
+      { type: 'change', text: '卸除鎧甲：防禦 5→4' },
+      { type: 'change', text: '火球：攻擊 4→3' },
+      { type: 'change', text: '塗毒：攻擊 3→2、防禦 5→3' },
+      { type: 'change', text: '瞄準器：經驗需求 8→6' },
+      { type: 'change', text: '招財貓：經驗需求 8→4' },
+      { type: 'change', text: 'Explosion!：攻擊 6→5' },
+      { type: 'change', text: '冰與雷之曲：經驗需求 8→4' },
+      { type: 'change', text: '狙擊蓄力：防禦 5→4' },
+      { type: 'change', text: '熔岩之擊：攻擊 4→3' },
+    ],
+  },
+  {
     version: '0.29.1',
     date: '2026-10-09',
     items: [
