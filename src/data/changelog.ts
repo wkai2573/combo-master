@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.32.0',
+    date: '2026-10-09',
+    items: [
+      { type: 'add', text: '新卡開放：布甲（共用防具）：[蓋1] 當我方收招時，這回合總防禦 +1' },
+      { type: 'add', text: '新卡開放：木棍（共用武器）：[蓋1] 當我方收招時，這回合總攻擊 +1' },
+    ],
+  },
+  {
     version: '0.31.1',
     date: '2026-10-09',
     items: [
