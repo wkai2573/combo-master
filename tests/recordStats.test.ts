@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BattleRecord } from '../src/stats/records';
-import { compareVersion, filterByOpponent, legacyCount, matchup, matchupTable, MIN_WIN_RATE_VERSION, turnStats } from '../src/stats/summary';
+import { characterSummary, compareVersion, filterByOpponent, legacyCount, matchup, matchupTable, MIN_WIN_RATE_VERSION, turnStats } from '../src/stats/summary';
 
 const V = MIN_WIN_RATE_VERSION;
 const rec = (mine: string, theirs: string, outcome: BattleRecord['outcome'], over: Partial<BattleRecord> = {}): BattleRecord => ({
@@ -116,5 +116,33 @@ describe('回合數統計', () => {
     const list = [rec('勇者', '刺客', 'win', { turns: 4 }), rec('刺客', '勇者', 'win', { turns: 6 }), rec('法師', '刺客', 'win', { turns: 9 })];
     expect(turnStats(list, { a: '勇者' })!.games).toBe(2);
     expect(turnStats(list, { a: '刺客' })!.games).toBe(3);
+  });
+});
+
+describe('單看角色', () => {
+  const chars = ['勇者', '刺客', '法師'];
+
+  it('列出對上每個角色的對戰與總勝率；對手用該角色的場次反過來算', () => {
+    const list = [
+      rec('勇者', '刺客', 'win'), rec('刺客', '勇者', 'win'), // 勇者 1 勝 1 負
+      rec('勇者', '法師', 'win'), rec('法師', '勇者', 'lose'), // 勇者 2 勝
+      rec('勇者', '法師', 'draw'),
+    ];
+    const s = characterSummary(list, '勇者', chars);
+    expect(s.versus.map((v) => v.opponent)).toEqual(chars);
+    expect(s.versus[1].cell).toMatchObject({ win: 1, lose: 1, rate: 0.5 });
+    expect(s.versus[2].cell).toMatchObject({ win: 2, lose: 0, draw: 1, rate: 1 });
+    expect(s.total).toMatchObject({ win: 3, lose: 1, draw: 1, games: 5, rate: 0.75 });
+  });
+
+  it('同角色對打不進總勝率，對角線只有場數', () => {
+    const s = characterSummary([rec('勇者', '勇者', 'win'), rec('勇者', '刺客', 'lose')], '勇者', chars);
+    expect(s.versus[0].cell).toMatchObject({ games: 1, rate: null });
+    expect(s.total).toMatchObject({ win: 0, lose: 1, games: 1, rate: 0 });
+  });
+
+  it('舊版本不進總勝率；沒有場次時總勝率是 null', () => {
+    const s = characterSummary([rec('勇者', '刺客', 'win', { version: '0.1.0' })], '勇者', chars);
+    expect(s.total).toMatchObject({ games: 0, rate: null });
   });
 });

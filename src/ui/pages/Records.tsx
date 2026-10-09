@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ALL_CHARACTERS } from '../../data/cards';
 import { clearRecords, listRecords } from '../../stats/records';
-import { filterByOpponent, legacyCount, matchupTable, turnStats, type Cell, type OpponentFilter } from '../../stats/summary';
+import { characterSummary, filterByOpponent, legacyCount, matchupTable, turnStats, type Cell, type OpponentFilter } from '../../stats/summary';
 import { Modal } from '../components/Modal';
 import { TurnChart } from '../components/TurnChart';
 
@@ -10,8 +10,8 @@ const CHARS = ALL_CHARACTERS.filter((c) => !c.pending).map((c) => c.id);
 
 const percent = (rate: number) => `${Math.round(rate * 100)}%`;
 
-type Tab = 'table' | 'turns';
-const TABS: [Tab, string][] = [['table', '角色對戰表'], ['turns', '回合數圖表']];
+type Tab = 'table' | 'char' | 'turns';
+const TABS: [Tab, string][] = [['table', '角色對戰表'], ['char', '單看角色'], ['turns', '回合數圖表']];
 
 function CellView({ cell, picked, onPick }: { cell: Cell; picked: boolean; onPick: () => void }) {
   if (cell.games === 0) return <td className="rcell none">—</td>;
@@ -29,18 +29,34 @@ function CellView({ cell, picked, onPick }: { cell: Cell; picked: boolean; onPic
   );
 }
 
+/** mirror：同角色對打只列場數，勝負平沒有意義 */
+function RowCells({ cell, mirror = false }: { cell: Cell; mirror?: boolean }) {
+  return (
+    <>
+      <td>{cell.rate === null ? '—' : percent(cell.rate)}</td>
+      <td>{cell.games > 0 ? cell.games : '—'}</td>
+      <td>{mirror ? '—' : cell.win}</td>
+      <td>{mirror ? '—' : cell.lose}</td>
+      <td>{mirror ? '—' : cell.draw}</td>
+    </>
+  );
+}
+
 export function Records({ onBack }: { onBack: () => void }) {
   const [records, setRecords] = useState(listRecords);
   const [filter, setFilter] = useState<OpponentFilter>('all');
   const [confirming, setConfirming] = useState(false);
   const [tab, setTab] = useState<Tab>('table');
   const [pair, setPair] = useState<[string, string] | null>(null);
+  const [char, setChar] = useState(CHARS[0]);
 
   const shown = useMemo(() => filterByOpponent(records, filter), [records, filter]);
   const table = useMemo(() => matchupTable(shown, CHARS), [shown]);
   const legacy = legacyCount(shown);
   const pairStats = useMemo(() => (pair ? turnStats(shown, { a: pair[0], b: pair[1] }) : null), [shown, pair]);
   const allStats = useMemo(() => turnStats(shown), [shown]);
+  const summary = useMemo(() => characterSummary(shown, char, CHARS), [shown, char]);
+  const charStats = useMemo(() => turnStats(shown, { a: char }), [shown, char]);
 
   return (
     <div className="page records">
@@ -65,6 +81,38 @@ export function Records({ onBack }: { onBack: () => void }) {
           <div className="muted">還沒有戰績。打完一場對局就會自動記錄。</div>
         ) : shown.length === 0 ? (
           <div className="muted">這個對手類型還沒有戰績。</div>
+        ) : tab === 'char' ? (
+          <>
+            <label className="row">
+              <span>角色</span>
+              <select value={char} onChange={(e) => setChar(e.target.value)}>
+                {CHARS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            <div className="muted" style={{ fontSize: 12 }}>
+              包含對手用 {char} 的場次（對手贏就是 {char} 輸）。總勝率不含同角色對打。
+            </div>
+            <table className="rtable">
+              <thead>
+                <tr><th>對手</th><th>勝率</th><th>場數</th><th>勝</th><th>負</th><th>平</th></tr>
+              </thead>
+              <tbody>
+                <tr className="rtotal">
+                  <th>全部角色</th>
+                  <RowCells cell={summary.total} />
+                </tr>
+                {summary.versus.map(({ opponent, cell }) => (
+                  <tr key={opponent}>
+                    <th>{opponent === char ? `${opponent}（同角色）` : opponent}</th>
+                    <RowCells cell={cell} mirror={opponent === char} />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <b>{char} 出場的回合數</b>
+            <TurnChart stats={charStats} />
+            {legacy > 0 && <div className="muted" style={{ fontSize: 12 }}>另有 {legacy} 場舊版本紀錄只計入回合數，不進勝率。</div>}
+          </>
         ) : tab === 'turns' ? (
           <>
             <div className="muted" style={{ fontSize: 12 }}>目前篩選範圍內全部場次的回合數分布，含舊版本紀錄。</div>

@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.28.3',
+    date: '2026-10-09',
+    items: [
+      { type: 'add', text: '戰績頁新增單看角色：選一個角色，看它對上每個角色的勝率與總勝率，對手用該角色的場次也會反過來算進去，並附上該角色出場的回合數圖表' },
+    ],
+  },
+  {
     version: '0.28.2',
     date: '2026-10-09',
     items: [

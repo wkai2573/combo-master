@@ -68,6 +68,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .rtable td.pickable { cursor: pointer; }
 .rtable td.pickable:hover { background: var(--panel); }
 .rtable td.picked { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rtotal th, .rtotal td { background: var(--panel); font-weight: 700; }
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .turnchart { display: grid; gap: 6px; }
 .tc-bars { display: flex; align-items: stretch; gap: 4px; height: 180px; padding-top: 18px; }

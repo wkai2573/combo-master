@@ -60,6 +60,26 @@ export function matchup(records: BattleRecord[], a: string, b: string): Cell {
   return cellOf(t, a === b);
 }
 
+export interface CharacterSummary {
+  /** 對上所有其他角色的合計；同角色對打不算，勝率另外沒有意義的情況同 Cell */
+  total: Cell;
+  /** 對上每個角色（含自己）的對戰，與 chars 同順序 */
+  versus: { opponent: string; cell: Cell }[];
+}
+
+/** 單看一個角色：對上每個角色的對戰（兩個方向合併），以及對上其他角色的總勝率 */
+export function characterSummary(records: BattleRecord[], char: string, chars: string[]): CharacterSummary {
+  const versus = chars.map((opponent) => ({ opponent, cell: matchup(records, char, opponent) }));
+  const sum: Tally = { win: 0, lose: 0, draw: 0 };
+  for (const { opponent, cell } of versus) {
+    if (opponent === char) continue;
+    sum.win += cell.win;
+    sum.lose += cell.lose;
+    sum.draw += cell.draw;
+  }
+  return { total: cellOf(sum, false), versus };
+}
+
 /** 角色對戰表：列是 a，欄是 b，與 chars 同順序 */
 export function matchupTable(records: BattleRecord[], chars: string[]): Cell[][] {
   return chars.map((a) => chars.map((b) => matchup(records, a, b)));
