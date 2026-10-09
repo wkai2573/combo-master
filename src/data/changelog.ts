@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.27.1',
+    date: '2026-10-09',
+    items: [
+      { type: 'change', text: '二刀連擊的文字改成「若我方招式卡疊僅有此卡，追擊+1」，條件只看招式卡疊，追擊成功的卡進來也不會取消額外的追擊' },
+    ],
+  },
+  {
     version: '0.27.0',
     date: '2026-10-09',
     items: [

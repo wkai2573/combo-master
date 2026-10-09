@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { totalAtk, totalDef } from '../src/engine/combat';
+import { playables, pursuitCount, totalAtk, totalDef } from '../src/engine/combat';
 import { inRange } from '../src/engine/judge';
 import { Z } from '../src/engine/ops';
 import { atkOf, defOf, pick, scenario, setZones } from './helpers';
@@ -74,5 +74,28 @@ describe('規則本身只看招式卡疊，追擊卡疊不影響', () => {
     expect(inRange(g, 0, c('黑桃6') as never)).toBe(true);
     expect(inRange(g, 0, c('黑桃9') as never)).toBe(false);
     expect(inRange(g, 0, c('黑桃1') as never)).toBe(false);
+  });
+
+  it('重複連擊值只看招式卡疊：追擊卡疊的連擊值不算已出現過', () => {
+    const g = scenario();
+    setZones(g, 0, { moves: ['黑桃3', '黑桃3'], pursuit: ['黑桃7'], hand: ['黑桃7', '黑桃5'] });
+    expect(playables(g, 0).map((c) => c.id)).toEqual(['黑桃7', '黑桃5']);
+  });
+
+  it('[頂] 只看招式卡疊最上方：追擊卡疊有牌時戒備打擊照樣有效', () => {
+    const g = scenario({ chars: ['刺客', '勇者'] });
+    setZones(g, 0, { moves: ['黑桃1', '戒備打擊'], pursuit: ['黑桃3'] });
+    expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('戒備打擊') + atkOf('黑桃3') + 2);
+    expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('戒備打擊') + 2);
+  });
+
+  it('二刀連擊：條件只看招式卡疊，追擊成功的卡進來也不取消追擊 +1', () => {
+    const g = scenario();
+    setZones(g, 0, { moves: ['二刀連擊'] });
+    expect(pursuitCount(g, 0)).toBe(2);
+    setZones(g, 0, { moves: ['二刀連擊'], pursuit: ['黑桃3'] });
+    expect(pursuitCount(g, 0)).toBe(2);
+    setZones(g, 0, { moves: ['黑桃1', '二刀連擊'], pursuit: [] });
+    expect(pursuitCount(g, 0)).toBe(1);
   });
 });

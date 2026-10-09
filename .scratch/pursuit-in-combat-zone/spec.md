@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: resolved
 
 # 追擊卡納入戰鬥區
 
