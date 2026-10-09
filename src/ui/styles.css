@@ -67,7 +67,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 /* ───────── 卡片 ───────── */
 .card {
   position: relative; flex: none; display: flex; flex-direction: column; border-radius: 8px;
-  border: 2px solid var(--cc, #666); background: linear-gradient(160deg, #262d42, #181c29);
+  border: 2px solid var(--cb, #666); background: linear-gradient(160deg, #262d42, #181c29);
   overflow: hidden; user-select: none;
 }
 /* 版面（由上到下）：攻／連擊／守 → 卡圖 → 效果 → 卡名 */
@@ -104,7 +104,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 }
 /* 窗口選項滑過時，亮起對應的那張卡 */
 .card.hint { outline: 3px solid var(--accent); outline-offset: 1px; box-shadow: 0 0 14px 3px var(--accent); z-index: 3; }
-.card.pursuit { outline: 2px solid var(--accent); outline-offset: -2px; }
+.card.pursuit { outline: 2px solid #fff; outline-offset: -2px; }
 /* 自成一層：「裏側」字樣只在這張卡裡，疊在上面的卡會把它一起蓋住 */
 .card.facedown { isolation: isolate; }
 .card.facedown::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, .55); pointer-events: none; }
@@ -331,7 +331,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .inspect .bigart {
   height: 112px; margin-bottom: 8px; border-radius: 10px; overflow: hidden; color: var(--cc, #999);
   background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--cc, #666) 38%, #12151c), #12151c);
-  border: 1px solid color-mix(in srgb, var(--cc, #666) 55%, #000);
+  border: 1px solid var(--cb, #666);
 }
 .inspect .bigart .art { height: 100%; background: none; border: 0; }
 .inspect .bigart svg { display: block; width: 100%; height: 100%; }
@@ -472,7 +472,6 @@ h1, h2, h3 { margin: 0 0 8px; }
 
 /* ───────── 經驗效果提示：經驗區裡正面朝上、帶 [經] 的卡 ───────── */
 :root { --fx-exp: #5fd4e8; }
-.card.expfx { border-color: var(--fx-exp); }
 .card.expfx:not(.glow):not(.selected) { box-shadow: 0 0 7px 1px color-mix(in srgb, var(--fx-exp) 70%, transparent); }
 .card.expfx::before {
   content: '[經]'; position: absolute; left: 2px; bottom: 2px; z-index: 2; padding: 0 3px; border-radius: 4px;

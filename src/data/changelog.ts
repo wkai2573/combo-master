@@ -21,6 +21,16 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.26.0',
+    date: '2026-10-09',
+    items: [
+      { type: 'change', text: '卡牌外框改依職業上色（共用是灰色），卡面底色與標籤仍依卡種區分；Ex 卡整張維持青色' },
+      { type: 'change', text: '經驗區裡經驗效果生效中的卡，不再把外框改成青色，保留職業色，仍有青色光暈與 [經] 標記' },
+      { type: 'change', text: '戰鬥區的追擊卡，內側線改成白色，避免和商人的金色外框混在一起' },
+      { type: 'change', text: '側欄說明區的放大卡圖，外框跟著用職業色' },
+    ],
+  },
+  {
     version: '0.25.2',
     date: '2026-10-08',
     items: [

@@ -7,14 +7,7 @@ import { keywordsIn } from '../../data/keywords';
 import { CardArt } from './CardArt';
 import { Delta } from './Delta';
 import { CardText } from './CardText';
-
-/** 卡面顏色只看卡種，不分職業：招式一色，裝備、增益、Ex 卡各一色 */
-export const KIND_COLOR = { move: '#9aa4c0', equip: '#c58a5a', buff: '#d97aa6', ex: '#7aa8a6' } as const;
-
-export function cardColor(c: CardData): string {
-  if (c.id.startsWith('Ex卡-')) return KIND_COLOR.ex;
-  return KIND_COLOR[c.kind];
-}
+import { cardBorderColor, cardColor } from '../cardColor';
 
 /** 滑鼠移到卡片上時，把卡片 id 交給側欄的說明區 */
 export const InspectContext = createContext<(id: string | null, expActive?: boolean) => void>(() => {});
@@ -84,7 +77,7 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
     <div
       className={cls.join(' ')}
       data-uid={uid}
-      style={{ ['--cc' as string]: cardColor(c) }}
+      style={{ ['--cc' as string]: cardColor(c), ['--cb' as string]: cardBorderColor(c) }}
       onClick={onClick ?? (() => pin(id, expEffect))}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -134,7 +127,7 @@ export function InspectPanel({ id, expActive, pinned, onUnpin }: { id: string | 
   const c = getCard(id);
   const kws = keywordsIn(c.text);
   return (
-    <div className="inspect" style={{ ['--cc' as string]: cardColor(c) }}>
+    <div className="inspect" style={{ ['--cc' as string]: cardColor(c), ['--cb' as string]: cardBorderColor(c) }}>
       {pinned && (
         <div className="pinbar">
           <span>已固定這張的說明</span>
