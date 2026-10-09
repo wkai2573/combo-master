@@ -11,6 +11,11 @@ export interface WindowEffect {
   mandatory?: boolean;
   /** 結算完不要再補錄一個說明影格（效果自己已經錄好影格時設為 false） */
   mark?: boolean;
+  /**
+   * 同組的效果文字相同、結算結果彼此不受順序影響（例如好幾張一樣的強制效果）：窗口把它們併成一個選項並標示張數，
+   * 選中後一次處理完整組。只用於強制效果。
+   */
+  group?: string;
   /** 此刻是否仍可發動（每次結算後重新檢查，例如費用付不起就從清單消失） */
   available: () => boolean;
   /**
@@ -48,21 +53,33 @@ export function* triggerWindow(g: GameCtx, p: PlayerId, title: string, effects: 
   for (;;) {
     const avail = pending.filter((e) => e.available());
     if (avail.length === 0) return;
-    if (avail.length === 1) {
+    // 同組的效果併成一個選項（只列組內第一個），選中後一次處理完
+    const shown = avail.filter((e, i) => !e.group || avail.findIndex((x) => x.group === e.group) === i);
+    const sizeOf = (e: WindowEffect) => (e.group ? avail.filter((x) => x.group === e.group).length : 1);
+    if (shown.length === 1) {
       // 只剩一個：強制效果直接處理；可選效果維持原本的發動與不發動確認
-      const [only] = avail;
-      pending.splice(pending.indexOf(only), 1);
-      yield* settleEffect(g, only, only.mandatory ?? false);
+      const [only] = shown;
+      yield* settleGroup(g, pending, only, only.mandatory ?? false);
       continue;
     }
-    const texts = optionLabels(g, p, avail);
-    const options = avail.map((e, i) => ({ key: `e${i}`, label: texts[i], ...(e.card && { uid: e.card.uid }) }));
-    if (!avail.some((e) => e.mandatory)) options.push({ key: WINDOW_END_KEY, label: '結束（不再發動）' });
+    const texts = optionLabels(g, p, shown).map((t, i) => (sizeOf(shown[i]) > 1 ? `${t}（×${sizeOf(shown[i])}）` : t));
+    const options = shown.map((e, i) => ({ key: `e${i}`, label: texts[i], ...(e.card && { uid: e.card.uid }) }));
+    if (!shown.some((e) => e.mandatory)) options.push({ key: WINDOW_END_KEY, label: '結束（不再發動）' });
     const [key] = yield* ask(g, { player: p, title: `${title}：選擇要發動的效果`, options, min: 1, max: 1 });
     if (key === WINDOW_END_KEY) return;
-    const chosen = avail[Number(key.slice(1))];
-    pending.splice(pending.indexOf(chosen), 1);
-    yield* settleEffect(g, chosen, true);
+    yield* settleGroup(g, pending, shown[Number(key.slice(1))], true);
+  }
+}
+
+/** 結算一個效果；它所在組的其餘效果接著一次處理完（每個結算前重新檢查是否仍可發動） */
+function* settleGroup(g: GameCtx, pending: WindowEffect[], first: WindowEffect, confirmed: boolean): Gen {
+  pending.splice(pending.indexOf(first), 1);
+  yield* settleEffect(g, first, confirmed);
+  if (!first.group) return;
+  for (const e of [...pending]) {
+    if (e.group !== first.group || !e.available()) continue;
+    pending.splice(pending.indexOf(e), 1);
+    yield* settleEffect(g, e, true);
   }
 }
 

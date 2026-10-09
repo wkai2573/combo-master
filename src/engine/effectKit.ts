@@ -77,8 +77,6 @@ export const SUBJECTS: { [K in EventKey]?: (arg: FireArgs[K]) => CardInst[] } = 
 export interface Queries {
   /** 開局起始手牌多抽幾張（加總） */
   openingDraw: number;
-  /** 抽牌階段多抽幾張（加總） */
-  drawPhaseExtra: number;
   /** 是否跳過抽牌階段（任一為真） */
   skipDrawPhase: boolean;
   /** 瞄準上限（加總） */
@@ -99,7 +97,6 @@ export type QueryKey = keyof Queries;
 
 export interface QueryArgs {
   openingDraw: [];
-  drawPhaseExtra: [];
   skipDrawPhase: [];
   aimLimit: [];
   aimLevel: [];

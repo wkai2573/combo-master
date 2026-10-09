@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.32.3',
+    date: '2026-10-09',
+    items: [
+      { type: 'change', text: '經驗區裡有好幾張 Ex-中毒時，回合開始的窗口把它們併成一個選項並標示張數，不用一張一張排順序；只有中毒時直接處理' },
+      { type: 'fix', text: '財富管理在付蓋1 時，若被蓋的卡讓牌組變得不足 3 張，改成放入牌組剩下的全部' },
+    ],
+  },
+  {
     version: '0.32.2',
     date: '2026-10-09',
     items: [

@@ -1,6 +1,6 @@
 import { defineSource, lasting, slot } from '../effectKit';
 import { faceUpExp } from '../cost';
-import { activate, awakened, chooseCards, combatZone, data, directHit, discard, draw, log, move, pname, recover, topOfZone, Z } from '../ops';
+import { chooseCards, combatZone, data, directHit, discard, draw, log, move, pname, recover, topOfZone, Z } from '../ops';
 import { other } from '../types';
 
 // 冰與雷之曲（法師）：[蓋2] 收招時，戰鬥區的卡合計具有「冰」「電」兩個特徵時，抽 1、回復 1；

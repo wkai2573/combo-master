@@ -1,7 +1,7 @@
 import { canPay, chooseX, faceUpExp, pay } from '../cost';
 import { hasExpEffect } from '../effects';
 import { defineSource, type EffectSource } from '../effectKit';
-import { activate, awakened, chooseCards, confirm, data, draw, log, move, orderCards, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
+import { activate, awakened, chooseCards, confirm, data, draw, log, move, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
 import { other, type PlayerId } from '../types';
 
 // 招財貓（商人）：[蓋2] 爆發時，額外抽 1
@@ -154,11 +154,13 @@ export const 財富管理 = coverReaction(
     onPlay: (c) => c.effect(
       { label: '【財富管理】將牌組上方 3 張卡以裏側放入經驗區（蓋1）', cost: { cover: 1 }, when: () => Z(c.g, c.p, 'deck').length >= 3 },
       () => {
-        for (const card of Z(c.g, c.p, 'deck').slice(0, 3)) {
+        // 發動條件在付費之前檢查；付費時被蓋的卡可能讓牌組變少（例如高價賣出抽牌），那就放入剩下的全部
+        const top = Z(c.g, c.p, 'deck').slice(0, 3);
+        for (const card of top) {
           move(c.g, card, 'exp');
           card.covered = true;
         }
-        log(c.g, `【財富管理】${pname(c.g, c.p)} 將牌組上方 3 張卡以裏側放入經驗區`);
+        log(c.g, `【財富管理】${pname(c.g, c.p)} 將牌組上方 ${top.length} 張卡以裏側放入經驗區`);
       },
     ),
   },

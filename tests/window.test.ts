@@ -379,3 +379,61 @@ describe('觸發窗口：被蓋成裏側的蓋反應', () => {
     expect(log.indexOf('【高價賣出】被蓋成裏側')).toBeLessThan(log.indexOf('【低價買進】被蓋成裏側'));
   });
 });
+
+describe('觸發窗口：同組效果併成一個選項', () => {
+  const mk = (name: string, order: string[], group?: string): WindowEffect => ({
+    label: name, mandatory: true, ...(group && { group }), available: () => true, *run() { order.push(name); },
+  });
+  const drive = (effects: WindowEffect[]) => {
+    const g = scenario();
+    const gen = triggerWindow(g, 0, '測試時機', effects);
+    const prompts: Request[] = [];
+    let r = gen.next();
+    return {
+      prompts,
+      answer(keys: string[]) {
+        if (r.done) throw new Error('窗口已經結束');
+        prompts.push(r.value);
+        r = gen.next(keys);
+      },
+      get done() { return r.done === true; },
+      get prompt() { return r.done ? null : r.value; },
+    };
+  };
+
+  it('同組的強制效果只列一個選項並標示張數，選中後一次處理完整組', () => {
+    const order: string[] = [];
+    const w = drive([mk('毒', order, 'p'), mk('毒', order, 'p'), mk('毒', order, 'p'), mk('甲', order)]);
+    expect(w.prompt!.options.map((o) => o.label)).toEqual(['【強制】毒（×3）', '【強制】甲']);
+    w.answer(['e0']);
+    expect(order).toEqual(['毒', '毒', '毒', '甲']); // 剩下的甲是單一強制效果，直接處理
+    expect(w.done).toBe(true);
+  });
+
+  it('全部都是同一組：不用問，直接處理完', () => {
+    const order: string[] = [];
+    const w = drive([mk('毒', order, 'p'), mk('毒', order, 'p')]);
+    expect(w.done).toBe(true);
+    expect(order).toEqual(['毒', '毒']);
+  });
+
+  it('沒有分組的相同效果維持原樣：照卡所在位置各列一個', () => {
+    const order: string[] = [];
+    const w = drive([mk('毒', order), mk('毒', order)]);
+    expect(w.prompt!.options).toHaveLength(2);
+  });
+
+  it('Ex-中毒好幾張：回合開始時併成一個強制效果，每張各直擊 1', () => {
+    const g = scenario({ phase: '重置', singlePhase: true, p1: { exp: ['Ex-中毒', 'Ex-中毒', 'Ex-中毒'] } });
+    expect(g.pending).toBeNull();
+    expect(Z(g, 1, 'deck')).toHaveLength(17);
+  });
+
+  it('Ex-中毒好幾張加上凡骨的意志：選單只有兩項，中毒標示張數', () => {
+    const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p1: { exp: ['Ex-中毒', 'Ex-中毒', 'Ex-中毒', '黑桃3', '凡骨的意志'] } });
+    expect(g.pending!.player).toBe(1);
+    expect(labels(g).sort()).toEqual(['【強制】【中毒】直擊 1（×3）', '【強制】【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量'].sort());
+    pick(g, '【強制】【中毒】直擊 1（×3）');
+    expect(Z(g, 1, 'deck')).toHaveLength(17);
+  });
+});

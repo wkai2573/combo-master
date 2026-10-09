@@ -10,6 +10,7 @@ export const Ex中毒 = defineSource({
       label: '【中毒】直擊 1',
       card: c.self ?? undefined,
       mandatory: true,
+      group: 'Ex-中毒', // 好幾張中毒的結算順序無關，窗口併成一個選項
       available: () => c.here(),
       *run() {
         log(c.g, `【中毒】${pname(c.g, c.p)} 的回合開始`);

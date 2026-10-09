@@ -278,11 +278,6 @@ function* drawPhase(g: Game): Gen {
       continue;
     }
     yield* draw(g, p, 1);
-    const more = query(g, p, 'drawPhaseExtra');
-    if (more > 0) {
-      yield* draw(g, p, more);
-      log(g, `${pname(g, p)} 抽牌階段額外抽 ${more}`);
-    }
   }
   mark(g, skipped.length ? `抽牌階段：${skipped.map((p) => pname(g, p)).join('、')} 跳過` : '抽牌階段：雙方各抽 1 張', { type: 'draw' });
   checkWin(g);

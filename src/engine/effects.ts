@@ -74,7 +74,6 @@ type Fold<K extends QueryKey> = { init: () => Queries[K]; add: (acc: Queries[K],
 const sum = { init: () => 0, add: (a: number, x: number) => a + x };
 const FOLD: { [K in QueryKey]: Fold<K> } = {
   openingDraw: sum,
-  drawPhaseExtra: sum,
   skipDrawPhase: { init: () => false, add: (a, x) => a || x },
   aimLimit: sum,
   aimLevel: sum,
