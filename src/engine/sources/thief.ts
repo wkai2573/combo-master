@@ -121,7 +121,7 @@ export const 幸運兔腳 = defineSource({
   },
 });
 
-// 二刀連擊（盜賊）：[頂] 戰鬥區只有此卡時，追擊 +1
+// 二刀連擊（盜賊）：[頂] 招式卡疊只有此卡時，追擊 +1（追擊卡疊不算）
 export const 二刀連擊 = defineSource({
   id: '二刀連擊',
   at: 'moves',

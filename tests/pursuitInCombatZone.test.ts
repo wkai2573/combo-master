@@ -6,6 +6,7 @@ import { atkOf, defOf, pick, scenario, setZones } from './helpers';
 
 const filler = Array(20).fill('黑桃2') as string[];
 
+// 電弧與冰與雷之曲在出招、收招時結算，那時追擊卡疊還是空的；這兩個測試只驗證「戰鬥區」的定義，不代表實際對局會碰到
 describe('卡效果的「戰鬥區」包含追擊卡疊', () => {
   it('盾擊：追擊成功的招式卡也補到原始防禦力，結算算進去', () => {
     const g = scenario({ chars: ['刺客', '勇者'] });

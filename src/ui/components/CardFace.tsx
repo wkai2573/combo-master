@@ -22,7 +22,7 @@ export interface CardFaceProps {
   selected?: boolean;
   glow?: boolean;
   dim?: boolean;
-  /** 追擊卡（戰鬥區內以金框標示） */
+  /** 追擊卡（戰鬥區內以白色內線標示） */
   pursuit?: boolean;
   /** 剛打出的牌：短暫發光 */
   fresh?: boolean;

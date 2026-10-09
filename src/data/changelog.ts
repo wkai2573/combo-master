@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.27.2',
+    date: '2026-10-09',
+    items: [
+      { type: 'fix', text: '關鍵字「範圍內」的說明改成「雙方招式卡疊最後一張招式的連擊值之間」，跟追擊卡疊不算在範圍裡的規則一致' },
+    ],
+  },
+  {
     version: '0.27.1',
     date: '2026-10-09',
     items: [
@@ -32,7 +39,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2026-10-09',
     items: [
       { type: 'change', text: '追擊成功的卡現在算在「戰鬥區」裡：卡效果寫「戰鬥區」的地方，招式卡疊與追擊卡疊都算；範圍內、重複連擊值、[頂]、歸還順序仍只看招式卡疊' },
-      { type: 'change', text: '電弧、凡骨的意志、冰與雷之曲：數量與特徵把追擊成功的卡一起算進去' },
+      { type: 'change', text: '凡骨的意志：白板卡的數量把追擊成功的卡一起算進去' },
       { type: 'change', text: '盾擊：追擊成功的招式卡，攻擊力也會補到原始防禦力' },
     ],
   },

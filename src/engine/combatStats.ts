@@ -1,7 +1,7 @@
 import { isVanilla } from '../data/enabledCards';
 import { moveRules, query } from './effects';
 import { combatZone, data, Z, type GameCtx } from './ops';
-import type { PlayerId } from './types';
+import type { CardInst, PlayerId } from './types';
 
 export { ASSASSIN_CAP } from './sources/thief';
 
@@ -40,14 +40,20 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
   // [頂] 盾擊：位於招式卡疊最上方時，戰鬥區（含追擊卡疊）每張招式卡的攻擊力至少是它的原始防禦力（先補，再套用其他加成與修正）
   const lift = moves.length > 0 && moveRules(moves[moves.length - 1].id).liftAtkToDef;
 
+  // 盾擊補的攻擊力累計進 shieldLift
+  const liftedAtk = (c: CardInst): number => {
+    const printedAtk = data(c).atk;
+    const atk = lift ? Math.max(printedAtk, data(c).def) : printedAtk;
+    shieldLift += atk - printedAtk;
+    return atk;
+  };
+
   moves.forEach((c, i) => {
     const isTop = i === moves.length - 1;
     const rules = moveRules(c.id);
     const atkMod = isTop ? rules.topAtk : 0;
     const defMod = isTop ? rules.topDef : 0;
-    const printedAtk = data(c).atk;
-    const atk = lift ? Math.max(printedAtk, data(c).def) : printedAtk;
-    shieldLift += atk - printedAtk;
+    const atk = liftedAtk(c);
     combatZoneAtk += Math.max(0, atk + atkMod);
     combatZoneDef += Math.max(0, data(c).def + defMod);
   });
@@ -56,9 +62,7 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
   let pursuitDef = 0;
   for (const c of Z(g, p, 'pursuit')) {
     const rules = moveRules(c.id);
-    const printedAtk = data(c).atk;
-    const atk = lift ? Math.max(printedAtk, data(c).def) : printedAtk;
-    shieldLift += atk - printedAtk;
+    const atk = liftedAtk(c);
     pursuitAtk += atk + rules.pursuitAtk;
     pursuitDef += rules.pursuitDef;
   }

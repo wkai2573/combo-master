@@ -1,5 +1,5 @@
 import {
-  ask, cardOpt, chooseCards, data, draw, log, mark, markIfLogged, move,
+  ask, cardOpt, chooseCards, combatZone, data, draw, log, mark, markIfLogged, move,
   order, pname, takeDamage, Z, type GameCtx, type Gen,
 } from './ops';
 import { inRange, judge } from './judge';
@@ -166,7 +166,7 @@ export function* returnStep(g: GameCtx): Gen {
   g.state.phase = '歸還';
   for (const p of order(g)) {
     // 招式卡疊由最底到最頂，最後是追擊卡疊
-    for (const c of [...Z(g, p, 'moves'), ...Z(g, p, 'pursuit')]) move(g, c, 'exp');
+    for (const c of combatZone(g, p)) move(g, c, 'exp');
   }
   // 塗毒：歸還時，把 [Ex卡-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
   yield* fireEach(g, 'afterReturn');
