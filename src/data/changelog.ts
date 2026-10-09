@@ -21,6 +21,19 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.30.2',
+    date: '2026-10-09',
+    items: [
+      { type: 'change', text: '戒備打擊：[頂] 總攻擊由 +2 改成 +1，總防禦仍是 +2' },
+      { type: 'change', text: '二刀連擊：[頂] 追擊 +1 不再需要招式卡疊只有它一張，位於最上方就算' },
+      { type: 'change', text: '低價買進：被蓋為裏側時回復由 3 改成 1' },
+      { type: 'change', text: '家族相片：費用由蓋1、怒3 改成蓋1、怒2' },
+      { type: 'change', text: '冰與雷之曲：費用由蓋3 改成蓋2' },
+      { type: 'change', text: 'Explosion!：對方直擊由 5 改成 4' },
+      { type: 'change', text: '凡骨的意志：卡面文字改成「必須蓋前 2 張表側經驗」，效果不變' },
+    ],
+  },
+  {
     version: '0.30.1',
     date: '2026-10-09',
     items: [

@@ -129,8 +129,8 @@ const coverReaction = (id: string, text: string, react: (g: GameCtx, p: PlayerId
     },
   });
 
-// 低價買進（商人）：[經] 此卡被蓋成裏側時，回復 3
-export const 低價買進 = coverReaction('低價買進', '回復 3', (g, p) => void recover(g, p, 3));
+// 低價買進（商人）：[經] 此卡被蓋成裏側時，回復 1
+export const 低價買進 = coverReaction('低價買進', '回復 1', (g, p) => void recover(g, p, 1));
 // 高價賣出（商人）：[經] 此卡被蓋成裏側時，抽 1
 export const 高價賣出 = coverReaction('高價賣出', '抽 1', function* (g, p) {
   yield* draw(g, p, 1);

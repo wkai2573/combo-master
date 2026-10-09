@@ -247,14 +247,14 @@ describe('觸發窗口：回合開始', () => {
     const g = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
     expect(g.pending!.title).toContain('回合開始');
     expect(labels(g).map((l) => l.replace(/^【強制】/, '強制：'))).toEqual([
-      '【家族相片】回復 1（蓋1、怒3）',
+      '【家族相片】回復 1（蓋1、怒2）',
       '強制：【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量',
     ]);
   });
 
   it('先發家族相片會蓋到凡骨的意志自己，凡骨就沒有效果；先發凡骨則兩張都能發', () => {
     const a = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
-    pick(a, '【家族相片】回復 1（蓋1、怒3）');
+    pick(a, '【家族相片】回復 1（蓋1、怒2）');
     expect(Z(a, 0, 'exp').map((c) => c.covered)).toEqual([true, false, false]);
     expect(凡骨狀態.read(a, 0).uids).toEqual([]); // 凡骨已被蓋成裏側，從清單消失
     expect(a.pending).toBeNull();
@@ -312,7 +312,7 @@ describe('觸發窗口：回合開始', () => {
       p1: { gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3'], rage: Array(4).fill('黑桃1') },
     });
     expect(g.pending!.player).toBe(1);
-    pick(g, '【家族相片】回復 1（蓋1、怒3）');
+    pick(g, '【家族相片】回復 1（蓋1、怒2）');
     expect(g.pending!.player).toBe(0);
     expect(g.pending!.title).toContain('回合開始');
   });
@@ -372,7 +372,7 @@ describe('觸發窗口：被蓋成裏側的蓋反應', () => {
     // 對方的表側且帶 [經] 的經驗有 2 張，強制蓋 2，兩張都有蓋反應
     expect(g.pending!.player).toBe(1);
     expect(g.pending!.title).toContain('被蓋成裏側');
-    expect(labels(g)).toEqual(['【強制】【低價買進】被蓋成裏側：回復 3', '【強制】【高價賣出】被蓋成裏側：抽 1']);
+    expect(labels(g)).toEqual(['【強制】【低價買進】被蓋成裏側：回復 1', '【強制】【高價賣出】被蓋成裏側：抽 1']);
     pick(g, '【強制】【高價賣出】被蓋成裏側：抽 1'); // 先抽牌
     expect(g.pending?.title ?? '').not.toContain('被蓋成裏側'); // 剩下的低價買進直接處理
     const log = g.state.log.join('\n');

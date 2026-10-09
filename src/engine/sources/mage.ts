@@ -2,7 +2,7 @@ import { defineSource, lasting, slot } from '../effectKit';
 import { activate, awakened, chooseCards, combatZone, data, directHit, discard, draw, log, move, pname, recover, topOfZone, Z } from '../ops';
 import { other } from '../types';
 
-// 冰與雷之曲（法師）：[蓋3] 收招時，戰鬥區的卡合計具有「冰」「電」兩個特徵時，抽 1、回復 1；
+// 冰與雷之曲（法師）：[蓋2] 收招時，戰鬥區的卡合計具有「冰」「電」兩個特徵時，抽 1、回復 1；
 // 一張卡兩個特徵或兩張各一個都算
 export const 冰與雷之曲 = defineSource({
   id: '冰與雷之曲',
@@ -11,7 +11,7 @@ export const 冰與雷之曲 = defineSource({
     onPass: (c) => {
       const has = (traits: string[]) => combatZone(c.g, c.p).some((card) => data(card).traits.some((t) => traits.includes(t)));
       return c.effect(
-        { label: '【冰與雷之曲】抽 1，回復 1（蓋3）', cost: { cover: 3 }, when: () => has(['冰']) && has(['電']) },
+        { label: '【冰與雷之曲】抽 1，回復 1（蓋2）', cost: { cover: 2 }, when: () => has(['冰']) && has(['電']) },
         function* () {
           yield* draw(c.g, c.p, 1);
           recover(c.g, c.p, 1);
@@ -37,14 +37,14 @@ export const 火球 = defineSource({
 /** Explosion! 是否讓這回合跳過抽牌階段 */
 export const Explosion狀態 = slot('Explosion!', () => ({ skip: false }));
 
-// Explosion!（法師）：[先_蓋8] 對方直擊 5，然後我方收招，並跳過我方下個抽牌階段
+// Explosion!（法師）：[先_蓋8] 對方直擊 4，然後我方收招，並跳過我方下個抽牌階段
 export const Explosion = defineSource({
   id: 'Explosion!',
   at: 'moves',
   on: {
-    onOpen: (c) => c.effect({ label: '【Explosion!】對方直擊 5，我方收招，跳過抽牌階段（蓋8）', cost: { cover: 8 } }, () => {
+    onOpen: (c) => c.effect({ label: '【Explosion!】對方直擊 4，我方收招，跳過抽牌階段（蓋8）', cost: { cover: 8 } }, () => {
       const { g, p } = c;
-      directHit(g, other(p), 5);
+      directHit(g, other(p), 4);
       g.state.passed[p] = true;
       Explosion狀態.of(g, p).skip = true;
       log(g, `【Explosion!】${pname(g, p)} 收招，並跳過這回合的抽牌階段`);

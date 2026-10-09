@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coverChanges, diffFlights, flightTiming, fromSpotlight, type Flight } from '../src/engine/flights';
-import type { GameCtx } from '../src/engine/ops';
+import { recover, settle, type GameCtx } from '../src/engine/ops';
 import { pay } from '../src/engine/cost';
 import { frameFor, viewFor } from '../src/engine/view';
 import { pick, scenario } from './helpers';
@@ -105,13 +105,16 @@ describe('卡片飛行', () => {
   it('回復：怒氣區上方的牌逐張飛回牌組頂，全程牌背', () => {
     const g = scenario({
       animate: true, chars: ['商人', '勇者'],
-      p0: { exp: ['低價買進', '黑桃3'], rage: Array(5).fill('黑桃1') },
+      p0: { exp: ['黑桃3'], rage: Array(5).fill('黑桃1') },
     });
     g.drainFrames();
-    pay(g as unknown as GameCtx, 0, { cover: 1 }).next();
+    const ctx = g as unknown as GameCtx;
+    const before = viewFor(g, 0);
+    recover(ctx, 0, 3);
+    settle(ctx, '回復 3');
     const frames = g.drainFrames().map((f) => frameFor(f, 0));
-    expect(frames.length).toBeGreaterThan(1);
-    const flights = diffFlights(frames[frames.length - 2].view, frames[frames.length - 1].view);
+    expect(frames.length).toBeGreaterThan(0);
+    const flights = diffFlights(before, frames[frames.length - 1].view);
     expect(flights).toHaveLength(3);
     expect(flights.map((f) => f.order)).toEqual([0, 1, 2]);
     for (const f of flights) {
@@ -126,11 +129,11 @@ describe('卡片飛行', () => {
       p0: { hand: ['Explosion!'], exp: Array(8).fill('黑桃3') }, p1: { hand: [] },
     });
     g.drainFrames();
-    pick(g, '發動'); // 蓋 8，對方直擊 5
+    pick(g, '發動'); // 蓋 8，對方直擊 4
     const frames = g.drainFrames().map((f) => frameFor(f, 0));
-    const hit = frames.find((f) => f.view.players[1].discard.length === 5)!;
-    // 5 張：最後一張晚 4×90ms 出發，再飛 420ms ＝ 780ms；影格要多留一點緩衝，超過原本的 800ms
-    expect(hit.ms).toBeGreaterThanOrEqual(900);
+    const hit = frames.find((f) => f.view.players[1].discard.length === 4)!;
+    // 4 張：最後一張晚 3×90ms 出發，再飛 420ms ＝ 690ms；影格要多留一點緩衝，超過整批飛完的時間
+    expect(hit.ms).toBeGreaterThan(flightTiming(3).total);
   });
 
   it('飛行時序：張數少維持原速，張數多時整批壓縮在 1.5 秒內', () => {

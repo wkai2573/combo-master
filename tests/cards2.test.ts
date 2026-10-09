@@ -180,14 +180,14 @@ describe('新卡（第二批）', () => {
     expect(totalAtk(g, 0)).toBe(atkOf('力量爆破') - 3);
   });
 
-  it('低價買進：[經] 被蓋成裏側時回復 3', () => {
+  it('低價買進：[經] 被蓋成裏側時回復 1', () => {
     const g = scenario({
       chars: ['商人', '勇者'],
       p0: { exp: ['低價買進', '黑桃3'], rage: Array(5).fill('黑桃1') },
     });
     pay(g, 0, { cover: 1 }).next();
     expect(Z(g, 0, 'exp')[0].covered).toBe(true);
-    expect(Z(g, 0, 'rage')).toHaveLength(2);
+    expect(Z(g, 0, 'rage')).toHaveLength(4);
   });
 
   it('高價賣出：[經] 被蓋成裏側時抽 1', () => {
@@ -466,7 +466,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 1, 'discard')).toHaveLength(2);
   });
 
-  it('Explosion!：[先_蓋8] 對方直擊 5，我方收招（對方仍可反擊），並跳過我方這回合的抽牌階段', () => {
+  it('Explosion!：[先_蓋8] 對方直擊 4，我方收招（對方仍可反擊），並跳過我方這回合的抽牌階段', () => {
     const g = scenario({
       chars: ['法師', '勇者'],
       p0: { hand: ['Explosion!', '黑桃2'], exp: Array(8).fill('黑桃3') },
@@ -474,7 +474,7 @@ describe('新卡（第二批）', () => {
     });
     pick(g, 'Explosion!');
     pick(g, '發動');
-    expect(Z(g, 1, 'discard')).toHaveLength(5);
+    expect(Z(g, 1, 'discard')).toHaveLength(4);
     expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(8);
     expect(g.state.passed).toEqual([true, false]);
     // 對方還能反擊：輪到玩家1 選擇出招或收招
@@ -551,7 +551,7 @@ describe('新卡（第二批）', () => {
     expect(Z(t, 1, 'exp').some((c) => c.id === 'Ex-中毒')).toBe(false);
   });
 
-  it('家族相片：回合開始時 [蓋1_怒3] 回復 1', () => {
+  it('家族相片：回合開始時 [蓋1_怒2] 回復 1', () => {
     const g = scenario({
       phase: '重置',
       singlePhase: true,
@@ -559,12 +559,12 @@ describe('新卡（第二批）', () => {
     });
     const deck = Z(g, 0, 'deck').length;
     pick(g, '發動');
-    expect(Z(g, 0, 'rage')).toHaveLength(0); // 怒 3 再回復 1
+    expect(Z(g, 0, 'rage')).toHaveLength(1); // 怒 2 再回復 1
     expect(Z(g, 0, 'deck')).toHaveLength(deck + 1);
     expect(Z(g, 0, 'exp')[0].covered).toBe(true);
   });
 
-  it('冰與雷之曲：收招時戰鬥區有「冰」「電」特徵的卡各 1 張，才可蓋 3 抽 1、回復 1', () => {
+  it('冰與雷之曲：收招時戰鬥區有「冰」「電」特徵的卡各 1 張，才可蓋 2 抽 1、回復 1', () => {
     const g = scenario({
       phase: '先手',
       singlePhase: true,
@@ -577,7 +577,7 @@ describe('新卡（第二批）', () => {
     pick(g, '發動');
     // 手牌變化：打出黑桃1 (-1)、冰與雷之曲抽 1 (+1)、追擊判定落入範圍回到手中 (+1)
     expect(Z(g, 0, 'hand')).toHaveLength(3);
-    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(3);
+    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(2);
     expect(Z(g, 0, 'rage')).toHaveLength(0);
 
     const only = scenario({
@@ -619,7 +619,7 @@ describe('新卡（第二批）', () => {
   it('pay 只蓋到一張蓋反應的卡時，自動觸發它的效果', () => {
     const g = scenario({ p0: { exp: ['低價買進', '黑桃3'], rage: Array(5).fill('黑桃1'), deck: ['黑桃4', ...filler] } });
     pay(g, 0, { cover: 1 }).next();
-    expect(Z(g, 0, 'rage')).toHaveLength(2); // 低價買進：回復 3
+    expect(Z(g, 0, 'rage')).toHaveLength(4); // 低價買進：回復 1
   });
 });
 
@@ -636,7 +636,7 @@ describe('卡表同步的新卡：高利貸、狙擊蓄力、熔岩之擊', () =
     expect(Z(g, 0, 'exp')[0].covered).toBe(true);
     // X＝2（低價買進、高價賣出）：從最前面蓋 2 張＝低價買進與黑桃3
     expect(Z(g, 1, 'exp').map((c) => c.covered)).toEqual([true, true, false, false]);
-    expect(g.state.log.join('\n')).toContain('玩家B（刺客） 回復 3'); // 低價買進被蓋成裏側：回復 3
+    expect(g.state.log.join('\n')).toContain('玩家B（刺客） 回復 1'); // 低價買進被蓋成裏側：回復 1
     expect(g.state.log.join('\n')).toContain('【低價買進】被蓋成裏側');
   });
 

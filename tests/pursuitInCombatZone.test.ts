@@ -87,17 +87,19 @@ describe('規則本身只看招式卡疊，追擊卡疊不影響', () => {
   it('[頂] 只看招式卡疊最上方：追擊卡疊有牌時戒備打擊照樣有效', () => {
     const g = scenario({ chars: ['刺客', '勇者'] });
     setZones(g, 0, { moves: ['黑桃1', '戒備打擊'], pursuit: ['黑桃3'] });
-    expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('戒備打擊') + atkOf('黑桃3') + 2);
+    expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('戒備打擊') + atkOf('黑桃3') + 1);
     expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('戒備打擊') + 2);
   });
 
-  it('二刀連擊：條件只看招式卡疊，追擊成功的卡進來也不取消追擊 +1', () => {
+  it('二刀連擊：[頂] 只看招式卡疊最上方，追擊成功的卡進來也不取消追擊 +1', () => {
     const g = scenario();
     setZones(g, 0, { moves: ['二刀連擊'] });
     expect(pursuitCount(g, 0)).toBe(2);
     setZones(g, 0, { moves: ['二刀連擊'], pursuit: ['黑桃3'] });
     expect(pursuitCount(g, 0)).toBe(2);
-    setZones(g, 0, { moves: ['黑桃1', '二刀連擊'], pursuit: [] });
+    setZones(g, 0, { moves: ['二刀連擊', '黑桃1'], pursuit: [] });
     expect(pursuitCount(g, 0)).toBe(1);
+    setZones(g, 0, { moves: ['黑桃1', '二刀連擊'], pursuit: [] });
+    expect(pursuitCount(g, 0)).toBe(2);
   });
 });

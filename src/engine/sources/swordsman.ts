@@ -3,13 +3,13 @@ import { defineSource, slot } from '../effectKit';
 import { activate, awakened, data, directHit, isFirst, log, move, pname, recover, Z } from '../ops';
 import { other } from '../types';
 
-// 家族相片（劍士）：[蓋1_怒3] 回合開始時，回復 1，可選
+// 家族相片（劍士）：[蓋1_怒2] 回合開始時，回復 1，可選
 export const 家族相片 = defineSource({
   id: '家族相片',
   at: 'gear',
   on: {
     turnStart: (c) => c.effect(
-      { label: '【家族相片】回復 1（蓋1、怒3）', cost: { cover: 1, rage: 3 } },
+      { label: '【家族相片】回復 1（蓋1、怒2）', cost: { cover: 1, rage: 2 } },
       () => void recover(c.g, c.p, 1),
     ),
   },
@@ -90,8 +90,8 @@ export const 熔岩之擊 = defineSource({
   },
 });
 
-// 戒備打擊（劍士）：[頂] 我方總攻擊 +2，總防禦 +2
-export const 戒備打擊 = defineSource({ id: '戒備打擊', at: 'moves', asMove: { topAtk: 2, topDef: 2 } });
+// 戒備打擊（劍士）：[頂] 我方總攻擊 +1，總防禦 +2
+export const 戒備打擊 = defineSource({ id: '戒備打擊', at: 'moves', asMove: { topAtk: 1, topDef: 2 } });
 
 // 盾擊（劍士）：[頂] 我方戰鬥區的招式卡，若原始攻擊力小於原始防禦力，則該卡的攻擊力改為原始防禦力
 export const 盾擊 = defineSource({ id: '盾擊', at: 'moves', asMove: { liftAtkToDef: true } });

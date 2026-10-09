@@ -1,6 +1,6 @@
 import { canPay, chooseX, pay } from '../cost';
 import { defineSource, lasting, slot } from '../effectKit';
-import { activate, awakened, chooseCards, data, discard, draw, isFirst, log, newCard, pname, Z } from '../ops';
+import { activate, awakened, chooseCards, data, discard, draw, isFirst, log, newCard, pname, topOfZone, Z } from '../ops';
 import { other } from '../types';
 
 /** 刺客「追擊判定成功」加成的總上限 */
@@ -118,11 +118,11 @@ export const 幸運兔腳 = defineSource({
   },
 });
 
-// 二刀連擊（盜賊）：[頂] 招式卡疊只有此卡時，追擊 +1（追擊卡疊不算）
+// 二刀連擊（盜賊）：[頂] 追擊 +1，只有在招式卡疊最上方時才算
 export const 二刀連擊 = defineSource({
   id: '二刀連擊',
   at: 'moves',
-  ask: { pursuitBonus: (c) => (Z(c.g, c.p, 'moves').length === 1 ? 1 : 0) },
+  ask: { pursuitBonus: (c) => (topOfZone(c.g, c.p) === c.self ? 1 : 0) },
 });
 
 // ───────────────────────── 角色 ─────────────────────────

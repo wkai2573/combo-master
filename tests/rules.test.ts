@@ -198,11 +198,11 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(totalDef(g, 1)).toBe(defOf('黑桃1') + defOf('黑桃3') + 1);
   });
 
-  it('戒備打擊（劍士）：[頂] 總攻擊 +2、總防禦 +2，只有在最上方時才算', () => {
+  it('戒備打擊（劍士）：[頂] 總攻擊 +1、總防禦 +2，只有在最上方時才算', () => {
     const g = scenario();
     setZones(g, 0, { moves: ['黑桃1', '戒備打擊'] });
     expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('戒備打擊') + 2);
-    expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('戒備打擊') + 2);
+    expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('戒備打擊') + 1);
     setZones(g, 0, { moves: ['戒備打擊', '黑桃1'] });
     expect(totalDef(g, 0)).toBe(defOf('黑桃1') + defOf('戒備打擊'));
     expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('戒備打擊'));
@@ -235,11 +235,13 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('地雷陷阱') + 3);
   });
 
-  it('二刀連擊（盜賊）：[頂] 戰鬥區只有此卡時追擊 +1', () => {
+  it('二刀連擊（盜賊）：[頂] 在招式卡疊最上方時追擊 +1', () => {
     const g = scenario();
     setZones(g, 0, { moves: ['二刀連擊'] });
     expect(pursuitCount(g, 0)).toBe(2);
     setZones(g, 0, { moves: ['黑桃1', '二刀連擊'] });
+    expect(pursuitCount(g, 0)).toBe(2);
+    setZones(g, 0, { moves: ['二刀連擊', '黑桃1'] });
     expect(pursuitCount(g, 0)).toBe(1);
     setZones(g, 0, { moves: ['黑桃1'] });
     expect(pursuitCount(g, 0)).toBe(1);
