@@ -70,7 +70,6 @@ export const 冰霜護甲 = defineSource({
         const { g, p } = c;
         const pending = g.state.flags.damagePending;
         const covered = Z(g, p, 'exp').filter((card) => card.covered);
-        activate(g, p, c.self!);
         const drop = yield* chooseCards(g, p, '【冰霜護甲】選擇要捨棄的裏側經驗，每張減少 1 點傷害', covered, 1, Math.min(pending[p], covered.length));
         for (const card of drop) discard(g, card);
         pending[p] -= drop.length;
@@ -80,17 +79,16 @@ export const 冰霜護甲 = defineSource({
   },
 });
 
-// 電弧（法師）：[發] 抽X，再將 X 張手牌放到牌組底。X = 對方戰鬥區的招式數量
+// 電弧（法師）：[發_蓋1] 抽X，再將 X 張手牌放到牌組底。X = 對方戰鬥區的招式數量
 export const 電弧 = defineSource({
   id: '電弧',
   at: 'moves',
   on: {
     onPlay: (c) => c.effect(
-      { label: '【電弧】抽 X，再放 X 張手牌到牌組底', mandatory: true, when: () => combatZone(c.g, other(c.p)).length > 0 },
+      { label: '【電弧】抽 X，再放 X 張手牌到牌組底（蓋1）', cost: { cover: 1 }, when: () => combatZone(c.g, other(c.p)).length > 0 },
       function* () {
         const { g, p } = c;
         const x = combatZone(g, other(p)).length;
-        activate(g, p, c.self!);
         yield* draw(g, p, x);
         const put = yield* chooseCards(g, p, `【電弧】選擇 ${x} 張手牌放到牌組底`, Z(g, p, 'hand'), x, x);
         for (const card of put) move(g, card, 'deck', 'bottom');

@@ -21,6 +21,15 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.30.1',
+    date: '2026-10-09',
+    items: [
+      { type: 'change', text: '電弧改成 [發_蓋1]：要付蓋1 才發動，不再是強制效果' },
+      { type: 'change', text: '高利貸改成 [發_蓋1]：要付蓋1 才發動；文字改成「對方蓋前 X 張表側經驗」，效果不變' },
+      { type: 'change', text: '塗毒改成 [發_蓋2]：打出時付蓋2，歸還時 Ex-中毒一律移入對方的經驗區，不再看雙方出招張數' },
+    ],
+  },
+  {
     version: '0.30.0',
     date: '2026-10-09',
     items: [

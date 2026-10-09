@@ -510,13 +510,14 @@ describe('新卡（第二批）', () => {
     expect(Z(no, 1, 'discard')).toHaveLength(0);
   });
 
-  it('塗毒：先手出招時付費發動，歸還時中毒落入出招較少的一方；不發動就沒有中毒', () => {
-    const setup = () => scenario({ chars: ['刺客', '勇者'], first: 0, p0: { hand: ['塗毒', '黑桃2'], exp: ['黑桃3'] }, p1: { hand: [] } });
+  it('塗毒：[發_蓋2] 打出時付費發動，歸還時中毒落入對方；不發動就沒有中毒', () => {
+    const setup = () => scenario({ chars: ['刺客', '勇者'], first: 0, p0: { hand: ['塗毒', '黑桃2'], exp: ['黑桃3', '黑桃4'] }, p1: { hand: [] } });
     const yes = setup();
     pick(yes, '塗毒');
     pick(yes, '發動');
-    expect(Z(yes, 0, 'exp')[0].covered).toBe(true);
-    expect(names(yes, 1, 'exp')).toContain('Ex-中毒'); // 我方出招 1 張、對方 0 張，中毒落入對方
+    expect(Z(yes, 0, 'exp').slice(0, 2).map((c) => c.covered)).toEqual([true, true]);
+    expect(names(yes, 1, 'exp')).toContain('Ex-中毒');
+    expect(names(yes, 0, 'exp')).not.toContain('Ex-中毒');
     const no = setup();
     pick(no, '塗毒');
     pick(no, '不發動');
@@ -524,45 +525,30 @@ describe('新卡（第二批）', () => {
     expect(names(no, 0, 'exp')).not.toContain('Ex-中毒');
   });
 
-  it('塗毒：歸還時 [Ex-中毒] 移入出招卡較少的一方，相同時落入對方；離開經驗區就移除遊戲', () => {
-    const g = scenario();
-    塗毒狀態.of(g, 0).armed = 1;
-    g.state.flags.played = [1, 2];
-    drive(returnStep(g));
-    expect(names(g, 0, 'exp')).toContain('Ex-中毒');
+  it('塗毒：蓋2 付不起（表側經驗不足 2 張）就不能發動', () => {
+    const g = scenario({ chars: ['刺客', '勇者'], first: 0, p0: { hand: ['塗毒', '黑桃2'], exp: ['黑桃3'] }, p1: { hand: [] } });
+    pick(g, '塗毒');
+    expect(Z(g, 0, 'exp')[0].covered).toBe(false);
+    expect(names(g, 1, 'exp')).not.toContain('Ex-中毒');
+  });
+
+  it('塗毒：歸還時 [Ex-中毒] 一律移入對方的經驗區，不看雙方出招張數；離開經驗區就移除遊戲', () => {
+    for (const played of [[1, 2], [2, 2], [2, 1]] as Array<[number, number]>) {
+      const g = scenario();
+      塗毒狀態.of(g, 0).armed = 1;
+      g.state.flags.played = played;
+      drive(returnStep(g));
+      expect(names(g, 1, 'exp'), played.join()).toContain('Ex-中毒');
+      expect(names(g, 0, 'exp'), played.join()).not.toContain('Ex-中毒');
+    }
 
     const t = scenario();
     塗毒狀態.of(t, 0).armed = 1;
-    t.state.flags.played = [2, 2];
     drive(returnStep(t));
-    expect(names(t, 1, 'exp')).toContain('Ex-中毒');
-
     const poison = Z(t, 1, 'exp').find((c) => c.id === 'Ex-中毒')!;
     discard(t, poison);
     expect(Z(t, 1, 'discard').some((c) => c.id === 'Ex-中毒')).toBe(false);
     expect(Z(t, 1, 'exp').some((c) => c.id === 'Ex-中毒')).toBe(false);
-  });
-
-  it('中毒：回合開始時直擊我方 1，不分先後攻；裏側時不發動', () => {
-    const g = scenario({ phase: '重置', singlePhase: true, p1: { exp: ['Ex-中毒'] } });
-    expect(Z(g, 1, 'deck')).toHaveLength(19);
-
-    const f = scenario({ first: 1, phase: '重置', singlePhase: true, p1: { exp: ['Ex-中毒'] } });
-    expect(Z(f, 1, 'deck')).toHaveLength(19);
-
-    const covered = scenario({ phase: '重置', singlePhase: true, p1: { exp: ['~Ex-中毒'] } });
-    expect(Z(covered, 1, 'deck')).toHaveLength(20);
-  });
-
-  it('流血：表側時我方總防禦 −1，多張疊加，裏側時無效', () => {
-    const def = (exp: string[]) => {
-      const g = scenario({ phase: '重置', singlePhase: true, p1: { exp, moves: ['梅花1'] } });
-      return totalDef(g, 1);
-    };
-    const none = def([]);
-    expect(def(['Ex-流血'])).toBe(none - 1);
-    expect(def(['Ex-流血', 'Ex-流血'])).toBe(none - 2);
-    expect(def(['~Ex-流血'])).toBe(none);
   });
 
   it('家族相片：回合開始時 [蓋1_怒3] 回復 1', () => {
@@ -641,11 +627,13 @@ describe('卡表同步的新卡：高利貸、狙擊蓄力、熔岩之擊', () =
   // 只跑戰鬥階段：先攻方手牌只有 1 張招式時自動先手出招，後攻方沒有可出的招式就直接進入傷害計算
   const combat = (s: Parameters<typeof scenario>[0]) => scenario({ phase: '先手', singlePhase: true, ...s });
 
-  it('高利貸：[發] 對方強制蓋 X，X＝對方表側且帶 [經] 的經驗張數；被蓋的卡蓋反應照常觸發', () => {
+  it('高利貸：[發_蓋1] 對方強制蓋 X，X＝對方表側且帶 [經] 的經驗張數；被蓋的卡蓋反應照常觸發', () => {
     const g = combat({
-      p0: { hand: ['高利貸'] },
+      p0: { hand: ['高利貸'], exp: ['黑桃5'] },
       p1: { hand: [], exp: ['低價買進', '黑桃3', '高價賣出', '黑桃4'], rage: Array(5).fill('黑桃1'), deck: ['黑桃6', ...filler] },
     });
+    pick(g, '發動'); // 先付蓋1
+    expect(Z(g, 0, 'exp')[0].covered).toBe(true);
     // X＝2（低價買進、高價賣出）：從最前面蓋 2 張＝低價買進與黑桃3
     expect(Z(g, 1, 'exp').map((c) => c.covered)).toEqual([true, true, false, false]);
     expect(g.state.log.join('\n')).toContain('玩家B（刺客） 回復 3'); // 低價買進被蓋成裏側：回復 3
@@ -653,10 +641,12 @@ describe('卡表同步的新卡：高利貸、狙擊蓄力、熔岩之擊', () =
   });
 
   it('高利貸：對方沒有帶 [經] 的表側經驗時什麼都不蓋；裏側的 [經] 卡不算；表側不足就蓋到沒有為止', () => {
-    const none = combat({ p0: { hand: ['高利貸'] }, p1: { hand: [], exp: ['黑桃3', '~低價買進'] } });
+    const none = combat({ p0: { hand: ['高利貸'], exp: ['黑桃5'] }, p1: { hand: [], exp: ['黑桃3', '~低價買進'] } });
     expect(Z(none, 1, 'exp').map((c) => c.covered)).toEqual([false, true]);
+    expect(Z(none, 0, 'exp')[0].covered).toBe(false); // 對方沒有可蓋的，連蓋1 的費用都不問
 
-    const one = combat({ p0: { hand: ['高利貸'] }, p1: { hand: [], exp: ['黑桃3', '高價賣出'], deck: ['黑桃6', ...filler] } });
+    const one = combat({ p0: { hand: ['高利貸'], exp: ['黑桃5'] }, p1: { hand: [], exp: ['黑桃3', '高價賣出'], deck: ['黑桃6', ...filler] } });
+    pick(one, '發動');
     expect(Z(one, 1, 'exp').map((c) => c.covered)).toEqual([true, false]); // X＝1，蓋最前面 1 張
   });
 

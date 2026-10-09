@@ -96,7 +96,7 @@ export const 即時停損 = defineSource({
   },
 });
 
-// 高利貸（商人）：[發] 對方蓋X。X = 對方帶 [經] 的表側經驗張數
+// 高利貸（商人）：[發_蓋1] 對方蓋前 X 張表側經驗。X = 對方帶 [經] 的表側經驗張數
 export const 高利貸 = defineSource({
   id: '高利貸',
   at: 'moves',
@@ -104,9 +104,8 @@ export const 高利貸 = defineSource({
     onPlay: (c) => {
       const foe = other(c.p);
       const count = () => faceUpExp(c.g, foe).filter((card) => hasExpEffect(card.id)).length;
-      return c.effect({ label: '【高利貸】對方蓋X', mandatory: true, when: () => count() > 0 }, function* () {
+      return c.effect({ label: '【高利貸】對方蓋前 X 張表側經驗（蓋1）', cost: { cover: 1 }, when: () => count() > 0 }, function* () {
         const x = count();
-        activate(c.g, c.p, c.self!);
         log(c.g, `【高利貸】${pname(c.g, foe)} 的表側經驗中有 ${x} 張帶 [經]，強制蓋 ${x}`);
         yield* pay(c.g, foe, { cover: x });
       });

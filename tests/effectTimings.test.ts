@@ -20,11 +20,12 @@ describe('電弧：抽 X，X 是對方戰鬥區的招式數量', () => {
   it('對方戰鬥區有 1 張招式時，抽 1 再放 1 張手牌到牌組底，並錄發動影格', () => {
     const g = scenario({
       chars: ['勇者', '法師'], first: 0, animate: true,
-      p0: { hand: ['黑桃5'] }, p1: { hand: ['電弧', '黑桃1'] },
+      p0: { hand: ['黑桃5'] }, p1: { hand: ['電弧', '黑桃1'], exp: ['黑桃3'] },
     });
     // 先手只有 1 張可出，自動打出；輪到對方反擊
     g.drainFrames();
     pick(g, '電弧'); // 反擊步驟打出，對方（先手）的戰鬥區有 1 張
+    pick(g, '發動'); // 付蓋1
     expect(g.pending!.title).toContain('【電弧】選擇 1 張手牌放到牌組底');
     expect(Z(g, 1, 'hand')).toHaveLength(2);
     expect(activates(g)).toHaveLength(1);

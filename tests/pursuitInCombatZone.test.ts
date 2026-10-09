@@ -57,10 +57,11 @@ describe('卡效果的「戰鬥區」包含追擊卡疊', () => {
     const g = scenario({
       phase: '先手',
       singlePhase: true,
-      p0: { hand: ['電弧', '黑桃1'], deck: ['黑桃3', '黑桃4', '黑桃5', ...filler] },
+      p0: { hand: ['電弧', '黑桃1'], exp: ['黑桃2'], deck: ['黑桃3', '黑桃4', '黑桃5', ...filler] },
       p1: { hand: ['黑桃9'], moves: ['黑桃6'], pursuit: ['黑桃7', '黑桃8'] },
     });
     pick(g, '電弧');
+    pick(g, '發動'); // 付蓋1
     // 對方招式卡疊 1 張加追擊卡疊 2 張：X = 3
     expect(g.pending!.title).toContain('選擇 3 張手牌');
   });

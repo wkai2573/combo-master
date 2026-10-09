@@ -245,14 +245,15 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(pursuitCount(g, 0)).toBe(1);
   });
 
-  it('電弧（法師）：[發] 抽X，再放 X 張手牌到牌組底，X＝對方戰鬥區招式數', () => {
+  it('電弧（法師）：[發_蓋1] 抽X，再放 X 張手牌到牌組底，X＝對方戰鬥區招式數', () => {
     const g = scenario({
       first: 1,
       chars: ['法師', '勇者'],
-      p0: { hand: ['電弧', '黑桃2'], deck: ['黑桃7', ...Array(20).fill('黑桃1')] },
+      p0: { hand: ['電弧', '黑桃2'], exp: ['黑桃3'], deck: ['黑桃7', ...Array(20).fill('黑桃1')] },
       p1: { hand: ['黑桃5'] },
     });
     pick(g, '電弧'); // 玩家1 先攻只有 1 張，自動先手出招；對方戰鬥區有 1 張 → X = 1
+    pick(g, '發動'); // 付蓋1
     expect(g.pending!.title).toContain('電弧');
     pick(g, '黑桃2');
     expect(names(g, 0, 'hand')).toContain('黑桃7');

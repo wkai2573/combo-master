@@ -73,24 +73,21 @@ export const 卸除鎧甲 = defineSource({
 /** 塗毒在這回合被發動的次數；歸還時依此放出中毒 */
 export const 塗毒狀態 = slot('塗毒', () => ({ armed: 0 }));
 
-// 塗毒（盜賊）：[先_蓋1] 歸還時，將 [Ex-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
+// 塗毒（盜賊）：[發_蓋2] 當歸還時，將 [Ex-中毒] 移入對方的經驗區
 export const 塗毒 = defineSource({
   id: '塗毒',
   at: 'moves',
   on: {
-    onOpen: (c) => c.effect({ label: '【塗毒】歸還時，Ex-中毒移入經驗區（蓋1）', cost: { cover: 1 } }, () => {
+    onPlay: (c) => c.effect({ label: '【塗毒】歸還時，Ex-中毒移入對方的經驗區（蓋2）', cost: { cover: 2 } }, () => {
       塗毒狀態.of(c.g, c.p).armed++;
-      log(c.g, '【塗毒】歸還時，[Ex-中毒]將移入經驗區');
+      log(c.g, '【塗毒】歸還時，[Ex-中毒]將移入對方的經驗區');
     }),
     // 歸還時卡已經離開戰鬥區，所以要明寫 lasting；是否發動看塗毒留下的記號
     afterReturn: lasting((c) => Array.from({ length: 塗毒狀態.read(c.g, c.p).armed }, () =>
       // 歸還的影格已經涵蓋這張卡的出現，所以不另外補錄
-      c.effect({ label: '【塗毒】Ex-中毒移入經驗區', mandatory: true, mark: false }, () => {
+      c.effect({ label: '【塗毒】Ex-中毒移入對方的經驗區', mandatory: true, mark: false }, () => {
         塗毒狀態.of(c.g, c.p).armed--;
-        const f = c.g.state.flags;
-        const mine = f.played[c.p];
-        const theirs = f.played[other(c.p)];
-        const target = mine < theirs ? c.p : other(c.p);
+        const target = other(c.p);
         newCard(c.g, 'Ex-中毒', target, 'exp');
         log(c.g, `【塗毒】[Ex-中毒]移入${pname(c.g, target)}的經驗區`);
       }))),
