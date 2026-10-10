@@ -7,7 +7,6 @@ import { armorScenario, atkOf, defOf, drive, liftedAtkOf, names, pick, scenario,
 
 import { 伏擊狀態, 塗毒狀態, 順手牽羊狀態 } from '../src/engine/sources/thief';
 import { 二連矢狀態 } from '../src/engine/sources/archer';
-import { 凡骨狀態 } from '../src/engine/sources/swordsman';
 import { 狙擊印記狀態 } from '../src/engine/sources/archer';
 
 const filler = Array(20).fill('黑桃2') as string[];
@@ -351,7 +350,7 @@ describe('新卡（第二批）', () => {
     it('前 2 張表側經驗包含自己時，連自己一起蓋，效果失效，沒有加成', () => {
       const g = play(['凡骨的意志', '黑桃3', '黑桃4']);
       expect(coveredIds(g)).toEqual(['凡骨的意志', '黑桃3']);
-      expect(g.state.log.join('\n')).toContain('蓋到自己而失效');
+      expect(g.state.log.join('\n')).toContain('蓋到自己，加成消失');
       expect(totalAtk(g, 0)).toBe(base);
       expect(totalDef(g, 0)).toBe(baseDef);
       // 下個回合：它已經被蓋住，不能再發動，也不會去蓋黑桃3
@@ -360,9 +359,9 @@ describe('新卡（第二批）', () => {
     });
 
     it('表側經驗剛好 2 張（包含自己）：兩張都蓋，沒有加成', () => {
-      const g = scenario({ chars: ['商人', '刺客'], phase: '回合開始', singlePhase: true, p0: { exp: ['黑桃3', '~黑桃4', '凡骨的意志'] } });
+      const g = scenario({ chars: ['商人', '刺客'], phase: '回合開始', singlePhase: true, p0: { exp: ['黑桃3', '~黑桃4', '凡骨的意志'], moves: ids } });
       expect(Z(g, 0, 'exp').map((c) => c.covered)).toEqual([true, true, true]);
-      expect(凡骨狀態.read(g, 0).uids).toEqual([]);
+      expect(totalAtk(g, 0)).toBe(base);
     });
 
     it('它是唯一的表側經驗時，蓋的就是自己，沒有加成', () => {
@@ -371,7 +370,24 @@ describe('新卡（第二批）', () => {
       expect(totalAtk(g, 0)).toBe(base);
     });
 
-    it('發動之後它才被蓋成裏側或離開經驗區，這回合的加成就消失；翻回表側才恢復', () => {
+    it('[經] 加成是常駐的：爆發放進經驗區的這回合就有加成，不用等到下個回合開始', () => {
+      const g = scenario({ chars: ['商人', '刺客'], phase: '爆發', singlePhase: true, p0: { hand: ['凡骨的意志'], moves: ids } });
+      expect(totalAtk(g, 0)).toBe(base);
+      pick(g, '凡骨的意志');
+      expect(Z(g, 0, 'exp').map((c) => c.id)).toEqual(['凡骨的意志']);
+      expect(Z(g, 0, 'exp')[0].covered).toBe(false);
+      expect(totalAtk(g, 0)).toBe(base + 2);
+      expect(totalDef(g, 0)).toBe(baseDef + 2);
+    });
+
+    it('回合開始蓋到自己變裏側，之後翻回表側，加成就恢復（表側就持續有效）', () => {
+      const g = play(['凡骨的意志']);
+      expect(totalAtk(g, 0)).toBe(base);
+      Z(g, 0, 'exp')[0].covered = false;
+      expect(totalAtk(g, 0)).toBe(base + 2);
+    });
+
+    it('被蓋成裏側或離開經驗區，加成就消失；翻回表側才恢復', () => {
       const g = play(['黑桃3', '黑桃4', '凡骨的意志']);
       expect(totalAtk(g, 0)).toBe(base + 2);
       cover(g, 0, 1); // 表側只剩它一張
@@ -391,7 +407,6 @@ describe('新卡（第二批）', () => {
       pick(g, g.pending!.options[1].label);
       expect(g.pending).toBeNull();
       expect(Z(g, 0, 'exp').map((c) => c.covered)).toEqual([true, true, false]);
-      expect(凡骨狀態.read(g, 0).uids).toEqual([a.uid]);
       expect(totalAtk(g, 0)).toBe(base + 2);
     });
   });

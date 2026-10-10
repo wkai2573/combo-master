@@ -7,7 +7,6 @@ import { Rng } from '../src/engine/rng';
 import type { Request } from '../src/engine/types';
 import { names, pick, scenario } from './helpers';
 import { 伏擊狀態 } from '../src/engine/sources/thief';
-import { 凡骨狀態 } from '../src/engine/sources/swordsman';
 
 const labels = (g: ReturnType<typeof scenario>) => g.pending!.options.map((o) => o.label);
 
@@ -249,7 +248,7 @@ describe('觸發窗口：回合開始', () => {
     expect(g.pending!.title).toContain('回合開始');
     expect(labels(g).map((l) => l.replace(/^【強制】/, '強制：'))).toEqual([
       '【家族相片】回復 1（蓋1、怒2）',
-      '強制：【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量',
+      '強制：【凡骨的意志】蓋前 2 張表側經驗',
     ]);
   });
 
@@ -257,12 +256,10 @@ describe('觸發窗口：回合開始', () => {
     const a = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
     pick(a, '【家族相片】回復 1（蓋1、怒2）');
     expect(Z(a, 0, 'exp').map((c) => c.covered)).toEqual([true, false, false]);
-    expect(凡骨狀態.read(a, 0).uids).toEqual([]); // 凡骨已被蓋成裏側，從清單消失
     expect(a.pending).toBeNull();
 
     const b = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
-    pick(b, '【強制】【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量');
-    expect(凡骨狀態.read(b, 0).uids).toEqual([]); // 前 2 張就包含它自己：蓋到自己而失效
+    pick(b, '【強制】【凡骨的意志】蓋前 2 張表側經驗');
     expect(Z(b, 0, 'exp').map((c) => c.covered)).toEqual([true, true, false]);
     expect(b.pending!.title).toContain('家族相片'); // 只剩一個可選效果：原本的確認
     pick(b, '發動');
@@ -284,7 +281,6 @@ describe('觸發窗口：回合開始', () => {
     expect(labels(g).every((l) => l.startsWith('【強制】'))).toBe(true);
     pick(g, '【強制】【中毒】直擊 1');
     expect(g.pending).toBeNull(); // 剩下的凡骨強制效果直接處理
-    expect(凡骨狀態.read(g, 1).uids).toHaveLength(1);
     expect(Z(g, 1, 'discard')).toHaveLength(1);
   });
 
@@ -436,7 +432,7 @@ describe('觸發窗口：同組效果併成一個選項', () => {
   it('Ex-中毒好幾張加上凡骨的意志：選單只有兩項，中毒標示張數', () => {
     const g = scenario({ chars: ['商人', '刺客'], phase: '回合開始', singlePhase: true, p1: { exp: ['Ex-中毒', 'Ex-中毒', 'Ex-中毒', '黑桃3', '凡骨的意志'] } });
     expect(g.pending!.player).toBe(1);
-    expect(labels(g).sort()).toEqual(['【強制】【中毒】直擊 1（×3）', '【強制】【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量'].sort());
+    expect(labels(g).sort()).toEqual(['【強制】【中毒】直擊 1（×3）', '【強制】【凡骨的意志】蓋前 2 張表側經驗'].sort());
     pick(g, '【強制】【中毒】直擊 1（×3）');
     expect(Z(g, 1, 'deck')).toHaveLength(17);
   });

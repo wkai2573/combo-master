@@ -46,8 +46,13 @@ export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: bool
   }
 
   // 先手出招同時是「先手出招時」與「打出時」，兩者的效果進同一個窗口
+  const passedBefore = [...g.state.passed];
   yield* fire(g, p, opening ? (['onOpen', 'onPlay'] as const) : 'onPlay', { card });
   checkWin(g);
+  // 效果讓玩家被迫收招（Explosion!、即時停損）也是收招：窗口結算完，各自開「收招時」的窗口，先攻方先
+  for (const q of order(g)) {
+    if (g.state.passed[q] && !passedBefore[q]) yield* markIfLogged(g, () => fire(g, q, 'onPass'));
+  }
 }
 
 // ───────────────────────── 總攻擊／總防禦 ─────────────────────────

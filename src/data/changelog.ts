@@ -21,6 +21,15 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.37.1',
+    date: '2026-10-10',
+    items: [
+      { type: 'fix', text: 'Explosion!、即時停損：效果讓我方被迫收招時，也算收招，會觸發木棍、布甲、冰與雷之曲、元素法典等「收招時」的效果' },
+      { type: 'fix', text: '凡骨的意志：總攻擊與總防禦的加成改成表側在經驗區就持續有效，爆發放進去的這回合就有加成；回合開始的蓋前 2 張表側經驗維持強制' },
+      { type: 'change', text: '凡骨的意志：卡面文字拆成兩個 [經] 效果，加成與回合開始的蓋 2 分開寫' },
+    ],
+  },
+  {
     version: '0.37.0',
     date: '2026-10-10',
     items: [

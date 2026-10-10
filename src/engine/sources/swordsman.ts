@@ -1,5 +1,5 @@
 import { faceUpExp, pay } from '../cost';
-import { defineSource, slot } from '../effectKit';
+import { defineSource } from '../effectKit';
 import { activate, awakened, data, directHit, isFirst, log, move, pname, recover, Z } from '../ops';
 import { isVanilla } from '../../data/enabledCards';
 import { other } from '../types';
@@ -16,10 +16,9 @@ export const 家族相片 = defineSource({
   },
 });
 
-/** 這回合已發動過的凡骨的意志（uid）；加成只算現在仍是表側經驗的那幾張 */
-export const 凡骨狀態 = slot('凡骨的意志', () => ({ uids: [] as number[] }));
-
-// 凡骨的意志（劍士）：[經] 回合開始時需蓋前 2 張表側經驗，此回合總攻擊 +X、總防禦 +X，強制
+// 凡骨的意志（劍士）：[經] 總攻擊 +X、總防禦 +X，表側在經驗區就持續有效；
+// [經] 回合開始時必須蓋前 2 張表側經驗（強制）。兩個效果各自獨立：加成不需要在回合開始發動過，
+// 蓋到自己變成裏側，加成就跟著消失
 export const 凡骨的意志 = defineSource({
   id: '凡骨的意志',
   at: 'exp',
@@ -28,7 +27,7 @@ export const 凡骨的意志 = defineSource({
       const { g, p } = c;
       const card = c.self!;
       return {
-        label: '【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量',
+        label: '【凡骨的意志】蓋前 2 張表側經驗',
         card,
         mandatory: true,
         // 前面的效果（例如家族相片、另一張凡骨的意志）已經把它蓋成裏側，就無效
@@ -38,19 +37,13 @@ export const 凡骨的意志 = defineSource({
           const n = Math.min(2, faceUpExp(g, p).length);
           activate(g, p, card);
           yield* pay(g, p, { cover: n });
-          // 蓋到自己就失效，沒有加成
-          if (card.covered) {
-            log(g, `【凡骨的意志】${pname(g, p)} 蓋前 ${n} 張表側經驗，蓋到自己而失效`);
-            return;
-          }
-          凡骨狀態.of(g, p).uids.push(card.uid);
-          log(g, `【凡骨的意志】${pname(g, p)} 蓋前 ${n} 張表側經驗，此回合總攻擊與總防禦各加上戰鬥區白板卡的數量`);
+          log(g, `【凡骨的意志】${pname(g, p)} 蓋前 ${n} 張表側經驗${card.covered ? '，蓋到自己，加成消失' : ''}`);
         },
       };
     },
   },
-  // 加成跟著卡走：它之後被蓋成裏側或離開經驗區，加成就跟著消失（常駐在經驗區表側時才會被問到）
-  ask: { vanillaBoost: (c) => (c.self && 凡骨狀態.read(c.g, c.p).uids.includes(c.self.uid) ? 1 : 0) },
+  // 加成跟著卡走：只有常駐在經驗區表側時才會被問到，被蓋成裏側或離開經驗區就沒有
+  ask: { vanillaBoost: () => 1 },
 });
 
 // 復仇之嚎（劍士）：[經_怒3] 傷害計算時，若對方給予的傷害 > 我方給予的傷害，將怒氣區上方 1 張卡加入手牌
