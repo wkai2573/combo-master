@@ -10,8 +10,8 @@ const filler = Array(20).fill('黑桃1') as string[];
 //   [發_蓋1] 必須將牌組上方 3 張卡以裏側放入經驗區
 //   [經] 當此卡被蓋為裏側時，必須選擇 2 張經驗放回牌組底
 describe('財富管理', () => {
-  it('卡表資料：商人招式，貿易特徵，已開放', () => {
-    expect(getCard('投資')).toMatchObject({ name: '財富管理', cls: '商人', kind: 'move', traits: ['貿易'] });
+  it('卡表資料：商人招式，市場特徵，已開放', () => {
+    expect(getCard('投資')).toMatchObject({ name: '財富管理', cls: '商人', kind: 'move', traits: ['市場'] });
     expect(ENABLED_EFFECT_CARDS).toContain('投資');
   });
 
@@ -51,7 +51,7 @@ describe('財富管理', () => {
   const covered = (exp: string[], deck = ['黑桃7', ...filler]) =>
     scenario({
       chars: ['商人', '刺客'],
-      phase: '重置',
+      phase: '回合開始',
       singlePhase: true,
       p0: { gear: ['家族相片'], exp, rage: Array(4).fill('黑桃1'), deck },
     });

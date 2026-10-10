@@ -1,10 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { presetDeck } from '../src/data/presetDecks';
 import { LocalSession } from '../src/net/session';
-import { listRecords } from '../src/stats/records';
+import type { BattleRecord } from '../src/stats/records';
+import { setRecordSink } from '../src/stats/sink';
 
 // 時間固定在 1：亂數種子是現在時間，這樣玩家先攻，而且第一次出招後輪到機器人
+// 戰績不再寫本機，而是交給上傳；測試換成自己的接收函式，直接看交出去了什麼
+let captured: BattleRecord[] = [];
+let restoreSink = () => {};
 beforeEach(() => {
+  captured = [];
+  restoreSink = setRecordSink((r) => captured.push(r));
   vi.useFakeTimers();
   vi.setSystemTime(1);
   const data = new Map<string, string>();
@@ -16,6 +22,7 @@ beforeEach(() => {
 });
 const sessions: LocalSession[] = [];
 afterEach(() => {
+  restoreSink();
   sessions.splice(0).forEach((s) => s.leave());
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -115,11 +122,11 @@ function playToEnd(s: LocalSession) {
 describe('單機練習：戰績', () => {
   it('對局正常打完留下一筆戰績：對手是電腦，欄位對得上最終畫面', () => {
     const s = start();
-    expect(listRecords()).toEqual([]);
+    expect(captured).toEqual([]);
     playToEnd(s);
     const v = s.getState().view!;
     const expected = v.winner === 'draw' ? 'draw' : v.winner === 0 ? 'win' : 'lose';
-    expect(listRecords()).toEqual([
+    expect(captured).toEqual([
       { version: expect.any(String), opponent: 'cpu', mine: '勇者', theirs: '刺客', outcome: expected, turns: v.turn, first: v.openingFirst === 0 },
     ]);
   });
@@ -129,7 +136,7 @@ describe('單機練習：戰績', () => {
     playToEnd(s);
     s.submit(['x']);
     vi.advanceTimersByTime(5000);
-    expect(listRecords()).toHaveLength(1);
+    expect(captured).toHaveLength(1);
   });
 
   it('對局期間開過作弊（即使後來關掉）就不記錄', () => {
@@ -138,7 +145,7 @@ describe('單機練習：戰績', () => {
     s.cheat!.setOn(false);
     playToEnd(s);
     expect(s.getState().view!.cheated).toBe(true);
-    expect(listRecords()).toEqual([]);
+    expect(captured).toEqual([]);
   });
 
   it('中途離開不記錄', () => {
@@ -146,6 +153,6 @@ describe('單機練習：戰績', () => {
     playFirst(s);
     s.leave();
     vi.advanceTimersByTime(5000);
-    expect(listRecords()).toEqual([]);
+    expect(captured).toEqual([]);
   });
 });

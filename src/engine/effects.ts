@@ -81,6 +81,7 @@ const FOLD: { [K in QueryKey]: Fold<K> } = {
   flatAtk: sum,
   flatDef: sum,
   vanillaBoost: sum,
+  continueAfterFoePass: { init: () => false, add: (a, x) => a || x },
   combatBonus: {
     init: () => ({ atk: 0, def: 0, pursuitDef: 0 }),
     add: (a, x) => ({ atk: a.atk + (x.atk ?? 0), def: a.def + (x.def ?? 0), pursuitDef: a.pursuitDef + (x.pursuitDef ?? 0) }),

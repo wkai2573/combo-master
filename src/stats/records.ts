@@ -41,7 +41,7 @@ export function recordFromView(view: GameView, opponent: Opponent, version: stri
   return record;
 }
 
-const isRecord = (r: unknown): r is BattleRecord => {
+export const isRecord = (r: unknown): r is BattleRecord => {
   if (typeof r !== 'object' || r === null) return false;
   const o = r as Record<string, unknown>;
   return typeof o.version === 'string'

@@ -1,5 +1,5 @@
 import { defineSource, lasting, slot } from '../effectKit';
-import { activate, awakened, chooseCards, draw, log, move, pname, Z } from '../ops';
+import { activate, awakened, chooseCards, draw, log, move, pname, recover, topOfZone, Z } from '../ops';
 
 // 遊俠：當我方覺醒時，可以抽 2；瞄準上限 1，覺醒時 2
 export const 遊俠 = defineSource({
@@ -80,4 +80,20 @@ export const 魅影射擊 = defineSource({ id: '魅影射擊', at: 'pursuit', as
 // 地雷陷阱（弓箭手）：[追] 我方總攻擊 +3
 export const 地雷陷阱 = defineSource({ id: '地雷陷阱', at: 'pursuit', asMove: { pursuitAtk: 3 } });
 
-export const ARCHER_SOURCES = [遊俠, 瞄準器, 二連矢, 狙擊蓄力, 狙擊印記, 魅影射擊, 地雷陷阱];
+// 生命偷取（弓箭手）：[頂] 當我方追擊判定成功時，回復 2
+export const 生命偷取 = defineSource({
+  id: '生命偷取',
+  at: 'moves',
+  on: {
+    onPursuitSuccess: (c) => c.effect(
+      { label: '【生命偷取】回復 2', mandatory: true, when: () => topOfZone(c.g, c.p) === c.self },
+      () => {
+        activate(c.g, c.p, c.self!);
+        recover(c.g, c.p, 2);
+        log(c.g, `【生命偷取】${pname(c.g, c.p)} 追擊判定成功，回復 2`);
+      },
+    ),
+  },
+});
+
+export const ARCHER_SOURCES = [遊俠, 瞄準器, 二連矢, 狙擊蓄力, 狙擊印記, 魅影射擊, 地雷陷阱, 生命偷取];

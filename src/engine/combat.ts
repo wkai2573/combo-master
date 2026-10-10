@@ -3,6 +3,7 @@ import {
   order, pname, takeDamage, Z, type GameCtx, type Gen,
 } from './ops';
 import { inRange, judge } from './judge';
+import { canPay, pay } from './cost';
 import { fire, fireEach, moveRules, query } from './effects';
 import { checkWin } from './win';
 import { other, type CardInst, type PlayerId } from './types';
@@ -12,14 +13,19 @@ import {
 
 // ───────────────────────── 範圍內／可出招判定 ─────────────────────────
 
-/** p 目前可以打出的招式（手牌） */
-export function playables(g: GameCtx, p: PlayerId): CardInst[] {
+/** p 目前可以打出的招式（手牌）；opening 為先手步驟，只能在先手步驟出招的卡只有這時才算 */
+export function playables(g: GameCtx, p: PlayerId, opening = false): CardInst[] {
   const cands = Z(g, p, 'hand').filter((c) => data(c).kind === 'move');
   // 招式卡疊只能出現一次「重複連擊值」：已經有同值 2 張之後，招式卡疊裡有的連擊值都不能再打出
   const copies = new Map<number, number>();
   for (const c of Z(g, p, 'moves')) copies.set(data(c).combo, (copies.get(data(c).combo) ?? 0) + 1);
   const hasDuplicate = [...copies.values()].some((n) => n >= 2);
-  return cands.filter((c) => inRange(g, p, c) && !(hasDuplicate && copies.has(data(c).combo)));
+  return cands.filter((c) => {
+    const rules = moveRules(c.id);
+    if (rules.openingOnly && !opening) return false;
+    if (rules.playCover > 0 && !canPay(g, p, { cover: rules.playCover })) return false;
+    return inRange(g, p, c) && !(hasDuplicate && copies.has(data(c).combo));
+  });
 }
 
 // ───────────────────────── 出招 ─────────────────────────
@@ -31,6 +37,13 @@ export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: bool
   const cd = data(card);
   mark(g, `${pname(g, p)} ${opening ? '先手出招' : '出招'}【${cd.name}】　攻${cd.atk}　連擊${cd.combo}　守${cd.def}`,
     { type: 'play', player: p, uid: card.uid });
+
+  // 出招時必須支付的費用（嘲諷的蓋2）：先付，再處理出招時的效果
+  const playCover = moveRules(card.id).playCover;
+  if (playCover > 0) {
+    log(g, `${pname(g, p)} 出招需支付蓋${playCover}`);
+    yield* pay(g, p, { cover: playCover });
+  }
 
   // 先手出招同時是「先手出招時」與「打出時」，兩者的效果進同一個窗口
   yield* fire(g, p, opening ? (['onOpen', 'onPlay'] as const) : 'onPlay', { card });
@@ -183,7 +196,7 @@ export function* combatPhase(g: GameCtx): Gen {
   const [first, second] = order(g);
 
   s.phase = '先手';
-  const opening = playables(g, first);
+  const opening = playables(g, first, true);
   if (opening.length === 0) {
     const hand = Z(g, first, 'hand').map((c) => data(c).name).join('、') || '（無）';
     log(g, `${pname(g, first)} 沒有可出的招式，展示手牌：${hand}`);
@@ -220,7 +233,8 @@ export function* combatPhase(g: GameCtx): Gen {
     } else {
       s.passed[cur] = true;
       log(g, `${pname(g, cur)} 收招`);
-      const direct = firstAction && cur === second;
+      // 後攻方第一個動作就收招：先攻方不能再出招，直接傷害計算；嘲諷讓先攻方可以繼續出招
+      const direct = firstAction && cur === second && !query(g, first, 'continueAfterFoePass');
       mark(g, `${pname(g, cur)} 收招${direct ? '，直接進入傷害計算' : ''}`, { type: 'pass', player: cur });
       yield* markIfLogged(g, () => fire(g, cur, 'onPass'));
       if (direct) {
@@ -232,7 +246,11 @@ export function* combatPhase(g: GameCtx): Gen {
     cur = other(cur);
   }
 
-  if (!straightToDamage) yield* pursuitPhase(g);
+  if (!straightToDamage) {
+    // 追擊通則：只要有一方的招式卡疊沒有招式，就不追擊，雙方都不翻牌
+    if (Z(g, 0, 'moves').length > 0 && Z(g, 1, 'moves').length > 0) yield* pursuitPhase(g);
+    else log(g, '有一方沒有出招，不進行追擊');
+  }
   yield* damageStep(g);
   yield* returnStep(g);
   yield* fireEach(g, 'onAwaken'); // 歸還讓經驗區增加，可能進入覺醒

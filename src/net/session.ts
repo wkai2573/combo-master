@@ -3,7 +3,8 @@ import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
 import type { CheatSnapshot, CheatZone } from '../engine/cheat';
 import { Rng } from '../engine/rng';
-import { addRecord, recordFromView, type Opponent } from '../stats/records';
+import { recordFromView, type Opponent } from '../stats/records';
+import { submitRecord } from '../stats/sink';
 import { APP_VERSION } from '../version';
 import type { Frame, GameView } from '../engine/view';
 import type { PlayerId } from '../engine/types';
@@ -115,12 +116,15 @@ abstract class Base implements Session {
     this.recordIfOver();
     this.subs.forEach((f) => f());
   }
-  /** 對局第一次進入結束狀態時留下戰績；離線判負、作弊過的對局由 recordFromView 排除 */
+  /** 這個場次是不是負責上傳戰績：連線對局只由房主上傳，一場只留一筆，訪客不上傳 */
+  protected readonly uploadsRecord: boolean = true;
+  /** 對局第一次進入結束狀態時留下戰績並交給上傳；離線判負、作弊過的對局由 recordFromView 排除 */
   private recordIfOver() {
     if (this.recorded || this.s.status !== 'over' || !this.s.view) return;
     this.recorded = true;
+    if (!this.uploadsRecord) return;
     const record = recordFromView(this.s.view, this.opponent, APP_VERSION);
-    if (record) addRecord(record);
+    if (record) submitRecord(record);
   }
   abstract submit(keys: string[]): void;
   abstract leave(): void;
@@ -364,6 +368,7 @@ function viewMsg(seat: SeatUpdate): HostMsg {
 export class GuestSession extends Base {
   readonly me: PlayerId = 1;
   protected readonly opponent = 'player' as const;
+  protected readonly uploadsRecord = false;
   private peer: Peer;
   private conn: DataConnection | undefined;
   private pingTimer: ReturnType<typeof setInterval> | undefined;

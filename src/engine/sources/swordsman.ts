@@ -97,6 +97,20 @@ export const 戒備打擊 = defineSource({ id: '戒備打擊', at: 'moves', asMo
 // 盾擊（劍士）：[頂] 我方戰鬥區的招式卡，若原始攻擊力小於原始防禦力，則該卡的攻擊力改為原始防禦力
 export const 盾擊 = defineSource({ id: '盾擊', at: 'moves', asMove: { liftAtkToDef: true } });
 
+// 嘲諷（劍士）：此卡只能在先手步驟出招，出招時必須支付 [蓋2]；
+// [先] 後攻方第一個動作就收招（對方沒有招式）時，我方可以繼續出招；
+// 傷害計算時，我方總防禦 −4X，X＝我方招式卡疊的卡數（含自己，總防禦最低為 0）
+export const 嘲諷 = defineSource({
+  id: '嘲諷',
+  at: 'moves',
+  asMove: { openingOnly: true, playCover: 2 },
+  ask: {
+    // 嘲諷只能在先手步驟出招，所以它在招式卡疊裡就代表這是先手出招的那張
+    continueAfterFoePass: () => true,
+    flatDef: (c) => -4 * Z(c.g, c.p, 'moves').length,
+  },
+});
+
 // 勇者：戰鬥結算前的基礎攻擊達到門檻時，總攻擊 +3；覺醒時門檻較低
 export const 勇者 = defineSource({
   id: '勇者',
@@ -123,4 +137,4 @@ export const 後人 = defineSource({
     },
   },
 });
-export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊, 戒備打擊, 盾擊, 勇者, 後人];
+export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊, 戒備打擊, 盾擊, 嘲諷, 勇者, 後人];

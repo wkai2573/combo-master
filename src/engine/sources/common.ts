@@ -1,5 +1,5 @@
 import { defineSource, lasting, slot } from '../effectKit';
-import { directHit, log, pname } from '../ops';
+import { directHit, log, pname, recover } from '../ops';
 
 // Ex-中毒：[經] 當回合開始時，直擊我方 1，強制
 export const Ex中毒 = defineSource({
@@ -61,4 +61,16 @@ export const 木棍 = defineSource({
   ask: { flatAtk: lasting((c) => 木棍狀態.read(c.g, c.p).atk) },
 });
 
-export const COMMON_SOURCES = [Ex中毒, Ex流血, 布甲, 木棍];
+// 生命藥水（共用招式）：[發_蓋3] 回復 3
+export const 生命藥水 = defineSource({
+  id: '生命藥水',
+  at: 'moves',
+  on: {
+    onPlay: (c) => c.effect({ label: '【生命藥水】回復 3（蓋3）', cost: { cover: 3 } }, () => {
+      recover(c.g, c.p, 3);
+      log(c.g, `【生命藥水】${pname(c.g, c.p)} 回復 3`);
+    }),
+  },
+});
+
+export const COMMON_SOURCES = [Ex中毒, Ex流血, 布甲, 木棍, 生命藥水];

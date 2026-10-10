@@ -12,6 +12,7 @@ import { ZoneViewer } from '../components/ZoneViewer';
 import { StepTracker } from '../components/StepTracker';
 import { PromptPanel } from '../components/PromptPanel';
 import { CheatPanel } from '../components/CheatPanel';
+import { isCheatUnlocked } from '../../cheatUnlock';
 import { useWide } from '../useWide';
 import type { Session } from '../../net/session';
 import type { PlayerId } from '../../engine/types';
@@ -36,6 +37,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const [flowOpen, setFlowOpen] = useState(false);
   // 作弊模式：開關記在連線層（對方才看得到提示），離開或下一局都會回到關閉；面板的開合只是這個畫面的事
   const [cheatOpen, setCheatOpen] = useState(false);
+  // 作弊模式預設隱藏：瀏覽器裡有解鎖旗標才顯示開關與面板（對手開啟時的提示橫幅不受影響）
+  const [cheatUnlocked] = useState(isCheatUnlocked);
   const cheatOpenRef = useRef(cheatOpen);
   cheatOpenRef.current = cheatOpen;
   // 面板跟著連線層確認過的開關走：開啟被確認才打開，關閉就收起（房主沒回應或遊戲已結束時不會憑空彈出）
@@ -167,7 +170,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
               <button className={drawer === 'log' ? 'on' : ''} aria-pressed={drawer === 'log'} onClick={() => setDrawer((d) => (d === 'log' ? null : 'log'))}>紀錄</button>
             </>
           )}
-          {session.cheat && (
+          {session.cheat && cheatUnlocked && (
             <>
               <button className={cheatOn ? 'on' : ''} aria-pressed={cheatOn} title="開啟後可以隨意加入手牌、移除手牌，調整、刪除、新增牌堆的卡，以及翻面經驗卡" onClick={() => session.cheat?.setOn(!cheatOn)}>作弊模式</button>
               {cheatOn && <button className={cheatOpen ? 'on' : ''} aria-pressed={cheatOpen} onClick={() => setCheatOpen(!cheatOpen)}>作弊面板</button>}
@@ -220,7 +223,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           )}
         </div>
 
-        {session.cheat && cheatOn && cheatOpen && v.winner === null && (
+        {session.cheat && cheatUnlocked && cheatOn && cheatOpen && v.winner === null && (
           <CheatPanel cheat={session.cheat} me={me} snapshotKey={final} locked={!pres.settled} onClose={() => setCheatOpen(false)} />
         )}
         <PhaseBanner fx={fx} n={fxKey} me={me} />

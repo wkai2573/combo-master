@@ -90,6 +90,8 @@ export interface Queries {
   flatDef: number;
   /** 凡骨的意志生效的次數（加總） */
   vanillaBoost: number;
+  /** 後攻方在反擊步驟第一個動作就收招時，我方（先攻方）是否可以繼續出招（任一為真）；嘲諷用 */
+  continueAfterFoePass: boolean;
   /** 角色專屬的戰鬥結算加成（欄位各自加總） */
   combatBonus: { atk: number; def: number; pursuitDef: number };
 }
@@ -104,6 +106,7 @@ export interface QueryArgs {
   flatAtk: [];
   flatDef: [];
   vanillaBoost: [];
+  continueAfterFoePass: [];
   combatBonus: [arg: { baseAtk: number }];
 }
 
@@ -122,9 +125,13 @@ export interface MoveRules {
   pursuitDef: number;
   /** 追擊判定一律失敗 */
   pursuitFails: boolean;
+  /** 只能在先手步驟出招 */
+  openingOnly: boolean;
+  /** 出招時必須支付的蓋X；表側經驗不足就不能出招 */
+  playCover: number;
 }
 export const NO_MOVE_RULES: Readonly<MoveRules> = Object.freeze({
-  topAtk: 0, topDef: 0, liftAtkToDef: false, pursuitAtk: 0, pursuitDef: 0, pursuitFails: false,
+  topAtk: 0, topDef: 0, liftAtkToDef: false, pursuitAtk: 0, pursuitDef: 0, pursuitFails: false, openingOnly: false, playCover: 0,
 });
 
 // ───────────────────────── 處理器與條目 ─────────────────────────

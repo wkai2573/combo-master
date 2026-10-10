@@ -1,8 +1,8 @@
 import { canPay, chooseX, faceUpExp, pay } from '../cost';
 import { hasExpEffect } from '../effects';
 import { defineSource, type EffectSource } from '../effectKit';
-import { activate, awakened, chooseCards, confirm, data, draw, log, move, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
-import { other, type PlayerId } from '../types';
+import { activate, awakened, chooseCards, confirm, data, discard, draw, log, move, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
+import type { CardInst, PlayerId } from '../types';
 
 // 招財貓（商人）：[蓋2] 爆發時，額外抽 1
 export const 招財貓 = defineSource({
@@ -98,25 +98,8 @@ export const 即時停損 = defineSource({
   },
 });
 
-// 高利貸（商人）：[發_蓋1] 對方蓋前 X 張表側經驗。X = 對方帶 [經] 的表側經驗張數
-export const 高利貸 = defineSource({
-  id: '高利貸',
-  at: 'moves',
-  on: {
-    onPlay: (c) => {
-      const foe = other(c.p);
-      const count = () => faceUpExp(c.g, foe).filter((card) => hasExpEffect(card.id)).length;
-      return c.effect({ label: '【高利貸】對方蓋前 X 張表側經驗（蓋1）', cost: { cover: 1 }, when: () => count() > 0 }, function* () {
-        const x = count();
-        log(c.g, `【高利貸】${pname(c.g, foe)} 的表側經驗中有 ${x} 張帶 [經]，強制蓋 ${x}`);
-        yield* pay(c.g, foe, { cover: x });
-      });
-    },
-  },
-});
-
 /** 蓋反應：強制，自己錄發動與步驟影格，所以結算完不再補錄 */
-const coverReaction = (id: string, text: string, react: (g: GameCtx, p: PlayerId) => Gen | void, extraOn: EffectSource['on'] = {}) =>
+const coverReaction = (id: string, text: string, react: (g: GameCtx, p: PlayerId, self: CardInst) => Gen | void, extraOn: EffectSource['on'] = {}) =>
   defineSource({
     id,
     at: 'exp',
@@ -125,7 +108,7 @@ const coverReaction = (id: string, text: string, react: (g: GameCtx, p: PlayerId
       onCovered: (c) => c.effect({ label: `【${data(c.self!).name}】被蓋成裏側：${text}`, mandatory: true, mark: false }, function* () {
         log(c.g, `【${data(c.self!).name}】被蓋成裏側`);
         activate(c.g, c.p, c.self!, `【${data(c.self!).name}】被蓋成裏側，效果發動`);
-        const r = react(c.g, c.p);
+        const r = react(c.g, c.p, c.self!);
         if (r) yield* r;
         settle(c.g);
       }),
@@ -138,6 +121,28 @@ export const 低價買進 = coverReaction('低價買進', '回復 1', (g, p) => 
 export const 高價賣出 = coverReaction('高價賣出', '抽 1', function* (g, p) {
   yield* draw(g, p, 1);
 });
+
+// 公開資訊（id 高利貸，商人）：[經] 當此卡被蓋為裏側時，翻開最多 3 張我方裏側經驗，然後捨棄此卡
+// 翻開的對象不含它自己（它馬上就被捨棄）；裏側經驗超過 3 張時由擁有者選 3 張，不足就全部翻開
+export const 公開資訊 = coverReaction(
+  '高利貸',
+  '翻開最多 3 張我方裏側經驗，然後捨棄此卡',
+  function* (g, p, self) {
+    const candidates = () => Z(g, p, 'exp').filter((card) => card.covered && card !== self);
+    const pool = candidates();
+    const opened = pool.length <= 3
+      ? pool
+      : yield* chooseCards(g, p, '【公開資訊】選擇 3 張裏側經驗翻開', pool, 3, 3);
+    for (const card of opened) {
+      // 提示等待期間經驗區可能被作弊改動：選到的卡已經不是裏側經驗就略過
+      if (card.covered && Z(g, p, 'exp').includes(card)) card.covered = false;
+    }
+    if (opened.length > 0) g.touched++;
+    log(g, `【公開資訊】${pname(g, p)} 翻開 ${opened.length} 張裏側經驗`);
+    if (Z(g, p, 'exp').includes(self)) discard(g, self);
+    log(g, `【公開資訊】${pname(g, p)} 捨棄此卡`);
+  },
+);
 
 // 財富管理（id 投資，商人）：
 //   [發_蓋1] 必須將牌組上方 3 張卡以裏側放入經驗區（牌組不足 3 張不能發動；放在經驗區最後方；牌組就是生命值，放完剩 0 張就落敗）
@@ -166,4 +171,4 @@ export const 財富管理 = coverReaction(
   },
 );
 
-export const MERCHANT_SOURCES = [招財貓, 商人, 交涉, 即時停損, 高利貸, 低價買進, 高價賣出, 財富管理];
+export const MERCHANT_SOURCES = [招財貓, 商人, 交涉, 即時停損, 公開資訊, 低價買進, 高價賣出, 財富管理];

@@ -124,21 +124,35 @@ export const 二刀連擊 = defineSource({
 
 // ───────────────────────── 角色 ─────────────────────────
 
-// 刺客：追擊成功時，將 1 張 [Ex-流血] 加入對方經驗區；覺醒（追加）再加 1 張 [Ex-中毒]。沒有次數上限，放在對方經驗區最後方，表側
+/** 刺客兩段效果這回合各自用過了沒 */
+export const 刺客狀態 = slot('刺客', () => ({ bleed: false, poison: false }));
+
+// 刺客：(回合1次) 追擊成功時，將 1 張 [Ex-流血] 加入對方經驗區；覺醒（追加）(回合1次) 追擊成功時，再加 1 張 [Ex-中毒]。
+// 兩段各自每回合 1 次，放在對方經驗區最後方，表側；同一次追擊成功時兩段都可用，仍是一個效果
 export const 刺客 = defineSource({
   id: '刺客',
   at: 'char',
   on: {
-    onPursuitSuccess: (c) => c.effect({ label: '【刺客】追擊成功：Ex-流血加入對方經驗區', mandatory: true }, () => {
-      const foe = other(c.p);
-      newCard(c.g, 'Ex-流血', foe, 'exp');
-      if (awakened(c.g, c.p)) {
-        newCard(c.g, 'Ex-中毒', foe, 'exp');
-        log(c.g, `【刺客】追擊成功，[Ex-流血]與[Ex-中毒]加入${pname(c.g, foe)}的經驗區`);
-      } else {
-        log(c.g, `【刺客】追擊成功，[Ex-流血]加入${pname(c.g, foe)}的經驗區`);
-      }
-    }),
+    onPursuitSuccess: (c) => {
+      const used = () => 刺客狀態.read(c.g, c.p);
+      const bleedReady = () => !used().bleed;
+      const poisonReady = () => awakened(c.g, c.p) && !used().poison;
+      return c.effect({ label: '【刺客】追擊成功：Ex-流血加入對方經驗區', mandatory: true, when: () => bleedReady() || poisonReady() }, () => {
+        const foe = other(c.p);
+        const added: string[] = [];
+        if (bleedReady()) {
+          刺客狀態.of(c.g, c.p).bleed = true;
+          newCard(c.g, 'Ex-流血', foe, 'exp');
+          added.push('[Ex-流血]');
+        }
+        if (poisonReady()) {
+          刺客狀態.of(c.g, c.p).poison = true;
+          newCard(c.g, 'Ex-中毒', foe, 'exp');
+          added.push('[Ex-中毒]');
+        }
+        log(c.g, `【刺客】追擊成功，${added.join('與')}加入${pname(c.g, foe)}的經驗區`);
+      });
+    },
   },
 });
 

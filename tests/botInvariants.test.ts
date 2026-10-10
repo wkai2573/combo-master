@@ -34,3 +34,24 @@ describe('壓測用的卡片守恆檢查', () => {
     }
   });
 });
+
+describe('新卡（嘲諷、生命偷取、生命藥水、公開資訊）的對局壓測', () => {
+  it('牌組裡塞了新卡的對局都能跑完，沒有卡死也沒有違反守恆', () => {
+    const NEW = ['嘲諷', '生命偷取', '生命藥水', '高利貸'];
+    for (const [a, b] of [['勇者', '遊俠'], ['商人', '刺客'], ['法師', '先人']] as const) {
+      for (let seed = 1; seed <= 8; seed++) {
+        const mk = (charId: string) => {
+          const cards = presetDeck(charId);
+          const out = [...cards];
+          // 把牌組最前面的 8 張換成新卡，每種各 2 張
+          for (let i = 0; i < 8; i++) out[i] = NEW[i % NEW.length];
+          return { charId, cards: out };
+        };
+        const decks = [mk(a), mk(b)] as const;
+        const game = new Game({ decks: [decks[0], decks[1]], seed: seed * 104729 });
+        const r = playOut(game, new Rng(seed), [decks[0].cards.length, decks[1].cards.length]);
+        expect(r.finished, `${a} vs ${b} seed=${seed}`).toBe(true);
+      }
+    }
+  });
+});

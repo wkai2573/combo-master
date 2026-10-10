@@ -20,10 +20,14 @@ describe('刺客：追擊成功時，將 Ex-流血加入對方經驗區', () => 
     expect(g.state.log.join('\n')).toContain('【刺客】追擊成功，[Ex-流血]加入玩家B');
   });
 
-  it('沒有次數上限：每次追擊成功都加', () => {
+  it('(回合1次)：同一回合第二次追擊成功不再加卡，下一回合重新可用', () => {
     const g = scenario({ chars: ['刺客', '勇者'], p0: { exp: ['黑桃1'] }, p1: { exp: [] } });
-    for (let i = 0; i < 7; i++) pursuitSuccess(g);
-    expect(names(g, 1, 'exp')).toEqual(Array(7).fill('Ex-流血'));
+    pursuitSuccess(g);
+    pursuitSuccess(g);
+    expect(names(g, 1, 'exp')).toEqual(['Ex-流血']);
+    g.state.slots = [{}, {}]; // 回合開始時各效果的回合狀態清空
+    pursuitSuccess(g);
+    expect(names(g, 1, 'exp')).toEqual(['Ex-流血', 'Ex-流血']);
   });
 
   it('流血讓對方總防禦 −1，多張疊加', () => {
@@ -31,6 +35,7 @@ describe('刺客：追擊成功時，將 Ex-流血加入對方經驗區', () => 
     const base = totalDef(g, 1);
     expect(base).toBe(defOf('梅花1'));
     pursuitSuccess(g);
+    g.state.slots = [{}, {}];
     pursuitSuccess(g);
     expect(totalDef(g, 1)).toBe(base - 2);
   });
@@ -40,6 +45,18 @@ describe('刺客：追擊成功時，將 Ex-流血加入對方經驗區', () => 
     pursuitSuccess(g);
     expect(names(g, 1, 'exp')).toEqual(['Ex-流血', 'Ex-中毒']);
     expect(g.state.log.join('\n')).toContain('[Ex-流血]與[Ex-中毒]');
+    // 兩段效果各自每回合 1 次：同一回合再追擊成功都不再加
+    pursuitSuccess(g);
+    expect(names(g, 1, 'exp')).toEqual(['Ex-流血', 'Ex-中毒']);
+  });
+
+  it('覺醒前先用掉流血，覺醒後同一回合還能再用中毒那一段', () => {
+    const g = scenario({ chars: ['刺客', '勇者'], p0: { exp: ['黑桃1'] }, p1: { exp: [] } });
+    pursuitSuccess(g);
+    expect(names(g, 1, 'exp')).toEqual(['Ex-流血']);
+    setZones(g, 0, { exp: Array(8).fill('黑桃1') });
+    pursuitSuccess(g);
+    expect(names(g, 1, 'exp')).toEqual(['Ex-流血', 'Ex-中毒']);
   });
 
   it('不是刺客就沒有這個效果', () => {

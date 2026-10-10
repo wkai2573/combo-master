@@ -31,8 +31,10 @@ export interface Scenario {
   seed?: number;
   /** 錄製動畫影格 */
   animate?: boolean;
-  /** 指定起始階段 */
+  /** 指定起始階段；沒指定時從先手步驟開始，讓戰鬥相關測試不必理會回合前段的階段 */
   phase?: StartPhase;
+  /** 不指定起始階段，照正式對局從第 1 回合的回合開始走（略過抽牌與爆發） */
+  fullGame?: boolean;
   /** 僅執行指定階段 */
   singlePhase?: boolean;
 }
@@ -52,7 +54,7 @@ function scenarioSetup(s: Scenario): GameSetup {
   ];
   return {
     decks, first: s.first ?? 0, seed: s.seed ?? 1, animate: s.animate,
-    startPhase: s.phase,
+    startPhase: s.phase ?? (s.fullGame ? undefined : '先手'),
     singlePhase: s.singlePhase,
     afterSetup: (g) => {
       if (s.p0) setZones(g, 0, { deck: FILLER, ...s.p0 });
@@ -112,6 +114,7 @@ export function armorScenario(p0: Zones = {}, extra: Partial<Scenario> = {}): Ga
     chars: ['法師', '勇者'],
     p0: { hand: ['冰霜護甲'], rage: Array(5).fill('黑桃1'), ...p0 },
     p1: { hand: ['黑桃9'] },
+    singlePhase: true,
     ...extra,
   });
   伏擊狀態.of(g, 1).atk = 3;

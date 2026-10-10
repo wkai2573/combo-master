@@ -1,0 +1,10 @@
+# 戰績伺服器（Cloudflare Workers + D1）。部署與設定步驟見 README 的「戰績伺服器」一節。
+name = "combo-master-records"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "combo-master-records"
+# 建立資料庫（wrangler d1 create）回報的 database_id
+database_id = "369d15da-08e1-4e41-9398-504a8f992f93"

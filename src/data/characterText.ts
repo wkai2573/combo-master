@@ -9,8 +9,8 @@ export const characterText: Record<string, { text: string; awakenText: string }>
     awakenText: '（取代）總攻擊達 10 以上時，總攻擊 +3。',
   },
   刺客: {
-    text: '追擊成功時，將 1 張 [Ex-流血] 加入對方經驗區。',
-    awakenText: '（追加）追擊成功時，將 1 張 [Ex-中毒] 加入對方經驗區。',
+    text: '(回合1次)追擊成功時，將 1 張 [Ex-流血] 加入對方經驗區。',
+    awakenText: '（追加）(回合1次)追擊成功時，將 1 張 [Ex-中毒] 加入對方經驗區。',
   },
   商人: {
     text: '爆發後，可以將 1 張表側經驗放到最前方。',

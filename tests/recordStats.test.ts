@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BattleRecord } from '../src/stats/records';
-import { characterSeats, characterSummary, compareVersion, filterByOpponent, legacyCount, matchup, matchupTable, MIN_WIN_RATE_VERSION, seatStats, turnStats, unseatedCount } from '../src/stats/summary';
+import { characterSeats, characterSummary, compareVersion, defaultVersions, filterByOpponent, filterByVersions, isLegacyVersion, legacyCount, matchup, matchupTable, MIN_WIN_RATE_VERSION, seatStats, turnStats, unseatedCount, versionCounts } from '../src/stats/summary';
 
 const V = MIN_WIN_RATE_VERSION;
 const rec = (mine: string, theirs: string, outcome: BattleRecord['outcome'], over: Partial<BattleRecord> = {}): BattleRecord => ({
@@ -51,13 +51,14 @@ describe('兩個角色的對戰統計', () => {
     expect(matchup([rec('勇者', '法師', 'win')], '勇者', '刺客').games).toBe(0);
   });
 
-  it('舊版本的戰績不進勝率，並可算出被排除幾場', () => {
+  it('勝率不再內建排除舊版本：傳進來的戰績都算，要排除就用版本篩選；舊版本場數另外算出來給畫面提示', () => {
     const list = [rec('勇者', '刺客', 'win'), rec('勇者', '刺客', 'win', { version: '0.1.0' }), rec('勇者', '刺客', 'lose', { version: '0.27.2' })];
-    expect(matchup(list, '勇者', '刺客')).toMatchObject({ win: 1, lose: 0, games: 1 });
+    expect(matchup(list, '勇者', '刺客')).toMatchObject({ win: 2, lose: 1, games: 3 });
     expect(legacyCount(list)).toBe(2);
+    expect(isLegacyVersion(list[0])).toBe(false);
   });
 
-  it('剛好是最低版本與更新的版本都進勝率', () => {
+  it('剛好是最低版本與更新的版本不是舊版本', () => {
     const list = [rec('勇者', '刺客', 'win', { version: V }), rec('勇者', '刺客', 'win', { version: '0.100.0' })];
     expect(matchup(list, '勇者', '刺客').games).toBe(2);
     expect(legacyCount(list)).toBe(0);
@@ -141,8 +142,8 @@ describe('單看角色', () => {
     expect(s.total).toMatchObject({ win: 0, lose: 1, games: 1, rate: 0 });
   });
 
-  it('舊版本不進總勝率；沒有場次時總勝率是 null', () => {
-    const s = characterSummary([rec('勇者', '刺客', 'win', { version: '0.1.0' })], '勇者', chars);
+  it('沒有場次時總勝率是 null', () => {
+    const s = characterSummary([], '勇者', chars);
     expect(s.total).toMatchObject({ games: 0, rate: null });
   });
 });
@@ -167,22 +168,20 @@ describe('先攻與後攻勝率', () => {
     expect(s.second).toEqual({ win: 0, lose: 1, draw: 1, games: 2, rate: 0 });
   });
 
-  it('同角色對打、沒有先後攻資料、舊版本的場次都不算', () => {
+  it('同角色對打、沒有先後攻資料的場次都不算', () => {
     const list = [
       rec('勇者', '勇者', 'win', { first: true }),
       rec('勇者', '刺客', 'win'),
-      rec('勇者', '刺客', 'win', { first: true, version: '0.1.0' }),
     ];
     expect(seatStats(list).first.games).toBe(0);
     expect(seatStats(list).first.rate).toBeNull();
   });
 
-  it('被排除的舊紀錄場數：夠新的版本、非同角色、但沒有先後攻資料', () => {
+  it('被排除的舊紀錄場數：非同角色、但沒有先後攻資料', () => {
     const list = [
       rec('勇者', '刺客', 'win'),
       rec('勇者', '刺客', 'win', { first: false }),
       rec('勇者', '勇者', 'win'),
-      rec('勇者', '刺客', 'win', { version: '0.1.0' }),
     ];
     expect(unseatedCount(list)).toBe(1);
     expect(unseatedCount(list, '勇者')).toBe(1);
@@ -202,5 +201,44 @@ describe('先攻與後攻勝率', () => {
     const s = characterSeats(list, '勇者');
     expect(s.first).toEqual({ win: 1, lose: 1, draw: 0, games: 2, rate: 0.5 });
     expect(s.second).toEqual({ win: 1, lose: 2, draw: 0, games: 3, rate: 1 / 3 });
+  });
+});
+
+describe('版本篩選', () => {
+  const list = [
+    rec('勇者', '刺客', 'win', { version: '0.9.0' }),
+    rec('勇者', '刺客', 'lose', { version: '0.10.0' }),
+    rec('勇者', '刺客', 'win', { version: '0.10.0' }),
+    rec('勇者', '刺客', 'win', { version: V }),
+    rec('勇者', '刺客', 'draw', { version: '99.0.0' }),
+  ];
+
+  it('列出出現過的版本與場數，由新到舊，用數值比較：0.10 比 0.9 新', () => {
+    expect(versionCounts(list)).toEqual([
+      { version: '99.0.0', games: 1 },
+      { version: V, games: 1 },
+      { version: '0.10.0', games: 2 },
+      { version: '0.9.0', games: 1 },
+    ]);
+    expect(versionCounts([])).toEqual([]);
+  });
+
+  it('預設選取：勝率統計最低版本以上、出現過的所有版本；沒有紀錄時是空', () => {
+    expect(defaultVersions(list)).toEqual(['99.0.0', V]);
+    expect(defaultVersions([])).toEqual([]);
+  });
+
+  it('只計入選取的版本；選舊版本就算進勝率；沒選任何版本是空', () => {
+    const only = filterByVersions(list, ['0.10.0']);
+    expect(only).toHaveLength(2);
+    expect(matchup(only, '勇者', '刺客')).toMatchObject({ win: 1, lose: 1, games: 2, rate: 0.5 });
+    expect(matchup(filterByVersions(list, ['0.9.0', V]), '勇者', '刺客')).toMatchObject({ win: 2, lose: 0, games: 2 });
+    expect(filterByVersions(list, [])).toEqual([]);
+  });
+
+  it('回合數圖表與對手類型篩選都只看篩過的戰績', () => {
+    const mixed = [rec('勇者', '刺客', 'win', { turns: 3 }), rec('勇者', '刺客', 'win', { version: '0.9.0', turns: 9 }), rec('勇者', '刺客', 'win', { opponent: 'player', turns: 4 })];
+    expect(turnStats(filterByVersions(mixed, [V]))?.games).toBe(2);
+    expect(turnStats(filterByVersions(filterByOpponent(mixed, 'cpu'), [V]))?.games).toBe(1);
   });
 });

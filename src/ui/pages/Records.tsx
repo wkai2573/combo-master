@@ -1,9 +1,13 @@
 import { useMemo, useState } from 'react';
 import { ALL_CHARACTERS } from '../../data/cards';
-import { clearRecords, listRecords } from '../../stats/records';
-import { characterSeats, characterSummary, filterByOpponent, legacyCount, matchupTable, seatStats, turnStats, unseatedCount, type Cell, type OpponentFilter, type SeatStats } from '../../stats/summary';
-import { Modal } from '../components/Modal';
+import { defaultStore } from '../../stats/upload';
+import { APP_VERSION } from '../../version';
+import { characterSeats, characterSummary, filterByOpponent, legacyCount, matchupTable, MIN_WIN_RATE_VERSION, seatStats, turnStats, unseatedCount, type Cell, type OpponentFilter, type SeatStats } from '../../stats/summary';
 import { TurnChart } from '../components/TurnChart';
+import { useCloudRecords } from '../useCloudRecords';
+
+/** 戰績倉庫：整個頁面共用一個，沒有設定伺服器時是 null */
+const STORE = defaultStore();
 
 const FILTERS: [OpponentFilter, string][] = [['all', '全部'], ['cpu', '電腦'], ['player', '玩家']];
 const CHARS = ALL_CHARACTERS.filter((c) => !c.pending).map((c) => c.id);
@@ -61,16 +65,25 @@ function SeatTable({ seats, label }: { seats: SeatStats; label: string }) {
 }
 
 export function Records({ onBack }: { onBack: () => void }) {
-  const [records, setRecords] = useState(listRecords);
   const [filter, setFilter] = useState<OpponentFilter>('all');
-  const [confirming, setConfirming] = useState(false);
+  // 版本複選：沒動過就用預設（勝率統計最低版本以上的所有版本）；三個檢視共用
+  const [picked, setPicked] = useState<string[] | null>(null);
   const [tab, setTab] = useState<Tab>('table');
   const [pair, setPair] = useState<[string, string] | null>(null);
   const [char, setChar] = useState(CHARS[0]);
 
+  // 戰績來自雲端的全站資料：版本勾選決定向伺服器取哪些版本，對手類型再在這裡篩
+  const cloud = useCloudRecords(STORE, picked);
+  const { versions, chosen, records } = cloud;
   const shown = useMemo(() => filterByOpponent(records, filter), [records, filter]);
+  const toggleVersion = (v: string) => setPicked(chosen.includes(v) ? chosen.filter((x) => x !== v) : [...chosen, v]);
   const table = useMemo(() => matchupTable(shown, CHARS), [shown]);
   const legacy = legacyCount(shown);
+  const legacyNote = legacy > 0 && (
+    <div className="muted" style={{ fontSize: 12 }}>
+      範圍內含 {legacy} 場規則和現在不同的舊版本紀錄（低於 v{MIN_WIN_RATE_VERSION}），數字不一定能和新版本直接比較。
+    </div>
+  );
   const unseated = unseatedCount(shown);
   const charUnseated = unseatedCount(shown, char);
   const seats = useMemo(() => seatStats(shown), [shown]);
@@ -94,15 +107,52 @@ export function Records({ onBack }: { onBack: () => void }) {
           ))}
           <span className="muted">共 {shown.length} 場</span>
         </div>
+        {versions.length > 0 && (
+          <div className="row" style={{ flexWrap: 'wrap' }}>
+            <span>版本</span>
+            {versions.map(({ version, games }) => (
+              <label key={version} className="row" style={{ gap: 4 }}>
+                <input type="checkbox" checked={chosen.includes(version)} onChange={() => toggleVersion(version)} />
+                v{version}<span className="muted">（{games} 場）</span>
+              </label>
+            ))}
+            <button onClick={() => setPicked(versions.map((v) => v.version))}>全選</button>
+            <button onClick={() => setPicked([APP_VERSION])}>只選目前版本</button>
+            <button onClick={() => setPicked(null)}>預設</button>
+          </div>
+        )}
+        {(cloud.status === 'loading' || cloud.status === 'error' || cloud.stale) && records.length > 0 && (
+          <div className="row" style={{ fontSize: 12 }}>
+            {cloud.status === 'loading' && <span className="muted">更新中…</span>}
+            {cloud.status === 'error' && (
+              <>
+                <span style={{ color: 'var(--bad)' }}>{cloud.error}</span>
+                <button onClick={cloud.retry}>重試</button>
+              </>
+            )}
+            {cloud.stale && cloud.status !== 'loading' && <span className="muted">顯示的是上次成功取得的資料。</span>}
+          </div>
+        )}
         <div className="tabs">
           {TABS.map(([key, label]) => (
             <button key={key} className={tab === key ? 'primary' : ''} onClick={() => setTab(key)}>{label}</button>
           ))}
         </div>
-        {records.length === 0 ? (
-          <div className="muted">還沒有戰績。打完一場對局就會自動記錄。</div>
+        {cloud.status === 'unavailable' ? (
+          <div className="muted">雲端戰績目前不可用（還沒有設定戰績伺服器）。對局照常進行，不受影響。</div>
+        ) : cloud.status === 'loading' && records.length === 0 ? (
+          <div className="muted">載入戰績中…</div>
+        ) : cloud.status === 'error' && records.length === 0 ? (
+          <div className="row">
+            <span style={{ color: 'var(--bad)' }}>{cloud.error}</span>
+            <button onClick={cloud.retry}>重試</button>
+          </div>
+        ) : versions.length === 0 ? (
+          <div className="muted">雲端還沒有戰績。打完一場對局就會自動上傳。</div>
+        ) : chosen.length === 0 ? (
+          <div className="muted">請至少勾選一個版本。</div>
         ) : shown.length === 0 ? (
-          <div className="muted">這個對手類型還沒有戰績。</div>
+          <div className="muted">這個對手類型與版本還沒有戰績。</div>
         ) : tab === 'char' ? (
           <>
             <label className="row">
@@ -137,7 +187,7 @@ export function Records({ onBack }: { onBack: () => void }) {
             </div>
             <b>{char} 出場的回合數</b>
             <TurnChart stats={charStats} />
-            {legacy > 0 && <div className="muted" style={{ fontSize: 12 }}>另有 {legacy} 場舊版本紀錄只計入回合數，不進勝率。</div>}
+            {legacyNote}
           </>
         ) : tab === 'seat' ? (
           <>
@@ -149,8 +199,9 @@ export function Records({ onBack }: { onBack: () => void }) {
           </>
         ) : tab === 'turns' ? (
           <>
-            <div className="muted" style={{ fontSize: 12 }}>目前篩選範圍內全部場次的回合數分布，含舊版本紀錄。</div>
+            <div className="muted" style={{ fontSize: 12 }}>目前篩選範圍內全部場次的回合數分布。</div>
             <TurnChart stats={allStats} />
+            {legacyNote}
           </>
         ) : (
           <>
@@ -188,36 +239,13 @@ export function Records({ onBack }: { onBack: () => void }) {
                 <TurnChart stats={pairStats} />
               </div>
             )}
-            {legacy > 0 && <div className="muted" style={{ fontSize: 12 }}>另有 {legacy} 場舊版本紀錄只計入回合數，不進勝率。</div>}
+            {legacyNote}
           </>
         )}
         <div className="muted" style={{ fontSize: 12 }}>
-          戰績只存在這個瀏覽器。對手離線判負、中途離開、開過作弊模式的對局不記錄。
-        </div>
-        <div>
-          <button className="danger" disabled={records.length === 0} onClick={() => setConfirming(true)}>清除全部紀錄</button>
+          這是所有玩家的戰績，存在雲端；連線對局只由房主上傳，一場只算一筆。對手離線判負、中途離開、開過作弊模式的對局不記錄。
         </div>
       </div>
-      {confirming && (
-        <Modal onClose={() => setConfirming(false)}>
-          <div style={{ display: 'grid', gap: 12 }}>
-            <div>確定要清除全部 {records.length} 場戰績嗎？清除後無法復原。</div>
-            <div className="row">
-              <button
-                className="danger"
-                onClick={() => {
-                  clearRecords();
-                  setRecords(listRecords());
-                  setConfirming(false);
-                }}
-              >
-                清除
-              </button>
-              <button onClick={() => setConfirming(false)}>取消</button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

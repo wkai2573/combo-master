@@ -3,7 +3,7 @@ import { query } from '../src/engine/effects';
 import { Z } from '../src/engine/ops';
 import { 二連矢狀態, 狙擊印記狀態 } from '../src/engine/sources/archer';
 import { 伏擊狀態, 順手牽羊狀態 } from '../src/engine/sources/thief';
-import { Explosion狀態 } from '../src/engine/sources/mage';
+
 import { pick, scenario } from './helpers';
 
 /** 效果來源遷移時補的特徵測試：記錄遷移前就有的細節，確保搬家後不變 */
@@ -40,16 +40,14 @@ describe('卡離場後仍要生效的查詢', () => {
     expect(query(g, 0, 'pursuitBonus')).toBe(2);
   });
 
-  it('狙擊印記、伏擊、順手牽羊、Explosion!：卡離開戰鬥區後，這回合的效果仍然算', () => {
+  it('狙擊印記、伏擊、順手牽羊：卡離開戰鬥區後，這回合的效果仍然算', () => {
     const g = scenario({ p0: { moves: [] } });
     狙擊印記狀態.of(g, 0).up = 1;
     伏擊狀態.of(g, 0).atk = 4;
     順手牽羊狀態.of(g, 0).def = -2;
-    Explosion狀態.of(g, 0).skip = true;
     expect(query(g, 0, 'aimLevel')).toBe(1);
     expect(query(g, 0, 'flatAtk')).toBe(4);
     expect(query(g, 0, 'flatDef')).toBe(-2);
-    expect(query(g, 0, 'skipDrawPhase')).toBe(true);
     // 另一位玩家不受影響
     expect(query(g, 1, 'flatAtk')).toBe(0);
   });

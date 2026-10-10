@@ -2,11 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { presetDeck } from '../src/data/presetDecks';
 import { FORFEIT_AFTER_S, OFFLINE_AFTER_MS, type HostMsg } from '../src/net/protocol';
 import { HostSession } from '../src/net/session';
-import { listRecords } from '../src/stats/records';
+import type { BattleRecord } from '../src/stats/records';
+import { setRecordSink } from '../src/stats/sink';
 import { FakeTransport } from './fakeTransport';
 
 // 房主有定時器（心跳偵測、離線倒數），一律用假計時器
+// 戰績不再寫本機，而是交給上傳；測試換成自己的接收函式，直接看交出去了什麼
+let captured: BattleRecord[] = [];
+let restoreSink = () => {};
 beforeEach(() => {
+  captured = [];
+  restoreSink = setRecordSink((r) => captured.push(r));
   vi.useFakeTimers();
   const data = new Map<string, string>();
   vi.stubGlobal('localStorage', {
@@ -17,6 +23,7 @@ beforeEach(() => {
 });
 const hosts: HostSession[] = [];
 afterEach(() => {
+  restoreSink();
   hosts.splice(0).forEach((h) => h.leave());
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -219,7 +226,7 @@ describe('房主：戰績', () => {
     const { host, guest } = start();
     playToEnd(host, guest);
     const v = host.getState().view!;
-    expect(listRecords()).toEqual([
+    expect(captured).toEqual([
       {
         version: expect.any(String), opponent: 'player', mine: '勇者', theirs: '刺客',
         outcome: v.winner === 'draw' ? 'draw' : v.winner === 0 ? 'win' : 'lose', turns: v.turn, first: v.openingFirst === 0,
@@ -233,7 +240,7 @@ describe('房主：戰績', () => {
     expect(host.getState().status).toBe('over');
     expect(host.getState().view!.forfeited).toBe(true);
     expect(lastView(guest.sent).view.forfeited).toBe(true);
-    expect(listRecords()).toEqual([]);
+    expect(captured).toEqual([]);
   });
 
   it('訪客開過作弊，這場雙方都不記錄，視角也帶著作弊旗標', () => {
@@ -243,12 +250,12 @@ describe('房主：戰績', () => {
     expect(host.getState().view!.cheated).toBe(true);
     expect(lastView(guest.sent).view.cheated).toBe(true);
     playToEnd(host, guest);
-    expect(listRecords()).toEqual([]);
+    expect(captured).toEqual([]);
   });
 
   it('房主中途離開不記錄', () => {
     const { host } = start();
     host.leave();
-    expect(listRecords()).toEqual([]);
+    expect(captured).toEqual([]);
   });
 });

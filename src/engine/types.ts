@@ -46,11 +46,11 @@ export interface TurnFlags {
 }
 
 export type Phase =
-  | '設置' | '重置' | '先手' | '反擊' | '追擊' | '傷害' | '歸還'
+  | '設置' | '回合開始' | '先手' | '反擊' | '追擊' | '傷害' | '歸還'
   | '抽牌' | '爆發' | '增益' | '回合結束' | '結束';
 
 /** 能當起點的階段：戰鬥階段整塊進入，所以只有先手，反擊、追擊、傷害、歸還不能單獨進入 */
-export type StartPhase = '重置' | '先手' | '抽牌' | '爆發' | '增益';
+export type StartPhase = '回合開始' | '抽牌' | '爆發' | '增益' | '先手';
 
 export interface GameState {
   players: [PlayerState, PlayerState];
@@ -73,6 +73,8 @@ export interface GameState {
   awakeSeen: [boolean, boolean];
   /** 卡片擁有的回合狀態（效果來源的狀態槽），每位玩家一份，回合開始清空 */
   slots: [Record<string, unknown>, Record<string, unknown>];
+  /** 下個抽牌階段要跳過的玩家（Explosion! 這類跨回合的代價）；跳過後清除 */
+  drawSkips: [boolean, boolean];
 }
 
 export interface Opt {
@@ -146,7 +148,7 @@ export interface GameSetup {
   noShuffle?: boolean;
   /** 測試用：設置完成（抽完起始手牌）後、第一個提示前，可改寫各區域 */
   afterSetup?: (g: import('./ops').GameCtx) => void;
-  /** 指定起始階段（測試用，若未提供則從第 1 回合重置階段開始） */
+  /** 指定起始階段（測試用，若未提供則從第 1 回合回合開始階段開始，並略過抽牌與爆發階段） */
   startPhase?: StartPhase;
   /** 僅執行指定階段（測試用，階段完成後結束，不推進後續階段） */
   singlePhase?: boolean;

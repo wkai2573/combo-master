@@ -13,6 +13,7 @@ const archerScenario = (deck: string[], exp: string[] = []) =>
     chars: ['遊俠', '勇者'],
     p0: { hand: ['黑桃7'], deck, exp },
     p1: { hand: ['黑桃9'] },
+    singlePhase: true,
   });
 
 describe('遊俠・瞄準', () => {

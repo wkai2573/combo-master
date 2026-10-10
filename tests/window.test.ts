@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { triggerWindow, type WindowEffect } from '../src/engine/window';
 import { Z } from '../src/engine/ops';
+import { pay } from '../src/engine/cost';
 import { botChoice } from '../src/engine/bot';
 import { Rng } from '../src/engine/rng';
 import type { Request } from '../src/engine/types';
@@ -241,7 +242,7 @@ describe('提示：窗口選單', () => {
 
 describe('觸發窗口：回合開始', () => {
   const start = (p0: Parameters<typeof scenario>[0] extends infer S ? (S extends { p0?: infer P } ? P : never) : never, extra: Partial<Parameters<typeof scenario>[0]> = {}) =>
-    scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0, ...extra });
+    scenario({ chars: ['商人', '刺客'], phase: '回合開始', singlePhase: true, p0, ...extra });
 
   it('家族相片可選、凡骨的意志強制：選單標示強制且沒有結束選項', () => {
     const g = start({ gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3', '黑桃4'], rage: Array(4).fill('黑桃1') });
@@ -272,7 +273,7 @@ describe('觸發窗口：回合開始', () => {
     const g = scenario({
       chars: ['刺客', '商人'],
       first: 0,
-      phase: '重置',
+      phase: '回合開始',
       singlePhase: true,
       p0: { exp: ['黑桃1'] },
       p1: { exp: ['Ex-中毒', '黑桃3', '凡骨的意志'] },
@@ -291,7 +292,7 @@ describe('觸發窗口：回合開始', () => {
     const g = scenario({
       chars: ['刺客', '商人'],
       first: 0,
-      phase: '重置',
+      phase: '回合開始',
       singlePhase: true,
       p0: { exp: ['黑桃1'] },
       p1: { exp: ['Ex-中毒', '黑桃3', '凡骨的意志'] },
@@ -306,7 +307,7 @@ describe('觸發窗口：回合開始', () => {
     const g = scenario({
       chars: ['商人', '商人'],
       first: 1,
-      phase: '重置',
+      phase: '回合開始',
       singlePhase: true,
       p0: { gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3'], rage: Array(4).fill('黑桃1') },
       p1: { gear: ['家族相片'], exp: ['凡骨的意志', '黑桃3'], rage: Array(4).fill('黑桃1') },
@@ -320,7 +321,7 @@ describe('觸發窗口：回合開始', () => {
 
 describe('觸發窗口：傷害計算時', () => {
   const hit = (exp: string[]) =>
-    scenario({ p0: { hand: ['黑桃1'], exp, rage: Array(12).fill('黑桃1') }, p1: { hand: ['黑桃9'] } });
+    scenario({ p0: { hand: ['黑桃1'], exp, rage: Array(12).fill('黑桃1') }, p1: { hand: ['黑桃9'] }, singlePhase: true });
 
   it('兩張復仇之嚎各算一個效果：選單可以選要發哪張，也可以結束', () => {
     const g = hit(['復仇之嚎', '復仇之嚎']);
@@ -365,16 +366,19 @@ describe('觸發窗口：收招時', () => {
 describe('觸發窗口：被蓋成裏側的蓋反應', () => {
   it('同一次蓋到兩張有蓋反應的卡，擁有者決定先後，兩個都強制', () => {
     const g = scenario({
-      p0: { hand: ['高利貸'], exp: ['黑桃5'] },
       p1: { hand: [], exp: ['低價買進', '高價賣出', '黑桃3'], rage: Array(5).fill('黑桃1'), deck: ['黑桃4', ...Array(20).fill('黑桃2')] },
     });
-    pick(g, '發動'); // 高利貸先付蓋1
-    // 對方的表側且帶 [經] 的經驗有 2 張，強制蓋 2，兩張都有蓋反應
-    expect(g.pending!.player).toBe(1);
-    expect(g.pending!.title).toContain('被蓋成裏側');
-    expect(labels(g)).toEqual(['【強制】【低價買進】被蓋成裏側：回復 1', '【強制】【高價賣出】被蓋成裏側：抽 1']);
-    pick(g, '【強制】【高價賣出】被蓋成裏側：抽 1'); // 先抽牌
-    expect(g.pending?.title ?? '').not.toContain('被蓋成裏側'); // 剩下的低價買進直接處理
+    // 對方一次付蓋2，最前面的 2 張表側經驗都有蓋反應
+    const gen = pay(g, 1, { cover: 2 });
+    const r = gen.next();
+    expect(r.done).toBe(false);
+    const req = r.value as Request;
+    expect(req.player).toBe(1);
+    expect(req.title).toContain('被蓋成裏側');
+    expect(req.options.map((o) => o.label)).toEqual(['【強制】【低價買進】被蓋成裏側：回復 1', '【強制】【高價賣出】被蓋成裏側：抽 1']);
+    // 先抽牌；剩下的低價買進直接處理，不再開提示
+    const key = req.options.find((o) => o.label === '【強制】【高價賣出】被蓋成裏側：抽 1')!.key;
+    expect(gen.next([key]).done).toBe(true);
     const log = g.state.log.join('\n');
     expect(log.indexOf('【高價賣出】被蓋成裏側')).toBeLessThan(log.indexOf('【低價買進】被蓋成裏側'));
   });
@@ -424,13 +428,13 @@ describe('觸發窗口：同組效果併成一個選項', () => {
   });
 
   it('Ex-中毒好幾張：回合開始時併成一個強制效果，每張各直擊 1', () => {
-    const g = scenario({ phase: '重置', singlePhase: true, p1: { exp: ['Ex-中毒', 'Ex-中毒', 'Ex-中毒'] } });
+    const g = scenario({ phase: '回合開始', singlePhase: true, p1: { exp: ['Ex-中毒', 'Ex-中毒', 'Ex-中毒'] } });
     expect(g.pending).toBeNull();
     expect(Z(g, 1, 'deck')).toHaveLength(17);
   });
 
   it('Ex-中毒好幾張加上凡骨的意志：選單只有兩項，中毒標示張數', () => {
-    const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p1: { exp: ['Ex-中毒', 'Ex-中毒', 'Ex-中毒', '黑桃3', '凡骨的意志'] } });
+    const g = scenario({ chars: ['商人', '刺客'], phase: '回合開始', singlePhase: true, p1: { exp: ['Ex-中毒', 'Ex-中毒', 'Ex-中毒', '黑桃3', '凡骨的意志'] } });
     expect(g.pending!.player).toBe(1);
     expect(labels(g).sort()).toEqual(['【強制】【中毒】直擊 1（×3）', '【強制】【凡骨的意志】蓋前 2 張表側經驗，此回合總攻擊與總防禦加上戰鬥區白板卡的數量'].sort());
     pick(g, '【強制】【中毒】直擊 1（×3）');

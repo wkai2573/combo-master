@@ -1,4 +1,4 @@
-import { defineSource, lasting, slot } from '../effectKit';
+import { defineSource } from '../effectKit';
 import { faceUpExp } from '../cost';
 import { chooseCards, combatZone, data, directHit, discard, draw, log, move, pname, recover, topOfZone, Z } from '../ops';
 import { other } from '../types';
@@ -35,23 +35,20 @@ export const 火球 = defineSource({
   },
 });
 
-/** Explosion! 是否讓這回合跳過抽牌階段 */
-export const Explosion狀態 = slot('Explosion!', () => ({ skip: false }));
-
-// Explosion!（法師）：[先_蓋8] 對方直擊 4，然後我方收招，並跳過我方下個抽牌階段
+// Explosion!（法師）：[先_怒10] 對方直擊 4，然後我方收招，並跳過我方下個回合的抽牌階段
+// 抽牌階段在戰鬥之前，所以代價是跨回合的：標記存在玩家狀態上，下個抽牌階段消耗
 export const Explosion = defineSource({
   id: 'Explosion!',
   at: 'moves',
   on: {
-    onOpen: (c) => c.effect({ label: '【Explosion!】對方直擊 4，我方收招，跳過抽牌階段（蓋8）', cost: { cover: 8 } }, () => {
+    onOpen: (c) => c.effect({ label: '【Explosion!】對方直擊 4，我方收招，跳過下個回合的抽牌階段（怒10）', cost: { rage: 10 } }, () => {
       const { g, p } = c;
       directHit(g, other(p), 4);
       g.state.passed[p] = true;
-      Explosion狀態.of(g, p).skip = true;
-      log(g, `【Explosion!】${pname(g, p)} 收招，並跳過這回合的抽牌階段`);
+      g.state.drawSkips[p] = true;
+      log(g, `【Explosion!】${pname(g, p)} 收招，並跳過下個回合的抽牌階段`);
     }),
   },
-  ask: { skipDrawPhase: lasting((c) => Explosion狀態.read(c.g, c.p).skip) },
 });
 
 // 冰霜護甲（法師）：[頂_蓋2] 傷害計算時，捨棄我方 X 張裏側經驗，減少受到的 X 點傷害。X 最大為將受到的傷害

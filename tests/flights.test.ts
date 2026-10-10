@@ -126,10 +126,10 @@ describe('卡片飛行', () => {
   it('影格停留的時間夠讓整批飛行播完，不會被下一個影格截斷', () => {
     const g = scenario({
       animate: true, chars: ['法師', '勇者'],
-      p0: { hand: ['Explosion!'], exp: Array(8).fill('黑桃3') }, p1: { hand: [] },
+      p0: { hand: ['Explosion!'], rage: Array(10).fill('黑桃3') }, p1: { hand: [] },
     });
     g.drainFrames();
-    pick(g, '發動'); // 蓋 8，對方直擊 4
+    pick(g, '發動'); // 怒 10，對方直擊 4
     const frames = g.drainFrames().map((f) => frameFor(f, 0));
     const hit = frames.find((f) => f.view.players[1].discard.length === 4)!;
     // 4 張：最後一張晚 3×90ms 出發，再飛 420ms ＝ 690ms；影格要多留一點緩衝，超過整批飛完的時間

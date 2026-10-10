@@ -5,7 +5,7 @@ import { buildFlowChart, CHART_W, highlightNode, MAX_LINES, MAX_SUB_CHARS, MAX_T
 
 const chart = buildFlowChart();
 const byId = new Map(chart.nodes.map((n) => [n.id, n]));
-const ALL_PHASES: Phase[] = ['設置', '重置', '先手', '反擊', '追擊', '傷害', '歸還', '抽牌', '爆發', '增益', '回合結束', '結束'];
+const ALL_PHASES: Phase[] = ['設置', '回合開始', '先手', '反擊', '追擊', '傷害', '歸還', '抽牌', '爆發', '增益', '回合結束', '結束'];
 
 const overlap = (a: FlowNode, b: FlowNode) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 const laneOf = (n: FlowNode) => chart.lanes.find((l) => n.y >= l.y && n.y + n.h <= l.y + l.h);
@@ -125,25 +125,26 @@ describe('流程圖內容與規則書一致', () => {
     expect(chart.edges.some((e) => e.from === '先手' && e.to === 'show-hand')).toBe(true);
   });
 
-  it('反擊：後攻方第一個動作就收招時跳過追擊，直接進傷害計算', () => {
+  it('反擊：只要有一方沒有招式（含後攻方第一個動作就收招）就跳過追擊，直接進傷害計算', () => {
     const skip = chart.edges.find((e) => e.from === '反擊' && e.to === '傷害');
+    expect(skip?.label?.text).toContain('一方沒招式');
     expect(skip?.label?.text).toContain('跳過追擊');
   });
 
   it('追擊：分成成功與失敗，並標出一律失敗的情況', () => {
     expect(text('chase-hit')).toContain('成功');
     expect(text('chase-miss')).toContain('失敗');
-    expect(text('chase-always')).toContain('裝備增益');
-    expect(text('chase-always')).toContain('沒招式');
+    expect(text('chase-always')).toContain('裝備');
+    expect(text('chase-always')).toContain('增益');
     expect(labels).toContain('一律失敗');
     expect(labels).toContain('不在範圍內');
     expect(labels).toContain('在範圍內');
   });
 
-  it('勝負檢查：分區標題說明每個步驟結束後都檢查，含重置與抽牌階段', () => {
+  it('勝負檢查：分區標題說明每個步驟結束後都檢查，含回合開始與抽牌階段', () => {
     const lane = chart.lanes.find((l) => l.label.includes('勝負判定'))!;
     expect(lane.label).toContain('每個步驟結束後都檢查');
-    expect(lane.label).toContain('重置');
+    expect(lane.label).toContain('回合開始');
     expect(lane.label).toContain('抽牌');
     expect(lane.exception).toBe(true);
     expect(laneOf(byId.get('win-check')!)).toBe(lane);

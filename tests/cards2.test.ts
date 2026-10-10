@@ -4,7 +4,7 @@ import { discard, newCard, Z } from '../src/engine/ops';
 import { cover, optionalPay, pay } from '../src/engine/cost';
 import { getCard } from '../src/data/cards';
 import { armorScenario, atkOf, defOf, drive, liftedAtkOf, names, pick, scenario, setZones } from './helpers';
-import { Explosion狀態 } from '../src/engine/sources/mage';
+
 import { 伏擊狀態, 塗毒狀態, 順手牽羊狀態 } from '../src/engine/sources/thief';
 import { 二連矢狀態 } from '../src/engine/sources/archer';
 import { 凡骨狀態 } from '../src/engine/sources/swordsman';
@@ -15,7 +15,7 @@ const filler = Array(20).fill('黑桃2') as string[];
 describe('爆發階段：抽 2', () => {
   it('把 1 張手牌放入經驗區後抽 2；招財貓可以蓋 2 再多抽 1', () => {
     const base = (gear: string[]) =>
-      scenario({ p0: { hand: ['黑桃5'], gear, exp: ['黑桃1', '黑桃2'] }, p1: { hand: [] } });
+      scenario({ phase: '抽牌', p0: { hand: [], gear, exp: ['黑桃1', '黑桃2'] }, p1: { hand: [] } });
     const g = base([]);
     expect(g.pending!.title).toContain('爆發');
     const hand = Z(g, 0, 'hand');
@@ -120,7 +120,7 @@ describe('瞄準：次數與等級', () => {
   });
 
   it('狙擊印記：[先] 此回合瞄準升級 1', () => {
-    const g = scenario({ chars: ['遊俠', '勇者'], p0: { hand: ['狙擊印記', '黑桃2'] }, p1: { hand: [] } });
+    const g = scenario({ chars: ['遊俠', '勇者'], p0: { hand: ['狙擊印記', '黑桃2'] }, p1: { hand: [] }, singlePhase: true });
     pick(g, '狙擊印記');
     expect(狙擊印記狀態.read(g, 0).up).toBe(1);
   });
@@ -130,6 +130,7 @@ describe('瞄準：次數與等級', () => {
       chars: ['遊俠', '勇者'],
       p0: { hand: ['黑桃7'], deck: ['黑桃8', '黑桃1', ...filler] },
       p1: { hand: ['黑桃9'] },
+      singlePhase: true,
     });
     狙擊印記狀態.of(g, 0).up = 1;
     二連矢狀態.of(g, 0).plus = 1; // 追擊 2 次：第二次判定前，用過的瞄準不能再用
@@ -168,7 +169,7 @@ describe('新卡（第二批）', () => {
   });
 
   it('復仇之嚎：[經_怒3] 傷害計算時，若受到的傷害大於造成的，可以付怒氣 3 再把怒氣區上方 1 張加入手牌', () => {
-    const g = scenario({ p0: { hand: ['黑桃1'], exp: ['復仇之嚎'], rage: Array(8).fill('黑桃1') }, p1: { hand: ['黑桃9'] } });
+    const g = scenario({ p0: { hand: ['黑桃1'], exp: ['復仇之嚎'], rage: Array(8).fill('黑桃1') }, p1: { hand: ['黑桃9'] }, singlePhase: true });
     伏擊狀態.of(g, 1).atk = 3; // 對方多 3 點總攻擊：受到的傷害大於造成的
     pick(g, '黑桃9');
     expect(g.pending!.title).toContain('復仇之嚎');
@@ -177,7 +178,7 @@ describe('新卡（第二批）', () => {
     pick(g, '發動');
     // 窗口時傷害還沒放進怒氣區：付 3 取 1，之後這回合的傷害才放進去
     expect(Z(g, 0, 'rage')).toHaveLength(rage - 3 - 1 + g.state.flags.damageTaken[0]);
-    expect(Z(g, 0, 'hand')).toHaveLength(hand + 2); // 怒氣區上方 1 張＋之後抽牌階段抽 1
+    expect(Z(g, 0, 'hand')).toHaveLength(hand + 1); // 怒氣區上方 1 張
   });
 
   it('順手牽羊：[發_蓋X] 抽 X，此回合總防禦 −X（X ≤ 2），不影響總攻擊', () => {
@@ -185,6 +186,7 @@ describe('新卡（第二批）', () => {
       chars: ['刺客', '勇者'],
       p0: { hand: ['順手牽羊', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5'] },
       p1: { hand: [] },
+      singlePhase: true,
     });
     pick(g, '順手牽羊');
     expect(g.pending!.options.map((o) => o.label)).toEqual(['不發動', '蓋1', '蓋2']);
@@ -192,7 +194,7 @@ describe('新卡（第二批）', () => {
     expect(順手牽羊狀態.read(g, 0).def).toBe(-2);
     expect(伏擊狀態.read(g, 0).atk).toBe(0);
     expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(2);
-    expect(Z(g, 0, 'hand')).toHaveLength(4); // 打出後剩 1 張＋抽 2＋抽牌階段抽 1
+    expect(Z(g, 0, 'hand')).toHaveLength(3); // 打出後剩 1 張＋抽 2
   });
 
   it('順手牽羊：[發] 在反擊步驟打出也能發動；總防禦最低為 0', () => {
@@ -318,6 +320,7 @@ describe('新卡（第二批）', () => {
     const g = scenario({
       p0: { hand: ['黑桃7'], deck: ['二連矢', '黑桃1', ...filler] },
       p1: { hand: ['黑桃9'] },
+      singlePhase: true,
     });
     pick(g, '黑桃9');
     expect(g.state.flags.pursuitSuccess[0]).toBe(2); // 二連矢（連擊值 3，範圍外）成功，再翻黑桃1 也成功
@@ -335,7 +338,7 @@ describe('新卡（第二批）', () => {
     const baseDef = ids.reduce((n, id) => n + defOf(id), 0);
     // 戰鬥區放 3 張招式，其中 2 張是白板卡；scenario 開局時已經跑過第一回合的回合開始效果
     const play = (exp: string[], phase?: boolean) =>
-      scenario({ chars: ['商人', '刺客'], p0: { exp, moves: ids }, ...(phase ? { phase: '重置', singlePhase: true } : {}) });
+      scenario({ chars: ['商人', '刺客'], p0: { exp, moves: ids }, ...(phase ? { phase: '回合開始', singlePhase: true } : { fullGame: true }) });
     const coveredIds = (g: ReturnType<typeof scenario>) => Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id);
 
     it('回合開始時需蓋前 2 張表側經驗，總攻擊與總防禦各加戰鬥區白板卡數量', () => {
@@ -352,12 +355,12 @@ describe('新卡（第二批）', () => {
       expect(totalAtk(g, 0)).toBe(base);
       expect(totalDef(g, 0)).toBe(baseDef);
       // 下個回合：它已經被蓋住，不能再發動，也不會去蓋黑桃3
-      const nextTurn = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['~凡骨的意志', '黑桃3'] } });
+      const nextTurn = scenario({ chars: ['商人', '刺客'], phase: '回合開始', singlePhase: true, p0: { exp: ['~凡骨的意志', '黑桃3'] } });
       expect(Z(nextTurn, 0, 'exp')[1].covered).toBe(false);
     });
 
     it('表側經驗剛好 2 張（包含自己）：兩張都蓋，沒有加成', () => {
-      const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['黑桃3', '~黑桃4', '凡骨的意志'] } });
+      const g = scenario({ chars: ['商人', '刺客'], phase: '回合開始', singlePhase: true, p0: { exp: ['黑桃3', '~黑桃4', '凡骨的意志'] } });
       expect(Z(g, 0, 'exp').map((c) => c.covered)).toEqual([true, true, true]);
       expect(凡骨狀態.read(g, 0).uids).toEqual([]);
     });
@@ -381,7 +384,7 @@ describe('新卡（第二批）', () => {
 
     it('蓋掉另一張 [經] 卡，那張立即失效：它在窗口裡消失，不會發動', () => {
       // 位置：[黑桃3, 凡骨B, 凡骨A]；A 先發會蓋黑桃3 與 B，B 就不能再發動，A 的加成照給
-      const g = scenario({ chars: ['商人', '刺客'], phase: '重置', singlePhase: true, p0: { exp: ['黑桃3', '凡骨的意志', '凡骨的意志'], moves: ids } });
+      const g = scenario({ chars: ['商人', '刺客'], phase: '回合開始', singlePhase: true, p0: { exp: ['黑桃3', '凡骨的意志', '凡骨的意志'], moves: ids } });
       const [, , a] = Z(g, 0, 'exp');
       expect(g.pending!.options.map((o) => o.uid)).toEqual([Z(g, 0, 'exp')[1].uid, a.uid]);
       expect(g.pending!.options.map((o) => o.label.slice(-10))).toEqual(['（經驗區第 2 張）', '（經驗區第 3 張）']);
@@ -436,31 +439,35 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 1, 'discard')).toHaveLength(2);
   });
 
-  it('Explosion!：[先_蓋8] 對方直擊 4，我方收招（對方仍可反擊），並跳過我方這回合的抽牌階段', () => {
+  it('Explosion!：[先_怒10] 對方直擊 4，我方收招（對方仍可反擊），並跳過我方下個回合的抽牌階段', () => {
     const g = scenario({
       chars: ['法師', '勇者'],
-      p0: { hand: ['Explosion!', '黑桃2'], exp: Array(8).fill('黑桃3') },
+      p0: { hand: ['Explosion!', '黑桃2'], rage: Array(10).fill('黑桃3') },
       p1: { hand: ['黑桃5'] },
     });
     pick(g, 'Explosion!');
     pick(g, '發動');
     expect(Z(g, 1, 'discard')).toHaveLength(4);
-    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(8);
+    expect(Z(g, 0, 'rage')).toHaveLength(0); // 怒10：捨棄怒氣區上方 10 張
+    expect(Z(g, 0, 'discard')).toHaveLength(10);
     expect(g.state.passed).toEqual([true, false]);
     // 對方還能反擊：輪到玩家1 選擇出招或收招
     expect(g.pending!.player).toBe(1);
     expect(g.pending!.options.map((o) => o.label)).toContain('黑桃5');
-    pick(g, '黑桃5'); // 玩家1 手上沒牌了自動收招 → 雙方都已收招，進入追擊、傷害，然後是抽牌階段
+    expect(g.state.drawSkips).toEqual([true, false]);
+    pick(g, '黑桃5'); // 玩家1 手上沒牌了自動收招 → 雙方都已收招，進入追擊、傷害，然後是下個回合的抽牌階段
+    expect(g.state.turn).toBe(2);
+    expect(g.state.drawSkips).toEqual([false, false]); // 跳過一次就消耗掉
     expect(g.state.log.join('\n')).toContain('玩家A（法師） 跳過抽牌階段');
     expect(g.state.phase).toBe('爆發');
     expect(Z(g, 0, 'hand').map((c) => c.id)).toEqual(['黑桃2']); // 沒有抽牌
     expect(Z(g, 1, 'hand')).toHaveLength(1); // 玩家1 照常抽 1
   });
 
-  it('Explosion!：正面經驗不足 8 張不能發動；選擇不發動就沒有任何效果', () => {
+  it('Explosion!：怒氣區不足 10 張不能發動；選擇不發動就沒有任何效果', () => {
     const few = scenario({
       chars: ['法師', '勇者'],
-      p0: { hand: ['Explosion!', '黑桃2'], exp: Array(7).fill('黑桃3') },
+      p0: { hand: ['Explosion!', '黑桃2'], rage: Array(9).fill('黑桃3') },
       p1: { hand: ['黑桃5'] },
     });
     pick(few, 'Explosion!');
@@ -470,13 +477,13 @@ describe('新卡（第二批）', () => {
 
     const no = scenario({
       chars: ['法師', '勇者'],
-      p0: { hand: ['Explosion!', '黑桃2'], exp: Array(8).fill('黑桃3') },
+      p0: { hand: ['Explosion!', '黑桃2'], rage: Array(10).fill('黑桃3') },
       p1: { hand: ['黑桃5'] },
     });
     pick(no, 'Explosion!');
     pick(no, '不發動');
-    expect(Explosion狀態.read(no, 0).skip).toBe(false);
-    expect(Z(no, 0, 'exp').filter((c) => c.covered)).toHaveLength(0);
+    expect(no.state.drawSkips[0]).toBe(false);
+    expect(Z(no, 0, 'rage')).toHaveLength(10);
     expect(Z(no, 1, 'discard')).toHaveLength(0);
   });
 
@@ -523,7 +530,7 @@ describe('新卡（第二批）', () => {
 
   it('家族相片：回合開始時 [蓋1_怒2] 回復 1', () => {
     const g = scenario({
-      phase: '重置',
+      phase: '回合開始',
       singlePhase: true,
       p0: { gear: ['家族相片'], exp: ['黑桃3'], rage: Array(4).fill('黑桃1') },
     });
@@ -567,6 +574,7 @@ describe('新卡（第二批）', () => {
     const g = scenario({
       p0: { hand: ['黑桃4'] },
       p1: { hand: ['黑桃6'], gear: ['幸運兔腳'], exp: ['黑桃2', '黑桃3'], deck: ['黑桃5', '黑桃1', ...filler] },
+      singlePhase: true,
     });
     pick(g, '黑桃6');
     pick(g, '發動');
@@ -593,31 +601,49 @@ describe('新卡（第二批）', () => {
   });
 });
 
-describe('卡表同步的新卡：高利貸、狙擊蓄力、熔岩之擊', () => {
+describe('卡表同步的新卡：公開資訊（id 高利貸）、狙擊蓄力、熔岩之擊', () => {
   // 只跑戰鬥階段：先攻方手牌只有 1 張招式時自動先手出招，後攻方沒有可出的招式就直接進入傷害計算
   const combat = (s: Parameters<typeof scenario>[0]) => scenario({ phase: '先手', singlePhase: true, ...s });
 
-  it('高利貸：[發_蓋1] 對方強制蓋 X，X＝對方表側且帶 [經] 的經驗張數；被蓋的卡蓋反應照常觸發', () => {
-    const g = combat({
-      p0: { hand: ['高利貸'], exp: ['黑桃5'] },
-      p1: { hand: [], exp: ['低價買進', '黑桃3', '高價賣出', '黑桃4'], rage: Array(5).fill('黑桃1'), deck: ['黑桃6', ...filler] },
-    });
-    pick(g, '發動'); // 先付蓋1
-    expect(Z(g, 0, 'exp')[0].covered).toBe(true);
-    // X＝2（低價買進、高價賣出）：從最前面蓋 2 張＝低價買進與黑桃3
-    expect(Z(g, 1, 'exp').map((c) => c.covered)).toEqual([true, true, false, false]);
-    expect(g.state.log.join('\n')).toContain('玩家B（刺客） 回復 1'); // 低價買進被蓋成裏側：回復 1
-    expect(g.state.log.join('\n')).toContain('【低價買進】被蓋成裏側');
+  /** 玩家 0 付蓋1：最前面的表側經驗（公開資訊）被蓋成裏側，觸發蓋反應 */
+  const coverFront = (exp: string[]) => {
+    const g = scenario({ p0: { exp } });
+    return { g, gen: pay(g, 0, { cover: 1 }) };
+  };
+  const faceUp = (g: ReturnType<typeof scenario>) => Z(g, 0, 'exp').map((c) => !c.covered);
+
+  it('公開資訊：[經] 被蓋成裏側時，翻開最多 3 張我方裏側經驗（不足就全部），然後捨棄此卡', () => {
+    const { g, gen } = coverFront(['高利貸', '~黑桃3', '黑桃4', '~黑桃5']);
+    expect(gen.next().done).toBe(true); // 裏側經驗只有 2 張，不用選
+    expect(names(g, 0, 'exp')).toEqual(['黑桃3', '黑桃4', '黑桃5']);
+    expect(faceUp(g)).toEqual([true, true, true]);
+    expect(names(g, 0, 'discard')).toEqual(['公開資訊']);
+    expect(g.state.log.join('\n')).toContain('【公開資訊】玩家A（勇者） 翻開 2 張裏側經驗');
   });
 
-  it('高利貸：對方沒有帶 [經] 的表側經驗時什麼都不蓋；裏側的 [經] 卡不算；表側不足就蓋到沒有為止', () => {
-    const none = combat({ p0: { hand: ['高利貸'], exp: ['黑桃5'] }, p1: { hand: [], exp: ['黑桃3', '~低價買進'] } });
-    expect(Z(none, 1, 'exp').map((c) => c.covered)).toEqual([false, true]);
-    expect(Z(none, 0, 'exp')[0].covered).toBe(false); // 對方沒有可蓋的，連蓋1 的費用都不問
+  it('公開資訊：裏側經驗超過 3 張時由擁有者選 3 張翻開，沒選到的仍是裏側', () => {
+    const { g, gen } = coverFront(['高利貸', '~黑桃1', '~黑桃2', '~黑桃3', '~黑桃4']);
+    const r = gen.next();
+    expect(r.done).toBe(false);
+    const req = r.value as { title: string; min: number; max: number; options: Array<{ key: string; label: string }> };
+    expect(req.title).toContain('選擇 3 張裏側經驗翻開');
+    expect([req.min, req.max]).toEqual([3, 3]);
+    expect(req.options.map((o) => o.label)).toEqual(['黑桃1', '黑桃2', '黑桃3', '黑桃4']); // 不含公開資訊自己
+    expect(gen.next(['黑桃1', '黑桃3', '黑桃4'].map((l) => req.options.find((o) => o.label === l)!.key)).done).toBe(true);
+    expect(names(g, 0, 'exp')).toEqual(['黑桃1', '黑桃2', '黑桃3', '黑桃4']);
+    expect(faceUp(g)).toEqual([true, false, true, true]);
+    expect(names(g, 0, 'discard')).toEqual(['公開資訊']);
+  });
 
-    const one = combat({ p0: { hand: ['高利貸'], exp: ['黑桃5'] }, p1: { hand: [], exp: ['黑桃3', '高價賣出'], deck: ['黑桃6', ...filler] } });
-    pick(one, '發動');
-    expect(Z(one, 1, 'exp').map((c) => c.covered)).toEqual([true, false]); // X＝1，蓋最前面 1 張
+  it('公開資訊：沒有其他裏側經驗時只捨棄自己；表側時不會發動', () => {
+    const { g, gen } = coverFront(['高利貸', '黑桃4']);
+    expect(gen.next().done).toBe(true);
+    expect(names(g, 0, 'exp')).toEqual(['黑桃4']);
+    expect(names(g, 0, 'discard')).toEqual(['公開資訊']);
+
+    const idle = scenario({ p0: { exp: ['高利貸', '~黑桃3'] } });
+    expect(names(idle, 0, 'discard')).toEqual([]);
+    expect(Z(idle, 0, 'exp').map((c) => c.covered)).toEqual([false, true]);
   });
 
   it('狙擊蓄力：[發_蓋4] 蓋 4、抽 2，再選 1 張手牌放到牌組頂', () => {

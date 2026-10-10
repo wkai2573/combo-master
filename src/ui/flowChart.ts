@@ -64,7 +64,7 @@ type SpinePhase = Exclude<Phase, '設置' | '結束'>;
 
 // 主幹節點的文字：標題與一句話
 const SPINE_TEXT: Record<SpinePhase, string[]> = {
-  重置: ['重置階段', '回合開始的效果'],
+  回合開始: ['回合開始', '回合開始時的效果'],
   先手: ['先手步驟', '先攻出 1 張招式'],
   反擊: ['反擊步驟', '後攻先，輪流出招'],
   追擊: ['追擊判定', '雙方翻牌組頂 1 張'],
@@ -93,6 +93,8 @@ const LANE_H = 118;
 const LANE_PITCH = 138;
 const LANE_TOP = 56;
 const EXTRA_BOTTOM = 66; // 圖例
+/** 第 1 行戰鬥步驟從第幾欄開始排（第 0 欄留給先手沒招式的分支） */
+const BATTLE_COL0 = 1;
 
 const colX = (c: number) => COL0 + c * COL_PITCH;
 const colCx = (c: number) => colX(c) + NW / 2;
@@ -129,9 +131,9 @@ export function buildFlowChart(): FlowChart {
     nodes.push({ id: g.label, x: colX(gi), y: nodeY(0), w: NW, h: NH, lines: [`${g.label}階段`, '展開成下方步驟'], tone: 'turn' });
     g.steps.forEach((s, i) => {
       const phase = s.phase as SpinePhase;
-      colOf.set(phase, gi + i);
+      colOf.set(phase, BATTLE_COL0 + i);
       laneOf.set(phase, 1);
-      nodes.push({ id: phase, x: colX(gi + i), y: nodeY(1), w: NW, h: NH, lines: SPINE_TEXT[phase] ?? missing(phase), tone: 'combat', phase });
+      nodes.push({ id: phase, x: colX(BATTLE_COL0 + i), y: nodeY(1), w: NW, h: NH, lines: SPINE_TEXT[phase] ?? missing(phase), tone: 'combat', phase });
     });
   });
   const battle = STEP_GROUPS.findIndex((g) => g.steps.length > 1);
@@ -161,9 +163,11 @@ export function buildFlowChart(): FlowChart {
   // 戰鬥各步驟：由左到右；從戰鬥格展開，歸還之後回到下一個回合階段
   const group = at(STEP_GROUPS[battle].label);
   const firstStep = battleSteps[0];
-  edge(group.id, firstStep, `M${cx(firstStep)},${group.y + NH} V${topY(firstStep)}`, 'branch', {
+  // 戰鬥格在第 0 行的後段，步驟在第 1 行靠左：從戰鬥格往下到兩行之間的空隙，向左走到先手上方再往下
+  const expandY = laneY(0) + LANE_H - 2;
+  edge(group.id, firstStep, `M${group.x + NW / 2},${group.y + NH} V${expandY} H${cx(firstStep)} V${topY(firstStep)}`, 'branch', {
     dashed: true,
-    label: ['展開步驟', cx(firstStep) + 28, (group.y + NH + topY(firstStep)) / 2 + 3],
+    label: ['展開步驟', (group.x + NW / 2 + cx(firstStep)) / 2, expandY - 5],
   });
   battleSteps.slice(0, -1).forEach((p, i) => {
     const q = battleSteps[i + 1];
@@ -175,7 +179,7 @@ export function buildFlowChart(): FlowChart {
   if (next) {
     const gapY = laneY(0) + LANE_H + 10;
     edge(lastStep, next, `M${cx(lastStep)},${topY(lastStep)} V${gapY} H${cx(next)} V${botY(next)}`, 'turn', {
-      label: ['戰鬥結束，進入抽牌', cx(lastStep) - 56, laneY(1) + 22],
+      label: ['戰鬥結束', cx(lastStep) - 38, laneY(1) + 22],
     });
   }
 
@@ -189,16 +193,16 @@ export function buildFlowChart(): FlowChart {
     dashed: true,
     label: ['無招式', (left('先手') + colX(colAt('先手') - 1) + NW) / 2, cyOf('先手') - 6],
   });
-  // 反擊：後攻方第一個動作就收招，跳過追擊
+  // 追擊通則：只要有一方的招式卡疊沒有招式（含後攻方第一個動作就收招），就跳過追擊
   const skipY = laneY(1) + 30;
   edge('反擊', '傷害', `M${cx('反擊')},${topY('反擊')} V${skipY} H${cx('傷害')} V${topY('傷害')}`, 'branch', {
     dashed: true,
-    label: ['後攻首手就收招：跳過追擊', (cx('反擊') + cx('傷害')) / 2, skipY],
+    label: ['一方沒招式：跳過追擊', (cx('反擊') + cx('傷害')) / 2, skipY],
   });
 
   // 追擊判定的結果
   const chase = colAt('追擊');
-  branch('chase-always', '追擊', chase - 2, 2, ['一律失敗', '裝備增益，或沒招式'], 'bad', true);
+  branch('chase-always', '追擊', chase - 2, 2, ['一律失敗', '翻到裝備或增益'], 'bad', true);
   branch('chase-miss', '追擊', chase - 1, 2, ['追擊失敗', '該卡加入手牌'], 'bad');
   branch('chase-hit', '追擊', chase, 2, ['追擊成功', '成為追擊卡，計入攻擊'], 'good');
   const e1 = laneY(2) + 18;
@@ -213,7 +217,7 @@ export function buildFlowChart(): FlowChart {
   // 成功的邊最後畫，三條邊共用的那一段垂直線才會維持綠色
   edge('追擊', 'chase-hit', `M${cx('追擊')},${botY('追擊')} V${nodeY(2)}`, 'good', { label: ['不在範圍內', cx('追擊') + 38, laneY(2) + 3] });
 
-  // 勝負：每個步驟結束都檢查，分區標題說明包含重置與抽牌階段；單方歸零落敗，同時歸零比手牌
+  // 勝負：每個步驟結束都檢查，分區標題說明包含回合開始與抽牌階段；單方歸零落敗，同時歸零比手牌
   const dmg = colAt('傷害');
   branch('lose', '傷害', dmg - 1, 3, ['牌組歸零者落敗', '只有一方歸零'], 'bad');
   branch('win-check', '傷害', dmg, 3, ['勝負檢查', '每個步驟結束都檢查'], 'bad');
@@ -239,7 +243,7 @@ export function buildFlowChart(): FlowChart {
     ['01 / 回合階段', false],
     [`02 / ${STEP_GROUPS[battle].label}階段`, false],
     ['03 / 追擊結果', false],
-    ['EX / 勝負判定（每個步驟結束後都檢查，含重置與抽牌階段）', true],
+    ['EX / 勝負判定（每個步驟結束後都檢查，含回合開始與抽牌階段）', true],
     ['EX / 同時歸零比手牌', true],
   ].map(([label, exception], k) => ({ label: label as string, exception: exception as boolean, x: LANE_X, y: laneY(k), w: LANE_W, h: LANE_H }));
 

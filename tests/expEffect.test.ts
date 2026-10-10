@@ -23,7 +23,7 @@ describe('經驗效果：登記表的查詢', () => {
     expect(hasExpEffect('復仇之嚎')).toBe(true);
     expect(hasExpEffect('Ex-中毒')).toBe(true);
     expect(hasExpEffect('火球')).toBe(false);
-    expect(hasExpEffect('高利貸')).toBe(false); // 文字裡引用 [經]，但它不是經驗效果
+    expect(hasExpEffect('高利貸')).toBe(true); // 公開資訊（id 高利貸）：[經] 被蓋成裏側時
     expect(hasExpEffect('塗毒')).toBe(false); // 只引用 Ex-中毒，它的 [經] 不算塗毒自己的
     expect(hasExpEffect('紅心5')).toBe(false);
   });
@@ -60,7 +60,7 @@ describe('經驗效果：卡文與登記表一致', () => {
 
   it('讀卡文的判斷本身：轉述別張卡的 [經] 說明不算，引用 [經] 的說明不算', () => {
     expect(textSaysExpEffect('塗毒')).toBe(false);
-    expect(textSaysExpEffect('高利貸')).toBe(false);
+    expect(textSaysExpEffect('高利貸')).toBe(true);
     expect(textSaysExpEffect('低價買進')).toBe(true);
     expect(textSaysExpEffect('復仇之嚎')).toBe(true); // [經_怒3]
   });

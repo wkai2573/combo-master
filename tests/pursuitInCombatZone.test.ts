@@ -34,6 +34,7 @@ describe('卡效果的「戰鬥區」包含追擊卡疊', () => {
     const g = scenario({
       chars: ['商人', '刺客'],
       p0: { exp: ['黑桃3', '黑桃4', '凡骨的意志'], moves: ids, pursuit: ['黑桃5'] },
+      fullGame: true,
     });
     // 開局已跑過第一回合的回合開始效果：白板卡是招式卡疊 2 張加追擊卡疊 1 張
     expect(totalAtk(g, 0)).toBe(ids.reduce((n, id) => n + atkOf(id), 0) + atkOf('黑桃5') + 3);

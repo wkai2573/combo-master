@@ -67,7 +67,7 @@ export class Game {
     this.state = {
       players: [emptyPlayer(0, setup.decks[0].charId), emptyPlayer(1, setup.decks[1].charId)],
       first: 0, openingFirst: 0, turn: 0, phase: '設置', flags: emptyFlags(), passed: [false, false],
-      log: [], winner: null, winReason: '', cheated: false, forfeited: false, awakeSeen: [false, false], slots: [{}, {}],
+      log: [], winner: null, winReason: '', cheated: false, forfeited: false, awakeSeen: [false, false], slots: [{}, {}], drawSkips: [false, false],
     };
     this.it = this.run();
     this.advance(undefined);
@@ -196,11 +196,16 @@ export class Game {
       s.passed = [false, false];
       log(g, `── 第 ${s.turn} 回合（先攻：${pname(g, s.first)}）──`);
 
-      // 起始階段只適用於第 1 回合
-      const from = s.turn === 1 && this.setup.startPhase ? phaseIndex(this.setup.startPhase) : 0;
-      for (const step of PHASES.slice(from)) yield* step.run(this, true);
+      // 起始階段只適用於第 1 回合；沒有指定起始階段的第 1 回合略過抽牌與爆發
+      const startPhase = s.turn === 1 ? this.setup.startPhase : undefined;
+      const from = startPhase ? phaseIndex(startPhase) : 0;
+      for (const step of PHASES.slice(from)) {
+        if (s.turn === 1 && !startPhase && FIRST_TURN_SKIPS.has(step.start)) continue;
+        yield* step.run(this, true);
+      }
 
       s.phase = '回合結束';
+      // 橫置狀態的卡改為重置狀態：目前沒有卡片使用橫置，保留在回合結束供日後擴充
       s.first = other(s.first);
       mark(g, '回合結束：交換先攻與後攻', { type: 'phase' });
       checkWin(g);
@@ -235,15 +240,17 @@ export class Game {
 /** 回合內的階段順序，只在這裡寫一次：完整對局從起點往後依序跑，單階段只跑起點那一項 */
 const PHASES: { start: StartPhase; run: (g: Game, full: boolean) => Gen }[] = [
   {
-    start: '重置',
-    // 橫置狀態的卡改為重置狀態：目前沒有卡片使用橫置，保留階段供日後擴充
+    start: '回合開始',
     // 回合開始時的效果：家族相片、凡骨的意志、中毒
     *run(g) {
-      g.state.phase = '重置';
+      g.state.phase = '回合開始';
       yield* markIfLogged(g, () => fireEach(g, 'turnStart'));
       checkWin(g);
     },
   },
+  { start: '抽牌', run: drawPhase },
+  { start: '爆發', run: burstPhase },
+  { start: '增益', run: buffPhase },
   {
     start: '先手',
     // 戰鬥階段整塊是一項：內部的反擊、追擊、傷害、歸還不能單獨進入
@@ -253,10 +260,10 @@ const PHASES: { start: StartPhase; run: (g: Game, full: boolean) => Gen }[] = [
       yield* combatPhase(g);
     },
   },
-  { start: '抽牌', run: drawPhase },
-  { start: '爆發', run: burstPhase },
-  { start: '增益', run: buffPhase },
 ];
+
+/** 沒有指定起始階段的第 1 回合略過的階段 */
+const FIRST_TURN_SKIPS: ReadonlySet<StartPhase> = new Set<StartPhase>(['抽牌', '爆發']);
 
 /** 起點在階段表裡的位置；不認得的起點直接報錯，不悄悄跑錯階段 */
 function phaseIndex(start: StartPhase): number {
@@ -271,8 +278,10 @@ function* drawPhase(g: Game): Gen {
   g.state.phase = '抽牌';
   const skipped: PlayerId[] = [];
   for (const p of order(g)) {
-    // 跳過抽牌階段時，連額外抽牌一起跳過
-    if (query(g, p, 'skipDrawPhase')) {
+    // 跳過抽牌階段時，連額外抽牌一起跳過；跨回合的跳過標記在這裡消耗
+    const carried = g.state.drawSkips[p];
+    g.state.drawSkips[p] = false;
+    if (carried || query(g, p, 'skipDrawPhase')) {
       skipped.push(p);
       log(g, `${pname(g, p)} 跳過抽牌階段`);
       continue;

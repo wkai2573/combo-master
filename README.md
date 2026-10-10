@@ -14,7 +14,7 @@ https://wkai2573.github.io/combo-master/
 
 戰鬥流程圖是 App 內的元件（`src/ui/components/FlowChartModal.tsx`，圖的版面資料在 `src/ui/flowChart.ts`），用彈窗開啟：遊戲首頁、規則說明和對戰畫面上方的「流程圖」都是入口。從對戰畫面開啟時，主幹上會標出目前的步驟（你在這裡），並隨對局推進更新。
 
-- 回合主幹（重置、戰鬥內五個步驟、抽牌、爆發、增益、回合結束）由 `src/data/turnSteps.ts` 的步驟表產生，戰鬥畫面上方的步驟列讀同一份，調整回合順序只要改這一處；新增階段時還要在 `flowChart.ts` 補主幹節點文字，沒補會有明確的錯誤。
+- 回合主幹（回合開始、抽牌、爆發、增益、戰鬥內五個步驟、回合結束）由 `src/data/turnSteps.ts` 的步驟表產生，戰鬥畫面上方的步驟列讀同一份，調整回合順序只要改這一處；新增階段時還要在 `flowChart.ts` 補主幹節點文字，沒補會有明確的錯誤。
 - 分支（先手無招式、跳過追擊、追擊判定、勝負與同時歸零）在 `src/ui/flowChart.ts` 手寫座標與文字，規則改了要手動維護；規則以 `docs/連擊大師.md` 為準。
 - 版面是橫向分區，由上往下依序是回合階段、戰鬥階段、追擊結果、勝負判定、同時歸零比手牌，設計寬度 1230；手機上固定最小寬度，在彈窗內拖曳捲動。
 - 節點文字預先斷成標題一行、說明一行，字數上限由 `tests/flowChart.test.ts` 檢查，同時檢查節點不超出寬度、彼此不重疊、邊線不穿過節點。
@@ -53,9 +53,25 @@ npm run build      # 型別檢查＋打包
 2. 另一人按「加入房間」，輸入房號。
 3. 房主的瀏覽器執行遊戲規則，對方只傳送選擇、接收畫面。
 
-對戰畫面頂端有「作弊模式」開關，雙方都可以開，對方會看到提示，用法見 `docs/規則詮釋.md` 的作弊模式一節。
+作弊模式預設隱藏，是除錯用的功能；解鎖方法與用法見 `docs/規則詮釋.md` 的作弊模式一節。
 
 兩人必須能連到公開的 PeerJS broker。兩人各自開上面的線上網址即可對戰；本機 `npm run dev` 只有同一台電腦或同網段能連。
+
+## 戰績伺服器
+
+戰績是全站共用的（決定見 `docs/adr/0005-global-cloud-records.md`）：單機對電腦與連線對戰（只由房主）正常結束的對局，會上傳到 Cloudflare Workers 加 D1 的小型伺服器；戰績頁從那裡取得所有玩家的戰績再在瀏覽器端統計。沒有登入，每個瀏覽器只有一個匿名的裝置代號，用來讓伺服器限流。
+
+- 程式在 `server/`：`src/handler.ts` 是處理請求的函式（驗證、限流、冪等、來源限制，沒有任何刪除或修改的路徑），`src/d1.ts` 是資料表的讀寫，`schema.sql` 是資料表結構，`wrangler.toml` 是部署設定。
+- 前端的戰績倉庫、補傳佇列與上傳在 `src/stats/`。上傳失敗的戰績存在本機佇列，下次啟動與每次對局結束後補傳；伺服器網址在 `src/stats/config.ts`：正式建置預設連線，本機開發與測試預設不連線（免得測試對局污染全站統計），要連時用環境變數 `VITE_RECORDS_API` 指定（設成空字串是關閉）；沒有網址時對局不受影響，戰績頁會說明雲端目前不可用。
+- 測試：`tests/server.test.ts` 用 Node 內建的 SQLite 跑真正的資料表與 SQL，`tests/cloudRecords.test.ts` 涵蓋前端的倉庫、佇列與前後端串接。
+- 本機試跑：`npm run server:db:local` 建立本機資料庫，`npm run server:dev` 在 http://127.0.0.1:8787 啟動伺服器；前端用 `VITE_RECORDS_API=http://127.0.0.1:8787 npm run dev` 連它。
+- 部署（需要一個免費的 Cloudflare 帳號，不用信用卡）：
+  1. `npx wrangler@4 login`，瀏覽器跳出授權頁時按允許。
+  2. `npx wrangler@4 d1 create combo-master-records`，把回報的 `database_id` 填進 `server/wrangler.toml`。
+  3. `npm run server:db` 建立遠端資料表，`npm run server:deploy` 部署，記下回報的 `*.workers.dev` 網址，填進 `src/stats/config.ts` 的 `PRODUCTION_RECORDS_API` 後重新建置。目前部署在 `https://combo-master-records.combo-master-tcg.workers.dev`。
+  4. 驗證：`curl -H "Origin: https://wkai2573.github.io" <網址>/versions` 回 `{"versions":[]}` 就通了。
+- 允許的來源在 `server/src/handler.ts` 的 `ALLOWED_ORIGINS`（本站與本機開發網址）。要刪除或整理資料請直接在 Cloudflare 後台或用 `wrangler d1 execute` 操作，網站沒有這類介面。
+- 新增角色時，`server/src/characters.ts` 要一起改，測試會提醒。
 
 ## 結構
 
@@ -63,4 +79,6 @@ npm run build      # 型別檢查＋打包
 - `src/data/`：卡表（花色招式與角色來自 xlsx，其餘由卡表網頁同步）、預設牌組。
 - `src/deck/`：牌組驗證與儲存。
 - `src/net/`：網路與單機練習。`match.ts` 的對局持有引擎與作弊中樞，每次變化同時為兩位玩家產生更新；`session.ts` 的單機、房主、訪客三種連線方式交給介面使用，單機與房主建立在對局之上。房主透過 `hostTransport.ts` 的傳輸介面收發訊息，正式環境用 PeerJS，測試用記憶體內的假傳輸；訪客與房主之間的訊息格式在 `protocol.ts`。
+- `src/stats/`：戰績。`records.ts` 把對局結果轉成戰績，`summary.ts` 是統計純函式，`cloud.ts` 的戰績倉庫上傳與取得全站戰績，`outbox.ts` 是補傳佇列，`upload.ts` 是上傳器。
+- `server/`：戰績伺服器（Cloudflare Workers 加 D1），見上一節。
 - `src/ui/`：畫面。
