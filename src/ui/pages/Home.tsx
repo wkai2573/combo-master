@@ -47,8 +47,7 @@ export function Home({ go }: { go: (r: Route) => void }) {
           ))}
         </div>
         <h1>
-          連擊大師 <button className="ver verbtn" title={`${VERSION_TITLE}
-點一下看更新日誌`} onClick={() => setChangelog(true)}>{VERSION_SHORT}</button>
+          連擊大師 <button className="ver verbtn" title={`${VERSION_TITLE}\n點一下看更新日誌`} onClick={() => setChangelog(true)}>{VERSION_SHORT}</button>
         </h1>
         <div className="muted tagline">以連擊值接力出招的 1v1 卡牌對戰</div>
       </header>

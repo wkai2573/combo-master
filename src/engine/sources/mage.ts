@@ -96,7 +96,7 @@ export const 電弧 = defineSource({
   },
 });
 
-// 力量爆破（法師）：[頂] 我方總攻擊 -3；[追] 此卡追擊判定失敗
+// 力量爆破（法師）：[頂] 我方 −3+0；[追] 此卡追擊判定失敗
 export const 力量爆破 = defineSource({ id: '力量爆破', at: 'moves', asMove: { topAtk: -3, pursuitFails: true } });
 
 // 法師：開局多抽 2；覺醒（追加）當我方覺醒時，可以抽 1

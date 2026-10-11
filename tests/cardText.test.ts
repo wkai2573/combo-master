@@ -91,6 +91,9 @@ describe('卡片文字規範檢查：不符規範的寫法會被指出', () => {
     for (const bad of ['我方總攻擊 +3。', '我方總防禦 −1。', '總攻擊 +X，總防禦 +X。', '此回合我方總防禦 -X。']) {
       expect(checkWording(bad), bad).not.toEqual([]);
     }
+    for (const bad of ['我方 -3+0。', '此回合我方 +0-X。', '我方 +0-4X。']) {
+      expect(checkWording(bad), bad).not.toEqual([]);
+    }
     for (const ok of ['我方 +3+0。', '我方 +0−4X。', '我方總攻擊（含追擊卡，加成前）達 15 以上時，+3+0。', '對方總攻擊 − 我方總防禦 ＝ 傷害']) {
       expect(checkWording(ok), ok).toEqual([]);
     }

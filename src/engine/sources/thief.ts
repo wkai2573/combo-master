@@ -8,7 +8,7 @@ import { other } from '../types';
 /** 伏擊給的這回合總攻擊加成 */
 export const 伏擊狀態 = slot('伏擊', () => ({ atk: 0 }));
 
-// 伏擊（盜賊）：[先] 此回合我方總攻擊 +4
+// 伏擊（盜賊）：[先] 此回合我方 +4+0
 export const 伏擊 = defineSource({
   id: '伏擊',
   at: 'moves',
@@ -25,7 +25,7 @@ export const 伏擊 = defineSource({
 /** 順手牽羊給的這回合總防禦加成，是負數 */
 export const 順手牽羊狀態 = slot('順手牽羊', () => ({ def: 0 }));
 
-// 順手牽羊（盜賊）：[發_蓋X] 抽X，此回合我方總防禦 -X。X 最大為 2
+// 順手牽羊（盜賊）：[發_蓋X] 抽X，此回合我方 +0−X。X 最大為 2
 export const 順手牽羊 = defineSource({
   id: '順手牽羊',
   at: 'moves',

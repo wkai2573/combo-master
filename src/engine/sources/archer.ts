@@ -77,7 +77,7 @@ export const 狙擊印記 = defineSource({
 // 魅影射擊（弓箭手）：[追] 作為追擊卡時防禦力也計入總防禦
 export const 魅影射擊 = defineSource({ id: '魅影射擊', at: 'pursuit', asMove: { pursuitDef: 4 } });
 
-// 地雷陷阱（弓箭手）：[追] 我方總攻擊 +3
+// 地雷陷阱（弓箭手）：[追] 我方 +3+0
 export const 地雷陷阱 = defineSource({ id: '地雷陷阱', at: 'pursuit', asMove: { pursuitAtk: 3 } });
 
 // 生命偷取（弓箭手）：[頂] 當我方追擊判定成功時，回復 2

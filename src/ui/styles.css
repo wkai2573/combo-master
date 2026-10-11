@@ -117,7 +117,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 
 /* 右下角的問卷浮動按鈕（只在主畫面） */
 .feedback-fab {
-  position: fixed; right: 16px; bottom: 16px; z-index: 20; display: inline-flex; align-items: center; gap: 6px;
+  position: fixed; right: 16px; bottom: 16px; z-index: 5; display: inline-flex; align-items: center; gap: 6px;
   padding: 9px 14px; border-radius: 999px; border: 1px solid var(--accent); background: var(--panel); color: var(--accent);
   font-size: 13px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 16px rgba(0, 0, 0, .5);
 }

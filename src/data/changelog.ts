@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.39.1',
+    date: '2026-10-11',
+    items: [
+      { type: 'fix', text: '主畫面開著規則說明或更新日誌時，問卷回饋按鈕不再浮在視窗上面' },
+    ],
+  },
+  {
     version: '0.39.0',
     date: '2026-10-11',
     items: [

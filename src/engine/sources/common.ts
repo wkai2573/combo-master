@@ -32,7 +32,7 @@ export const Ex流血 = defineSource({
 /** 布甲這回合給的總防禦加成 */
 export const 布甲狀態 = slot('布甲', () => ({ def: 0 }));
 
-// 布甲（id 皮甲，共用防具）：[蓋1] 當我方收招時，總防禦 +1。加成只在這回合
+// 布甲（id 皮甲，共用防具）：[蓋1] 當我方收招時，+0+1。加成只在這回合
 export const 布甲 = defineSource({
   id: '皮甲',
   at: 'gear',
@@ -48,7 +48,7 @@ export const 布甲 = defineSource({
 /** 木棍這回合給的總攻擊加成 */
 export const 木棍狀態 = slot('木棍', () => ({ atk: 0 }));
 
-// 木棍（共用武器）：[蓋1] 當我方收招時，總攻擊 +1。加成只在這回合
+// 木棍（共用武器）：[蓋1] 當我方收招時，+1+0。加成只在這回合
 export const 木棍 = defineSource({
   id: '木棍',
   at: 'gear',

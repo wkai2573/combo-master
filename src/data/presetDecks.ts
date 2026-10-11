@@ -51,6 +51,7 @@ export function presetDeck(charId: string): string[] {
   const profile = profiles[charId];
   if (!profile) throw new Error(`沒有 ${charId} 的預設牌組`);
   const ch = getCharacter(charId);
+  if (!TRINKETS[charId]) throw new Error(`${charId} 沒有指定飾品（TRINKETS）`);
 
   const fixed: string[] = [];
   const addCopies = (id: string, n: number) => {
