@@ -37,9 +37,9 @@ export const 布甲 = defineSource({
   id: '皮甲',
   at: 'gear',
   on: {
-    onPass: (c) => c.effect({ label: '【布甲】此回合總防禦 +1（蓋1）', cost: { cover: 1 } }, () => {
+    onPass: (c) => c.effect({ label: '【布甲】此回合 +0+1（蓋1）', cost: { cover: 1 } }, () => {
       布甲狀態.of(c.g, c.p).def += 1;
-      log(c.g, `【布甲】${pname(c.g, c.p)} 此回合總防禦 +1`);
+      log(c.g, `【布甲】${pname(c.g, c.p)} 此回合 +0+1`);
     }),
   },
   ask: { flatDef: lasting((c) => 布甲狀態.read(c.g, c.p).def) },
@@ -53,9 +53,9 @@ export const 木棍 = defineSource({
   id: '木棍',
   at: 'gear',
   on: {
-    onPass: (c) => c.effect({ label: '【木棍】此回合總攻擊 +1（蓋1）', cost: { cover: 1 } }, () => {
+    onPass: (c) => c.effect({ label: '【木棍】此回合 +1+0（蓋1）', cost: { cover: 1 } }, () => {
       木棍狀態.of(c.g, c.p).atk += 1;
-      log(c.g, `【木棍】${pname(c.g, c.p)} 此回合總攻擊 +1`);
+      log(c.g, `【木棍】${pname(c.g, c.p)} 此回合 +1+0`);
     }),
   },
   ask: { flatAtk: lasting((c) => 木棍狀態.read(c.g, c.p).atk) },

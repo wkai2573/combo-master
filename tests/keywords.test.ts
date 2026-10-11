@@ -19,10 +19,17 @@ describe('關鍵字', () => {
   });
 
   it('切片還原成原文，關鍵字片段帶有說明', () => {
-    const text = '[頂]：我方總防禦 +2。';
+    const text = '[頂]：我方 +0+2。';
     const segs = segmentsOf(text);
     expect(segs.map((s) => s.text).join('')).toBe(text);
-    expect(segs.filter((s) => s.kws.length > 0).map((s) => s.text)).toEqual(['[頂]', '總防禦']);
+    expect(segs.filter((s) => s.kws.length > 0).map((s) => s.text)).toEqual(['[頂]', '+0+2']);
+  });
+
+  it('+X+Y 的各種寫法都對得上同一個關鍵字：+3+0、−3+0、+0−4X、+X+X', () => {
+    for (const w of ['+1+2', '+3+0', '−3+0', '+0−4X', '+X+X', '+0−X']) {
+      expect(keywordsIn(`我方 ${w}。`).map((k) => k.name), w).toEqual(['+X+Y']);
+    }
+    expect(keywordsIn('追擊+1。').map((k) => k.name)).not.toContain('+X+Y');
   });
 
   it('引用 Ex 卡 [Ex-卡名] 像關鍵字：滑過顯示特徵與效果', () => {

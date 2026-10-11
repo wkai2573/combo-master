@@ -31,11 +31,11 @@ describe('卡片文字句型：切成各段', () => {
   });
 
   it('開頭關鍵字與費用寫在同一組方括號，以底線相連', () => {
-    const l = parseCardLine('[發_蓋X]：抽X，此回合我方總防禦 −X。X最大為2。');
+    const l = parseCardLine('[發_蓋X]：抽X，此回合我方 +0−X。X最大為2。');
     expect(l.tags).toEqual(['發']);
     expect(l.costs).toEqual(['蓋X']);
     expect(l.timing).toBe('');
-    expect(l.effect).toBe('抽X，此回合我方總防禦 −X。X最大為2。');
+    expect(l.effect).toBe('抽X，此回合我方 +0−X。X最大為2。');
     const both = parseCardLine('[經_怒3]：當傷害計算時，且對方給予的傷害 > 我方給予的傷害，將怒氣區上方 1 張卡加入手牌。');
     expect(both.tags).toEqual(['經']);
     expect(both.costs).toEqual(['怒3']);
@@ -53,7 +53,7 @@ describe('卡片文字句型：切成各段', () => {
   });
 
   it('多行卡文逐行切，每一行各自成一組', () => {
-    const lines = parseCardText('[頂]：我方總攻擊 −3。\n[追]：此卡追擊判定失敗。\n[經]：當此卡被蓋為裏側時，回復1。');
+    const lines = parseCardText('[頂]：我方 −3+0。\n[追]：此卡追擊判定失敗。\n[經]：當此卡被蓋為裏側時，回復1。');
     expect(lines.map((l) => l.tags)).toEqual([['頂'], ['追'], ['經']]);
     expect(lines[2].timing).toBe('當此卡被蓋為裏側時，');
     expect(lines.every((l) => l.errors.length === 0)).toBe(true);
@@ -85,6 +85,15 @@ describe('卡片文字規範檢查：不符規範的寫法會被指出', () => {
       expect(checkWording(bad), bad).not.toEqual([]);
     }
     expect(checkWording('當此卡被蓋為裏側時，抽1。')).toEqual([]);
+  });
+
+  it('加成一律寫成 +X+Y，不寫「總攻擊 +N」「總防禦 −N」', () => {
+    for (const bad of ['我方總攻擊 +3。', '我方總防禦 −1。', '總攻擊 +X，總防禦 +X。', '此回合我方總防禦 -X。']) {
+      expect(checkWording(bad), bad).not.toEqual([]);
+    }
+    for (const ok of ['我方 +3+0。', '我方 +0−4X。', '我方總攻擊（含追擊卡，加成前）達 15 以上時，+3+0。', '對方總攻擊 − 我方總防禦 ＝ 傷害']) {
+      expect(checkWording(ok), ok).toEqual([]);
+    }
   });
 });
 

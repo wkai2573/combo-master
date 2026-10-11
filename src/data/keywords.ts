@@ -28,11 +28,16 @@ const norm = (s: string) => s.replace(/\d+/g, 'X');
  * 「Ex-卡名」只是命名規則的說明，不比對。
  */
 const isSpecial = (name: string) => !name.includes('卡名') && (name.includes('OO') || /X(?!$)/.test(name));
+/** 「+X+Y」（總攻擊 +X、總防禦 +Y 的簡寫）：兩邊都有正負號，每一邊是數字、X，或 4X 這類寫法 */
+const STAT_BONUS = '+X+Y';
+const STAT_BONUS_SRC = '[+−](?:\\d+X?|X)[+−](?:\\d+X?|X)';
 const specials: Array<[RegExp, string, Keyword]> = SHOWN.filter((k) => isSpecial(k.name)).map((k) => {
-  const src = k.name
-    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    .replace(/OO/g, '[\\u4e00-\\u9fa5]{2}')
-    .replace(/X/g, '(?:\\d+|X)');
+  const src = k.name === STAT_BONUS
+    ? STAT_BONUS_SRC
+    : k.name
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/OO/g, '[\\u4e00-\\u9fa5]{2}')
+        .replace(/X/g, '(?:\\d+|X)');
   return [new RegExp('^' + src + '$'), src, k];
 });
 

@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.38.1',
+    date: '2026-10-11',
+    items: [
+      { type: 'change', text: '卡文、角色文字與遊戲紀錄裡總攻擊、總防禦的加減，改用 +X+Y 簡寫：前一個數字是總攻擊，後一個是總防禦，沒有的那邊寫 0，例如總防禦 +2 寫成 +0+2、總攻擊 +1 總防禦 +2 寫成 +1+2' },
+      { type: 'add', text: '滑過卡文裡的 +X+Y 會顯示說明' },
+    ],
+  },
+  {
     version: '0.38.0',
     date: '2026-10-11',
     items: [

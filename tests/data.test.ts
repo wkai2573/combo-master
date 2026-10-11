@@ -49,8 +49,8 @@ describe('卡表資料', () => {
 
   it('卡表新卡的職業與文字', () => {
     expect(getCard('戒備打擊').cls).toBe('劍士');
-    expect(getCard('戒備打擊').text).toContain('總防禦 +2');
-    expect(getCard('力量爆破').text).toContain('總攻擊 −3');
+    expect(getCard('戒備打擊').text).toContain('+1+2');
+    expect(getCard('力量爆破').text).toContain('−3+0');
     expect(getCard('狙擊印記').cls).toBe('弓箭手');
     expect(getCard('黑桃1').cls).toBe('共用');
   });

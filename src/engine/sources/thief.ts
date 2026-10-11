@@ -13,10 +13,10 @@ export const 伏擊 = defineSource({
   id: '伏擊',
   at: 'moves',
   on: {
-    onOpen: (c) => c.effect({ label: '【伏擊】此回合總攻擊 +4', mandatory: true }, () => {
+    onOpen: (c) => c.effect({ label: '【伏擊】此回合 +4+0', mandatory: true }, () => {
       activate(c.g, c.p, c.self!);
       伏擊狀態.of(c.g, c.p).atk += 4;
-      log(c.g, '【伏擊】此回合總攻擊 +4');
+      log(c.g, '【伏擊】此回合 +4+0');
     }),
   },
   ask: { flatAtk: lasting((c) => 伏擊狀態.read(c.g, c.p).atk) },
@@ -31,15 +31,15 @@ export const 順手牽羊 = defineSource({
   at: 'moves',
   on: {
     onPlay: (c) => c.effect(
-      { label: '【順手牽羊】蓋 X 張經驗，抽 X，此回合總防禦 −X', when: () => canPay(c.g, c.p, { cover: 1 }) },
+      { label: '【順手牽羊】蓋 X 張經驗，抽 X，此回合 +0−X', when: () => canPay(c.g, c.p, { cover: 1 }) },
       function* () {
-        const x = yield* chooseX(c.g, c.p, c.self!, 2, '蓋 X 張經驗，抽 X，此回合總防禦 −X');
+        const x = yield* chooseX(c.g, c.p, c.self!, 2, '蓋 X 張經驗，抽 X，此回合 +0−X');
         if (x === 0) return;
         activate(c.g, c.p, c.self!);
         yield* pay(c.g, c.p, { cover: x });
         yield* draw(c.g, c.p, x);
         順手牽羊狀態.of(c.g, c.p).def -= x;
-        log(c.g, `【順手牽羊】抽 ${x}，此回合總防禦 −${x}`);
+        log(c.g, `【順手牽羊】抽 ${x}，此回合 +0−${x}`);
       },
     ),
   },

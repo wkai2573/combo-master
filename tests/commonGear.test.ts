@@ -36,7 +36,7 @@ describe('共用裝備：布甲與木棍', () => {
     expect(Z(no, 0, 'exp')[0].covered).toBe(false);
     expect(yes.state.flags.damageTaken[0]).toBe(no.state.flags.damageTaken[0] - 1);
     expect(yes.state.flags.damageTaken[1]).toBe(no.state.flags.damageTaken[1]);
-    expect(yes.state.log.join('\n')).toContain('此回合總防禦 +1');
+    expect(yes.state.log.join('\n')).toContain('此回合 +0+1');
   });
 
   it('木棍：發動付蓋1，這回合我方總攻擊 +1，對方多受 1 點傷害', () => {
@@ -44,7 +44,7 @@ describe('共用裝備：布甲與木棍', () => {
     const no = run('木棍', false);
     expect(yes.state.flags.damageTaken[1]).toBe(no.state.flags.damageTaken[1] + 1);
     expect(yes.state.flags.damageTaken[0]).toBe(no.state.flags.damageTaken[0]);
-    expect(yes.state.log.join('\n')).toContain('此回合總攻擊 +1');
+    expect(yes.state.log.join('\n')).toContain('此回合 +1+0');
   });
 
   it('Explosion! 讓我方被迫收招，也算收招：木棍進收招時的窗口，窗口結算完才輪到對方反擊', () => {
@@ -90,8 +90,8 @@ describe('共用裝備：布甲與木棍', () => {
     expect(g.pending!.title).toContain('木棍');
     pick(g, '發動');
     const log = g.state.log.join('\n');
-    expect(log).toContain('【木棍】玩家A（商人） 此回合總攻擊 +1');
-    expect(log).toContain('【木棍】玩家B（商人） 此回合總攻擊 +1');
+    expect(log).toContain('【木棍】玩家A（商人） 此回合 +1+0');
+    expect(log).toContain('【木棍】玩家B（商人） 此回合 +1+0');
   });
 
   it('表側經驗不足 1 張，付不起蓋1：不詢問', () => {

@@ -5,8 +5,8 @@
  */
 export const characterText: Record<string, { text: string; awakenText: string }> = {
   勇者: {
-    text: '我方總攻擊（含追擊卡，加成前）達 15 以上時，總攻擊 +3。',
-    awakenText: '（取代）總攻擊達 10 以上時，總攻擊 +3。',
+    text: '我方總攻擊（含追擊卡，加成前）達 15 以上時，+3+0。',
+    awakenText: '（取代）總攻擊達 10 以上時，+3+0。',
   },
   刺客: {
     text: '(回合1次)追擊成功時，將 1 張 [Ex-流血] 加入對方經驗區。',
@@ -25,11 +25,11 @@ export const characterText: Record<string, { text: string; awakenText: string }>
     awakenText: '（追加）當我方覺醒時，可以抽1。',
   },
   先人: {
-    text: '我方先攻的回合，總攻擊 +X。X＝我方本回合出招張數 − 1。',
+    text: '我方先攻的回合，+X+0。X＝我方本回合出招張數 − 1。',
     awakenText: '（追加）我方先攻的回合，追擊判定多翻 1 張牌（追擊 +1）。',
   },
   後人: {
-    text: '我方後攻的回合，總防禦 +1。',
-    awakenText: '（追加）我方後攻的回合，每張追擊卡若為白板卡，其防禦也計入總防禦，否則總防禦 +2。',
+    text: '我方後攻的回合，+0+1。',
+    awakenText: '（追加）我方後攻的回合，每張追擊卡若為白板卡，其防禦也計入總防禦，否則 +0+2。',
   },
 };
