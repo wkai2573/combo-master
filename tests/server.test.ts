@@ -224,3 +224,36 @@ describe('戰績伺服器：角色清單', () => {
     expect([...KNOWN_CHARACTERS].sort()).toEqual(game);
   });
 });
+
+describe('戰績伺服器：問卷轉址 /feedback', () => {
+  const FORM = 'https://docs.google.com/forms/d/e/EXAMPLE/viewform';
+  const feedback = (path: string, feedbackUrl: string | undefined, init: RequestInit = {}) =>
+    handle(new Request(`https://records.example.workers.dev${path}`, init), repo, { now: NOW, feedbackUrl });
+
+  it('瀏覽器直接開啟（沒有來源標頭）也會 302 轉址到設定的網址，而且不快取', async () => {
+    const res = await feedback('/feedback', FORM);
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe(FORM);
+    expect(res.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('查詢字串不會被帶到目的網址', async () => {
+    const res = await feedback('/feedback?utm=abc&redirect=https://evil.example.com', FORM);
+    expect(res.headers.get('location')).toBe(FORM);
+  });
+
+  it('沒有設定或設定的不是 https 網址：不轉址，回 503', async () => {
+    for (const bad of [undefined, '', '   ', 'javascript:alert(1)', 'http://docs.google.com/forms', 'not a url']) {
+      const res = await feedback('/feedback', bad);
+      expect(res.status, String(bad)).toBe(503);
+      expect(res.headers.get('location'), String(bad)).toBeNull();
+    }
+  });
+
+  it('只接受 GET 與 HEAD', async () => {
+    expect((await feedback('/feedback', FORM, { method: 'HEAD' })).status).toBe(302);
+    for (const method of ['POST', 'PUT', 'DELETE']) {
+      expect((await feedback('/feedback', FORM, { method })).status, method).toBe(405);
+    }
+  });
+});

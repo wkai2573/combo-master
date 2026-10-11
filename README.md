@@ -73,6 +73,19 @@ npm run build      # 型別檢查＋打包
 - 允許的來源在 `server/src/handler.ts` 的 `ALLOWED_ORIGINS`（本站與本機開發網址）。要刪除或整理資料請直接在 Cloudflare 後台或用 `wrangler d1 execute` 操作，網站沒有這類介面。
 - 新增角色時，`server/src/characters.ts` 要一起改，測試會提醒。
 
+## 問卷回饋
+
+主畫面右下角有「問卷回饋」按鈕，點了用新分頁開啟問卷。按鈕連的永遠是戰績伺服器的固定網址 `<伺服器網址>/feedback`，伺服器再 302 轉址到目前的問卷，所以換問卷不用重新發布遊戲。
+
+- 目的網址設定在 `server/wrangler.toml` 的 `FEEDBACK_URL`（必須是 https，否則伺服器回 503 不轉址）。轉址的程式在 `server/src/handler.ts` 的 `feedback`，不收查詢字串，所以不會被拿來轉到別的網站。
+- 本機開發（沒有伺服器網址）時按鈕直接連 `src/stats/config.ts` 的 `FEEDBACK_FALLBACK_URL`；換問卷後它不改也不影響正式站。
+- 第一次上線，照這個順序：
+  1. 先部署伺服器：`npm run server:deploy`（還沒登入過就先 `npx wrangler@4 login`，瀏覽器跳出授權頁時按允許）。
+  2. 驗證：`curl -I https://combo-master-records.combo-master-tcg.workers.dev/feedback`，要看到 `302` 和 `location:` 是你的問卷網址。
+  3. 再把遊戲推到 `main`，等 GitHub Actions 部署完，按鈕就會出現。順序反過來的話，按鈕會短暫連到還沒有 `/feedback` 的舊伺服器。
+- 之後要換問卷或改導向：只改 `server/wrangler.toml` 的 `FEEDBACK_URL`，執行 `npm run server:deploy`，再用上面的 curl 驗證。不需要動遊戲，也不需要重新建置。
+- 要臨時關掉問卷導向：把 `FEEDBACK_URL` 改成空字串再部署，按鈕會顯示伺服器的 503 訊息。
+
 ## 結構
 
 - `src/engine/`：規則引擎（不依賴介面與網路）。`game.ts` 回合流程、`combat.ts` 戰鬥、`effects.ts` 效果來源（各卡與角色的效果條目依職業放在 `sources/`）、`win.ts` 勝負。

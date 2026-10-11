@@ -9,3 +9,11 @@ const PRODUCTION_RECORDS_API = 'https://combo-master-records.combo-master-tcg.wo
 const fromEnv = import.meta.env.VITE_RECORDS_API as string | undefined;
 
 export const RECORDS_API: string = (fromEnv ?? (import.meta.env.PROD ? PRODUCTION_RECORDS_API : '')).replace(/\/+$/, '');
+
+/**
+ * 問卷回饋：遊戲永遠連戰績伺服器的 /feedback，由伺服器轉址到目前的問卷（改問卷只改伺服器的 FEEDBACK_URL，不用重新發布遊戲）。
+ * 沒有伺服器網址（本機開發、測試）時，直接連備用網址；它只影響本機開發，換問卷後不改也不會影響正式站。
+ */
+export const FEEDBACK_FALLBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdZCBK4IwEDImkazrXJIiOwtLfNalrq8gkWlRmrFD0XQ99ycQ/viewform';
+export const feedbackUrlFor = (recordsApi: string): string => (recordsApi ? `${recordsApi}/feedback` : FEEDBACK_FALLBACK_URL);
+export const FEEDBACK_URL: string = feedbackUrlFor(RECORDS_API);

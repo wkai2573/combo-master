@@ -26,6 +26,8 @@ export interface HandleOptions {
   /** 目前時間（毫秒），測試用 */
   now?: number;
   origins?: readonly string[];
+  /** 問卷的目的網址（環境變數 FEEDBACK_URL）；沒設定或不是 https 就不轉址 */
+  feedbackUrl?: string;
 }
 
 function json(status: number, body: unknown, origin: string | null): Response {
@@ -38,7 +40,8 @@ function json(status: number, body: unknown, origin: string | null): Response {
 }
 
 /**
- * 處理一個請求。只有三個路徑：
+ * 處理一個請求。只有這幾個路徑：
+ *   GET  /feedback           302 轉址到問卷（目的網址在環境變數，不需要來源標頭，給玩家直接開新分頁用）
  *   POST /records            新增一筆戰績（驗證、限流、同對局代號只收一次）
  *   GET  /versions           各版本的場數
  *   GET  /records?versions=  依版本取得戰績（分頁）
@@ -66,6 +69,7 @@ export async function handle(request: Request, repo: Repo, opts: HandleOptions =
   }
 
   if (url.pathname === '/health') return json(200, { ok: true }, origin);
+  if (url.pathname === '/feedback') return feedback(request, opts.feedbackUrl);
   if (!origin) return json(403, { error: '來源不被允許' }, null);
 
   if (url.pathname === '/records') {
@@ -78,6 +82,22 @@ export async function handle(request: Request, repo: Repo, opts: HandleOptions =
     return json(200, { versions: await repo.versions() }, origin);
   }
   return json(404, { error: '找不到' }, origin);
+}
+
+/**
+ * 固定的回饋網址：遊戲永遠連這個路徑，要換問卷只改環境變數 FEEDBACK_URL 再重新部署伺服器。
+ * 只轉址到 https 網址，而且不帶查詢字串，所以不會被拿來當開放轉址。
+ */
+function feedback(request: Request, target: string | undefined): Response {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return json(405, { error: '不支援的方法' }, null);
+  let url: URL | null = null;
+  try {
+    url = new URL((target ?? '').trim());
+  } catch {
+    url = null;
+  }
+  if (!url || url.protocol !== 'https:') return json(503, { error: '問卷網址尚未設定' }, null);
+  return new Response(null, { status: 302, headers: { location: url.toString(), 'cache-control': 'no-store' } });
 }
 
 async function postRecord(request: Request, repo: Repo, now: number, origin: string): Promise<Response> {

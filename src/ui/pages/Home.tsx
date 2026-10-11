@@ -1,10 +1,20 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { createTapCounter, isCheatUnlocked, setCheatUnlocked } from '../../cheatUnlock';
+import { FEEDBACK_URL } from '../../stats/config';
 import { APP_BUILT_AT, VERSION_LABEL, VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { ChangelogModal } from '../components/ChangelogModal';
 import { FlowChartModal } from '../components/FlowChartModal';
 import { Modal } from '../components/Modal';
 import type { LobbyMode } from './Lobby';
+
+/** 標題上方扇形排開的裝飾牌：一組連擊值接力的樣子（只是外觀，不影響遊戲） */
+const FAN = [
+  { n: 3, suit: '♠', red: false },
+  { n: 5, suit: '♥', red: true },
+  { n: 4, suit: '♣', red: false },
+  { n: 6, suit: '♦', red: true },
+  { n: 7, suit: '♠', red: false },
+];
 
 export type Route = 'home' | 'decks' | 'records' | LobbyMode;
 
@@ -27,21 +37,56 @@ export function Home({ go }: { go: (r: Route) => void }) {
   };
   return (
     <div className="page home">
-      <h1>
-        連擊大師 <button className="ver verbtn" title={`${VERSION_TITLE}\n點一下看更新日誌`} onClick={() => setChangelog(true)}>{VERSION_SHORT}</button>
-      </h1>
-      <div className="muted">以連擊值接力出招的 1v1 卡牌對戰</div>
+      <header className="hero">
+        <div className="hero-fan" aria-hidden="true">
+          {FAN.map((c, i) => (
+            <span key={i} className={`fan-card ${c.red ? 'red' : ''}`} style={{ '--i': i - (FAN.length - 1) / 2 } as CSSProperties}>
+              <b>{c.n}</b>
+              <i>{c.suit}</i>
+            </span>
+          ))}
+        </div>
+        <h1>
+          連擊大師 <button className="ver verbtn" title={`${VERSION_TITLE}
+點一下看更新日誌`} onClick={() => setChangelog(true)}>{VERSION_SHORT}</button>
+        </h1>
+        <div className="muted tagline">以連擊值接力出招的 1v1 卡牌對戰</div>
+      </header>
+      <nav className="menu">
+        <button className="primary menu-main" onClick={() => go('practice')}>
+          <b>單機練習</b>
+          <span>對戰機器人，馬上開打</span>
+        </button>
+        <div className="menu-pair">
+          <button onClick={() => go('host')}>
+            <b>建立房間</b>
+            <span>與朋友對戰</span>
+          </button>
+          <button onClick={() => go('join')}>
+            <b>加入房間</b>
+            <span>輸入房號</span>
+          </button>
+        </div>
+        <div className="menu-pair">
+          <button onClick={() => go('decks')}>
+            <b>組牌</b>
+            <span>調整你的牌組</span>
+          </button>
+          <button onClick={() => go('records')}>
+            <b>戰績</b>
+            <span>全站勝率統計</span>
+          </button>
+        </div>
+        <div className="menu-info">
+          <button onClick={() => setRules(true)}>規則說明</button>
+          <button onClick={() => setChangelog(true)}>更新日誌</button>
+          <button onClick={() => setFlow(true)}>戰鬥流程圖</button>
+        </div>
+      </nav>
       <div className="muted verline" title={VERSION_TITLE} onClick={tapVersion}>{note || `${VERSION_LABEL}　建置於 ${APP_BUILT_AT}`}</div>
-      <div className="menu">
-        <button className="primary" onClick={() => go('host')}>建立房間（與朋友對戰）</button>
-        <button onClick={() => go('join')}>加入房間</button>
-        <button onClick={() => go('practice')}>單機練習（對戰機器人）</button>
-        <button onClick={() => go('decks')}>組牌</button>
-        <button onClick={() => go('records')}>戰績</button>
-        <button onClick={() => setRules(true)}>規則說明</button>
-        <button onClick={() => setChangelog(true)}>更新日誌</button>
-        <button onClick={() => setFlow(true)}>戰鬥流程圖</button>
-      </div>
+      <a className="feedback-fab" href={FEEDBACK_URL} target="_blank" rel="noopener noreferrer" title="填寫問卷，告訴我們你的想法">
+        <span aria-hidden="true">✎</span>問卷回饋
+      </a>
       {changelog && <ChangelogModal onClose={() => setChangelog(false)} />}
       {flow && <FlowChartModal onClose={() => setFlow(false)} />}
       {rules && (

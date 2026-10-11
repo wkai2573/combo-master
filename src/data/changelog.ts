@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.39.0',
+    date: '2026-10-11',
+    items: [
+      { type: 'change', text: '主選單重新設計：標題上方加了扇形的裝飾牌，單機練習放最大，建立房間與加入房間、組牌與戰績各成一排，規則說明、更新日誌、戰鬥流程圖收成最下面一排' },
+      { type: 'add', text: '主畫面右下角新增「問卷回饋」按鈕，點了會用新分頁開啟問卷，歡迎告訴我們你的想法' },
+    ],
+  },
+  {
     version: '0.38.1',
     date: '2026-10-11',
     items: [
