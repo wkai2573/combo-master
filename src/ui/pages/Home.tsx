@@ -3,18 +3,14 @@ import { createTapCounter, isCheatUnlocked, setCheatUnlocked } from '../../cheat
 import { FEEDBACK_URL } from '../../stats/config';
 import { APP_BUILT_AT, VERSION_LABEL, VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { ChangelogModal } from '../components/ChangelogModal';
+import { CardFace } from '../components/CardFace';
 import { FlowChartModal } from '../components/FlowChartModal';
 import { Modal } from '../components/Modal';
+import { useHomeScale } from '../useHomeScale';
 import type { LobbyMode } from './Lobby';
 
-/** 標題上方扇形排開的裝飾牌：一組連擊值接力的樣子（只是外觀，不影響遊戲） */
-const FAN = [
-  { n: 3, suit: '♠', red: false },
-  { n: 5, suit: '♥', red: true },
-  { n: 4, suit: '♣', red: false },
-  { n: 6, suit: '♦', red: true },
-  { n: 7, suit: '♠', red: false },
-];
+/** 標題上方扇形排開的 5 張真實卡面：劍、盾、藥水、弓、小刀（只是外觀，不影響遊戲） */
+const FAN = ['戒備打擊', '盾擊', '生命藥水', '狙擊蓄力', '二刀連擊'];
 
 export type Route = 'home' | 'decks' | 'records' | LobbyMode;
 
@@ -22,6 +18,7 @@ export function Home({ go }: { go: (r: Route) => void }) {
   const [rules, setRules] = useState(false);
   const [changelog, setChangelog] = useState(false);
   const [flow, setFlow] = useState(false);
+  const scale = useHomeScale();
   // 連點版本號那一行是作弊解鎖的備用入口；已經解鎖時只提示，不重複解鎖
   const taps = useRef(createTapCounter());
   const [note, setNote] = useState('');
@@ -36,13 +33,12 @@ export function Home({ go }: { go: (r: Route) => void }) {
     window.setTimeout(() => setNote(''), 2500);
   };
   return (
-    <div className="page home">
+    <div className="page home" style={{ '--s': scale } as CSSProperties}>
       <header className="hero">
         <div className="hero-fan" aria-hidden="true">
-          {FAN.map((c, i) => (
-            <span key={i} className={`fan-card ${c.red ? 'red' : ''}`} style={{ '--i': i - (FAN.length - 1) / 2 } as CSSProperties}>
-              <b>{c.n}</b>
-              <i>{c.suit}</i>
+          {FAN.map((id, i) => (
+            <span key={id} className="fan-card" style={{ '--i': i - (FAN.length - 1) / 2 } as CSSProperties}>
+              <span className="fan-scale"><CardFace id={id} size="md" /></span>
             </span>
           ))}
         </div>

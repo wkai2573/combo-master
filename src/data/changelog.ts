@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.40.1',
+    date: '2026-10-11',
+    items: [
+      { type: 'change', text: '主選單依視窗高度縮放：視窗越高標題、按鈕與扇形牌越大，內容撐滿畫面不留大片空白，視窗太窄時自動縮小不會超出畫面' },
+      { type: 'change', text: '主選單標題上方的扇形牌改成真實卡面：戒備打擊、盾擊、生命藥水、狙擊蓄力、二刀連擊' },
+    ],
+  },
+  {
     version: '0.40.0',
     date: '2026-10-11',
     items: [
