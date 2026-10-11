@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.40.0',
+    date: '2026-10-11',
+    items: [
+      { type: 'change', text: '全部效果卡與 Ex 卡的卡圖重新設計：每張都有自己專屬的圖，不再多張卡共用同一把劍，畫風統一為卡種色加白色輪廓，毒、血、火、冰、電另有點綴色' },
+    ],
+  },
+  {
     version: '0.39.1',
     date: '2026-10-11',
     items: [
