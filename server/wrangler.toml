@@ -3,7 +3,7 @@ name = "combo-master-records"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
 
-# 問卷的目的網址：遊戲的問卷按鈕永遠連 <Worker 網址>/feedback，要換問卷只改這一行再執行 npm run server:deploy
+# 問卷的目的網址：遊戲的問卷按鈕永遠連 <Worker 網址>/feedback，要換問卷只改這一行再執行 bun run server:deploy
 [vars]
 FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdZCBK4IwEDImkazrXJIiOwtLfNalrq8gkWlRmrFD0XQ99ycQ/viewform"
 

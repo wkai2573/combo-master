@@ -10,7 +10,7 @@
 - **新功能（feat）**：新增卡片、新角色技能、新遊戲機制、新增或重構主要 UI 模組。
 - **修復（fix）**：修復戰鬥判定、介面錯誤、顯示異常等 bug。
 - **UI / 樣式微調**：調整對齊、版面跳動修復、色調或字型等影響終端視覺的變更。
-- **卡表同步**：執行 `npm run table` 同步卡表數據產出 `src/data/cardTable.json`。
+- **卡表同步**：執行 `bun run table` 同步卡表數據產出 `src/data/cardTable.json`。
 
 ### 不強制升版
 - 純內部重構（`refactor`，未改動任何外顯行為或介面）。
@@ -32,11 +32,7 @@
 
 ## 3. 變更與提交方式
 
-1. **檔案範圍**：版本號儲存於 `package.json` 的 `version` 欄位。升版時必須同步更新 `package-lock.json`：
-   ```bash
-   npm version <newversion> --no-git-tag-version
-   ```
-   或直接編輯 `package.json` 後執行 `npm i --package-lock-only`。
+1. **檔案範圍**：版本號儲存於 `package.json` 的 `version` 欄位，直接編輯它即可；套件管理用 bun，`bun.lock` 不記錄專案自己的版本號，所以不用跟著更新。
 2. **隨功能一併提交**：版本更動應包含在該次功能的 Git commit 之中（同一個 commit），不另外建立單獨的 bump commit。
 3. **更新日誌隨版本一起**：玩家看得到的變化，在同一個 commit 於 `src/data/changelog.ts` 補一筆，用玩家的語言寫（不寫模組名稱與重構細節）。日誌版本會因純重構升版而跳號，這是預期的；`tests/changelog.test.ts` 只檢查格式、排序與不超過目前版本。
 4. **不建立 Git Tag**：專案不另外打 Git Tag，版本由 `package.json` 與 `vite.config.ts` 自動注入的 commit hash 組合辨識。
@@ -58,9 +54,9 @@
 所有 Agent 在完成任務準備提交 Git Commit 前，**必須**逐項檢查：
 
 - [ ] 1. 本次任務是否包含功能修改、問題修復、UI 微調或卡表同步？
-- [ ] 2. 若是，是否已依進位規則遞增 `package.json` 與 `package-lock.json` 的版本？
+- [ ] 2. 若是，是否已依進位規則遞增 `package.json` 的版本？
 - [ ] 3. 若變更是玩家看得到的（卡片、角色、規則判定、介面），是否已在 `src/data/changelog.ts` 最前面補上該版本一筆？純內部重構、沒有可見變化的升版不用補。卡表同步造成的變動逐張寫卡名，歸「調整」類。
-- [ ] 4. 是否已執行測試與型別檢查（`npm test`、`npm run build`）確認通過？
+- [ ] 4. 是否已執行測試與型別檢查（`bun run test`、`bun run build`）確認通過？
 - [ ] 5. 若有處理 `.scratch/` 票券，是否已在票券中標記解決版本？
 - [ ] 6. 將所有變更（含版本號與更新日誌）一併 commit。
 

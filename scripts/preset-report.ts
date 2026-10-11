@@ -1,7 +1,7 @@
 import { getCard } from '../src/data/cards';
 import { PRESET_CHARACTER_IDS, presetDeck, presetStyle } from '../src/data/presetDecks';
 
-// 列出各角色預設牌組的組成，調整 presetDecks.ts 後可用 `npm run presets` 檢查
+// 列出各角色預設牌組的組成，調整 presetDecks.ts 後可用 `bun run presets` 檢查
 for (const id of PRESET_CHARACTER_IDS) {
   const cards = presetDeck(id).map(getCard);
   const moves = cards.filter((c) => c.kind === 'move');

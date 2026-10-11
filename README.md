@@ -22,18 +22,18 @@ https://wkai2573.github.io/combo-master/
 ## 指令
 
 ```
-npm install
-npm run dev        # 開發伺服器（預設 http://localhost:5173）
-npm test           # 單元測試（規則、卡片效果、牌組驗證）
-npm run sim 40     # 機器人壓測：每種角色組合各打 40 局，檢查卡死與例外
-npm run presets    # 列出各角色預設牌組的連擊值分佈與平均攻守
-npm run data       # 修改 docs/連擊大師.xlsx 後，重新產生 src/data/generated/*.json
-npm run build      # 型別檢查＋打包
+bun install
+bun run dev        # 開發伺服器（預設 http://localhost:5173）
+bun run test           # 單元測試（規則、卡片效果、牌組驗證）
+bun run sim 40     # 機器人壓測：每種角色組合各打 40 局，檢查卡死與例外
+bun run presets    # 列出各角色預設牌組的連擊值分佈與平均攻守
+bun run data       # 修改 docs/連擊大師.xlsx 後，重新產生 src/data/generated/*.json
+bun run build      # 型別檢查＋打包
 ```
 
 ## 卡表網頁與數值同步
 
-卡片、角色的數值在「連擊大師卡表」網頁（Claude 的 Artifact，只有擁有者能開）上調整，可以新增卡片。調完請 Claude 同步：Claude 用 `ArtifactData` 把資料讀成 JSON，再執行 `npm run table -- <資料夾>`，產生 `src/data/cardTable.json`（既有卡的數值覆蓋、角色數值、新增的卡、永久編號）。`src/data/cards.ts` 會把它疊在 xlsx 產生的資料上，所以重跑 `npm run data` 不會洗掉。
+卡片、角色的數值在「連擊大師卡表」網頁（Claude 的 Artifact，只有擁有者能開）上調整，可以新增卡片。調完請 Claude 同步：Claude 用 `ArtifactData` 把資料讀成 JSON，再執行 `bun run table <資料夾>`，產生 `src/data/cardTable.json`（既有卡的數值覆蓋、角色數值、新增的卡、永久編號）。`src/data/cards.ts` 會把它疊在 xlsx 產生的資料上，所以重跑 `bun run data` 不會洗掉。
 
 卡表頁面標題旁有頁面版本（例如 `v1.2`），下方顯示「遊戲已同步到 vX.Y.Z」，那是每次同步後由 Claude 寫進資料庫的 `meta/sync`；頁面上「尚未同步的改動」（黃框，旁邊是「原」值）是拿每筆資料的 `base`（基準值）和現值比對。所以同步完成後，Claude 要把有差異的資料的 `base` 一併重設成現值，黃框才會消失；`base.name` 不可動，它是遊戲內部 id（見 `docs/規則詮釋.md`），改過名的卡改把 `syncedName` 寫成現在的卡名，卡名那一格的黃框才會消失。
 
@@ -55,7 +55,7 @@ npm run build      # 型別檢查＋打包
 
 作弊模式預設隱藏，是除錯用的功能；解鎖方法與用法見 `docs/規則詮釋.md` 的作弊模式一節。
 
-兩人必須能連到公開的 PeerJS broker。兩人各自開上面的線上網址即可對戰；本機 `npm run dev` 只有同一台電腦或同網段能連。
+兩人必須能連到公開的 PeerJS broker。兩人各自開上面的線上網址即可對戰；本機 `bun run dev` 只有同一台電腦或同網段能連。
 
 ## 戰績伺服器
 
@@ -64,11 +64,11 @@ npm run build      # 型別檢查＋打包
 - 程式在 `server/`：`src/handler.ts` 是處理請求的函式（驗證、限流、冪等、來源限制，沒有任何刪除或修改的路徑），`src/d1.ts` 是資料表的讀寫，`schema.sql` 是資料表結構，`wrangler.toml` 是部署設定。
 - 前端的戰績倉庫、補傳佇列與上傳在 `src/stats/`。上傳失敗的戰績存在本機佇列，下次啟動與每次對局結束後補傳；伺服器網址在 `src/stats/config.ts`：正式建置預設連線，本機開發與測試預設不連線（免得測試對局污染全站統計），要連時用環境變數 `VITE_RECORDS_API` 指定（設成空字串是關閉）；沒有網址時對局不受影響，戰績頁會說明雲端目前不可用。
 - 測試：`tests/server.test.ts` 用 Node 內建的 SQLite 跑真正的資料表與 SQL，`tests/cloudRecords.test.ts` 涵蓋前端的倉庫、佇列與前後端串接。
-- 本機試跑：`npm run server:db:local` 建立本機資料庫，`npm run server:dev` 在 http://127.0.0.1:8787 啟動伺服器；前端用 `VITE_RECORDS_API=http://127.0.0.1:8787 npm run dev` 連它。
+- 本機試跑：`bun run server:db:local` 建立本機資料庫，`bun run server:dev` 在 http://127.0.0.1:8787 啟動伺服器；前端用 `VITE_RECORDS_API=http://127.0.0.1:8787 bun run dev` 連它。
 - 部署（需要一個免費的 Cloudflare 帳號，不用信用卡）：
-  1. `npx wrangler@4 login`，瀏覽器跳出授權頁時按允許。
-  2. `npx wrangler@4 d1 create combo-master-records`，把回報的 `database_id` 填進 `server/wrangler.toml`。
-  3. `npm run server:db` 建立遠端資料表，`npm run server:deploy` 部署，記下回報的 `*.workers.dev` 網址，填進 `src/stats/config.ts` 的 `PRODUCTION_RECORDS_API` 後重新建置。目前部署在 `https://combo-master-records.combo-master-tcg.workers.dev`。
+  1. `bunx wrangler@4 login`，瀏覽器跳出授權頁時按允許。
+  2. `bunx wrangler@4 d1 create combo-master-records`，把回報的 `database_id` 填進 `server/wrangler.toml`。
+  3. `bun run server:db` 建立遠端資料表，`bun run server:deploy` 部署，記下回報的 `*.workers.dev` 網址，填進 `src/stats/config.ts` 的 `PRODUCTION_RECORDS_API` 後重新建置。目前部署在 `https://combo-master-records.combo-master-tcg.workers.dev`。
   4. 驗證：`curl -H "Origin: https://wkai2573.github.io" <網址>/versions` 回 `{"versions":[]}` 就通了。
 - 允許的來源在 `server/src/handler.ts` 的 `ALLOWED_ORIGINS`（本站與本機開發網址）。要刪除或整理資料請直接在 Cloudflare 後台或用 `wrangler d1 execute` 操作，網站沒有這類介面。
 - 新增角色時，`server/src/characters.ts` 要一起改，測試會提醒。
@@ -80,12 +80,12 @@ npm run build      # 型別檢查＋打包
 - 前端在 `src/stats/analytics.ts`：進站時登記一次造訪（每次載入頁面一個隨機造訪代號），分頁可見時每 30 秒回報一次累計的可見時間（心跳）、切走分頁時補送一次；單機、房主、訪客各自在對局開始與正常打完時送事件（`src/net/session.ts`）。只送匿名裝置代號、版本、對戰類型與事件名稱。
 - 只有正式建置會送（沒有伺服器網址時什麼都不做，和戰績一樣）。要排除自己：在正式站網址後面加 `?notrack`，這個瀏覽器之後都不送，`?track` 恢復；每個瀏覽器各做一次。
 - 伺服器的 `POST /events`（`server/src/handler.ts`）：事件寫成一列，心跳只更新造訪那一列的可見時間（只增不減，也不會超過造訪到現在實際經過的時間）。限流：單一裝置 10 分鐘最多新增 30 筆、全站每分鐘最多 300 筆；心跳不新增資料所以不計入，但同一次造訪兩次心跳至少隔 10 秒，太密的忽略。和戰績一樣，只靠來源標頭、格式驗證與限流擋濫用，任何人都能偽造資料。
-- 沒有對外讀取的路徑，資料只有站長能讀：`npm run stats` 用 wrangler 查遠端資料庫，印出總覽、每日（台北時間）、依版本、依對戰類型的摘要（本機試跑用 `npm run stats -- --local`）。停留時間是心跳回報的可見時間，切走分頁掛著的時間不算，誤差約 30 秒；人以所有事件的裝置代號去重，所以造訪被限流沒記到、但有開打的裝置也算一個人。
+- 沒有對外讀取的路徑，資料只有站長能讀：`bun run stats` 用 wrangler 查遠端資料庫，印出總覽、每日（台北時間）、依版本、依對戰類型的摘要（本機試跑用 `bun run stats --local`）。停留時間是心跳回報的可見時間，切走分頁掛著的時間不算，誤差約 30 秒；人以所有事件的裝置代號去重，所以造訪被限流沒記到、但有開打的裝置也算一個人。
 - 資料全部保留，不自動清除。要整理資料請直接在 Cloudflare 後台或用 `wrangler d1 execute` 操作。
 - 第一次上線，照這個順序：
-  1. 建立遠端資料表：`npm run server:db`（可重複執行，不會動到既有的戰績）。
-  2. 部署伺服器：`npm run server:deploy`。
-  3. 驗證：`curl -X POST -H "Origin: https://wkai2573.github.io" -H "content-type: text/plain" -d '{"name":"visit","visitId":"verify-0001","deviceId":"verify-0001","version":"0.41.0"}' https://combo-master-records.combo-master-tcg.workers.dev/events` 回 `{"ok":true,"duplicate":false}` 就通了；再跑 `npm run stats` 會看到這一筆（驗證用的資料可以用 `wrangler d1 execute` 刪掉）。
+  1. 建立遠端資料表：`bun run server:db`（可重複執行，不會動到既有的戰績）。
+  2. 部署伺服器：`bun run server:deploy`。
+  3. 驗證：`curl -X POST -H "Origin: https://wkai2573.github.io" -H "content-type: text/plain" -d '{"name":"visit","visitId":"verify-0001","deviceId":"verify-0001","version":"0.41.0"}' https://combo-master-records.combo-master-tcg.workers.dev/events` 回 `{"ok":true,"duplicate":false}` 就通了；再跑 `bun run stats` 會看到這一筆（驗證用的資料可以用 `wrangler d1 execute` 刪掉）。
   4. 再把遊戲推到 `main`。順序反過來的話，新版遊戲送事件會被舊伺服器回 404，統計會缺那段時間的資料，但不影響遊戲。
 
 ## 問卷回饋
@@ -95,10 +95,10 @@ npm run build      # 型別檢查＋打包
 - 目的網址設定在 `server/wrangler.toml` 的 `FEEDBACK_URL`（必須是 https，否則伺服器回 503 不轉址）。轉址的程式在 `server/src/handler.ts` 的 `feedback`，不收查詢字串，所以不會被拿來轉到別的網站。
 - 本機開發（沒有伺服器網址）時按鈕直接連 `src/stats/config.ts` 的 `FEEDBACK_FALLBACK_URL`；換問卷後它不改也不影響正式站。
 - 第一次上線，照這個順序：
-  1. 先部署伺服器：`npm run server:deploy`（還沒登入過就先 `npx wrangler@4 login`，瀏覽器跳出授權頁時按允許）。
+  1. 先部署伺服器：`bun run server:deploy`（還沒登入過就先 `bunx wrangler@4 login`，瀏覽器跳出授權頁時按允許）。
   2. 驗證：`curl -I https://combo-master-records.combo-master-tcg.workers.dev/feedback`，要看到 `302` 和 `location:` 是你的問卷網址。
   3. 再把遊戲推到 `main`，等 GitHub Actions 部署完，按鈕就會出現。順序反過來的話，按鈕會短暫連到還沒有 `/feedback` 的舊伺服器。
-- 之後要換問卷或改導向：只改 `server/wrangler.toml` 的 `FEEDBACK_URL`，執行 `npm run server:deploy`，再用上面的 curl 驗證。不需要動遊戲，也不需要重新建置。
+- 之後要換問卷或改導向：只改 `server/wrangler.toml` 的 `FEEDBACK_URL`，執行 `bun run server:deploy`，再用上面的 curl 驗證。不需要動遊戲，也不需要重新建置。
 - 要臨時關掉問卷導向：把 `FEEDBACK_URL` 改成空字串再部署，按鈕會顯示伺服器的 503 訊息。
 
 ## 結構

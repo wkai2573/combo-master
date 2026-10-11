@@ -1,6 +1,6 @@
 /**
  * 把「連擊大師卡表」網頁（Artifact）裡的數值同步回遊戲：
- *   npm run table -- <資料夾>
+ *   bun run table <資料夾>
  * 資料夾放 Claude 用 ArtifactData 讀出的 cards/、chars/、keywords/、exCards/ 子資料夾（每筆資料一個 JSON）。
  * 輸出 src/data/cardTable.json：
  *   overrides  既有卡（xlsx）被改過的數值（攻、守、連擊、經驗需求、持續回合）、卡名、類型、部位、職業與特徵
@@ -26,7 +26,7 @@ import { buildCardTable, type Doc } from './tableSync';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const out = resolve(root, 'src', 'data', 'cardTable.json');
 const dir = process.argv[2];
-if (!dir) throw new Error('用法：npm run table -- <資料夾>');
+if (!dir) throw new Error('用法：bun run table <資料夾>');
 
 function readDocs(sub: string): Doc[] {
   const p = resolve(dir, sub);

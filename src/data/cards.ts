@@ -13,7 +13,7 @@ const table = tableJson as {
 };
 
 /**
- * 36 張花色招式來自 xlsx，套上卡表網頁同步來的數值（cardTable.json，由 npm run table 產生）；
+ * 36 張花色招式來自 xlsx，套上卡表網頁同步來的數值（cardTable.json，由 bun run table 產生）；
  * 其餘的卡（各職業的新卡、裝備）全部是卡表新增的。
  */
 const addedIds = new Set(table.added.map((c) => c.id));

@@ -6,7 +6,7 @@
 
 **Status：** resolved
 
-- [x] 新文字：`[頂]：若我方招式卡疊僅有此卡，追擊+1。`，先更新卡表網頁，再執行 `npm run table -- <資料夾>` 同步 `src/data/cardTable.json`；這一步只有 Claude Code 能做
+- [x] 新文字：`[頂]：若我方招式卡疊僅有此卡，追擊+1。`，先更新卡表網頁，再執行 `bun run table <資料夾>` 同步 `src/data/cardTable.json`；這一步只有 Claude Code 能做
 - [x] 效果條件改成只看招式卡疊
 - [x] 測試：招式卡疊只有此卡時追擊+1；追擊成功後額外翻牌照常，不被追擊卡取消
 - [x] 測試：招式卡疊有兩張以上時不追擊+1
