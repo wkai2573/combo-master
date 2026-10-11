@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.41.0',
+    date: '2026-10-11',
+    items: [
+      { type: 'add', text: '本站開始匿名統計使用情形，用來了解進站人數、停留時間，以及有沒有開始或打完對局；只用隨機的裝置代號，不含任何個人資料，主選單最下方有一行說明' },
+    ],
+  },
+  {
     version: '0.40.1',
     date: '2026-10-11',
     items: [

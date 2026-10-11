@@ -1,5 +1,5 @@
 import type { Repo } from './repo';
-import { validateNewRecord, VERSION_PATTERN } from './validate';
+import { validateNewEvent, validateNewRecord, VERSION_PATTERN } from './validate';
 
 /** 允許的來源：本站與本機開發網址。這是擋掉一般濫用的第一道門，不是安全邊界（來源標頭可以偽造） */
 export const ALLOWED_ORIGINS: readonly string[] = [
@@ -16,6 +16,15 @@ export const DEVICE_MAX = 20;
 /** 全站在這段時間內最多新增幾筆，避免洪水式的寫入 */
 export const GLOBAL_WINDOW_MS = 60 * 1000;
 export const GLOBAL_MAX = 200;
+
+/** 流量事件：單一裝置在這段時間內最多新增幾筆（心跳不算，它只更新既有的造訪） */
+export const EVENT_DEVICE_WINDOW_MS = 10 * 60 * 1000;
+export const EVENT_DEVICE_MAX = 30;
+/** 流量事件：全站在這段時間內最多新增幾筆 */
+export const EVENT_GLOBAL_WINDOW_MS = 60 * 1000;
+export const EVENT_GLOBAL_MAX = 300;
+/** 同一次造訪的兩次心跳至少要隔這麼久，太密的忽略 */
+export const HEARTBEAT_MIN_GAP_MS = 10 * 1000;
 
 const MAX_BODY_CHARS = 2048;
 const DEFAULT_LIMIT = 1000;
@@ -43,6 +52,7 @@ function json(status: number, body: unknown, origin: string | null): Response {
  * 處理一個請求。只有這幾個路徑：
  *   GET  /feedback           302 轉址到問卷（目的網址在環境變數，不需要來源標頭，給玩家直接開新分頁用）
  *   POST /records            新增一筆戰績（驗證、限流、同對局代號只收一次）
+ *   POST /events            新增一筆匿名流量事件（造訪、開始對局、打完對局），或用心跳更新造訪的最後活動時間
  *   GET  /versions           各版本的場數
  *   GET  /records?versions=  依版本取得戰績（分頁）
  * 沒有任何刪除或修改的路徑；來源不在允許名單上的請求一律拒絕。
@@ -76,6 +86,10 @@ export async function handle(request: Request, repo: Repo, opts: HandleOptions =
     if (request.method === 'POST') return postRecord(request, repo, now, origin);
     if (request.method === 'GET') return getRecords(url, repo, origin);
     return json(405, { error: '不支援的方法' }, origin);
+  }
+  if (url.pathname === '/events') {
+    if (request.method !== 'POST') return json(405, { error: '不支援的方法' }, origin);
+    return postEvent(request, repo, now, origin);
   }
   if (url.pathname === '/versions') {
     if (request.method !== 'GET') return json(405, { error: '不支援的方法' }, origin);
@@ -115,6 +129,28 @@ async function postRecord(request: Request, repo: Repo, now: number, origin: str
   if ((await repo.countByDevice(record.deviceId, now - DEVICE_WINDOW_MS)) >= DEVICE_MAX) return json(429, { error: '這個裝置寫入太頻繁，請稍後再試' }, origin);
   if ((await repo.countAll(now - GLOBAL_WINDOW_MS)) >= GLOBAL_MAX) return json(429, { error: '伺服器忙碌，請稍後再試' }, origin);
   const result = await repo.insert(record, now);
+  return json(result === 'inserted' ? 201 : 200, { ok: true, duplicate: result === 'duplicate' }, origin);
+}
+
+async function postEvent(request: Request, repo: Repo, now: number, origin: string): Promise<Response> {
+  const text = await request.text();
+  if (text.length > MAX_BODY_CHARS) return json(413, { error: '內容太大' }, origin);
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return json(400, { error: '不是合法的 JSON' }, origin);
+  }
+  const checked = validateNewEvent(body);
+  if (!checked.ok) return json(400, { error: checked.error }, origin);
+  const event = checked.value;
+  if (event.name === 'beat') {
+    const updated = await repo.touchVisit(event.visitId, event.deviceId, now, event.activeMs, HEARTBEAT_MIN_GAP_MS);
+    return json(200, { ok: true, updated }, origin);
+  }
+  if ((await repo.countEventsByDevice(event.deviceId, now - EVENT_DEVICE_WINDOW_MS)) >= EVENT_DEVICE_MAX) return json(429, { error: '這個裝置寫入太頻繁，請稍後再試' }, origin);
+  if ((await repo.countEventsAll(now - EVENT_GLOBAL_WINDOW_MS)) >= EVENT_GLOBAL_MAX) return json(429, { error: '伺服器忙碌，請稍後再試' }, origin);
+  const result = await repo.insertEvent(event, now);
   return json(result === 'inserted' ? 201 : 200, { ok: true, duplicate: result === 'duplicate' }, origin);
 }
 

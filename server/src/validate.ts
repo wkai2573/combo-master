@@ -41,3 +41,46 @@ export function validateNewRecord(body: unknown): Validated<NewRecord> {
     },
   };
 }
+
+/** 心跳回報的可見時間上限：一整天 */
+const MAX_ACTIVE_MS = 24 * 60 * 60 * 1000;
+
+interface EventBase {
+  visitId: string;
+  deviceId: string;
+  version: string;
+}
+
+/**
+ * 伺服器收到的一筆流量事件。心跳（beat）只更新既有造訪、不新增資料，帶分頁可見的累計毫秒數；
+ * 開始與打完對局帶對戰類型。
+ */
+export type NewEvent =
+  | (EventBase & { name: 'visit' })
+  | (EventBase & { name: 'start' | 'finish'; opponent: 'cpu' | 'player' })
+  | (EventBase & { name: 'beat'; activeMs: number });
+
+export function validateNewEvent(body: unknown): Validated<NewEvent> {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) return { ok: false, error: '內容必須是物件' };
+  const o = body as Record<string, unknown>;
+  const str = (k: string) => (typeof o[k] === 'string' ? (o[k] as string) : '');
+  if (!ID_PATTERN.test(str('visitId'))) return { ok: false, error: 'visitId 格式不正確' };
+  if (!ID_PATTERN.test(str('deviceId'))) return { ok: false, error: 'deviceId 格式不正確' };
+  if (!VERSION_PATTERN.test(str('version'))) return { ok: false, error: 'version 格式不正確' };
+  const base = { visitId: str('visitId'), deviceId: str('deviceId'), version: str('version') };
+  switch (o.name) {
+    case 'visit':
+      return { ok: true, value: { name: 'visit', ...base } };
+    case 'start':
+    case 'finish':
+      if (o.opponent !== 'cpu' && o.opponent !== 'player') return { ok: false, error: 'opponent 必須是 cpu 或 player' };
+      return { ok: true, value: { name: o.name, ...base, opponent: o.opponent } };
+    case 'beat':
+      if (typeof o.activeMs !== 'number' || !Number.isInteger(o.activeMs) || o.activeMs < 0 || o.activeMs > MAX_ACTIVE_MS) {
+        return { ok: false, error: 'activeMs 必須是 0 到 86400000 的整數' };
+      }
+      return { ok: true, value: { name: 'beat', ...base, activeMs: o.activeMs } };
+    default:
+      return { ok: false, error: 'name 必須是 visit、start、finish 或 beat' };
+  }
+}

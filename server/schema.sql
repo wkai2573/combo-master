@@ -18,3 +18,23 @@ CREATE TABLE IF NOT EXISTS records (
 CREATE INDEX IF NOT EXISTS idx_records_device_time ON records (device_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_records_time ON records (created_at);
 CREATE INDEX IF NOT EXISTS idx_records_version ON records (version, id);
+
+-- 流量事件（匿名）：造訪、開始對局、打完對局。只存匿名裝置代號、版本、對戰類型與時間，沒有任何個人資料。
+-- 造訪每次載入頁面一列，心跳只更新那一列：last_seen_at 是最後一次心跳的時間，active_ms 是分頁在前景可見的累計時間，停留時間就是 active_ms。
+CREATE TABLE IF NOT EXISTS events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL CHECK (name IN ('visit', 'start', 'finish')),
+  visit_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  version TEXT NOT NULL,
+  -- 只有開始與打完對局才有：電腦或玩家
+  opponent TEXT CHECK (opponent IN ('cpu', 'player')),
+  created_at INTEGER NOT NULL,
+  last_seen_at INTEGER NOT NULL,
+  active_ms INTEGER NOT NULL DEFAULT 0
+);
+
+-- 同一個造訪代號只會有一列造訪；開始與打完同一造訪可以有很多列
+CREATE UNIQUE INDEX IF NOT EXISTS idx_events_visit_once ON events (visit_id) WHERE name = 'visit';
+CREATE INDEX IF NOT EXISTS idx_events_device_time ON events (device_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_events_time ON events (created_at);

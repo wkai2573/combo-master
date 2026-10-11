@@ -3,6 +3,7 @@ import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
 import type { CheatSnapshot, CheatZone } from '../engine/cheat';
 import { Rng } from '../engine/rng';
+import { trackPlay } from '../stats/analytics';
 import { recordFromView, type Opponent } from '../stats/records';
 import { submitRecord } from '../stats/sink';
 import { APP_VERSION } from '../version';
@@ -90,6 +91,8 @@ abstract class Base implements Session {
   /** 這場對局的對手類型，結束時寫進戰績 */
   protected abstract readonly opponent: Opponent;
   private recorded = false;
+  private started = false;
+  private finished = false;
   protected s: SessionState = {
     status: 'connecting', view: null, message: '', opponentOnline: true, forfeitIn: null,
     batch: { id: 0, frames: [] }, cheatOn: [false, false], cheatSnap: null,
@@ -113,8 +116,25 @@ abstract class Base implements Session {
   }
   protected set(patch: Partial<SessionState>) {
     this.s = { ...this.s, ...patch };
+    this.trackPlay();
     this.recordIfOver();
     this.subs.forEach((f) => f());
+  }
+  /**
+   * 流量統計：畫面第一次拿到對局視角算開始，正常分出勝負算打完；離線判負與認輸不算打完。
+   * 單機、房主、訪客各記各的，所以訪客也記（和戰績不同，這裡算的是有沒有人玩過）。
+   */
+  private trackPlay() {
+    const view = this.s.view;
+    if (!view) return;
+    if (!this.started) {
+      this.started = true;
+      trackPlay('start', this.opponent);
+    }
+    if (!this.finished && this.s.status === 'over' && view.winner !== null && view.forfeited !== true) {
+      this.finished = true;
+      trackPlay('finish', this.opponent);
+    }
   }
   /** 這個場次是不是負責上傳戰績：連線對局只由房主上傳，一場只留一筆，訪客不上傳 */
   protected readonly uploadsRecord: boolean = true;

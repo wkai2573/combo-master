@@ -50,6 +50,28 @@ export function d1Repo(db: D1Like): Repo {
       const res = await db.prepare('SELECT version, COUNT(*) AS games FROM records GROUP BY version').all<{ version: string; games: number }>();
       return res.results.map((r) => ({ version: r.version, games: r.games }));
     },
+    async insertEvent(e, now) {
+      const res = await db
+        .prepare('INSERT OR IGNORE INTO events (name, visit_id, device_id, version, opponent, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .bind(e.name, e.visitId, e.deviceId, e.version, 'opponent' in e ? e.opponent : null, now, now)
+        .run();
+      return res.meta.changes > 0 ? 'inserted' : 'duplicate';
+    },
+    async countEventsByDevice(deviceId, since) {
+      const row = await db.prepare('SELECT COUNT(*) AS n FROM events WHERE device_id = ? AND created_at >= ?').bind(deviceId, since).first<{ n: number }>();
+      return row?.n ?? 0;
+    },
+    async countEventsAll(since) {
+      const row = await db.prepare('SELECT COUNT(*) AS n FROM events WHERE created_at >= ?').bind(since).first<{ n: number }>();
+      return row?.n ?? 0;
+    },
+    async touchVisit(visitId, deviceId, now, activeMs, minGapMs) {
+      const res = await db
+        .prepare("UPDATE events SET last_seen_at = ?, active_ms = MIN(MAX(active_ms, ?), ? - created_at) WHERE name = 'visit' AND visit_id = ? AND device_id = ? AND last_seen_at <= ?")
+        .bind(now, activeMs, now, visitId, deviceId, now - minGapMs)
+        .run();
+      return res.meta.changes > 0;
+    },
     async list(versions, after, limit) {
       const marks = versions.map(() => '?').join(', ');
       const res = await db

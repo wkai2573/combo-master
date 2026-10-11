@@ -1,7 +1,7 @@
 {
   "name": "combo-master-tcg",
   "private": true,
-  "version": "0.40.1",
+  "version": "0.41.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
     "sim": "tsx scripts/simulate.ts",
     "presets": "tsx scripts/preset-report.ts",
     "table": "tsx scripts/sync-card-table.ts",
+    "stats": "tsx scripts/traffic-stats.ts",
     "server:dev": "npx --yes wrangler@4 dev --local --config server/wrangler.toml",
     "server:db:local": "npx --yes wrangler@4 d1 execute combo-master-records --local --file server/schema.sql --config server/wrangler.toml",
     "server:db": "npx --yes wrangler@4 d1 execute combo-master-records --remote --file server/schema.sql --config server/wrangler.toml",

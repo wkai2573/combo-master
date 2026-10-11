@@ -90,6 +90,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .ver.verbtn { background: transparent; cursor: pointer; }
 .topbar .ver { font-size: 12px; letter-spacing: 0; vertical-align: baseline; }
 .verline { font-size: calc(12px * var(--s)); margin-top: calc(12px * var(--s)); cursor: help; }
+.privacy-note { font-size: calc(11px * var(--s)); margin-top: calc(2px * var(--s)); opacity: .8; }
 .home .tagline { margin-top: calc(6px * var(--s)); font-size: calc(14px * var(--s)); }
 
 /* 主選單：標題上方扇形排開的 5 張真實卡面（只是裝飾，不能點） */

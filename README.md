@@ -73,6 +73,21 @@ npm run build      # 型別檢查＋打包
 - 允許的來源在 `server/src/handler.ts` 的 `ALLOWED_ORIGINS`（本站與本機開發網址）。要刪除或整理資料請直接在 Cloudflare 後台或用 `wrangler d1 execute` 操作，網站沒有這類介面。
 - 新增角色時，`server/src/characters.ts` 要一起改，測試會提醒。
 
+## 流量統計
+
+匿名記錄有多少人進站、停留多久、有沒有開始或打完對局，名詞定義見 `GLOSSARY.md`。資料送到同一個戰績伺服器，存在 D1 的 `events` 資料表，和戰績分開，不影響勝率統計。
+
+- 前端在 `src/stats/analytics.ts`：進站時登記一次造訪（每次載入頁面一個隨機造訪代號），分頁可見時每 30 秒回報一次累計的可見時間（心跳）、切走分頁時補送一次；單機、房主、訪客各自在對局開始與正常打完時送事件（`src/net/session.ts`）。只送匿名裝置代號、版本、對戰類型與事件名稱。
+- 只有正式建置會送（沒有伺服器網址時什麼都不做，和戰績一樣）。要排除自己：在正式站網址後面加 `?notrack`，這個瀏覽器之後都不送，`?track` 恢復；每個瀏覽器各做一次。
+- 伺服器的 `POST /events`（`server/src/handler.ts`）：事件寫成一列，心跳只更新造訪那一列的可見時間（只增不減，也不會超過造訪到現在實際經過的時間）。限流：單一裝置 10 分鐘最多新增 30 筆、全站每分鐘最多 300 筆；心跳不新增資料所以不計入，但同一次造訪兩次心跳至少隔 10 秒，太密的忽略。和戰績一樣，只靠來源標頭、格式驗證與限流擋濫用，任何人都能偽造資料。
+- 沒有對外讀取的路徑，資料只有站長能讀：`npm run stats` 用 wrangler 查遠端資料庫，印出總覽、每日（台北時間）、依版本、依對戰類型的摘要（本機試跑用 `npm run stats -- --local`）。停留時間是心跳回報的可見時間，切走分頁掛著的時間不算，誤差約 30 秒；人以所有事件的裝置代號去重，所以造訪被限流沒記到、但有開打的裝置也算一個人。
+- 資料全部保留，不自動清除。要整理資料請直接在 Cloudflare 後台或用 `wrangler d1 execute` 操作。
+- 第一次上線，照這個順序：
+  1. 建立遠端資料表：`npm run server:db`（可重複執行，不會動到既有的戰績）。
+  2. 部署伺服器：`npm run server:deploy`。
+  3. 驗證：`curl -X POST -H "Origin: https://wkai2573.github.io" -H "content-type: text/plain" -d '{"name":"visit","visitId":"verify-0001","deviceId":"verify-0001","version":"0.41.0"}' https://combo-master-records.combo-master-tcg.workers.dev/events` 回 `{"ok":true,"duplicate":false}` 就通了；再跑 `npm run stats` 會看到這一筆（驗證用的資料可以用 `wrangler d1 execute` 刪掉）。
+  4. 再把遊戲推到 `main`。順序反過來的話，新版遊戲送事件會被舊伺服器回 404，統計會缺那段時間的資料，但不影響遊戲。
+
 ## 問卷回饋
 
 主畫面右下角有「問卷回饋」按鈕，點了用新分頁開啟問卷。按鈕連的永遠是戰績伺服器的固定網址 `<伺服器網址>/feedback`，伺服器再 302 轉址到目前的問卷，所以換問卷不用重新發布遊戲。
@@ -92,6 +107,6 @@ npm run build      # 型別檢查＋打包
 - `src/data/`：卡表（花色招式與角色來自 xlsx，其餘由卡表網頁同步）、預設牌組。
 - `src/deck/`：牌組驗證與儲存。
 - `src/net/`：網路與單機練習。`match.ts` 的對局持有引擎與作弊中樞，每次變化同時為兩位玩家產生更新；`session.ts` 的單機、房主、訪客三種連線方式交給介面使用，單機與房主建立在對局之上。房主透過 `hostTransport.ts` 的傳輸介面收發訊息，正式環境用 PeerJS，測試用記憶體內的假傳輸；訪客與房主之間的訊息格式在 `protocol.ts`。
-- `src/stats/`：戰績。`records.ts` 把對局結果轉成戰績，`summary.ts` 是統計純函式，`cloud.ts` 的戰績倉庫上傳與取得全站戰績，`outbox.ts` 是補傳佇列，`upload.ts` 是上傳器。
+- `src/stats/`：戰績。`records.ts` 把對局結果轉成戰績，`summary.ts` 是統計純函式，`cloud.ts` 的戰績倉庫上傳與取得全站戰績，`outbox.ts` 是補傳佇列，`upload.ts` 是上傳器，`analytics.ts` 是匿名流量統計（見「流量統計」）。
 - `server/`：戰績伺服器（Cloudflare Workers 加 D1），見上一節。
 - `src/ui/`：畫面。

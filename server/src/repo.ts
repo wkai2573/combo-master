@@ -1,4 +1,7 @@
-import type { NewRecord } from './validate';
+import type { NewEvent, NewRecord } from './validate';
+
+/** 會寫成一列的事件（心跳只更新既有的造訪，不算） */
+export type StoredEvent = Exclude<NewEvent, { name: 'beat' }>;
 
 /** 取得戰績清單回傳的一筆：不含對局代號與裝置代號 */
 export interface StoredRecord {
@@ -23,4 +26,15 @@ export interface Repo {
   versions(): Promise<{ version: string; games: number }[]>;
   /** 依版本取得戰績，id 由小到大，從 after 之後開始；多取 1 筆判斷有沒有下一頁 */
   list(versions: string[], after: number, limit: number): Promise<{ records: StoredRecord[]; next: number | null }>;
+  /** 新增一筆造訪、開始或打完對局；同一個造訪代號的造訪已經有了就回傳 duplicate */
+  insertEvent(event: StoredEvent, now: number): Promise<'inserted' | 'duplicate'>;
+  /** 某個裝置從 since 起新增了幾筆事件 */
+  countEventsByDevice(deviceId: string, since: number): Promise<number>;
+  /** 全站從 since 起新增了幾筆事件 */
+  countEventsAll(since: number): Promise<number>;
+  /**
+   * 心跳：把這次造訪的最後活動時間更新成 now，可見時間更新成 activeMs（只增不減，也不會超過造訪到現在實際經過的時間）。
+   * 距離上次活動不到 minGapMs、造訪不存在或不屬於這個裝置時不更新並回傳 false
+   */
+  touchVisit(visitId: string, deviceId: string, now: number, activeMs: number, minGapMs: number): Promise<boolean>;
 }

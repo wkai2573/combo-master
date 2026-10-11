@@ -79,6 +79,7 @@ export function Home({ go }: { go: (r: Route) => void }) {
         </div>
       </nav>
       <div className="muted verline" title={VERSION_TITLE} onClick={tapVersion}>{note || `${VERSION_LABEL}　建置於 ${APP_BUILT_AT}`}</div>
+      <div className="muted privacy-note">本站會匿名統計使用情形，不含任何個人資料</div>
       <a className="feedback-fab" href={FEEDBACK_URL} target="_blank" rel="noopener noreferrer" title="填寫問卷，告訴我們你的想法">
         <span aria-hidden="true">✎</span>問卷回饋
       </a>
