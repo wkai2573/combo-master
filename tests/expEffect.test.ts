@@ -23,7 +23,7 @@ describe('經驗效果：登記表的查詢', () => {
     expect(hasExpEffect('復仇之嚎')).toBe(true);
     expect(hasExpEffect('Ex-中毒')).toBe(true);
     expect(hasExpEffect('火球')).toBe(false);
-    expect(hasExpEffect('高利貸')).toBe(true); // 公開資訊（id 高利貸）：[經] 被蓋成裏側時
+    expect(hasExpEffect('高利貸')).toBe(true); // 公開資訊：[經] 被蓋成裏側時
     expect(hasExpEffect('塗毒')).toBe(false); // 只引用 Ex-中毒，它的 [經] 不算塗毒自己的
     expect(hasExpEffect('紅心5')).toBe(false);
   });

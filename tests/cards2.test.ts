@@ -616,7 +616,7 @@ describe('新卡（第二批）', () => {
   });
 });
 
-describe('卡表同步的新卡：公開資訊（id 高利貸）、狙擊蓄力、熔岩之擊', () => {
+describe('卡表同步的新卡：公開資訊、狙擊蓄力、熔岩之擊', () => {
   // 只跑戰鬥階段：先攻方手牌只有 1 張招式時自動先手出招，後攻方沒有可出的招式就直接進入傷害計算
   const combat = (s: Parameters<typeof scenario>[0]) => scenario({ phase: '先手', singlePhase: true, ...s });
 
