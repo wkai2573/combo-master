@@ -347,7 +347,10 @@ export function CombatArea({ v, fx, caption, fxKey, changes }: {
   const opp: PlayerId = v.me === 0 ? 1 : 0;
   const calc = fx?.type === 'calc' ? fx : null;
   // 寬螢幕版與手機版面的疊牌區高度固定，備註改放中央欄
-  const wide = useWide() || usePhone();
+  // 兩個 hook 都要每次呼叫：用 || 短路會讓版面切換時 hook 數量不一致，整棵樹崩潰
+  const isWide = useWide();
+  const isPhone = usePhone();
+  const wide = isWide || isPhone;
   const notes = [['對方', statNote(v.players[opp])], ['我方', statNote(v.players[v.me])]].filter((n): n is [string, string] => n[1] !== null);
   const hasPursuit = v.players[opp].pursuit.length + v.players[v.me].pursuit.length > 0;
   return (

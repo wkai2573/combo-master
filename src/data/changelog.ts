@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.43.9',
+    date: '2026-10-12',
+    items: [
+      { type: 'fix', text: '對戰中縮放視窗（寬變窄或窄變寬）時，畫面不再變成全黑、無法繼續' },
+      { type: 'fix', text: '手機版面追擊成功或卡片效果發動後，飛向牌區的卡片不再變得很大、被截掉一半' },
+    ],
+  },
+  {
     version: '0.43.8',
     date: '2026-10-12',
     items: [

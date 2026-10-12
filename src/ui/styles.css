@@ -416,6 +416,8 @@ h1, h2, h3 { margin: 0 0 8px; }
 .pilelabel b { color: var(--text); }
 .flightlayer { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
 .flycard { position: fixed; perspective: 800px; filter: drop-shadow(0 6px 10px #000a); will-change: transform; }
+/* 飛行的複製品填滿外框（外框大小就是終點的大小），不論版面把卡片縮到多小都不會溢出；要壓過各版面的 .card.md 尺寸規則 */
+.flycard .card { width: 100% !important; height: 100% !important; }
 .flycard .flip, .spotcard .flip { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
 .flycard .side, .spotcard .side { position: absolute; inset: 0; backface-visibility: hidden; }
 .flycard .side.back, .spotcard .side.back { transform: rotateY(180deg); }

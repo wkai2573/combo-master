@@ -237,7 +237,7 @@ export function FlightLayer({ view, fx, playing, n, scale, extraPile }: {
               if (el) refs.current.set(pl.key, el);
               else refs.current.delete(pl.key);
             }}
-            style={{ left: pl.to.left, top: pl.to.top, width: pl.to.width, height: pl.to.height, opacity: 0 }}
+            style={{ left: pl.to.left, top: pl.to.top, width: pl.to.width, height: pl.to.height, fontSize: pl.to.width * (size === 'md' ? 11 / 112 : 10 / 76), opacity: 0 }}
           >
             <div className="flip" style={{ transform: `rotateY(${startFront ? 0 : 180}deg)` }}>
               <div className="side front">{f.id ? <CardFace id={f.id} size={size} /> : <CardFace id={null} size={size} />}</div>
