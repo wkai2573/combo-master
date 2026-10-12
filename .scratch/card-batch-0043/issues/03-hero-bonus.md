@@ -4,7 +4,11 @@
 
 **Blocked by（被誰阻擋）：** 無（可立即開始）
 
-**Status：** ready-for-agent
+**Status：** resolved
 
 - [ ] 總攻擊達 15 以上（覺醒 10）時 +2+0，邊界有測試
 - [ ] 角色卡面文字與規則詮釋同步
+
+## Answer
+
+已於 v0.43.2 生效。（03 與 04 同一個 commit 完成。）

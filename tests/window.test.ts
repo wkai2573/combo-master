@@ -96,6 +96,43 @@ describe('觸發窗口：爆發後', () => {
     expect(labels(g)).toEqual([CAT, ORDER, END]);
   });
 
+  it('覺醒商人：手牌張數 ≤ 6 才能把表側經驗加入手牌，7 張以上沒有這個選項', () => {
+    const run = (handSize: number) => {
+      const g = scenario({
+        chars: ['商人', '勇者'],
+        phase: '爆發',
+        singlePhase: true,
+        // 爆發放 1 張進經驗區、抽 2：手牌從 handSize 變成 handSize + 1
+        p0: { hand: ['黑桃3', ...Array(handSize - 1).fill('黑桃2')], gear: ['招財貓'], exp: [...Array(7).fill('黑桃1'), '黑桃4'] },
+        p1: { hand: [] },
+      });
+      pick(g, '黑桃3');
+      return g;
+    };
+    const six = run(5);
+    expect(names(six, 0, 'hand')).toHaveLength(6);
+    expect(labels(six)).toContain(TAKE);
+    const seven = run(6);
+    expect(names(seven, 0, 'hand')).toHaveLength(7);
+    expect(labels(seven)).toEqual([CAT, ORDER, END]);
+  });
+
+  it('覺醒商人：手牌張數在選到效果的當下才判斷，先發招財貓抽牌到 7 張，加入手牌的選項就消失', () => {
+    const g = scenario({
+      chars: ['商人', '勇者'],
+      phase: '爆發',
+      singlePhase: true,
+      p0: { hand: ['黑桃3', ...Array(4).fill('黑桃2')], gear: ['招財貓'], exp: [...Array(7).fill('黑桃1'), '黑桃4'] },
+      p1: { hand: [] },
+    });
+    pick(g, '黑桃3');
+    expect(labels(g)).toEqual([CAT, ORDER, TAKE, END]); // 手牌 6 張
+    pick(g, CAT); // 招財貓抽 1，手牌 7 張
+    expect(names(g, 0, 'hand')).toHaveLength(7);
+    expect(g.pending!.title).toContain('放到最前方'); // 只剩調整順序一個效果，維持原本的確認
+    expect(labels(g)).toEqual(['發動', '不發動']);
+  });
+
   it('只有一個效果可發動時維持原本的發動與不發動確認', () => {
     const g = scenario({
       chars: ['勇者', '刺客'],

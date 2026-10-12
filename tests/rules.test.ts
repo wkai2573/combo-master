@@ -166,7 +166,7 @@ describe('卡片效果', () => {
 });
 
 describe('角色效果（總攻擊／總防禦）', () => {
-  it('勇者：總攻擊 15 以上 +3，覺醒後條件改為 10', () => {
+  it('勇者：總攻擊 15 以上 +2，覺醒後條件改為 10', () => {
     const g = scenario();
     const sum = (ids: string[]) => ids.reduce((n, id) => n + atkOf(id), 0);
     const big = ['黑桃1', '黑桃9', '黑桃8']; // 總攻擊 ≥ 15
@@ -175,11 +175,11 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(sum(mid)).toBeGreaterThanOrEqual(10);
     expect(sum(mid)).toBeLessThan(15);
     setZones(g, 0, { moves: big });
-    expect(totalAtk(g, 0)).toBe(sum(big) + 3);
+    expect(totalAtk(g, 0)).toBe(sum(big) + 2);
     setZones(g, 0, { moves: mid });
     expect(totalAtk(g, 0)).toBe(sum(mid));
     setZones(g, 0, { moves: mid, exp: Array(8).fill('黑桃1') });
-    expect(totalAtk(g, 0)).toBe(sum(mid) + 3);
+    expect(totalAtk(g, 0)).toBe(sum(mid) + 2);
   });
 
   it('先人：先攻時攻擊 +（出招張數 - 1）', () => {

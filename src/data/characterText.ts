@@ -5,8 +5,8 @@
  */
 export const characterText: Record<string, { text: string; awakenText: string }> = {
   勇者: {
-    text: '我方總攻擊（含追擊卡，加成前）達 15 以上時，+3+0。',
-    awakenText: '（取代）總攻擊達 10 以上時，+3+0。',
+    text: '我方總攻擊（含追擊卡，加成前）達 15 以上時，+2+0。',
+    awakenText: '（取代）總攻擊達 10 以上時，+2+0。',
   },
   刺客: {
     text: '(回合1次)追擊成功時，將 1 張 [Ex-流血] 加入對方經驗區。',
@@ -14,7 +14,7 @@ export const characterText: Record<string, { text: string; awakenText: string }>
   },
   商人: {
     text: '爆發後，可以將 1 張表側經驗放到最前方。',
-    awakenText: '（追加）爆發後，可以將 1 張表側經驗加入手牌。',
+    awakenText: '（追加）爆發後，且我方手牌張數 ≤ 6 時，可以將 1 張表側經驗加入手牌。',
   },
   遊俠: {
     text: '獲得【瞄準】。',

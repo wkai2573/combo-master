@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.43.2',
+    date: '2026-10-12',
+    items: [
+      { type: 'change', text: '勇者：總攻擊達 15 以上（覺醒後 10 以上）的加成從 +3+0 降成 +2+0' },
+      { type: 'change', text: '商人覺醒：爆發後「將 1 張表側經驗加入手牌」只有在我方手牌張數 ≤ 6 時才能發動，選到這個效果的當下才數手牌' },
+    ],
+  },
+  {
     version: '0.43.1',
     date: '2026-10-12',
     items: [

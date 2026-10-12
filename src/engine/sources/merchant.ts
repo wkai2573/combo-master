@@ -27,7 +27,8 @@ export const 招財貓 = defineSource({
 /** 可以放到最前方的表側經驗：已經在經驗區最前方的那張不用選 */
 const frontCandidates = (g: GameCtx, p: PlayerId) => faceUpExp(g, p).filter((card) => card !== Z(g, p, 'exp')[0]);
 
-// 商人：爆發後，可以將 1 張表側經驗放到最前方；覺醒（追加）可以將 1 張表側經驗加入手牌
+// 商人：爆發後，可以將 1 張表側經驗放到最前方；覺醒（追加）爆發後，且我方手牌張數 ≤ 6 時，可以將 1 張表側經驗加入手牌
+// 手牌張數在窗口內選到這個效果的當下才數，所以先發動招財貓抽牌可能讓它消失
 export const 商人 = defineSource({
   id: '商人',
   at: 'char',
@@ -50,7 +51,7 @@ export const 商人 = defineSource({
       },
       {
         label: '【商人】覺醒：將 1 張表側經驗加入手牌',
-        available: () => awakened(g, p) && faceUpExp(g, p).length > 0,
+        available: () => awakened(g, p) && faceUpExp(g, p).length > 0 && Z(g, p, 'hand').length <= 6,
         *run(confirmed) {
           if (!confirmed && !(yield* confirm(g, p, '【商人】覺醒：要將 1 張表側經驗加入手牌嗎？'))) return;
           const [pick] = yield* chooseCards(g, p, '【商人】選擇 1 張表側經驗加入手牌', faceUpExp(g, p), 1, 1);

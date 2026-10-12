@@ -104,11 +104,11 @@ export const 嘲諷 = defineSource({
   },
 });
 
-// 勇者：戰鬥結算前的基礎攻擊達到門檻時，+3+0；覺醒時門檻較低
+// 勇者：戰鬥結算前的基礎攻擊達到門檻時，+2+0；覺醒時門檻較低
 export const 勇者 = defineSource({
   id: '勇者',
   at: 'char',
-  ask: { combatBonus: (c, { baseAtk }) => ({ atk: baseAtk >= (awakened(c.g, c.p) ? 10 : 15) ? 3 : 0 }) },
+  ask: { combatBonus: (c, { baseAtk }) => ({ atk: baseAtk >= (awakened(c.g, c.p) ? 10 : 15) ? 2 : 0 }) },
 });
 
 // 後人：後攻回合總防禦 +1；覺醒（追加）後攻回合，每張追擊卡若為白板卡，其防禦也計入總防禦，否則 +0+2
