@@ -75,3 +75,51 @@ describe('職業專精書：[發_蓋1] 看牌組上方 5 張卡，選擇其中 1
     expect(Z(g, 0, 'deck')[0].id).toBe('戒備打擊');
   });
 });
+
+describe('洩憤：[發_蓋3] 將怒氣區上方 2 張卡捨棄，然後其中的職業卡加入手牌', () => {
+  const vent = (rage: string[]) =>
+    scenario({
+      chars: ['勇者', '刺客'],
+      singlePhase: true,
+      p0: { hand: ['洩憤', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5'], rage },
+      p1: { hand: [] },
+    });
+
+  it('上方 2 張進棄牌區，其中的職業卡再加入手牌，其他留在棄牌區，第 3 張不動', () => {
+    const g = vent(['戒備打擊', '黑桃6', '盾擊']);
+    pick(g, '洩憤');
+    pick(g, '發動');
+    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(3);
+    expect(names(g, 0, 'hand')).toContain('戒備打擊');
+    expect(names(g, 0, 'discard')).toEqual(['黑桃6']);
+    expect(names(g, 0, 'rage')).toEqual(['盾擊']);
+  });
+
+  it('上方 2 張都是職業卡就都加入手牌；都不是職業卡就全部留在棄牌區', () => {
+    const both = vent(['戒備打擊', '盾擊']);
+    pick(both, '洩憤');
+    pick(both, '發動');
+    expect(names(both, 0, 'hand')).toEqual(expect.arrayContaining(['戒備打擊', '盾擊']));
+    expect(names(both, 0, 'discard')).toEqual([]);
+
+    const none = vent(['黑桃6', '黑桃7']);
+    pick(none, '洩憤');
+    pick(none, '發動');
+    expect(names(none, 0, 'hand')).not.toContain('黑桃6');
+    expect(sorted(names(none, 0, 'discard'))).toEqual(sorted(['黑桃6', '黑桃7']));
+  });
+
+  it('怒氣區不足 2 張時處理剩下的全部；怒氣區是空的也要付蓋3，什麼都不會發生', () => {
+    const one = vent(['戒備打擊']);
+    pick(one, '洩憤');
+    pick(one, '發動');
+    expect(names(one, 0, 'hand')).toContain('戒備打擊');
+    expect(names(one, 0, 'rage')).toEqual([]);
+
+    const empty = vent([]);
+    pick(empty, '洩憤');
+    pick(empty, '發動');
+    expect(Z(empty, 0, 'exp').filter((c) => c.covered)).toHaveLength(3);
+    expect(names(empty, 0, 'discard')).toEqual([]);
+  });
+});

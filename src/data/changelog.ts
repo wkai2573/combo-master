@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.43.4',
+    date: '2026-10-12',
+    items: [
+      { type: 'add', text: '新卡「洩憤」（劍士）：[發_蓋3] 將怒氣區上方 2 張卡捨棄，然後其中的職業卡加入手牌' },
+    ],
+  },
+  {
     version: '0.43.3',
     date: '2026-10-12',
     items: [

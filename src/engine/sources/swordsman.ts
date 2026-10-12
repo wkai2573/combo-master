@@ -1,7 +1,7 @@
 import { faceUpExp, pay } from '../cost';
 import { defineSource } from '../effectKit';
-import { activate, awakened, data, directHit, isFirst, log, move, pname, recover, Z } from '../ops';
-import { isVanilla } from '../../data/enabledCards';
+import { activate, awakened, data, directHit, discard, isFirst, log, move, pname, recover, Z } from '../ops';
+import { isClassCard, isVanilla } from '../../data/enabledCards';
 import { other } from '../types';
 
 // 家族相片（劍士）：[蓋1_怒2] 回合開始時，回復 1，可選
@@ -130,4 +130,22 @@ export const 後人 = defineSource({
     },
   },
 });
-export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊, 戒備打擊, 盾擊, 嘲諷, 勇者, 後人];
+// 洩憤（劍士）：[發_蓋3] 將怒氣區上方 2 張卡捨棄，然後其中的職業卡加入手牌
+// 沒有看與選擇：2 張先進棄牌區（雙方都看得到），其中的職業卡全部再從棄牌區加入手牌
+export const 洩憤 = defineSource({
+  id: '洩憤',
+  at: 'moves',
+  on: {
+    onPlay: (c) => c.effect({ label: '【洩憤】怒氣區上方 2 張捨棄，其中的職業卡加入手牌（蓋3）', cost: { cover: 3 } }, () => {
+      const { g, p } = c;
+      const top = Z(g, p, 'rage').slice(0, 2);
+      for (const card of top) discard(g, card);
+      const taken = top.filter((card) => isClassCard(data(card)));
+      for (const card of taken) move(g, card, 'hand');
+      const name = (cards: typeof top) => cards.map((card) => `【${data(card).name}】`).join('') || '（無）';
+      log(g, `【洩憤】${pname(g, p)} 捨棄怒氣區上方 ${top.length} 張：${name(top)}，職業卡加入手牌：${name(taken)}`);
+    }),
+  },
+});
+
+export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊, 戒備打擊, 盾擊, 嘲諷, 洩憤, 勇者, 後人];

@@ -142,6 +142,14 @@ const GLYPHS: Record<string, ReactNode> = {
     </>
   ),
 
+  洩憤: (
+    <>
+      <path d="M50 3 L58 19 L76 9 L70 27 L92 29 L74 39 L88 54 L66 47 L60 58 L50 45 L40 58 L34 47 L12 54 L26 39 L8 29 L30 27 L24 9 L42 19 Z" fill={BLOOD} stroke={W} strokeWidth="3" strokeLinejoin="round" />
+      <path d="M33 22 L46 29 M67 22 L54 29" stroke={W} strokeWidth="4" strokeLinecap="round" />
+      <path d="M40 42 Q50 34 60 42" fill="none" stroke={W} strokeWidth="4" strokeLinecap="round" />
+    </>
+  ),
+
   // ───────── 盜賊 ─────────
   伏擊: (
     <>
