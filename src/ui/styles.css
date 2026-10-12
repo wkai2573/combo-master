@@ -592,7 +592,8 @@ h1, h2, h3 { margin: 0 0 8px; }
 }
 
 /* ───────── 更新日誌 ───────── */
-.changelog { text-align: left; width: min(520px, 100%); line-height: 1.7; }
+/* 寬度用視窗單位算：用百分比會和彈窗自己的寬度互相依賴，一條長句就把整個彈窗撐到最寬。52px = 彈窗的內距與邊框 34px，加上捲軸的預留 */
+.changelog { text-align: left; width: min(520px, calc(92vw - 52px)); line-height: 1.7; }
 .changelog h4 { margin: 14px 0 4px; font-size: 15px; color: var(--accent); }
 .changelog ul { margin: 0; padding-left: 0; list-style: none; }
 .changelog li { margin-bottom: 4px; }

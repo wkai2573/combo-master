@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.44.1',
+    date: '2026-10-12',
+    items: [
+      { type: 'fix', text: '更新日誌的視窗不再被長句撐到整個畫面那麼寬，內容回到固定的閱讀寬度' },
+    ],
+  },
+  {
     version: '0.44.0',
     date: '2026-10-12',
     items: [
