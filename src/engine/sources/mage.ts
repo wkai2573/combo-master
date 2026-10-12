@@ -1,6 +1,7 @@
 import { defineSource } from '../effectKit';
 import { faceUpExp } from '../cost';
-import { chooseCards, combatZone, data, directHit, discard, draw, log, move, pname, recover, topOfZone, Z } from '../ops';
+import { isVanilla } from '../../data/enabledCards';
+import { activate, chooseCards, combatZone, data, directHit, discard, draw, log, move, pname, recover, topOfZone, Z } from '../ops';
 import { other } from '../types';
 
 // 冰與雷之曲（法師）：[蓋2] 收招時，戰鬥區的卡合計具有「冰」「電」兩個特徵時，抽 1、回復 1；
@@ -147,4 +148,24 @@ export const 元素法典 = defineSource({
   },
 });
 
-export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 元素法典, 法師];
+// 整理魔導書（法師）：[頂] 當歸還時，抽X。X＝我方戰鬥區白板卡的張數
+// 在歸還開始、卡還留在戰鬥區時計算，所以含追擊卡疊；這張卡自己有效果文字，不算白板卡
+const whiteCount = (g: Parameters<typeof combatZone>[0], p: Parameters<typeof combatZone>[1]) =>
+  combatZone(g, p).filter((card) => isVanilla(data(card))).length;
+export const 整理魔導書 = defineSource({
+  id: '整理魔導書',
+  at: 'moves',
+  on: {
+    beforeReturn: (c) => c.effect(
+      { label: '【整理魔導書】抽 X（X＝戰鬥區白板卡的張數）', mandatory: true, when: () => topOfZone(c.g, c.p) === c.self && whiteCount(c.g, c.p) > 0 },
+      function* () {
+        const x = whiteCount(c.g, c.p);
+        activate(c.g, c.p, c.self!);
+        yield* draw(c.g, c.p, x);
+        log(c.g, `【整理魔導書】${pname(c.g, c.p)} 歸還時抽 ${x}`);
+      },
+    ),
+  },
+});
+
+export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 整理魔導書, 元素法典, 法師];

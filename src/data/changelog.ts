@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.43.5',
+    date: '2026-10-12',
+    items: [
+      { type: 'add', text: '新卡「整理魔導書」（法師）：[頂] 當歸還時，抽X。X＝我方戰鬥區白板卡的張數' },
+    ],
+  },
+  {
     version: '0.43.4',
     date: '2026-10-12',
     items: [

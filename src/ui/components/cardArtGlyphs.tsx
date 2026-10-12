@@ -453,6 +453,18 @@ const GLYPHS: Record<string, ReactNode> = {
     </>
   ),
 
+  整理魔導書: (
+    <>
+      <g transform="rotate(-14 74 34)"><rect x="62" y="14" width="18" height="26" rx="2.5" fill={W} stroke={K} strokeWidth="1.8" /></g>
+      <g transform="rotate(6 80 34)"><rect x="70" y="14" width="18" height="26" rx="2.5" fill={W} stroke={K} strokeWidth="1.8" /></g>
+      <g transform="rotate(24 82 38)"><rect x="76" y="20" width="16" height="24" rx="2.5" fill={STEEL} stroke={K} strokeWidth="1.8" /></g>
+      <rect x="8" y="6" width="46" height="50" rx="4" fill="currentColor" stroke={W} strokeWidth="3" strokeLinejoin="round" />
+      <path d="M17 6 V56" stroke={W} strokeWidth="3" />
+      <circle cx="36" cy="31" r="10" fill="none" stroke={W} strokeWidth="2.5" />
+      <path d="M36 21 L39 33 L29 26 H43 L33 33 Z" fill={W} />
+    </>
+  ),
+
   // ───────── 共用 ─────────
   職業專精書: (
     <>

@@ -185,6 +185,9 @@ export function* damageStep(g: GameCtx): Gen {
 
 export function* returnStep(g: GameCtx): Gen {
   g.state.phase = '歸還';
+  // 歸還時，卡還在戰鬥區：整理魔導書在這裡數白板卡並抽牌
+  yield* fireEach(g, 'beforeReturn');
+  checkWin(g);
   for (const p of order(g)) {
     // 招式卡疊由最底到最頂，最後是追擊卡疊
     for (const c of combatZone(g, p)) move(g, c, 'exp');

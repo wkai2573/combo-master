@@ -30,6 +30,8 @@ export interface Events {
   onAwaken: Record<never, never>;
   /** 傷害算出之後、放進怒氣區之前。雙方將要承受的傷害讀 flags.damagePending，結算中會變，條件要用 when 即時判斷 */
   onDamage: Record<never, never>;
+  /** 歸還開始、卡還留在戰鬥區的當下；整理魔導書用它數戰鬥區的白板卡 */
+  beforeReturn: Record<never, never>;
   afterReturn: Record<never, never>;
   /** flipExtra：額外翻 1 張牌做追擊判定，以回呼傳入，條目不必匯入戰鬥模組 */
   afterPursuitFail: { flipExtra: () => Gen<boolean> };
@@ -54,6 +56,7 @@ export const EVENT_TITLES: Record<EventKey, string> = {
   afterBurst: '爆發後',
   onAwaken: '覺醒時',
   onDamage: '傷害計算時',
+  beforeReturn: '歸還時',
   afterReturn: '歸還時',
   afterPursuitFail: '追擊失敗後',
   onOpen: '先手出招時',

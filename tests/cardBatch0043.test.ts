@@ -123,3 +123,42 @@ describe('洩憤：[發_蓋3] 將怒氣區上方 2 張卡捨棄，然後其中�
     expect(names(empty, 0, 'discard')).toEqual([]);
   });
 });
+
+describe('整理魔導書：[頂] 當歸還時，抽X。X＝我方戰鬥區白板卡的張數', () => {
+  // p0 先手出整理魔導書；p1 沒有手牌，直接收招進傷害與歸還
+  const grimoire = (zones: { moves?: string[]; pursuit?: string[]; hand?: string[] }) =>
+    scenario({
+      chars: ['法師', '勇者'],
+      singlePhase: true,
+      p0: { hand: ['整理魔導書'], ...zones },
+      p1: { hand: [] },
+    });
+
+  it('歸還開始時數我方戰鬥區（招式卡疊加追擊卡疊）的白板卡，抽那麼多張', () => {
+    const g = grimoire({ moves: ['黑桃3', '黑桃4'], pursuit: ['黑桃8'] });
+    expect(g.pending).toBeNull(); // 全程自動：強制效果，沒有費用
+    expect(Z(g, 0, 'hand')).toHaveLength(3);
+    expect(names(g, 0, 'exp')).toContain('整理魔導書'); // 抽完牌才歸還
+  });
+
+  it('戰鬥區沒有白板卡時 X＝0，不抽牌', () => {
+    const g = grimoire({});
+    expect(Z(g, 0, 'hand')).toHaveLength(0);
+  });
+
+  it('只有位於招式卡疊最上方才有效', () => {
+    const g = scenario({
+      chars: ['法師', '勇者'],
+      singlePhase: true,
+      p0: { moves: ['整理魔導書', '黑桃3'], hand: ['黑桃5'] },
+      p1: { hand: [] },
+    });
+    expect(Z(g, 0, 'hand')).toHaveLength(0);
+  });
+
+  it('抽牌讓牌組少 X 張（牌組就是生命值）', () => {
+    const base = scenario({ chars: ['法師', '勇者'], singlePhase: true, p0: { hand: ['整理魔導書'] }, p1: { hand: [] } });
+    const withWhites = grimoire({ moves: ['黑桃3', '黑桃4'] });
+    expect(Z(base, 0, 'deck').length - Z(withWhites, 0, 'deck').length).toBe(2);
+  });
+});
