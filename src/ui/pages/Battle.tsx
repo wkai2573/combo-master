@@ -43,8 +43,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   }, []);
   const closeCardSheet = useCallback(() => setCardSheet(null), []);
   const [menuOpen, setMenuOpen] = useState(false);
-  // 窄螢幕版：卡片說明與遊戲紀錄收成可開關的抽屜，一次開一個
-  const [drawer, setDrawer] = useState<'inspect' | 'log' | null>(null);
+  // 手機版面：遊戲紀錄收成可開關的抽屜（從頂列選單打開）
+  const [logOpen, setLogOpen] = useState(false);
   const [zone, setZone] = useState<{ p: PlayerId; z: ZoneKey; anchor: DOMRect } | null>(null);
   const zoneRef = useRef(zone);
   zoneRef.current = zone;
@@ -73,15 +73,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const { presentation: pres, skip } = usePlayback(st.batch, final, speed);
   const { view: v, changes, fx, fxKey, scale } = pres;
 
-  // 窄螢幕沒有常駐的說明欄：固定一張卡的說明時自動打開說明抽屜
-  const wideRef = useRef(wide);
-  wideRef.current = wide;
-  useEffect(() => {
-    if (pinned && !wideRef.current) setDrawer('inspect');
-  }, [pinned]);
-
-  // 版面在寬螢幕版、窄螢幕版、手機版面之間切換：各版面專屬的面板與抽屜收起，免得換回來時殘留看不到的狀態（對局狀態不受影響）
-  const layoutKey = wide ? 'wide' : phone ? 'phone' : 'narrow';
+  // 版面在寬螢幕版與手機版面之間切換：各版面專屬的面板與抽屜收起，免得換回來時殘留看不到的狀態（對局狀態不受影響）
+  const layoutKey = wide ? 'wide' : 'phone';
   const lastLayout = useRef(layoutKey);
   useEffect(() => {
     if (lastLayout.current === layoutKey) return;
@@ -89,7 +82,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
     autoSheet.current = false;
     setSheet(null);
     setZone(null);
-    setDrawer(null);
+    setLogOpen(false);
     setPinned(null);
     setInspect(null);
     setCardSheet(null);
@@ -112,7 +105,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
       else if (cheatOpenRef.current) setCheatOpen(false);
       else {
         setPinned(null);
-        setDrawer(null);
+        setLogOpen(false);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -124,7 +117,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
 
   // 手拿著的牌可以拖到提示指定的放置區直接使用（動畫播放中不啟用）
   const livePrompt = v && !pres.playing ? v.prompt : null;
-  const { api: drag, ghost: dragGhost } = useCardDrag(livePrompt, (keys) => session.submit(keys), phone || wide);
+  const { api: drag, ghost: dragGhost } = useCardDrag(livePrompt, (keys) => session.submit(keys));
 
   // 提示物件每次收到狀態都可能是新的，內容沒變就不算換了提示；效果只看這個簽章，否則會一直重新設定面板而無限重繪
   const promptSig = livePrompt ? `${livePrompt.title}|${livePrompt.options.map((o) => o.key).join(',')}` : '';
@@ -248,7 +241,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   return (
     <InspectContext.Provider value={inspectCard}>
       <PinContext.Provider value={togglePin}>
-      <div className={`battle${wide ? ' wide' : phone ? ' phone' : ''}`} style={{ ['--spd' as string]: scale }}>
+      <div className={`battle${wide ? ' wide' : ' phone'}`} style={{ ['--spd' as string]: scale }}>
         <div className="topbar">
           <span className="ver" title={VERSION_TITLE}>連擊大師 {VERSION_SHORT}</span>
           <b>第 {v.turn} 回合</b>
@@ -259,17 +252,11 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           {phone ? (
             <PhoneMenu
               open={menuOpen} onToggle={() => setMenuOpen((o) => !o)} onClose={() => setMenuOpen(false)}
-              speed={speed} onSpeed={setSpeed} onLog={() => setDrawer('log')} onFlow={() => setFlowOpen(true)} onLeave={leave}
+              speed={speed} onSpeed={setSpeed} onLog={() => setLogOpen(true)} onFlow={() => setFlowOpen(true)} onLeave={leave}
               cheat={session.cheat && cheatUnlocked ? { on: cheatOn, panelOpen: cheatOpen, onToggle: () => session.cheat?.setOn(!cheatOn), onPanel: () => setCheatOpen(!cheatOpen) } : undefined}
             />
           ) : (
             <>
-              {!wide && (
-                <>
-                  <button className={drawer === 'inspect' ? 'on' : ''} aria-pressed={drawer === 'inspect'} onClick={() => setDrawer((d) => (d === 'inspect' ? null : 'inspect'))}>說明</button>
-                  <button className={drawer === 'log' ? 'on' : ''} aria-pressed={drawer === 'log'} onClick={() => setDrawer((d) => (d === 'log' ? null : 'log'))}>紀錄</button>
-                </>
-              )}
               {session.cheat && cheatUnlocked && (
                 <>
                   <button className={cheatOn ? 'on' : ''} aria-pressed={cheatOn} title="開啟後可以隨意加入手牌、移除手牌，調整、刪除、新增牌堆的卡，以及翻面經驗卡" onClick={() => session.cheat?.setOn(!cheatOn)}>作弊模式</button>
@@ -307,18 +294,18 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           ) : (
             <>
               <div className={`board${pres.playing ? ' playing' : ''}`}>
-                {phone ? oppBar : oppBoard}
+                {oppBar}
                 {combat}
-                {phone ? myDock : myBoard}
-                {phone ? <div className="promptslot">{phoneBar}</div> : promptBarOf(handUids)}
+                {myDock}
+                <div className="promptslot">{phoneBar}</div>
               </div>
-              {drawer && (
+              {logOpen && (
                 <div className="drawer">
                   <div className="drawerhead">
-                    <b>{drawer === 'inspect' ? '卡片說明' : '遊戲紀錄'}</b>
-                    <button onClick={() => { setDrawer(null); setPinned(null); }}>關閉</button>
+                    <b>遊戲紀錄</b>
+                    <button onClick={() => setLogOpen(false)}>關閉</button>
                   </div>
-                  {drawer === 'inspect' ? inspectPanel : <LogPanel lines={v.log} />}
+                  <LogPanel lines={v.log} />
                 </div>
               )}
             </>

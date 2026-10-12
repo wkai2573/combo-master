@@ -21,6 +21,15 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.45.0',
+    date: '2026-10-12',
+    items: [
+      { type: 'change', text: '對戰畫面只剩兩種版面：寬螢幕版（寬 1200、高 800 以上）和手機版面。平板、橫向手機、較小的視窗都改用手機版面，畫面比較寬時會置中成一條直欄' },
+      { type: 'change', text: '視窗太矮（不到 640）時，手機版面改成整頁可以上下捲動' },
+      { type: 'change', text: '「發動／不發動」這類選擇，不發動固定在左邊、發動固定在右邊，並且發動用強調色' },
+    ],
+  },
+  {
     version: '0.44.1',
     date: '2026-10-12',
     items: [

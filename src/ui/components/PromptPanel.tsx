@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCoarsePointer } from '../layoutMode';
 import type { Request } from '../../engine/types';
 import { CardFace } from './CardFace';
+import { orderPromptButtons } from '../promptButtons';
 import { SortableList } from './SortableList';
 
 /** 選項對應畫面上的某張卡（例如窗口裡的效果來源）：滑過或聚焦選項時讓那張卡亮起來 */
@@ -81,10 +82,10 @@ export function PromptPanel({ prompt, selected, onPick, onSubmit, skipUids }: Pr
         </div>
       )}
       <div className="btns">
-        {btnOpts.map((o) => (
+        {orderPromptButtons(btnOpts).map(({ opt: o, primary }) => (
           <button
             key={o.key}
-            className={o.key === 'yes' || o.key === 'pass' || o.key === 'end' ? '' : 'primary'}
+            className={primary ? 'primary' : ''}
             onClick={() => (single ? onSubmit([o.key]) : onPick(o.key))}
             onMouseEnter={() => hintCard(o.uid, true)}
             onMouseLeave={() => hintCard(o.uid, false)}

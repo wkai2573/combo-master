@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { expLayout } from '../expLayout';
 import { handLayout } from '../handLayout';
 import { useWide } from '../useWide';
-import { useCoarsePointer, usePhone } from '../layoutMode';
+import { useCoarsePointer } from '../layoutMode';
 import type { DragApi } from '../useCardDrag';
 import { tapCard } from '../touchTap';
 import { getCard, getCharacter } from '../../data/cards';
@@ -299,7 +299,7 @@ function statNote(pv: PlayerView): string | null {
   return `卡面合計 ${rawAtk} ／ ${rawDef}${diff(pv.atk, rawAtk)}`;
 }
 
-function StackColumn({ pv, label, mine, fx, delta, k, notes }: { pv: PlayerView; label: string; mine: boolean; fx?: FrameFx; delta?: { atk: number; def: number }; k: number; /** 備註放在總攻防下方（寬螢幕版改放中央欄，避免疊牌區高度跳動） */ notes: boolean }) {
+function StackColumn({ pv, label, mine, fx, delta, k }: { pv: PlayerView; label: string; mine: boolean; fx?: FrameFx; delta?: { atk: number; def: number }; k: number }) {
   const cards = [...pv.moves, ...pv.pursuit];
   return (
     <div className={`col ${mine ? 'mine' : 'opp'}`}>
@@ -319,8 +319,6 @@ function StackColumn({ pv, label, mine, fx, delta, k, notes }: { pv: PlayerView;
           <span className="sumslash"> ／ </span>
           <span className="sumline">總防 <b className="def">{pv.def}</b><Delta d={delta?.def} k={k} /></span>
         </div>
-        {notes && statNote(pv) && <div className="note">{statNote(pv)}</div>}
-        {notes && pv.pursuit.length > 0 && <div className="note">金框為追擊卡</div>}
       </div>
     </div>
   );
@@ -353,11 +351,6 @@ export function CombatArea({ v, fx, caption, fxKey, changes, hint }: {
 }) {
   const opp: PlayerId = v.me === 0 ? 1 : 0;
   const calc = fx?.type === 'calc' ? fx : null;
-  // 寬螢幕版與手機版面的疊牌區高度固定，備註改放中央欄
-  // 兩個 hook 都要每次呼叫：用 || 短路會讓版面切換時 hook 數量不一致，整棵樹崩潰
-  const isWide = useWide();
-  const isPhone = usePhone();
-  const wide = isWide || isPhone;
   const notes = [['對方', statNote(v.players[opp])], ['我方', statNote(v.players[v.me])]].filter((n): n is [string, string] => n[1] !== null);
   const hasPursuit = v.players[opp].pursuit.length + v.players[v.me].pursuit.length > 0;
   return (
@@ -365,7 +358,7 @@ export function CombatArea({ v, fx, caption, fxKey, changes, hint }: {
       <div className="caption" key={`c${fxKey}`}>{caption ?? ' '}</div>
       <div className="cols">
         <div className="colwrap">
-          <StackColumn notes={!wide} pv={v.players[opp]} label="對方" mine={false} fx={fx} delta={changes && { atk: changes.atk[opp], def: changes.def[opp] }} k={fxKey} />
+          <StackColumn pv={v.players[opp]} label="對方" mine={false} fx={fx} delta={changes && { atk: changes.atk[opp], def: changes.def[opp] }} k={fxKey} />
           <ColumnFx fx={fx} fxKey={fxKey} player={opp} />
         </div>
         <div className="mid">
@@ -384,17 +377,15 @@ export function CombatArea({ v, fx, caption, fxKey, changes, hint }: {
             <>
               <div className="range">{rangeText(v)}</div>
               <div className="muted" style={{ fontSize: 12 }}>傷害 ＝ 對方總攻 − 我方總防</div>
-              {wide && (
-                <div className="midnotes">
-                  {notes.map(([who, t]) => <div key={who}>{who}：{t}</div>)}
-                  {hasPursuit && <div>金框為追擊卡</div>}
-                </div>
-              )}
+              <div className="midnotes">
+                {notes.map(([who, t]) => <div key={who}>{who}：{t}</div>)}
+                {hasPursuit && <div>金框為追擊卡</div>}
+              </div>
             </>
           )}
         </div>
         <div className="colwrap">
-          <StackColumn notes={!wide} pv={v.players[v.me]} label="我方" mine fx={fx} delta={changes && { atk: changes.atk[v.me], def: changes.def[v.me] }} k={fxKey} />
+          <StackColumn pv={v.players[v.me]} label="我方" mine fx={fx} delta={changes && { atk: changes.atk[v.me], def: changes.def[v.me] }} k={fxKey} />
           <ColumnFx fx={fx} fxKey={fxKey} player={v.me} />
         </div>
       </div>

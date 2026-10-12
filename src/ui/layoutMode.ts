@@ -1,32 +1,19 @@
 import { useSyncExternalStore } from 'react';
-import { WIDE_QUERY } from './useWide';
+import { useWide, WIDE_MIN_H, WIDE_MIN_W } from './useWide';
 
-/** 對戰畫面的三種版面：寬螢幕版（整頁不捲動）、手機版面（直立手機，整頁不捲動）、窄螢幕版（單欄可捲動） */
-export type LayoutMode = 'wide' | 'phone' | 'narrow';
+export { WIDE_MIN_H, WIDE_MIN_W };
 
-export const WIDE_MIN_W = 1200;
-export const WIDE_MIN_H = 800;
-export const PHONE_MAX_W = 640;
-/** 與 useWide 共用的媒體查詢字串必須同一份數字，這裡只管手機版面 */
-export const PHONE_QUERY = `(max-width: ${PHONE_MAX_W}px) and (orientation: portrait)`;
+/** 對戰畫面的兩種版面：寬螢幕版（整頁不捲動），其餘畫面一律用手機版面（單欄直欄，太矮時整頁可捲動） */
+export type LayoutMode = 'wide' | 'phone';
 
-/** 依可視區大小決定版面；寬螢幕版優先，手機版面要寬 ≤ 640 且直立（高 ≥ 寬） */
+/** 依可視區大小決定版面；達到寬螢幕版的寬高門檻就是寬螢幕版，其餘都是手機版面 */
 export function layoutMode(w: number, h: number): LayoutMode {
-  if (w >= WIDE_MIN_W && h >= WIDE_MIN_H) return 'wide';
-  if (w <= PHONE_MAX_W && h >= w) return 'phone';
-  return 'narrow';
+  return w >= WIDE_MIN_W && h >= WIDE_MIN_H ? 'wide' : 'phone';
 }
 
-const phoneMq = typeof window !== 'undefined' ? window.matchMedia?.(PHONE_QUERY) : undefined;
-const subscribePhone = (cb: () => void) => {
-  phoneMq?.addEventListener('change', cb);
-  return () => phoneMq?.removeEventListener('change', cb);
-};
-const phoneSnapshot = () => phoneMq?.matches ?? false;
-
-/** 目前是不是手機版面 */
+/** 目前是不是手機版面：凡是不是寬螢幕版的畫面都是 */
 export function usePhone(): boolean {
-  return useSyncExternalStore(subscribePhone, phoneSnapshot);
+  return !useWide();
 }
 
 const coarseMq = typeof window !== 'undefined' ? window.matchMedia?.('(hover: none) and (pointer: coarse)') : undefined;

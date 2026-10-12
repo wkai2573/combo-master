@@ -197,7 +197,6 @@ h1, h2, h3 { margin: 0 0 8px; }
 .sumbox { text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; min-width: 112px; }
 .sumbox b { font-size: 20px; }
 .sumbox .atk { color: var(--fx-atk); } .sumbox .def { color: var(--fx-def); }
-.sumbox .note { font-size: 11px; color: var(--muted); }
 
 /* ───────── 戰鬥畫面 ───────── */
 .battle { display: grid; grid-template-rows: auto 1fr; height: 100%; }
@@ -569,27 +568,13 @@ h1, h2, h3 { margin: 0 0 8px; }
 .midnotes { margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--muted); }
 .battle.wide .combatarea .mid { align-self: flex-start; padding-top: 80px; }
 
-/* ───────── 窄螢幕版：單欄、可捲動，說明與紀錄收成抽屜 ───────── */
-.battle:not(.wide) { display: flex; flex-direction: column; height: 100%; }
-.battle:not(.wide) > .topbar, .battle:not(.wide) > .steps, .battle:not(.wide) > .banner { flex: none; }
-.battle:not(.wide) .topbar { flex-wrap: wrap; gap: 6px 10px; }
-.battle:not(.wide) .main { position: relative; flex: 1; grid-template-rows: minmax(0, 1fr); }
+/* ───────── 遊戲紀錄抽屜（手機版面） ───────── */
 .topbar button.on { border-color: var(--accent); color: var(--accent); }
-/* 抽屜蓋在桌面上方，最多佔一半高度，不蓋住底部的提示面板 */
+/* 抽屜蓋在桌面上方，最多佔一半高度，不蓋住底部的提示欄 */
 .drawer { position: absolute; top: 0; left: 0; right: 0; z-index: 7; max-height: min(40%, 280px); display: flex; flex-direction: column; background: var(--panel); border-bottom: 2px solid var(--accent); box-shadow: 0 8px 20px #000a; }
 .drawerhead { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; border-bottom: 1px solid var(--line); }
 .drawerhead button { padding: 1px 10px; font-size: 12px; }
-.drawer .inspect { flex: 1; min-height: 0; overflow-y: auto; border-bottom: 0; }
 .drawer .log { flex: 1; min-height: 0; }
-/* 窄螢幕的提示面板：選項卡排成一列橫向捲動，不佔滿整個畫面 */
-.battle:not(.wide) .prompt .cardrow { flex-wrap: nowrap; overflow-x: auto; padding-top: 14px; }
-@media (max-width: 640px) {
-  .pboard { padding: 6px; }
-  .zonesrow { flex-wrap: wrap; }
-  .zonesrow .expzone { flex: 1 1 100%; }
-  .combatarea .cols { flex-wrap: wrap; gap: 8px 24px; }
-  .combatarea .mid { order: 3; flex: 1 1 100%; max-width: none; }
-}
 
 /* ───────── 更新日誌 ───────── */
 /* 寬度用視窗單位算：用百分比會和彈窗自己的寬度互相依賴，一條長句就把整個彈窗撐到最寬。52px = 彈窗的內距與邊框 34px，加上捲軸的預留 */
@@ -660,7 +645,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 /* ───────── 手機版面（寬 ≤ 640 且直立）：整頁不捲動 ─────────
    頂欄、步驟提示、對手條、戰鬥區、我方牌堆與手牌、提示欄由上到下排滿一個畫面。
    經驗區與裝備增益區是牌堆，點開從底部滑出面板。 */
-.battle.phone { --mdw: 72px; --mdh: 101px; --pile-step: 1px; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.battle.phone { --mdw: 72px; --mdh: 101px; --pile-step: 1px; display: flex; flex-direction: column; position: relative; width: 100%; max-width: 560px; margin: 0 auto; height: 100%; min-height: 640px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); }
 .battle.phone > .topbar, .battle.phone > .steps, .battle.phone > .banner { flex: none; }
 .battle.phone .topbar { gap: 4px 6px; padding: 4px 8px; font-size: 12px; flex-wrap: wrap; }
 .battle.phone .topbar .ver, .battle.phone .topbar > .muted { display: none; }
@@ -669,7 +654,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .battle.phone .steps ol { display: none; }
 .battle.phone .steps .hint { margin-left: 0; }
 .battle.phone .banner { padding: 2px 8px; font-size: 12px; }
-.battle.phone .main { flex: 1; min-height: 0; }
+.battle.phone .main { position: relative; flex: 1; min-height: 0; }
 .battle.phone .board { height: 100%; padding: 4px 6px; gap: 4px; overflow: hidden; }
 .battle.phone .pboard { padding: 4px 8px; gap: 3px; border-radius: 8px; }
 
@@ -769,7 +754,7 @@ button.chip { font: inherit; font-size: 11px; }
 
 /* ───────── 底部面板 ───────── */
 .sheetback { position: fixed; inset: 0; z-index: 11; background: #0006; }
-.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 12; max-height: 62%; display: flex; flex-direction: column; background: var(--panel); border-top: 2px solid var(--accent); border-radius: 14px 14px 0 0; box-shadow: 0 -8px 24px #000b; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; max-width: 560px; margin: 0 auto; z-index: 12; max-height: 62%; display: flex; flex-direction: column; background: var(--panel); border-top: 2px solid var(--accent); border-radius: 14px 14px 0 0; box-shadow: 0 -8px 24px #000b; }
 @media (prefers-reduced-motion: no-preference) { .sheet { animation: sheetUp .2s ease-out; } }
 @keyframes sheetUp { from { transform: translateY(40%); opacity: 0; } to { transform: none; opacity: 1; } }
 .sheethead { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
@@ -796,7 +781,7 @@ body[data-drag="moves"] [data-dropzone="moves"],
 body[data-drag="exp"] [data-dropzone="exp"],
 body[data-drag="gear"] [data-dropzone="gear"] { outline: 2px dashed var(--accent); outline-offset: 2px; border-radius: 10px; }
 body[data-drag] [data-dropzone][data-dragover] { outline-style: solid; background: color-mix(in srgb, var(--accent) 22%, transparent); }
-/* 窄螢幕版的裝備增益區空的時候是隱藏的，拖曳時先露出來當放置區 */
+/* 裝備增益區空的時候預設隱藏，拖曳時先露出來當放置區 */
 body[data-drag="gear"] .gearzone.empty { display: block; min-height: 44px; }
 
 /* ───────── 錯誤保護畫面 ───────── */
@@ -814,7 +799,7 @@ body[data-drag="moves"] .combatarea { outline-offset: -3px; }
 .battle.phone .topbar .menubtn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 32px; padding: 0; }
 .battle.phone .topbar .menubtn.on { border-color: var(--accent); color: var(--accent); }
 .menuback { position: fixed; inset: 0; z-index: 29; }
-.phonemenu { position: fixed; top: 44px; right: 8px; z-index: 30; min-width: 220px; display: grid; gap: 6px; padding: 8px; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; box-shadow: 0 10px 28px #000c; }
+.phonemenu { position: fixed; top: 44px; right: max(8px, calc(50vw - 272px)); z-index: 30; min-width: 220px; display: grid; gap: 6px; padding: 8px; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; box-shadow: 0 10px 28px #000c; }
 .battle.phone .phonemenu button { padding: 8px 12px; min-height: 42px; font-size: 15px; text-align: left; }
 .phonemenu button.on { border-color: var(--accent); color: var(--accent); }
 .phonemenu button.danger { color: var(--bad); border-color: var(--bad); }
@@ -844,4 +829,4 @@ body[data-drag="moves"] .combatarea { outline-offset: -3px; }
 .flowchart.vertical { width: 100%; }
 .flowchart.vertical svg { min-width: 0; }
 .flowchart.vertical .fcscroll { max-height: calc(100dvh - 76px); }
-.overlay:has(.flowchart.vertical) .modal { width: 100vw; max-width: 100vw; height: 100vh; height: 100dvh; max-height: none; min-width: 0; padding: 10px; border: 0; border-radius: 0; }
+.overlay:has(.flowchart.vertical) .modal { width: min(100vw, 560px); max-width: 100vw; height: 100vh; height: 100dvh; max-height: none; min-width: 0; padding: 10px; border: 0; border-radius: 0; }

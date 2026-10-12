@@ -25,7 +25,7 @@ const zoneBoxes = (zone: DropZone) =>
  * 滑鼠移動超過一點距離就開始拖；觸控往上拖才開始，橫向移動留給手牌列捲動。
  * 拖曳期間，放置區的元素（data-dropzone）靠 body 的 data-drag 標示亮起。
  */
-export function useCardDrag(prompt: Request | null, onDrop: (keys: string[]) => void, touchDrag = true): { api: DragApi; ghost: ReactNode } {
+export function useCardDrag(prompt: Request | null, onDrop: (keys: string[]) => void): { api: DragApi; ghost: ReactNode } {
   const [dragging, setDragging] = useState<Dragging | null>(null);
   const promptRef = useRef(prompt);
   promptRef.current = prompt;
@@ -36,8 +36,6 @@ export function useCardDrag(prompt: Request | null, onDrop: (keys: string[]) => 
   // 提示真的換了或收掉（動畫開始、對手回合）：進行中的拖曳作廢。內容相同的新物件（只是重新收到狀態）不算
   const sig = prompt ? `${prompt.title}|${prompt.dropZone}|${prompt.options.map((o) => o.key).join(',')}` : '';
   useEffect(() => () => cleanupRef.current?.(), [sig]);
-  const touchRef = useRef(touchDrag);
-  touchRef.current = touchDrag;
   useEffect(() => () => cleanupRef.current?.(), []);
 
   const zoneFor = useCallback((key: string) => dragZone(promptRef.current, key), []);
@@ -48,8 +46,6 @@ export function useCardDrag(prompt: Request | null, onDrop: (keys: string[]) => 
     if (!zone) return;
     cleanupRef.current?.();
     const touch = e.pointerType !== 'mouse';
-    // 會上下捲動的版面裡，往上拖是頁面捲動，觸控拖曳會跟它打架，只留給滑鼠
-    if (touch && !touchRef.current) return;
     // 手牌列放得下就不能橫向捲動，橫向移動不需要留給捲動
     const row = (e.currentTarget as HTMLElement).closest<HTMLElement>('.handrow');
     const scrollable = !!row && row.scrollWidth > row.clientWidth + 1;
