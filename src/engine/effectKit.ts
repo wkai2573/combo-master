@@ -131,13 +131,15 @@ export interface MoveRules {
   pursuitDef: number;
   /** 追擊判定一律失敗 */
   pursuitFails: boolean;
+  /** 追擊判定一律成功，不看連擊值範圍 */
+  pursuitSucceeds: boolean;
   /** 只能在先手步驟出招 */
   openingOnly: boolean;
   /** 出招時必須支付的蓋X；表側經驗不足就不能出招 */
   playCover: number;
 }
 export const NO_MOVE_RULES: Readonly<MoveRules> = Object.freeze({
-  topAtk: 0, topDef: 0, liftAtkToDef: false, pursuitAtk: 0, pursuitDef: 0, pursuitFails: false, openingOnly: false, playCover: 0,
+  topAtk: 0, topDef: 0, liftAtkToDef: false, pursuitAtk: 0, pursuitDef: 0, pursuitFails: false, pursuitSucceeds: false, openingOnly: false, playCover: 0,
 });
 
 // ───────────────────────── 處理器與條目 ─────────────────────────

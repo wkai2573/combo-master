@@ -201,3 +201,56 @@ describe('狩獵印記：[先] 當對方收招時，抽X。X＝3 − 對方戰�
     expect(Z(g, 0, 'hand')).toHaveLength(2);
   });
 });
+
+describe('追跡箭矢：此卡追擊判定必定成功；[發_蓋2] 抽1；[追] 抽1', () => {
+  // p0 出 4、p1 出 6，之後進入追擊：範圍 4~6，連擊值 5 的追跡箭矢本來在範圍內會失敗
+  const arrow = (top: string, chars: [string, string] = ['勇者', '勇者']) =>
+    scenario({
+      chars,
+      p0: { hand: ['黑桃4'], deck: [top, '黑桃2', '黑桃2', '黑桃2', '黑桃2'] },
+      p1: { hand: ['黑桃6'] },
+      singlePhase: true,
+    });
+
+  it('連擊值在範圍內也判定成功，成為追擊卡並抽 1', () => {
+    const g = arrow('追跡箭矢');
+    pick(g, '黑桃6');
+    expect(g.state.flags.pursuitSuccess[0]).toBe(1);
+    expect(names(g, 0, 'hand')).not.toContain('追跡箭矢');
+    expect(names(g, 0, 'exp')).toContain('追跡箭矢'); // 追擊卡，歸還後進經驗區
+    expect(Z(g, 0, 'hand')).toHaveLength(1); // [追] 抽 1
+  });
+
+  it('對照：同樣在範圍內的白板卡判定失敗，加入手牌', () => {
+    const g = arrow('黑桃5');
+    pick(g, '黑桃6');
+    expect(g.state.flags.pursuitSuccess[0]).toBe(0);
+    expect(names(g, 0, 'hand')).toEqual(['黑桃5']);
+  });
+
+  it('遊俠的瞄準提示會說這張以目前範圍會判定成功', () => {
+    const g = arrow('追跡箭矢', ['遊俠', '勇者']);
+    pick(g, '黑桃6');
+    expect(g.pending!.title).toContain('追跡箭矢');
+    expect(g.pending!.title).toContain('成功');
+  });
+
+  it('[發_蓋2] 打出時付蓋2 抽 1', () => {
+    const g = scenario({
+      chars: ['刺客', '勇者'], singlePhase: true,
+      p0: { hand: ['追跡箭矢'], exp: ['黑桃3', '黑桃4'] }, p1: { hand: [] },
+    });
+    pick(g, '發動');
+    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(2);
+    expect(Z(g, 0, 'hand')).toHaveLength(1);
+  });
+
+  it('一方沒有招式就不追擊，通則不變', () => {
+    const g = scenario({
+      chars: ['刺客', '勇者'], singlePhase: true,
+      p0: { hand: ['追跡箭矢'], exp: ['黑桃3', '黑桃4'], deck: ['追跡箭矢', '黑桃2'] }, p1: { hand: [] },
+    });
+    pick(g, '不發動');
+    expect(g.state.flags.pursuitSuccess[0]).toBe(0);
+  });
+});

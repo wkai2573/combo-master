@@ -17,7 +17,7 @@ const MOVES: Record<string, string[]> = {
   刺客: ['伏擊', '二刀連擊', '順手牽羊', '卸除鎧甲', '塗毒', '狩獵印記'],
   先人: ['伏擊', '二刀連擊', '順手牽羊', '卸除鎧甲', '塗毒', '狩獵印記'],
   商人: ['低價買進', '高價賣出', '交涉', '即時停損', '公開資訊', '財富管理'],
-  遊俠: ['魅影射擊', '地雷陷阱', '狙擊印記', '二連矢', '狙擊蓄力', '生命偷取'],
+  遊俠: ['魅影射擊', '地雷陷阱', '狙擊印記', '二連矢', '狙擊蓄力', '生命偷取', '追跡箭矢'],
   法師: ['力量爆破', '電弧', '火球', '冰霜護甲', 'Explosion!', '整理魔導書'],
 };
 const TRINKET: Record<string, string> = { 勇者: '家族相片', 後人: '家族相片', 刺客: '幸運兔腳', 先人: '幸運兔腳', 商人: '招財貓', 遊俠: '瞄準器', 法師: '元素法典' };
@@ -40,13 +40,13 @@ describe('預設牌組的組成', () => {
 
   it.each(PRESET_CHARACTER_IDS)('%s：生命藥水的張數', (id) => {
     const potions = presetDeck(id).filter((c) => c === '生命藥水').length;
-    expect(potions).toBe(['勇者', '後人', '商人'].includes(id) ? 1 : 2);
+    expect(potions).toBe(['勇者', '後人', '商人', '遊俠'].includes(id) ? 1 : 2);
   });
 
   it.each(PRESET_CHARACTER_IDS)('%s：除了指定的效果卡與裝備，其餘都是白板卡，共 50 張', (id) => {
     const deck = presetDeck(id);
     expect(deck).toHaveLength(50);
-    const fixed = MOVES[id].length * 3 + 3 /* 裝備 */ + (id === '後人' ? 4 : 0) + (['勇者', '後人', '商人'].includes(id) ? 1 : 2);
+    const fixed = MOVES[id].length * 3 + 3 /* 裝備 */ + (id === '後人' ? 4 : 0) + (['勇者', '後人', '商人', '遊俠'].includes(id) ? 1 : 2);
     expect(whites(deck)).toHaveLength(50 - fixed);
   });
 

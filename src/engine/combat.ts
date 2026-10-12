@@ -119,7 +119,8 @@ function* aim(g: GameCtx, p: PlayerId, used: { n: number }): Gen {
     }
     if (deck.length < 2) return;
     const top = deck[0];
-    const hit = !moveRules(top.id).pursuitFails && !inRange(g, p, top);
+    const topRules = moveRules(top.id);
+    const hit = !topRules.pursuitFails && (topRules.pursuitSucceeds || !inRange(g, p, top));
     const keys = yield* ask(g, {
       player: p,
       title: `【瞄準】牌組頂是【${data(top).name}】（連擊值 ${data(top).combo}），以目前範圍會判定${hit ? '成功' : '失敗'}。（剩 ${left} 次）`,

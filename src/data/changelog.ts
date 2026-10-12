@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.43.7',
+    date: '2026-10-12',
+    items: [
+      { type: 'add', text: '新卡「追跡箭矢」（弓箭手）：此卡追擊判定必定成功；[發_蓋2] 抽1；[追] 抽1' },
+    ],
+  },
+  {
     version: '0.43.6',
     date: '2026-10-12',
     items: [

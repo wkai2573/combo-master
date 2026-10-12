@@ -44,7 +44,7 @@ const TRINKETS: Record<string, string> = {
 const COMMON_GEAR = ['木棍', '布甲'];
 /** 生命藥水的張數；連擊值 5 已經塞滿效果卡的角色放 1 張 */
 const POTION = '生命藥水';
-const potionCopies = (charId: string): number => (['勇者', '後人', '商人'].includes(charId) ? 1 : 2);
+const potionCopies = (charId: string): number => (['勇者', '後人', '商人', '遊俠'].includes(charId) ? 1 : 2);
 
 /** 取得角色的預設牌組（卡名陣列：先是固定放入的卡，再是白板卡依連擊值排序） */
 export function presetDeck(charId: string): string[] {

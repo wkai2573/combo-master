@@ -37,7 +37,8 @@ export function* judge(g: GameCtx, p: PlayerId, card: CardInst): Gen<boolean> {
   mark(g, `${pname(g, p)} 追擊判定：翻開【${cd.name}】${desc}`,
     { type: 'flip', player: p, cardId: card.id });
 
-  const success = isMove && !moveRules(card.id).pursuitFails && !inRange(g, p, card);
+  const rules = moveRules(card.id);
+  const success = isMove && !rules.pursuitFails && (rules.pursuitSucceeds || !inRange(g, p, card));
   if (success) {
     yield* becomePursuitCard(g, p, card);
     return true;

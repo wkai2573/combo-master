@@ -393,6 +393,17 @@ const GLYPHS: Record<string, ReactNode> = {
     </>
   ),
 
+  追跡箭矢: (
+    <>
+      <circle cx="78" cy="22" r="14" fill="none" stroke={W} strokeWidth="3" />
+      <circle cx="78" cy="22" r="5" fill={BLOOD} stroke={W} strokeWidth="2" />
+      <path d="M14 38 C26 41 38 35 48 25" fill="none" stroke={W} strokeWidth="2.5" strokeLinecap="round" strokeDasharray="3 5" opacity=".6" />
+      <path d="M8 52 C24 54 46 44 66 26" fill="none" stroke={W} strokeWidth="4.5" strokeLinecap="round" />
+      <path d="M8 52 l-2 -9 M8 52 l9 -2 M16 53 l-2 -9 M16 53 l9 -2" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M74 21 l-14 1 l7 10 z" fill="currentColor" stroke={W} strokeWidth="2.5" strokeLinejoin="round" />
+    </>
+  ),
+
   // ───────── 法師 ─────────
   力量爆破: (
     <>

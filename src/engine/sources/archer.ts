@@ -96,4 +96,22 @@ export const 生命偷取 = defineSource({
   },
 });
 
-export const ARCHER_SOURCES = [遊俠, 瞄準器, 二連矢, 狙擊蓄力, 狙擊印記, 魅影射擊, 地雷陷阱, 生命偷取];
+// 追跡箭矢（弓箭手）：此卡追擊判定必定成功；[發_蓋2] 抽1；[追] 抽1
+export const 追跡箭矢 = defineSource({
+  id: '追跡箭矢',
+  at: 'moves',
+  asMove: { pursuitSucceeds: true },
+  on: {
+    onPlay: (c) => c.effect({ label: '【追跡箭矢】抽 1（蓋2）', cost: { cover: 2 } }, function* () {
+      yield* draw(c.g, c.p, 1);
+      log(c.g, `【追跡箭矢】${pname(c.g, c.p)} 打出時抽 1`);
+    }),
+    onPursuitCard: (c) => c.effect({ label: '【追跡箭矢】抽 1', mandatory: true, mark: false }, function* () {
+      activate(c.g, c.p, c.self!);
+      yield* draw(c.g, c.p, 1);
+      log(c.g, `【追跡箭矢】${pname(c.g, c.p)} 成為追擊卡時抽 1`);
+    }),
+  },
+});
+
+export const ARCHER_SOURCES = [遊俠, 瞄準器, 二連矢, 狙擊蓄力, 狙擊印記, 魅影射擊, 地雷陷阱, 生命偷取, 追跡箭矢];
