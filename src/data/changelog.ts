@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.43.3',
+    date: '2026-10-12',
+    items: [
+      { type: 'add', text: '新卡「職業專精書」（共用招式）：[發_蓋1] 看牌組上方 5 張卡，選擇其中 1 張職業卡加入手牌，其餘隨機放到牌組底' },
+    ],
+  },
+  {
     version: '0.43.2',
     date: '2026-10-12',
     items: [

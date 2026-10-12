@@ -4,8 +4,12 @@
 
 **Blocked by（被誰阻擋）：** 02
 
-**Status：** ready-for-agent
+**Status：** resolved
 
 - [ ] 效果、沒有職業卡、牌組不足 5 張都有測試
 - [ ] 加進開放清單與預設牌組，牌組合法
 - [ ] 規則詮釋補上這張卡
+
+## Answer
+
+已於 v0.43.3 生效。

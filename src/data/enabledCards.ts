@@ -15,9 +15,13 @@ export const ENABLED_EFFECT_CARDS: string[] = [
   '狙擊印記', '順手牽羊', '交涉', '冰霜護甲', '盾擊', '即時停損', '二連矢', '凡骨的意志', '卸除鎧甲', '火球',
   '幸運兔腳', '塗毒', '家族相片', '瞄準器', '招財貓', '冰與雷之曲', 'Explosion!',
   '公開資訊', '狙擊蓄力', '熔岩之擊', '布甲', '木棍', '元素法典', '財富管理', '嘲諷', '生命偷取', '生命藥水',
+  '職業專精書',
 ];
 
 /** 花色招式：沒有特徵、也沒有效果文字的招式 */
 export const isVanilla = (c: CardData): boolean => c.kind === 'move' && c.traits.length === 0 && c.text === '';
+
+/** 職業卡：職業欄不是「共用」的卡 */
+export const isClassCard = (c: CardData): boolean => c.cls !== '共用';
 
 export const isCardEnabled = (c: CardData): boolean => isVanilla(c) || ENABLED_EFFECT_CARDS.includes(c.id);

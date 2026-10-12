@@ -446,6 +446,19 @@ const GLYPHS: Record<string, ReactNode> = {
   ),
 
   // ───────── 共用 ─────────
+  職業專精書: (
+    <>
+      <path d="M50 16 C38 10 22 10 10 14 V50 C22 46 38 46 50 52 C62 46 78 46 90 50 V14 C78 10 62 10 50 16 Z" fill={W} stroke={K} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M50 16 V52" stroke={K} strokeWidth="2" />
+      <path d="M10 14 C22 10 38 10 50 16 C62 10 78 10 90 14 V19 C78 15 62 15 50 21 C38 15 22 15 10 19 Z" fill="currentColor" stroke={K} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M18 29 H42 M18 36 H42 M18 43 H40" stroke={STEEL} strokeWidth="2.5" strokeLinecap="round" />
+      <path
+        transform="translate(72 34) scale(1.25)"
+        d="M0 -9 L2.6 -2.8 L9 -2.8 L3.8 1.2 L5.7 7.5 L0 3.7 L-5.7 7.5 L-3.8 1.2 L-9 -2.8 L-2.6 -2.8 Z"
+        fill={GOLD} stroke={K} strokeWidth="1.4" strokeLinejoin="round"
+      />
+    </>
+  ),
   生命藥水: (
     <>
       <rect x="42" y="2" width="16" height="9" rx="2" fill={WOOD} stroke={K} strokeWidth="1.5" />

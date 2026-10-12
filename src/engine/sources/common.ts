@@ -1,5 +1,6 @@
 import { defineSource, lasting, slot } from '../effectKit';
-import { directHit, log, pname, recover } from '../ops';
+import { isClassCard } from '../../data/enabledCards';
+import { chooseCards, data, directHit, log, move, pname, recover, Z } from '../ops';
 
 // Ex-中毒：[經] 當回合開始時，直擊我方 1，強制
 export const Ex中毒 = defineSource({
@@ -73,4 +74,24 @@ export const 生命藥水 = defineSource({
   },
 });
 
-export const COMMON_SOURCES = [Ex中毒, Ex流血, 布甲, 木棍, 生命藥水];
+// 職業專精書（共用招式）：[發_蓋1] 看牌組上方 5 張卡，選擇其中 1 張職業卡加入手牌，其餘隨機放到牌組底
+// 加入手牌的卡來自牌組，所以生命值少 1；上方沒有職業卡時 5 張全部放到牌組底
+export const 職業專精書 = defineSource({
+  id: '職業專精書',
+  at: 'moves',
+  on: {
+    onPlay: (c) => c.effect({ label: '【職業專精書】看牌組上方 5 張，選 1 張職業卡加入手牌（蓋1）', cost: { cover: 1 } }, function* () {
+      const { g, p } = c;
+      const seen = Z(g, p, 'deck').slice(0, 5);
+      const [pick] = yield* chooseCards(g, p, '【職業專精書】選擇 1 張職業卡加入手牌', seen.filter((card) => isClassCard(data(card))), 1, 1);
+      if (pick) move(g, pick, 'hand');
+      const rest = g.rng.shuffle(seen.filter((card) => card !== pick));
+      for (const card of rest) move(g, card, 'deck', 'bottom');
+      log(g, pick
+        ? `【職業專精書】${pname(g, p)} 看牌組上方 ${seen.length} 張，將職業卡加入手牌，其餘放到牌組底`
+        : `【職業專精書】${pname(g, p)} 看牌組上方 ${seen.length} 張，沒有職業卡，全部放到牌組底`);
+    }),
+  },
+});
+
+export const COMMON_SOURCES = [Ex中毒, Ex流血, 布甲, 木棍, 生命藥水, 職業專精書];
