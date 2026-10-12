@@ -4,10 +4,11 @@ import { tapCard } from '../touchTap';
 import { getCharacter } from '../../data/cards';
 import type { StatChanges } from '../../engine/stats';
 import type { PlayerId, Request } from '../../engine/types';
-import type { CardView, GameView, PlayerView } from '../../engine/view';
+import { pileTop, type CardView, type GameView, type PlayerView } from '../../engine/view';
 import type { DragApi } from '../useCardDrag';
+import type { Speed } from '../playback';
 import { HandRow, Pile } from './Board';
-import { CardFace, expEffectActive } from './CardFace';
+import { CardFace, expEffectActive, InspectPanel } from './CardFace';
 import { Delta } from './Delta';
 import { KeywordText } from './KeywordText';
 
@@ -80,7 +81,7 @@ export function OppBar({ v, p, changes, fxKey, hit, outcome, onOpen }: InfoProps
         {chip('deck', '牌組', pv.deckCount)}
         {chip('rage', '怒氣', pv.rage.length, undefined, changes?.rage[p])}
         {chip('discard', '棄牌', pv.discard.length, 'discard')}
-        {chip('exp', '經驗', `${pv.exp.length}/${ch.expReq}${awake ? ' 覺醒' : ''}`, 'exp', changes?.exp[p], awake ? ' awake' : '')}
+        {chip('exp', awake ? '覺醒' : '經驗', `${pv.exp.length}/${ch.expReq}`, 'exp', changes?.exp[p], awake ? ' awake' : '')}
         {chip('gear', '裝備增益', pv.gear.length + pv.buff.length, 'gear')}
       </div>
     </div>
@@ -106,15 +107,16 @@ export function MyDock({ v, p, changes, fxKey, hit, outcome, onOpen, prompt, sel
     <div className={`${boardClass(v, p, hit, outcome)} mydock`} style={hit ? { ['--hit-delay' as string]: `${hit.delay}ms` } : undefined}>
       {hit && <span className="dmgpop" key={hit.key}>−{hit.amount}</span>}
       <InfoLine v={v} p={p} changes={changes} fxKey={fxKey} onOpen={onOpen} />
-      <div className="piles minipiles">
+      {/* 爆發與增益階段拖曳使用手牌：整排牌堆列是放置區，放在列上任何位置都算，不必瞄準小小的牌堆 */}
+      <div className="piles minipiles" data-dropzone={prompt?.dropZone === 'exp' || prompt?.dropZone === 'gear' ? prompt.dropZone : undefined}>
         <Pile p={p} zone="deck" label="牌組" count={pv.deckCount} shuffling={shuffling} />
         <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} onClick={open('rage')} />
         <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={open('discard')} />
         <Pile
           p={p} zone="exp" label={awake ? '覺醒' : '經驗'} count={pv.exp.length} extra={`/${ch.expReq}`} awake={awake}
-          delta={changes?.exp[p]} k={fxKey} dropZone="exp" onClick={open('exp')}
+          top={pileTop(pv, 'exp') ?? undefined} delta={changes?.exp[p]} k={fxKey} onClick={open('exp')}
         />
-        <Pile p={p} zone="gear" label="裝備增益" count={pv.gear.length + pv.buff.length} dropZone="gear" onClick={open('gear')} />
+        <Pile p={p} zone="gear" label="裝備增益" count={pv.gear.length + pv.buff.length} top={pileTop(pv, 'gear') ?? undefined} onClick={open('gear')} />
       </div>
       <div className="handzone">
         <HandRow cards={pv.hand} mine optKeys={optKeys} selected={selected} single={prompt?.min === 1 && prompt?.max === 1} minStep={28} drag={drag} onPick={onPick} />
@@ -199,6 +201,92 @@ export function Sheet({ v, target, onTab, onClose, footer, children }: {
         <div className="sheetbody">{children}</div>
         {footer}
       </div>
+    </>
+  );
+}
+
+/** 手機版面放不下提示欄的提示（選項多、要看不在手牌上的卡、排序）：從底部滑出的面板，非回答不可所以不能點外面關閉 */
+export function PromptSheet({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <div className="sheetback" />
+      <div className="sheet promptsheet" role="dialog" aria-label="提示">{children}</div>
+    </>
+  );
+}
+
+/**
+ * 手機版面的卡片說明：點不能操作的卡從底部滑出。沒有固定機制，點面板以外的地方就收起，
+ * 那一下點擊不會穿透去操作別的東西；只有另一張不能操作的卡例外，點它是換成那張的說明
+ */
+export function CardSheet({ id, exp, onClose }: { id: string; exp: boolean; onClose: () => void }) {
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as Element | null;
+      if (t?.closest('.cardsheet')) return;
+      if (t?.closest('.card.inspectable')) return;
+      e.stopPropagation();
+      e.preventDefault();
+      onClose();
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [onClose]);
+  return (
+    <>
+      <div className="sheetback passive" />
+      <div className="sheet cardsheet" role="dialog" aria-label="卡片說明">
+        <div className="sheethead">
+          <b>卡片說明</b>
+          <span className="spacer" />
+          <button onClick={onClose}>關閉</button>
+        </div>
+        <div className="sheetbody"><InspectPanel id={id} expActive={exp} /></div>
+      </div>
+    </>
+  );
+}
+
+const MENU_SPEEDS: [Speed, string][] = [['normal', '標準'], ['fast', '快速'], ['off', '關閉']];
+
+/** 手機版面頂列的選單鈕（三條線）與展開的選單：紀錄、流程圖、動畫速度、作弊、離開 */
+export function PhoneMenu({ open, onToggle, onClose, speed, onSpeed, onLog, onFlow, cheat, onLeave }: {
+  open: boolean; onToggle: () => void; onClose: () => void;
+  speed: Speed; onSpeed: (s: Speed) => void; onLog: () => void; onFlow: () => void;
+  /** 解鎖作弊的瀏覽器才有：開關、面板按鈕 */
+  cheat?: { on: boolean; panelOpen: boolean; onToggle: () => void; onPanel: () => void };
+  onLeave: () => void;
+}) {
+  const run = (fn: () => void) => () => { onClose(); fn(); };
+  return (
+    <>
+      <button className={`menubtn${open ? ' on' : ''}`} aria-label="選單" aria-expanded={open} aria-haspopup="menu" onClick={onToggle}>
+        <svg width="18" height="14" viewBox="0 0 18 14" aria-hidden="true"><path d="M1 2h16M1 7h16M1 12h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+      </button>
+      {open && (
+        <>
+          <div className="menuback" onClick={onClose} />
+          <div className="phonemenu" role="menu">
+            <button role="menuitem" onClick={run(onLog)}>紀錄</button>
+            <button role="menuitem" onClick={run(onFlow)}>流程圖</button>
+            <div className="menuspeed" role="group" aria-label="動畫速度">
+              <span className="muted">動畫速度</span>
+              <div className="speeds">
+                {MENU_SPEEDS.map(([s, label]) => (
+                  <button key={s} className={s === speed ? 'on' : ''} aria-pressed={s === speed} onClick={() => onSpeed(s)}>{label}</button>
+                ))}
+              </div>
+            </div>
+            {cheat && (
+              <>
+                <button role="menuitem" className={cheat.on ? 'on' : ''} aria-pressed={cheat.on} onClick={run(cheat.onToggle)}>作弊模式</button>
+                {cheat.on && <button role="menuitem" className={cheat.panelOpen ? 'on' : ''} aria-pressed={cheat.panelOpen} onClick={run(cheat.onPanel)}>作弊面板</button>}
+              </>
+            )}
+            <button role="menuitem" className="danger" onClick={run(onLeave)}>離開</button>
+          </div>
+        </>
+      )}
     </>
   );
 }

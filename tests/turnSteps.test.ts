@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { STEP_GROUPS, STEP_ORDER } from '../src/data/turnSteps';
+import { STEP_GROUPS, STEP_ORDER, stepHint } from '../src/data/turnSteps';
 import type { Phase } from '../src/engine/types';
 
 // 用 Record 讓 Phase 多出新值時，這裡會在型別檢查就報錯
@@ -28,5 +28,29 @@ describe('回合步驟表', () => {
       expect(g.label.trim()).not.toBe('');
       for (const s of g.steps) expect(s.hint.trim(), s.phase).not.toBe('');
     }
+  });
+});
+
+describe('步驟提示', () => {
+  it('先手步驟輪到我：提示加上「輪到你」', () => {
+    expect(stepHint('先手', 0, 0)).toEqual({ phase: '先手', hint: '先攻出 1 張招式', who: '輪到你' });
+  });
+
+  it('反擊步驟輪到對手：提示加上「輪到對手」', () => {
+    expect(stepHint('反擊', 1, 0)?.who).toBe('輪到對手');
+  });
+
+  it('不需要輪流的階段不標示輪到誰', () => {
+    expect(stepHint('追擊', 0, 0)?.who).toBe('');
+    expect(stepHint('增益', 0, 0)?.who).toBe('');
+  });
+
+  it('沒有等待誰時不標示輪到誰', () => {
+    expect(stepHint('先手', null, 0)?.who).toBe('');
+  });
+
+  it('不在回合步驟裡的階段沒有提示', () => {
+    expect(stepHint('設置', null, 0)).toBeNull();
+    expect(stepHint('結束', null, 0)).toBeNull();
   });
 });

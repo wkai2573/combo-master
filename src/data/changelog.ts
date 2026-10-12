@@ -21,6 +21,22 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.44.0',
+    date: '2026-10-12',
+    items: [
+      { type: 'change', text: '手機版面頂列收成選單：紀錄、流程圖、動畫速度、離開都在三條線的選單裡，離開不再容易誤觸' },
+      { type: 'change', text: '手機版面的提示欄固定高度，戰鬥區不再忽高忽低；選項多、或要看不在手牌上的卡的提示，改從底部面板出現；提示按鈕加大、等寬' },
+      { type: 'change', text: '手機版面播放動畫時不再顯示「動畫播放中」條，也不提供跳過；動畫速度可在選單調整' },
+      { type: 'change', text: '手機版面點卡片看說明改為從底部滑出，不再固定，點別處就自動收起' },
+      { type: 'change', text: '手機版面的回合步驟提示移到戰鬥區中央，戰鬥區的卡片放大，對手條的牌區格子等寬加大' },
+      { type: 'change', text: '手機版面的經驗堆與裝備增益堆顯示最上面那張牌的牌面' },
+      { type: 'change', text: '拖曳手牌出招時，放在整個戰鬥區框內都算；手機版面爆發與增益階段，放在整排牌堆上都算' },
+      { type: 'change', text: '裏側的卡標示更醒目：牌面壓暗加斜紋，並標上大大的「裏側」，手機版面更大' },
+      { type: 'add', text: '手機版面的戰鬥流程圖改為直式單欄，不用再左右拖曳' },
+      { type: 'add', text: '畫面發生錯誤時，會顯示「重新載入」與「回首頁」，不會再整片黑掉' },
+    ],
+  },
+  {
     version: '0.43.9',
     date: '2026-10-12',
     items: [

@@ -1,16 +1,10 @@
 import { useMemo } from 'react';
+import { usePhone } from '../layoutMode';
 import type { Phase } from '../../engine/types';
-import { buildFlowChart, highlightNode, type EdgeTone, type Tone } from '../flowChart';
+import { buildFlowChart, FLOW_LEGEND as LEGEND, highlightNode, type EdgeTone } from '../flowChart';
 import { Modal } from './Modal';
 
 const EDGE_TONES: EdgeTone[] = ['plain', 'turn', 'combat', 'good', 'bad', 'branch'];
-const LEGEND: { tone: Tone; label: string }[] = [
-  { tone: 'turn', label: '回合階段' },
-  { tone: 'combat', label: '戰鬥步驟' },
-  { tone: 'good', label: '追擊成功' },
-  { tone: 'bad', label: '失敗與勝負' },
-  { tone: 'note', label: '備註' },
-];
 const LEGEND_X = 100;
 const LEGEND_PITCH = 112;
 // 標題與說明在節點內的基線位置
@@ -19,15 +13,23 @@ const SUB_DY = 44;
 
 /** 戰鬥流程圖：靜態的規則地圖。從戰鬥畫面開啟時傳入目前階段，主幹上會標出「你在這裡」 */
 export function FlowChartModal({ phase, onClose }: { phase?: Phase; onClose: () => void }) {
-  const chart = useMemo(buildFlowChart, []);
+  // 手機版面用直式單欄，不用橫向捲動；其他版面維持橫向大圖
+  const phone = usePhone();
+  const chart = useMemo(() => buildFlowChart(phone ? 'vertical' : 'horizontal'), [phone]);
   const here = highlightNode(phase);
+  // 圖例排成幾欄由版面決定：橫向一排，直式分多列
+  const compact = chart.legendCols < 5;
+  // 橫向圖例一排放完（含最後的條件分支）；直式分多列
+  const col = (i: number) => (compact ? i % chart.legendCols : i);
+  const legendX = (i: number) => (compact ? 30 + col(i) * 118 : LEGEND_X + col(i) * LEGEND_PITCH);
+  const legendYOf = (i: number) => chart.legendY + (compact ? 20 + Math.floor(i / chart.legendCols) * 22 : 0);
 
   return (
     <Modal onClose={onClose}>
-      <div className="flowchart">
+      <div className={`flowchart${phone ? ' vertical' : ''}`}>
         <div className="fchead">
           <h3>戰鬥流程圖</h3>
-          <span className="muted fchint">手機上可左右、上下拖曳</span>
+          {!phone && <span className="muted fchint">手機上可左右、上下拖曳</span>}
           <button onClick={onClose}>關閉</button>
         </div>
         <div className="fcscroll" tabIndex={0} role="region" aria-label="流程圖，可用方向鍵捲動">
@@ -79,15 +81,15 @@ export function FlowChartModal({ phase, onClose }: { phase?: Phase; onClose: () 
                 ),
             )}
             <g className="fc-legend">
-              <text className="lg-title" x={56} y={chart.legendY + 10}>圖例</text>
+              <text className="lg-title" x={compact ? 30 : 56} y={chart.legendY + 10}>圖例</text>
               {LEGEND.map((it, i) => (
-                <g key={it.tone} className={`fc-node fc-n-${it.tone}`} transform={`translate(${LEGEND_X + i * LEGEND_PITCH} ${chart.legendY})`}>
+                <g key={it.tone} className={`fc-node fc-n-${it.tone}`} transform={`translate(${legendX(i)} ${legendYOf(i)})`}>
                   <rect width={16} height={11} rx={3} />
                   <text x={22} y={10}>{it.label}</text>
                 </g>
               ))}
-              <path className="fc-edge fc-e-branch dashed" d={`M${LEGEND_X + LEGEND.length * LEGEND_PITCH},${chart.legendY + 6} h30`} markerEnd="url(#fc-arrow-branch)" />
-              <text x={LEGEND_X + LEGEND.length * LEGEND_PITCH + 38} y={chart.legendY + 10}>條件分支</text>
+              <path className="fc-edge fc-e-branch dashed" d={`M${legendX(LEGEND.length)},${legendYOf(LEGEND.length) + 6} h30`} markerEnd="url(#fc-arrow-branch)" />
+              <text x={legendX(LEGEND.length) + 38} y={legendYOf(LEGEND.length) + 10}>條件分支</text>
             </g>
           </svg>
         </div>

@@ -1,11 +1,9 @@
-import { STEP_GROUPS as GROUPS, STEP_ORDER as ORDER } from '../../data/turnSteps';
+import { STEP_GROUPS as GROUPS, STEP_ORDER as ORDER, stepHint } from '../../data/turnSteps';
 import type { Phase, PlayerId } from '../../engine/types';
 
 export function StepTracker({ phase, waitingFor, me }: { phase: Phase; waitingFor: PlayerId | null; me: PlayerId }) {
   const at = phase === '結束' ? ORDER.length : ORDER.indexOf(phase);
-  const cur = GROUPS.flatMap((g) => g.steps).find((s) => s.phase === phase);
-  const turnNote =
-    waitingFor === null || (phase !== '先手' && phase !== '反擊') ? '' : waitingFor === me ? '　輪到你' : '　輪到對手';
+  const cur = stepHint(phase, waitingFor, me);
 
   return (
     <div className="steps" aria-label="回合步驟">
@@ -41,7 +39,7 @@ export function StepTracker({ phase, waitingFor, me }: { phase: Phase; waitingFo
         {cur ? (
           <>
             <b>{cur.phase}</b>：{cur.hint}
-            {turnNote && <span className="who">{turnNote}</span>}
+            {cur.who && <span className="who">　{cur.who}</span>}
           </>
         ) : (
           '\u00a0'

@@ -1,4 +1,4 @@
-import type { Phase } from '../engine/types';
+import type { Phase, PlayerId } from '../engine/types';
 
 export interface TurnStep {
   phase: Phase;
@@ -31,3 +31,18 @@ export const STEP_GROUPS: StepGroup[] = [
 ];
 
 export const STEP_ORDER: Phase[] = STEP_GROUPS.flatMap((g) => g.steps.map((s) => s.phase));
+
+export interface StepHint {
+  phase: Phase;
+  hint: string;
+  /** 先手與反擊步驟輪到誰：「輪到你」「輪到對手」，其他情況是空字串 */
+  who: string;
+}
+
+/** 目前步驟的規則提示（戰鬥畫面的步驟列與手機版面戰鬥區中央都顯示它）；不在回合步驟裡的階段沒有提示 */
+export function stepHint(phase: Phase, waitingFor: PlayerId | null, me: PlayerId): StepHint | null {
+  const cur = STEP_GROUPS.flatMap((g) => g.steps).find((s) => s.phase === phase);
+  if (!cur) return null;
+  const who = waitingFor === null || (phase !== '先手' && phase !== '反擊') ? '' : waitingFor === me ? '輪到你' : '輪到對手';
+  return { phase: cur.phase, hint: cur.hint, who };
+}

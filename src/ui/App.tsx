@@ -5,6 +5,7 @@ import { DeckBuilder } from './pages/DeckBuilder';
 import { Home, type Route } from './pages/Home';
 import { Lobby, type LobbyMode } from './pages/Lobby';
 import { Records } from './pages/Records';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { KeywordTooltip } from './components/KeywordText';
 
 function Routes() {
@@ -33,7 +34,9 @@ function Routes() {
 export function App() {
   return (
     <>
-      <Routes />
+      <ErrorBoundary>
+        <Routes />
+      </ErrorBoundary>
       <KeywordTooltip />
     </>
   );

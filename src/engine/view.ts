@@ -29,6 +29,12 @@ export interface PlayerView {
   def: number;
 }
 
+/** 手機版面以牌堆呈現的牌區頂牌：經驗堆是最後放進去的那張，裝備增益堆是裝備加增益排好後的最後一張；沒有牌就沒有頂牌 */
+export function pileTop(pv: PlayerView, zone: 'exp' | 'gear'): CardView | null {
+  const cards = zone === 'exp' ? pv.exp : [...pv.gear, ...pv.buff];
+  return cards[cards.length - 1] ?? null;
+}
+
 export interface GameView {
   me: PlayerId;
   players: [PlayerView, PlayerView];

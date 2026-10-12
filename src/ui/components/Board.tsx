@@ -10,6 +10,7 @@ import { getCard, getCharacter } from '../../data/cards';
 import type { CardView, GameView, PlayerView } from '../../engine/view';
 import type { StatChanges } from '../../engine/stats';
 import type { DropZone, FrameFx, PlayerId, Request } from '../../engine/types';
+import type { StepHint } from '../../data/turnSteps';
 import { CardFace, expEffectActive } from './CardFace';
 import { Delta } from './Delta';
 
@@ -54,8 +55,8 @@ export function Pile({ p, zone, label, count, top, delta, k, shuffling, awake, e
       <div className={`pilestack${shuffling ? ' shuffling' : ''}`} data-pile={`${p}-${zone}`} style={{ boxShadow: edge || undefined }}>
         {count === 0 ? (
           <div className="card sm slot">空</div>
-        ) : zone === 'discard' && top?.id ? (
-          <CardFace id={top.id} size="sm" />
+        ) : top?.id ? (
+          <CardFace id={top.id} size="sm" covered={top.covered} />
         ) : (
           <CardFace id={null} size="sm" />
         )}
@@ -313,7 +314,11 @@ function StackColumn({ pv, label, mine, fx, delta, k, notes }: { pv: PlayerView;
         {cards.length === 0 && <span className="empty">（尚未出招）</span>}
       </div>
       <div className={`sumbox${fx?.type === 'calc' ? ' pulse' : ''}`}>
-        <div>總攻 <b className="atk">{pv.atk}</b><Delta d={delta?.atk} k={k} /> ／ 總防 <b className="def">{pv.def}</b><Delta d={delta?.def} k={k} /></div>
+        <div>
+          <span className="sumline">總攻 <b className="atk">{pv.atk}</b><Delta d={delta?.atk} k={k} /></span>
+          <span className="sumslash"> ／ </span>
+          <span className="sumline">總防 <b className="def">{pv.def}</b><Delta d={delta?.def} k={k} /></span>
+        </div>
         {notes && statNote(pv) && <div className="note">{statNote(pv)}</div>}
         {notes && pv.pursuit.length > 0 && <div className="note">金框為追擊卡</div>}
       </div>
@@ -341,8 +346,10 @@ function Equation({ who, atk, def, dmg, from }: { who: string; atk: number; def:
   );
 }
 
-export function CombatArea({ v, fx, caption, fxKey, changes }: {
+export function CombatArea({ v, fx, caption, fxKey, changes, hint }: {
   v: GameView; fx?: FrameFx; caption?: string; fxKey: number; changes?: StatChanges;
+  /** 回合步驟的規則提示：手機版面沒有步驟列，改放在戰鬥區中央 */
+  hint?: StepHint | null;
 }) {
   const opp: PlayerId = v.me === 0 ? 1 : 0;
   const calc = fx?.type === 'calc' ? fx : null;
@@ -354,7 +361,7 @@ export function CombatArea({ v, fx, caption, fxKey, changes }: {
   const notes = [['對方', statNote(v.players[opp])], ['我方', statNote(v.players[v.me])]].filter((n): n is [string, string] => n[1] !== null);
   const hasPursuit = v.players[opp].pursuit.length + v.players[v.me].pursuit.length > 0;
   return (
-    <div className="combatarea">
+    <div className="combatarea" data-dropzone="moves">
       <div className="caption" key={`c${fxKey}`}>{caption ?? ' '}</div>
       <div className="cols">
         <div className="colwrap">
@@ -362,6 +369,12 @@ export function CombatArea({ v, fx, caption, fxKey, changes }: {
           <ColumnFx fx={fx} fxKey={fxKey} player={opp} />
         </div>
         <div className="mid">
+          {hint && (
+            <div className="stephint">
+              <b>{hint.phase}</b>：{hint.hint}
+              {hint.who && <span className="who">{hint.who}</span>}
+            </div>
+          )}
           {calc ? (
             <div className="calc" key={`calc${fxKey}`}>
               <Equation who="對方 → 我方" atk={calc.atk[opp]} def={calc.def[v.me]} dmg={calc.dmg[v.me]} from={0} />
@@ -380,7 +393,7 @@ export function CombatArea({ v, fx, caption, fxKey, changes }: {
             </>
           )}
         </div>
-        <div className="colwrap" data-dropzone="moves">
+        <div className="colwrap">
           <StackColumn notes={!wide} pv={v.players[v.me]} label="我方" mine fx={fx} delta={changes && { atk: changes.atk[v.me], def: changes.def[v.me] }} k={fxKey} />
           <ColumnFx fx={fx} fxKey={fxKey} player={v.me} />
         </div>

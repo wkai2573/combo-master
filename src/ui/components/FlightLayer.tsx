@@ -7,6 +7,9 @@ import { CardFace } from './CardFace';
 /** 牌堆（沒有逐張畫出卡片）的區域：飛行以牌堆元件當起訖點 */
 const PILE_ZONES = new Set(['deck', 'discard', 'rage']);
 
+/** 頂牌顯示牌面的牌堆（手機版面的經驗堆與裝備增益堆，棄牌堆一向如此）：牌飛來時頂牌先藏起來，落地才顯示 */
+const TOP_PILES = new Set(['exp', 'gear', 'buff']);
+
 /** 增益與裝備放在同一個牌堆（手機版面）：牌堆的 data-pile 以裝備增益區的 gear 為準 */
 const pileKey = (zone: string) => (zone === 'buff' ? 'gear' : zone);
 
@@ -116,7 +119,9 @@ export function FlightLayer({ view, fx, playing, n, scale, extraPile }: {
           size: (destEl ? destEl.classList.contains('md') : dest.width > 90) ? 'md' : 'sm',
           delay: f.order * timing.stagger + (spot ? SPOTLIGHT_HOLD_MS : 0),
           ms: timing.ms,
-          pileTop: f.to === 'discard' ? document.querySelector<HTMLElement>(`[data-pile="${f.owner}-discard"] .card`) : null,
+          pileTop: f.to === 'discard' || (isPile(f.owner, f.to) && TOP_PILES.has(f.to))
+            ? document.querySelector<HTMLElement>(`[data-pile="${f.owner}-${pileKey(f.to)}"] .card`)
+            : null,
           hide: destEl,
         });
       }

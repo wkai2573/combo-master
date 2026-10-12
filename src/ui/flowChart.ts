@@ -58,7 +58,18 @@ export interface FlowChart {
   nodes: FlowNode[];
   edges: FlowEdge[];
   legendY: number;
+  /** 圖例一列放幾項（直式版面窄，要分多列） */
+  legendCols: number;
 }
+
+/** 圖例的節點顏色項目（圖例最後還有一項條件分支的虛線箭頭） */
+export const FLOW_LEGEND: { tone: Tone; label: string }[] = [
+  { tone: 'turn', label: '回合階段' },
+  { tone: 'combat', label: '戰鬥步驟' },
+  { tone: 'good', label: '追擊成功' },
+  { tone: 'bad', label: '失敗與勝負' },
+  { tone: 'note', label: '備註' },
+];
 
 type SpinePhase = Exclude<Phase, '設置' | '結束'>;
 
@@ -106,7 +117,15 @@ function missing(phase: Phase): never {
   throw new Error(`流程圖主幹缺少「${phase}」的節點文字，請在 SPINE_TEXT 補上`);
 }
 
-export function buildFlowChart(): FlowChart {
+/** 版面方向：橫向是桌面與平板的固定大圖，直式是手機的單欄版面 */
+export type FlowLayout = 'horizontal' | 'vertical';
+
+/** 戰鬥流程圖的版面資料。橫向與直式的節點、邊、文字完全相同，只有座標不同 */
+export function buildFlowChart(layout: FlowLayout = 'horizontal'): FlowChart {
+  return layout === 'vertical' ? buildVertical() : buildHorizontal();
+}
+
+function buildHorizontal(): FlowChart {
   const nodes: FlowNode[] = [];
   const edges: FlowEdge[] = [];
   const at = (id: string) => nodes.find((n) => n.id === id)!;
@@ -247,7 +266,150 @@ export function buildFlowChart(): FlowChart {
     ['EX / 同時歸零比手牌', true],
   ].map(([label, exception], k) => ({ label: label as string, exception: exception as boolean, x: LANE_X, y: laneY(k), w: LANE_W, h: LANE_H }));
 
-  return { width: CHART_W, height: laneY(4) + LANE_H + EXTRA_BOTTOM, lanes, nodes, edges, legendY: laneY(4) + LANE_H + 18 };
+  return { width: CHART_W, height: laneY(4) + LANE_H + EXTRA_BOTTOM, lanes, nodes, edges, legendY: laneY(4) + LANE_H + 18, legendCols: 5 };
+}
+// ── 直式版面：主幹排成單欄由上到下，分支掛在右欄，寬度適合手機 ──
+export const CHART_VERTICAL_W = 400;
+const V_SX = 34; // 主幹欄的左邊
+const V_BX = CHART_VERTICAL_W - 14 - NW; // 分支欄的左邊
+const V_PITCH = 88;
+const V_TOP = 16;
+const V_LANE_X = 2;
+const V_LANE_W = CHART_VERTICAL_W - 4;
+/** 追擊之後留幾列給右欄的三個追擊結果 */
+const V_CHASE_ROWS = 2;
+const V_LEGEND_COLS = 3;
+/** 圖例共幾項：節點顏色加條件分支 */
+const LEGEND_ITEMS = FLOW_LEGEND.length + 1;
+
+function buildVertical(): FlowChart {
+  const nodes: FlowNode[] = [];
+  const edges: FlowEdge[] = [];
+  const edge = (from: string, to: string, d: string, tone: EdgeTone, o: { dashed?: boolean; label?: [string, number, number] } = {}) =>
+    edges.push({ id: `${from}>${to}`, from, to, d, tone, dashed: o.dashed, label: o.label && { text: o.label[0], x: o.label[1], y: o.label[2] } });
+
+  // 主幹的列：回合階段各一列，戰鬥分組展開後每個步驟一列，追擊之後多留幾列
+  const battle = STEP_GROUPS.findIndex((g) => g.steps.length > 1);
+  const rows: { id: string; phase?: SpinePhase; tone: Tone }[] = [];
+  const rowOf = new Map<string, number>();
+  let r = 0;
+  const push = (id: string, tone: Tone, phase?: SpinePhase, gap = 0) => {
+    rows.push({ id, phase, tone });
+    rowOf.set(id, r);
+    r += 1 + gap;
+  };
+  for (const g of STEP_GROUPS) {
+    if (g.steps.length === 1) {
+      const phase = g.steps[0].phase as SpinePhase;
+      push(phase, 'turn', phase);
+      continue;
+    }
+    push(g.label, 'turn');
+    for (const s of g.steps) push(s.phase, 'combat', s.phase as SpinePhase, s.phase === '追擊' ? V_CHASE_ROWS : 0);
+  }
+  const battleRow = rowOf.get(STEP_GROUPS[battle].label)!;
+
+  // 分區：第一條放戰鬥之前的回合階段，第二條放戰鬥以及之後的一切（含追擊結果與勝負判定）
+  const lane1Y = V_TOP;
+  const lane2Y = lane1Y + 40 + (battleRow - 1) * V_PITCH + NH + 16 + 12;
+  const rowY = (row: number) => (row < battleRow ? lane1Y + 40 + row * V_PITCH : lane2Y + 40 + (row - battleRow) * V_PITCH);
+  const cy = (id: string) => rowY(rowOf.get(id)!) + NH / 2;
+  const spineCx = V_SX + NW / 2;
+  const branchCx = V_BX + NW / 2;
+
+  for (const row of rows) {
+    const text = row.phase ? (SPINE_TEXT[row.phase] ?? missing(row.phase)) : [`${row.id}階段`, '展開成下方步驟'];
+    nodes.push({ id: row.id, x: V_SX, y: rowY(rowOf.get(row.id)!), w: NW, h: NH, lines: text, tone: row.tone, phase: row.phase });
+  }
+  const at = (id: string) => nodes.find((n) => n.id === id)!;
+
+  // 主幹：上一格的底接下一格的頂；分組展開、戰鬥結束用不同的語意
+  const battleSteps = STEP_GROUPS[battle].steps.map((s) => s.phase as SpinePhase);
+  const lastStep = battleSteps[battleSteps.length - 1];
+  for (let i = 0; i < rows.length - 1; i++) {
+    const a = at(rows[i].id);
+    const b = at(rows[i + 1].id);
+    const down = `M${spineCx},${a.y + NH} V${b.y}`;
+    const midY = (a.y + NH + b.y) / 2;
+    if (a.id === STEP_GROUPS[battle].label) {
+      edge(a.id, b.id, down, 'branch', { dashed: true, label: ['展開步驟', spineCx + 40, midY + 4] });
+    } else if (a.id === lastStep) {
+      edge(a.id, b.id, down, 'turn', { label: ['戰鬥結束', spineCx + 40, midY + 4] });
+    } else if (battleSteps.includes(a.phase as SpinePhase) && battleSteps.includes(b.phase as SpinePhase)) {
+      const text = SPINE_EDGE_LABEL[a.phase as SpinePhase];
+      edge(a.id, b.id, down, 'combat', { label: text ? [text, spineCx + 40, midY + 4] : undefined });
+    } else {
+      edge(a.id, b.id, down, 'turn');
+    }
+  }
+  // 最後一格以虛線回到第一格：從底部繞到左邊，沿著左邊往上
+  const first = at(rows[0].id);
+  const last = at(rows[rows.length - 1].id);
+  const loopBottom = last.y + NH + 16;
+  edge(last.id, first.id, `M${spineCx},${last.y + NH} V${loopBottom} H8 V${first.y + NH / 2} H${V_SX}`, 'branch', {
+    dashed: true,
+    label: ['下一回合', (8 + spineCx) / 2, loopBottom - 5],
+  });
+
+  // 追擊通則：只要有一方的招式卡疊沒有招式，就跳過追擊；沿左邊的空隙繞過追擊
+  edge('反擊', '傷害', `M${V_SX},${cy('反擊')} H22 V${cy('傷害')} H${V_SX}`, 'branch', {
+    dashed: true,
+    label: ['一方沒招式', 62, (cy('追擊') + cy('傷害')) / 2],
+  });
+
+  // 分支：掛在主幹旁邊的右欄
+  const branch = (id: string, row: number, lines: string[], tone: Tone, dashed: boolean, anchor: Phase) =>
+    nodes.push({ id, x: V_BX, y: rowY(row), w: NW, h: NH, lines, tone, dashed, anchor });
+  const bcy = (id: string) => at(id).y + NH / 2;
+  const rightEdge = V_SX + NW;
+  const bus = rightEdge + 16;
+
+  // 先手：沒有可打出的招式時展示手牌，不算收招
+  branch('show-hand', rowOf.get('先手')!, ['先手沒招式', '展示手牌，不算收招'], 'note', true, '先手');
+  edge('先手', 'show-hand', `M${rightEdge},${cy('先手')} H${V_BX}`, 'plain', { dashed: true, label: ['無招式', (rightEdge + V_BX) / 2, cy('先手') - 6] });
+
+  // 追擊判定的結果：成功、失敗、一律失敗，由上到下三列
+  const chaseRow = rowOf.get('追擊')!;
+  branch('chase-hit', chaseRow, ['追擊成功', '成為追擊卡，計入攻擊'], 'good', false, '追擊');
+  branch('chase-miss', chaseRow + 1, ['追擊失敗', '該卡加入手牌'], 'bad', false, '追擊');
+  branch('chase-always', chaseRow + 2, ['一律失敗', '翻到裝備或增益'], 'bad', true, '追擊');
+  edge('追擊', 'chase-miss', `M${rightEdge},${cy('追擊')} H${bus} V${bcy('chase-miss')} H${V_BX}`, 'bad', {
+    label: ['在範圍內', (bus + V_BX) / 2 + 4, bcy('chase-miss') - 6],
+  });
+  edge('追擊', 'chase-always', `M${rightEdge},${cy('追擊')} H${bus} V${bcy('chase-always')} H${V_BX}`, 'bad', {
+    dashed: true,
+    label: ['一律失敗', (bus + V_BX) / 2 + 4, bcy('chase-always') - 6],
+  });
+  // 成功的邊最後畫，三條邊共用的那一段橫線才會維持綠色
+  edge('追擊', 'chase-hit', `M${rightEdge},${cy('追擊')} H${V_BX}`, 'good', { label: ['不在範圍內', (rightEdge + V_BX) / 2, cy('追擊') - 6] });
+
+  // 勝負：每個步驟結束都檢查；單方歸零落敗，同時歸零比手牌
+  const dmgRow = rowOf.get('傷害')!;
+  branch('win-check', dmgRow, ['勝負檢查', '每個步驟結束都檢查'], 'bad', false, '傷害');
+  branch('lose', dmgRow + 1, ['牌組歸零者落敗', '只有一方歸零'], 'bad', false, '傷害');
+  branch('tie', dmgRow + 2, ['雙方同時歸零', '進入手牌比較'], 'bad', false, '傷害');
+  branch('tie-hand', dmgRow + 3, ['比手牌張數', '多者獲勝，相同則平手'], 'bad', false, '傷害');
+  edge('傷害', 'win-check', `M${rightEdge},${cy('傷害')} H${V_BX}`, 'bad', { dashed: true, label: ['隨時檢查', (rightEdge + V_BX) / 2, cy('傷害') - 6] });
+  edge('win-check', 'lose', `M${branchCx},${at('win-check').y + NH} V${at('lose').y}`, 'bad', {
+    dashed: true,
+    label: ['單方歸零', branchCx + 40, (at('win-check').y + NH + at('lose').y) / 2 + 4],
+  });
+  edge('win-check', 'tie', `M${V_BX},${bcy('win-check')} H${bus + 20} V${bcy('tie')} H${V_BX}`, 'bad', {
+    dashed: true,
+    label: ['同時歸零', bus + 20, (bcy('lose') + bcy('tie')) / 2 + 4],
+  });
+  edge('tie', 'tie-hand', `M${branchCx},${at('tie').y + NH} V${at('tie-hand').y}`, 'bad', { dashed: true });
+
+  const lane2H = Math.max(...nodes.map((n) => n.y + n.h)) + 28 - lane2Y;
+  const lanes: FlowLane[] = [
+    { label: '01 / 回合階段', exception: false, x: V_LANE_X, y: lane1Y, w: V_LANE_W, h: lane2Y - 12 - lane1Y },
+    { label: `02 / ${STEP_GROUPS[battle].label}階段（含追擊結果與勝負判定）`, exception: false, x: V_LANE_X, y: lane2Y, w: V_LANE_W, h: lane2H },
+  ];
+  const legendY = lane2Y + lane2H + 18;
+  return {
+    width: CHART_VERTICAL_W, height: legendY + 20 + 22 * Math.ceil(LEGEND_ITEMS / V_LEGEND_COLS) + 24,
+    lanes, nodes, edges, legendY, legendCols: V_LEGEND_COLS,
+  };
 }
 
 /** 目前階段在主幹上對應的節點；設置、結束或沒有階段時沒有對應 */

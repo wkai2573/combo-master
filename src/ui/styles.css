@@ -170,8 +170,12 @@ h1, h2, h3 { margin: 0 0 8px; }
 .card.pursuit { outline: 2px solid #fff; outline-offset: -2px; }
 /* 自成一層：「裏側」字樣只在這張卡裡，疊在上面的卡會把它一起蓋住 */
 .card.facedown { isolation: isolate; }
-.card.facedown::after { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, .55); pointer-events: none; }
-.card .fdtag { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1; padding: 1px 6px; border-radius: 8px; background: #000b; color: #dfe6ff; font-size: 10px; font-weight: 700; pointer-events: none; }
+/* 裏側：壓暗加斜紋，和表側一眼分得出來；標籤是醒目色塊，字級隨卡片大小縮放 */
+.card.facedown::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, rgba(4, 6, 12, .74) 0 7px, rgba(4, 6, 12, .58) 7px 14px); pointer-events: none; }
+.card .fdtag { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1; padding: .1em .55em; border-radius: .5em; border: 1px solid #000a; background: var(--accent); color: #10131c; font-size: 1.4em; font-weight: 800; line-height: 1.3; white-space: nowrap; box-shadow: 0 1px 4px #000c; pointer-events: none; }
+/* 手機版面的卡小，標籤再放大一檔 */
+.battle.phone .card .fdtag { font-size: 1.8em; }
+.battle.phone .pile .card .fdtag { font-size: 1.7em; }
 .card.back { background: repeating-linear-gradient(45deg, #2a3350, #2a3350 6px, #222a42 6px, #222a42 12px); align-items: center; justify-content: center; color: var(--muted); }
 .card.selected { outline: 3px solid var(--accent); transform: translateY(-12px); }
 .card.glow { box-shadow: 0 0 10px 2px var(--accent); cursor: pointer; }
@@ -680,7 +684,7 @@ button.chip { font: inherit; font-size: 11px; }
 .chip.awake { color: #1b1405; background: var(--accent); border-color: var(--accent); font-weight: 700; }
 
 /* 戰鬥區：對方疊牌｜範圍與算式｜我方疊牌，疊牌高度由版面決定 */
-.battle.phone .combatarea { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 3px 4px; overflow: hidden; }
+.battle.phone .combatarea { --mdw: clamp(72px, 21vw, 96px); --mdh: calc(var(--mdw) * 1.4); flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 3px 4px; overflow: hidden; }
 .battle.phone .combatarea .caption { min-height: 20px; margin-bottom: 0; font-size: 13px; }
 .battle.phone .combatarea .cols { flex: 1; min-height: 0; flex-wrap: nowrap; align-items: stretch; gap: 4px; }
 .battle.phone .combatarea .colwrap { display: flex; flex-direction: column; flex: none; }
@@ -696,8 +700,10 @@ button.chip { font: inherit; font-size: 11px; }
 .battle.phone .midnotes { margin-top: 4px; font-size: 11px; }
 .battle.phone .sumbox { min-width: 0; width: var(--mdw); padding: 2px 2px; }
 .battle.phone .sumbox b { font-size: 15px; }
+.battle.phone .sumbox .sumline { display: block; white-space: nowrap; }
+.battle.phone .sumbox .sumslash { display: none; }
 .battle.phone .vstack { container-type: size; width: var(--mdw); min-height: 0; justify-content: flex-start; }
-.battle.phone .vstack .card { flex: none; width: var(--mdw); height: var(--mdh); font-size: 9px; --ov: max(3px, min(24px, calc((100cqh - var(--mdh)) / var(--n1, 1)))); }
+.battle.phone .vstack .card { flex: none; width: var(--mdw); height: var(--mdh); font-size: calc(var(--mdw) * .125); --ov: max(3px, min(24px, calc((100cqh - var(--mdh)) / var(--n1, 1)))); }
 .battle.phone .vstack .card + .card { margin-top: calc(var(--ov) - var(--mdh)); }
 .battle.phone .vstack .card .hd { height: 18px; padding: 0 4px; }
 .battle.phone .vstack .card .hd .c { min-width: 24px; line-height: 1.1; }
@@ -745,11 +751,16 @@ button.chip { font: inherit; font-size: 11px; }
 .handpreview .card.selected { transform: none; outline: 0; }
 .previewhint { font-size: 11px; color: var(--accent); }
 
-/* 提示欄：高度不限制整頁，內容多時內部捲動 */
-.battle.phone .prompt { position: static; flex: none; max-height: 30%; overflow-y: auto; padding: 5px 8px; gap: 4px; box-shadow: none; }
+/* 提示欄：固定高度（放不下的提示改用牌區面板或底部提示面板），戰鬥區的高度因此不隨提示變化 */
+.battle.phone .promptslot { flex: none; height: 104px; display: flex; }
+.battle.phone .promptslot > .prompt { flex: 1; min-width: 0; max-height: none; height: 100%; overflow-y: auto; align-content: center; }
+.battle.phone .prompt { position: static; flex: none; padding: 5px 8px; gap: 4px; box-shadow: none; }
+.battle.phone .prompt.wait { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; text-align: center; }
 .battle.phone .prompt .ptitle { font-size: 13px; }
-.battle.phone .prompt .btns { gap: 6px; }
-.battle.phone .prompt .btns button { padding: 4px 10px; }
+/* 提示按鈕：每列最多兩顆、等寬、夠高；單顆或多出來的一顆撐滿一列 */
+.battle.phone .prompt .btns, .sheet .prompt .btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.battle.phone .prompt .btns > button, .sheet .prompt .btns > button { flex: 1 1 calc(50% - 6px); min-height: 44px; padding: 6px 10px; font-size: 15px; }
+.battle.phone .prompt .btns > span { flex: 1 1 100%; }
 .battle.phone .prompt .cardrow { flex-wrap: nowrap; overflow-x: auto; padding-top: 8px; }
 .battle.phone .prompt .card.md { width: 64px; height: 90px; font-size: 8px; }
 .battle.phone .prompt .card.md .ef { display: none; }
@@ -771,6 +782,8 @@ button.chip { font: inherit; font-size: 11px; }
 .sheetnote { width: 100%; font-size: 11px; }
 .sheet .prompt { position: static; flex: none; border-radius: 0; border-width: 2px 0 0; box-shadow: none; max-height: 45%; overflow-y: auto; }
 .sheet .prompt .card.md { width: 64px; height: 90px; font-size: 8px; }
+.sheet.promptsheet { max-height: 70%; overflow-y: auto; }
+.sheet.promptsheet .prompt { max-height: none; border-width: 0; }
 .sheet .prompt .card.md .ef { display: none; }
 
 /* ───────── 拖曳使用手牌：只有提示指定的放置區亮起 ───────── */
@@ -784,3 +797,50 @@ body[data-drag="gear"] [data-dropzone="gear"] { outline: 2px dashed var(--accent
 body[data-drag] [data-dropzone][data-dragover] { outline-style: solid; background: color-mix(in srgb, var(--accent) 22%, transparent); }
 /* 窄螢幕版的裝備增益區空的時候是隱藏的，拖曳時先露出來當放置區 */
 body[data-drag="gear"] .gearzone.empty { display: block; min-height: 44px; }
+
+/* ───────── 錯誤保護畫面 ───────── */
+.errorpanel { display: grid; gap: 10px; }
+.errorpanel .errormsg { font-size: 12px; color: var(--muted); word-break: break-all; }
+.errorpanel .btns { display: flex; gap: 8px; }
+body[data-drag="moves"] .combatarea { outline-offset: -3px; }
+
+/* 手機版面：回合步驟的規則提示放在戰鬥區中央 */
+.stephint { margin-bottom: 6px; font-size: 13px; line-height: 1.45; color: var(--text); text-align: center; }
+.stephint b { color: var(--accent); }
+.stephint .who { display: block; margin-top: 2px; font-size: 15px; font-weight: 800; color: var(--accent); }
+
+/* ───────── 手機版面：頂列選單與卡片說明面板 ───────── */
+.battle.phone .topbar .menubtn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 32px; padding: 0; }
+.battle.phone .topbar .menubtn.on { border-color: var(--accent); color: var(--accent); }
+.menuback { position: fixed; inset: 0; z-index: 29; }
+.phonemenu { position: fixed; top: 44px; right: 8px; z-index: 30; min-width: 220px; display: grid; gap: 6px; padding: 8px; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; box-shadow: 0 10px 28px #000c; }
+.battle.phone .phonemenu button { padding: 8px 12px; min-height: 42px; font-size: 15px; text-align: left; }
+.phonemenu button.on { border-color: var(--accent); color: var(--accent); }
+.phonemenu button.danger { color: var(--bad); border-color: var(--bad); }
+.phonemenu .menuspeed { display: grid; gap: 4px; padding: 2px 0; font-size: 12px; }
+.battle.phone .phonemenu .speeds { display: flex; gap: 6px; }
+.battle.phone .phonemenu .speeds button { flex: 1; text-align: center; padding: 8px 4px; }
+.sheetback.passive { pointer-events: none; }
+.sheet.cardsheet { max-height: 62%; }
+.sheet.cardsheet .inspect { border: 0; padding: 0; }
+.sheetback { z-index: 11; }
+.sheethead .spacer { flex: 1; }
+
+/* 手機版面對手條：五個牌區格子等寬加大；能點開的是按鈕樣式，牌組與怒氣只是顯示 */
+.battle.phone .oppbar .chips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; overflow: visible; }
+.battle.phone .oppbar .chip { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 42px; padding: 3px 2px; border-radius: 8px; font-size: 11px; line-height: 1.25; white-space: normal; text-align: center; }
+.battle.phone .oppbar .chip b { font-size: 15px; }
+.battle.phone .oppbar .chip.click { border-color: #5a6890; background: #232b44; box-shadow: 0 1px 0 #0008; }
+.battle.phone .oppbar span.chip { background: transparent; border-style: dashed; color: var(--muted); }
+/* 對手條與我方面板的高度固定，不因為覺醒、差值或多出的標籤而變高，戰鬥區才不會跳 */
+.battle.phone .oppbar .chip { position: relative; height: 44px; overflow: hidden; }
+.battle.phone .oppbar .chip .delta { position: absolute; top: 1px; right: 4px; margin: 0; font-size: 12px; }
+.battle.phone .infoline { height: 28px; overflow: hidden; }
+.battle.phone .pilelabel { height: 16px; line-height: 16px; overflow: visible; }
+.battle.phone .pilelabel .delta { font-size: 11px; line-height: 1; vertical-align: top; }
+
+/* 手機版面的流程圖：直式單欄，全螢幕，不需要橫向捲動 */
+.flowchart.vertical { width: 100%; }
+.flowchart.vertical svg { min-width: 0; }
+.flowchart.vertical .fcscroll { max-height: calc(100dvh - 76px); }
+.overlay:has(.flowchart.vertical) .modal { width: 100vw; max-width: 100vw; height: 100vh; height: 100dvh; max-height: none; min-width: 0; padding: 10px; border: 0; border-radius: 0; }
