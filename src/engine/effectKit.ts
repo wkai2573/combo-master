@@ -26,6 +26,8 @@ export type Place = ZoneName | 'char' | 'lasting';
 export interface Events {
   turnStart: Record<never, never>;
   onPass: Record<never, never>;
+  /** 對方收招的當下，問收招者的對手；含被迫收招 */
+  onFoePass: Record<never, never>;
   afterBurst: Record<never, never>;
   onAwaken: Record<never, never>;
   /** 傷害算出之後、放進怒氣區之前。雙方將要承受的傷害讀 flags.damagePending，結算中會變，條件要用 when 即時判斷 */
@@ -53,6 +55,7 @@ export type FireArgList<K extends EventKey> = Record<never, never> extends FireA
 export const EVENT_TITLES: Record<EventKey, string> = {
   turnStart: '回合開始',
   onPass: '收招時',
+  onFoePass: '對方收招時',
   afterBurst: '爆發後',
   onAwaken: '覺醒時',
   onDamage: '傷害計算時',

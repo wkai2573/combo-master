@@ -225,6 +225,15 @@ const GLYPHS: Record<string, ReactNode> = {
     </>
   ),
 
+  狩獵印記: (
+    <>
+      <circle cx="50" cy="30" r="22" fill="none" stroke={W} strokeWidth="3.5" />
+      <circle cx="50" cy="30" r="9" fill="none" stroke="currentColor" strokeWidth="4.5" />
+      <path d="M50 2 V12 M50 48 V58 M22 30 H32 M68 30 H78" stroke={W} strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M33 11 L67 49 M42 7 L76 45 M25 15 L59 53" stroke={BLOOD} strokeWidth="4.5" strokeLinecap="round" />
+    </>
+  ),
+
   // ───────── 商人 ─────────
   低價買進: (
     <>

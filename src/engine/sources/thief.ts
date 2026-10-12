@@ -1,6 +1,6 @@
 import { canPay, chooseX, pay } from '../cost';
 import { defineSource, lasting, slot } from '../effectKit';
-import { activate, awakened, chooseCards, data, discard, draw, isFirst, log, newCard, pname, topOfZone, Z } from '../ops';
+import { activate, awakened, chooseCards, combatZone, data, discard, draw, isFirst, log, newCard, pname, topOfZone, Z } from '../ops';
 import { other } from '../types';
 
 // ───────────────────────── 卡片 ─────────────────────────
@@ -166,4 +166,29 @@ export const 先人 = defineSource({
   },
 });
 
-export const THIEF_SOURCES = [伏擊, 順手牽羊, 卸除鎧甲, 塗毒, 幸運兔腳, 二刀連擊, 刺客, 先人];
+/** 狩獵印記這回合是否掛上了「對方收招時」的觸發 */
+export const 狩獵印記狀態 = slot('狩獵印記', () => ({ armed: false }));
+
+// 狩獵印記（盜賊）：[先] 當對方收招時，抽X。X＝3 − 對方戰鬥區的招式張數，最低為 0
+// 只有作為先手步驟出的招才會掛上；掛上之後和這張卡還在不在戰鬥區無關（被替換後仍然生效）
+export const 狩獵印記 = defineSource({
+  id: '狩獵印記',
+  at: 'moves',
+  on: {
+    onOpen: (c) => c.effect({ label: '【狩獵印記】這回合對方收招時抽牌', mandatory: true, mark: false }, () => {
+      狩獵印記狀態.of(c.g, c.p).armed = true;
+      log(c.g, '【狩獵印記】這回合對方收招時，將依對方戰鬥區的招式張數抽牌');
+    }),
+    onFoePass: lasting((c) => c.effect(
+      { label: '【狩獵印記】抽 X（X＝3 − 對方戰鬥區的招式張數）', mandatory: true, when: () => 狩獵印記狀態.read(c.g, c.p).armed && 3 - combatZone(c.g, other(c.p)).length > 0 },
+      function* () {
+        狩獵印記狀態.of(c.g, c.p).armed = false;
+        const x = Math.max(0, 3 - combatZone(c.g, other(c.p)).length);
+        yield* draw(c.g, c.p, x);
+        log(c.g, `【狩獵印記】對方收招，${pname(c.g, c.p)} 抽 ${x}`);
+      },
+    )),
+  },
+});
+
+export const THIEF_SOURCES = [伏擊, 順手牽羊, 卸除鎧甲, 塗毒, 幸運兔腳, 二刀連擊, 刺客, 先人, 狩獵印記];

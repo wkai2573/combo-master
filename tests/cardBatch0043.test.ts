@@ -162,3 +162,42 @@ describe('整理魔導書：[頂] 當歸還時，抽X。X＝我方戰鬥區白�
     expect(Z(base, 0, 'deck').length - Z(withWhites, 0, 'deck').length).toBe(2);
   });
 });
+
+describe('狩獵印記：[先] 當對方收招時，抽X。X＝3 − 對方戰鬥區的招式張數，最低為 0', () => {
+  it('先攻方先手步驟出招，對方一開始就收招：抽 3', () => {
+    const g = scenario({ chars: ['刺客', '勇者'], singlePhase: true, p0: { hand: ['狩獵印記'] }, p1: { hand: [] } });
+    expect(Z(g, 0, 'hand')).toHaveLength(3);
+  });
+
+  it('對方先出 1 張招式再收招：抽 2；招式越多抽越少，3 張以上不抽', () => {
+    const one = scenario({ chars: ['刺客', '勇者'], singlePhase: true, p0: { hand: ['狩獵印記'] }, p1: { hand: ['黑桃5'] } });
+    pick(one, '黑桃5');
+    expect(Z(one, 0, 'hand')).toHaveLength(2);
+
+    const three = scenario({
+      chars: ['刺客', '勇者'], singlePhase: true,
+      p0: { hand: ['狩獵印記'] }, p1: { hand: [], moves: ['黑桃2', '黑桃3', '黑桃4'] },
+    });
+    expect(Z(three, 0, 'hand')).toHaveLength(0);
+  });
+
+  it('不是先手步驟出的招就不會掛上觸發', () => {
+    const g = scenario({
+      chars: ['勇者', '刺客'], first: 1, singlePhase: true,
+      p0: { hand: ['狩獵印記'] }, p1: { hand: ['黑桃5'] },
+    });
+    pick(g, '狩獵印記'); // 後攻方在反擊步驟打出
+    expect(Z(g, 0, 'hand')).toHaveLength(0);
+  });
+
+  it('被迫收招也算收招：對方用即時停損讓雙方收招，對方戰鬥區只有它自己，抽 2', () => {
+    const g = scenario({
+      chars: ['刺客', '商人'], singlePhase: true,
+      p0: { hand: ['狩獵印記'] },
+      p1: { hand: ['即時停損'], exp: ['黑桃3', '黑桃4', '黑桃5', '黑桃6'] },
+    });
+    pick(g, '即時停損');
+    pick(g, '發動');
+    expect(Z(g, 0, 'hand')).toHaveLength(2);
+  });
+});

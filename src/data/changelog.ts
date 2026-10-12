@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.43.6',
+    date: '2026-10-12',
+    items: [
+      { type: 'add', text: '新卡「狩獵印記」（盜賊）：[先] 當對方收招時，抽X。X＝3 − 對方戰鬥區的招式張數，最低為 0' },
+    ],
+  },
+  {
     version: '0.43.5',
     date: '2026-10-12',
     items: [

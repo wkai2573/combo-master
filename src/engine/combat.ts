@@ -51,7 +51,10 @@ export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: bool
   checkWin(g);
   // 效果讓玩家被迫收招（Explosion!、即時停損）也是收招：窗口結算完，各自開「收招時」的窗口，先攻方先
   for (const q of order(g)) {
-    if (g.state.passed[q] && !passedBefore[q]) yield* markIfLogged(g, () => fire(g, q, 'onPass'));
+    if (g.state.passed[q] && !passedBefore[q]) {
+      yield* markIfLogged(g, () => fire(g, q, 'onPass'));
+      yield* markIfLogged(g, () => fire(g, other(q), 'onFoePass'));
+    }
   }
 }
 
@@ -245,6 +248,7 @@ export function* combatPhase(g: GameCtx): Gen {
       const direct = firstAction && cur === second && !query(g, first, 'continueAfterFoePass');
       mark(g, `${pname(g, cur)} 收招${direct ? '，直接進入傷害計算' : ''}`, { type: 'pass', player: cur });
       yield* markIfLogged(g, () => fire(g, cur, 'onPass'));
+      yield* markIfLogged(g, () => fire(g, other(cur), 'onFoePass'));
       if (direct) {
         straightToDamage = true;
         break;
