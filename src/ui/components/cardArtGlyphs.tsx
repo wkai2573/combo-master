@@ -258,7 +258,7 @@ const GLYPHS: Record<string, ReactNode> = {
       </g>
     </>
   ),
-  高利貸: (
+  公開資訊: (
     <>
       <path d="M26 4 H64 L74 14 V56 H26 Z" fill={W} stroke={K} strokeWidth="2" strokeLinejoin="round" />
       <path d="M64 4 V14 H74" fill={STEEL} stroke={K} strokeWidth="2" strokeLinejoin="round" />
@@ -269,7 +269,7 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="M84 48 L92 56" stroke={W} strokeWidth="4.5" strokeLinecap="round" />
     </>
   ),
-  投資: (
+  財富管理: (
     <>
       <rect x="10" y="10" width="54" height="46" rx="5" fill="currentColor" {...OUT} />
       <rect x="17" y="17" width="40" height="32" rx="3" fill="none" stroke={W} strokeWidth="2" opacity=".6" />
@@ -434,7 +434,7 @@ const GLYPHS: Record<string, ReactNode> = {
       {bolt(90, 40, 0.9)}
     </>
   ),
-  星界法典: (
+  元素法典: (
     <>
       <path d="M50 54 Q28 46 6 50 V26 Q28 22 50 30 Q72 22 94 26 V50 Q72 46 50 54 Z" fill={W} stroke={K} strokeWidth="1.5" strokeLinejoin="round" />
       <path d="M50 30 V54" stroke="currentColor" strokeWidth="4" />
@@ -456,7 +456,7 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="M86 12 V24 M80 18 H92" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
     </>
   ),
-  皮甲: (
+  布甲: (
     <>
       <path d="M34 6 Q50 18 66 6 L90 16 L82 32 L72 28 V56 H28 V28 L18 32 L10 16 Z" fill="currentColor" {...OUT} />
       <path d="M34 6 Q50 18 66 6" fill="none" stroke={W} strokeWidth="3" />

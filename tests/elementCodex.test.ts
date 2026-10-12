@@ -6,12 +6,12 @@ import { ELEMENT_TRAITS } from '../src/engine/sources/mage';
 import { Z } from '../src/engine/ops';
 import { names, pick, scenario } from './helpers';
 
-// 元素法典（id 星界法典）：[蓋3] 當我方收招時，且我方戰鬥區有【元素】特徵時，
+// 元素法典：[蓋3] 當我方收招時，且我方戰鬥區有【元素】特徵時，
 // 從表側經驗選擇 1 張有相同【元素】特徵的卡加入手牌
 describe('元素法典', () => {
   it('卡表資料與關鍵字：法師飾品，已開放；【元素】是火、冰、電的統稱，毒不算', () => {
-    expect(getCard('星界法典')).toMatchObject({ name: '元素法典', cls: '法師', kind: 'equip', slot: '飾品', expReq: 8 });
-    expect(ENABLED_EFFECT_CARDS).toContain('星界法典');
+    expect(getCard('元素法典')).toMatchObject({ name: '元素法典', cls: '法師', kind: 'equip', slot: '飾品', expReq: 8 });
+    expect(ENABLED_EFFECT_CARDS).toContain('元素法典');
     expect(ELEMENT_TRAITS).toEqual(['火', '冰', '電']);
     const kw = KEYWORDS.find((k) => k.name === '元素')!;
     expect(kw.group).toBe('名詞');
@@ -25,7 +25,7 @@ describe('元素法典', () => {
       chars: ['法師', '勇者'],
       phase: '先手',
       singlePhase: true,
-      p0: { hand: ['黑桃1', '黑桃2'], gear: ['星界法典'], exp, moves },
+      p0: { hand: ['黑桃1', '黑桃2'], gear: ['元素法典'], exp, moves },
       p1: { hand: ['黑桃9'] },
     });
     pick(g, '黑桃1');

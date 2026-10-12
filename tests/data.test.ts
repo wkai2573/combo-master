@@ -132,8 +132,8 @@ describe('預設牌組', () => {
 });
 
 describe('卡表同步的新卡進組牌卡池', () => {
-  it('高利貸、狙擊蓄力、熔岩之擊已開放，預設牌組放了它們；各職業再多換進 1 張白板卡的位置後牌組仍合法', () => {
-    const swaps: Array<[string, string]> = [['商人', '高利貸'], ['遊俠', '狙擊蓄力'], ['勇者', '熔岩之擊']];
+  it('公開資訊、狙擊蓄力、熔岩之擊已開放，預設牌組放了它們；各職業再多換進 1 張白板卡的位置後牌組仍合法', () => {
+    const swaps: Array<[string, string]> = [['商人', '公開資訊'], ['遊俠', '狙擊蓄力'], ['勇者', '熔岩之擊']];
     for (const [char, inn] of swaps) {
       expect(isCardEnabled(getCard(inn)), inn).toBe(true);
       expect(PLAYABLE_CARDS.map((c) => c.id), inn).toContain(inn);

@@ -6,13 +6,13 @@ import { names, pick, scenario } from './helpers';
 
 const filler = Array(20).fill('黑桃1') as string[];
 
-// 財富管理（id 投資）：
+// 財富管理：
 //   [發_蓋1] 必須將牌組上方 3 張卡以裏側放入經驗區
 //   [經] 當此卡被蓋為裏側時，必須選擇 2 張經驗放回牌組底
 describe('財富管理', () => {
   it('卡表資料：商人招式，市場特徵，已開放', () => {
-    expect(getCard('投資')).toMatchObject({ name: '財富管理', cls: '商人', kind: 'move', traits: ['市場'] });
-    expect(ENABLED_EFFECT_CARDS).toContain('投資');
+    expect(getCard('財富管理')).toMatchObject({ name: '財富管理', cls: '商人', kind: 'move', traits: ['市場'] });
+    expect(ENABLED_EFFECT_CARDS).toContain('財富管理');
   });
 
   const play = (deck: string[], exp = ['黑桃5']) =>
@@ -20,7 +20,7 @@ describe('財富管理', () => {
       chars: ['商人', '勇者'],
       phase: '先手',
       singlePhase: true,
-      p0: { hand: ['投資'], exp, deck },
+      p0: { hand: ['財富管理'], exp, deck },
       p1: { hand: [] },
     });
 
@@ -57,7 +57,7 @@ describe('財富管理', () => {
     });
 
   it('[經]：被蓋為裏側時必須選 2 張經驗放回牌組底，表側裏側都可以，可含自己', () => {
-    const g = covered(['投資', '黑桃3', '~黑桃4', '黑桃6']);
+    const g = covered(['財富管理', '黑桃3', '~黑桃4', '黑桃6']);
     const deck = Z(g, 0, 'deck').length;
     pick(g, '發動'); // 家族相片：蓋1 蓋住最前面的表側經驗＝財富管理
     expect(g.pending!.title).toContain('財富管理');
@@ -65,19 +65,19 @@ describe('財富管理', () => {
     expect(g.pending!.max).toBe(2);
     expect(g.pending!.options.map((o) => o.label).sort()).toEqual(['財富管理', '黑桃3', '黑桃4', '黑桃6'].sort());
     pick(g, '財富管理', '黑桃4');
-    expect(Z(g, 0, 'deck').slice(-2).map((c) => c.id).sort()).toEqual(['投資', '黑桃4'].sort());
+    expect(Z(g, 0, 'deck').slice(-2).map((c) => c.id).sort()).toEqual(['財富管理', '黑桃4'].sort());
     expect(names(g, 0, 'exp')).toEqual(['黑桃3', '黑桃6']);
     expect(Z(g, 0, 'deck').length).toBe(deck + 2 + 1); // 放回 2 張，加上家族相片回復 1
   });
 
   it('經驗不足 2 張就全放回；Ex 卡離開經驗區直接移除遊戲，不進牌組', () => {
-    const only = covered(['投資']);
+    const only = covered(['財富管理']);
     const deck = Z(only, 0, 'deck').length;
     pick(only, '發動');
     expect(names(only, 0, 'exp')).toEqual([]);
     expect(Z(only, 0, 'deck').length).toBe(deck + 1 + 1);
 
-    const ex = covered(['投資', 'Ex-流血', '黑桃3']);
+    const ex = covered(['財富管理', 'Ex-流血', '黑桃3']);
     const exDeck = Z(ex, 0, 'deck').length;
     pick(ex, '發動');
     pick(ex, 'Ex-流血', '黑桃3');

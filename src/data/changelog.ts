@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.43.1',
+    date: '2026-10-12',
+    items: [
+      { type: 'change', text: '公開資訊、財富管理、元素法典、布甲的內部名稱整理成與卡名一致：先前存的牌組若含這四張卡，會變成不合法，需要重新組牌' },
+    ],
+  },
+  {
     version: '0.43.0',
     date: '2026-10-12',
     items: [
@@ -131,7 +138,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       { type: 'add', text: '新卡嘲諷（劍士）：只能在先手步驟出招，出招時必須蓋 2；對方沒有招式就收招時，我方可以繼續出招；傷害計算時總防禦 −4X（X＝我方招式卡疊的卡數）' },
       { type: 'add', text: '新卡生命偷取（弓箭手）：[頂] 我方追擊判定成功時，回復 2' },
       { type: 'add', text: '新卡生命藥水（共用）：[發_蓋3] 回復 3' },
-      { type: 'change', text: '公開資訊（原高利貸）：連擊值改成 6，效果改成被蓋成裏側時，翻開最多 3 張我方裏側經驗，然後捨棄此卡' },
+      { type: 'change', text: '公開資訊：連擊值改成 6，效果改成被蓋成裏側時，翻開最多 3 張我方裏側經驗，然後捨棄此卡' },
       { type: 'change', text: 'Explosion!：費用由蓋 8 改成怒 10' },
       { type: 'change', text: '刺客：追擊成功加入 Ex-流血與覺醒後加入 Ex-中毒，兩段效果都改成每回合 1 次' },
       { type: 'change', text: '塗毒：文字改成「加入對方經驗」，效果不變' },
@@ -214,7 +221,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2026-10-09',
     items: [
       { type: 'change', text: '電弧改成 [發_蓋1]：要付蓋1 才發動，不再是強制效果' },
-      { type: 'change', text: '高利貸改成 [發_蓋1]：要付蓋1 才發動；文字改成「對方蓋前 X 張表側經驗」，效果不變' },
+      { type: 'change', text: '舊版公開資訊改成 [發_蓋1]：要付蓋1 才發動；文字改成「對方蓋前 X 張表側經驗」，效果不變' },
       { type: 'change', text: '塗毒改成 [發_蓋2]：打出時付蓋2，歸還時 Ex-中毒一律移入對方的經驗區，不再看雙方出招張數' },
     ],
   },

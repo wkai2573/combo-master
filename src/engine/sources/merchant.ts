@@ -125,7 +125,7 @@ export const 高價賣出 = coverReaction('高價賣出', '抽 1', function* (g,
 // 公開資訊（商人）：[經] 當此卡被蓋為裏側時，翻開最多 3 張我方裏側經驗，然後捨棄此卡
 // 翻開的對象不含它自己（它馬上就被捨棄）；裏側經驗超過 3 張時由擁有者選 3 張，不足就全部翻開
 export const 公開資訊 = coverReaction(
-  '高利貸',
+  '公開資訊',
   '翻開最多 3 張我方裏側經驗，然後捨棄此卡',
   function* (g, p, self) {
     const candidates = () => Z(g, p, 'exp').filter((card) => card.covered && card !== self);
@@ -144,11 +144,11 @@ export const 公開資訊 = coverReaction(
   },
 );
 
-// 財富管理（id 投資，商人）：
+// 財富管理（商人）：
 //   [發_蓋1] 必須將牌組上方 3 張卡以裏側放入經驗區（牌組不足 3 張不能發動；放在經驗區最後方；牌組就是生命值，放完剩 0 張就落敗）
 //   [經] 當此卡被蓋為裏側時，必須選擇 2 張經驗放回牌組底（表側裏側都可以，可含此卡；不足 2 張全放回；Ex 卡離開經驗區就移除遊戲，不會進牌組）
 export const 財富管理 = coverReaction(
-  '投資',
+  '財富管理',
   '選擇 2 張經驗放回牌組底',
   function* (g, p) {
     const back = yield* chooseCards(g, p, '【財富管理】選擇 2 張經驗放回牌組底', Z(g, p, 'exp'), 2, 2);

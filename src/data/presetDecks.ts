@@ -38,10 +38,10 @@ const TRINKETS: Record<string, string> = {
   先人: '幸運兔腳',
   商人: '招財貓',
   遊俠: '瞄準器',
-  法師: '星界法典',
+  法師: '元素法典',
 };
 /** 所有角色都放 1 張的共用武器與防具 */
-const COMMON_GEAR = ['木棍', '皮甲'];
+const COMMON_GEAR = ['木棍', '布甲'];
 /** 生命藥水的張數；連擊值 5 已經塞滿效果卡的角色放 1 張 */
 const POTION = '生命藥水';
 const potionCopies = (charId: string): number => (['勇者', '後人', '商人'].includes(charId) ? 1 : 2);

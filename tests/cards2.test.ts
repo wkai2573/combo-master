@@ -640,7 +640,7 @@ describe('卡表同步的新卡：公開資訊、狙擊蓄力、熔岩之擊', (
   const faceUp = (g: ReturnType<typeof scenario>) => Z(g, 0, 'exp').map((c) => !c.covered);
 
   it('公開資訊：[經] 被蓋成裏側時，翻開最多 3 張我方裏側經驗（不足就全部），然後捨棄此卡', () => {
-    const { g, gen } = coverFront(['高利貸', '~黑桃3', '黑桃4', '~黑桃5']);
+    const { g, gen } = coverFront(['公開資訊', '~黑桃3', '黑桃4', '~黑桃5']);
     expect(gen.next().done).toBe(true); // 裏側經驗只有 2 張，不用選
     expect(names(g, 0, 'exp')).toEqual(['黑桃3', '黑桃4', '黑桃5']);
     expect(faceUp(g)).toEqual([true, true, true]);
@@ -649,7 +649,7 @@ describe('卡表同步的新卡：公開資訊、狙擊蓄力、熔岩之擊', (
   });
 
   it('公開資訊：裏側經驗超過 3 張時由擁有者選 3 張翻開，沒選到的仍是裏側', () => {
-    const { g, gen } = coverFront(['高利貸', '~黑桃1', '~黑桃2', '~黑桃3', '~黑桃4']);
+    const { g, gen } = coverFront(['公開資訊', '~黑桃1', '~黑桃2', '~黑桃3', '~黑桃4']);
     const r = gen.next();
     expect(r.done).toBe(false);
     const req = r.value as { title: string; min: number; max: number; options: Array<{ key: string; label: string }> };
@@ -663,12 +663,12 @@ describe('卡表同步的新卡：公開資訊、狙擊蓄力、熔岩之擊', (
   });
 
   it('公開資訊：沒有其他裏側經驗時只捨棄自己；表側時不會發動', () => {
-    const { g, gen } = coverFront(['高利貸', '黑桃4']);
+    const { g, gen } = coverFront(['公開資訊', '黑桃4']);
     expect(gen.next().done).toBe(true);
     expect(names(g, 0, 'exp')).toEqual(['黑桃4']);
     expect(names(g, 0, 'discard')).toEqual(['公開資訊']);
 
-    const idle = scenario({ p0: { exp: ['高利貸', '~黑桃3'] } });
+    const idle = scenario({ p0: { exp: ['公開資訊', '~黑桃3'] } });
     expect(names(idle, 0, 'discard')).toEqual([]);
     expect(Z(idle, 0, 'exp').map((c) => c.covered)).toEqual([false, true]);
   });

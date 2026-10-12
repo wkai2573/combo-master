@@ -32,9 +32,9 @@ export const Ex流血 = defineSource({
 /** 布甲這回合給的總防禦加成 */
 export const 布甲狀態 = slot('布甲', () => ({ def: 0 }));
 
-// 布甲（id 皮甲，共用防具）：[蓋1] 當我方收招時，+0+1。加成只在這回合
+// 布甲（共用防具）：[蓋1] 當我方收招時，+0+1。加成只在這回合
 export const 布甲 = defineSource({
-  id: '皮甲',
+  id: '布甲',
   at: 'gear',
   on: {
     onPass: (c) => c.effect({ label: '【布甲】此回合 +0+1（蓋1）', cost: { cover: 1 } }, () => {

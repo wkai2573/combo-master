@@ -16,11 +16,11 @@ const MOVES: Record<string, string[]> = {
   後人: SWORD,
   刺客: ['伏擊', '二刀連擊', '順手牽羊', '卸除鎧甲', '塗毒'],
   先人: ['伏擊', '二刀連擊', '順手牽羊', '卸除鎧甲', '塗毒'],
-  商人: ['低價買進', '高價賣出', '交涉', '即時停損', '高利貸', '投資'],
+  商人: ['低價買進', '高價賣出', '交涉', '即時停損', '公開資訊', '財富管理'],
   遊俠: ['魅影射擊', '地雷陷阱', '狙擊印記', '二連矢', '狙擊蓄力', '生命偷取'],
   法師: ['力量爆破', '電弧', '火球', '冰霜護甲', 'Explosion!'],
 };
-const TRINKET: Record<string, string> = { 勇者: '家族相片', 後人: '家族相片', 刺客: '幸運兔腳', 先人: '幸運兔腳', 商人: '招財貓', 遊俠: '瞄準器', 法師: '星界法典' };
+const TRINKET: Record<string, string> = { 勇者: '家族相片', 後人: '家族相片', 刺客: '幸運兔腳', 先人: '幸運兔腳', 商人: '招財貓', 遊俠: '瞄準器', 法師: '元素法典' };
 
 const whites = (deck: string[]) => deck.map(getCard).filter(isVanilla);
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -33,9 +33,9 @@ describe('預設牌組的組成', () => {
     expect(n.get('盾擊') ?? 0, `${id} 的盾擊`).toBe(id === '後人' ? 3 : 0);
   });
 
-  it.each(PRESET_CHARACTER_IDS)('%s：裝備只有木棍、皮甲、職業飾品各 1 張', (id) => {
+  it.each(PRESET_CHARACTER_IDS)('%s：裝備只有木棍、布甲、職業飾品各 1 張', (id) => {
     const equips = presetDeck(id).filter((c) => getCard(c).kind === 'equip').sort();
-    expect(equips).toEqual(['木棍', '皮甲', TRINKET[id]].sort());
+    expect(equips).toEqual(['木棍', '布甲', TRINKET[id]].sort());
   });
 
   it.each(PRESET_CHARACTER_IDS)('%s：生命藥水的張數', (id) => {
