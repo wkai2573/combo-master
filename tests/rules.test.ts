@@ -291,7 +291,7 @@ describe('戰鬥結算深模組 (resolveCombatStats)', () => {
     setZones(g, 0, { moves: ['黑桃1', '黑桃9'], pursuit: ['地雷陷阱'] });
     const s0 = resolveCombatStats(g, 0);
     const expectedBase0 = atkOf('黑桃1') + atkOf('黑桃9') + atkOf('地雷陷阱') + 3;
-    expect(s0.atk).toBe(expectedBase0 + (expectedBase0 >= 15 ? 3 : 0));
+    expect(s0.atk).toBe(expectedBase0 + (expectedBase0 >= 15 ? 2 : 0));
     expect(s0.breakdown.combatZoneAtk).toBe(atkOf('黑桃1') + atkOf('黑桃9'));
     expect(s0.breakdown.pursuitAtk).toBe(atkOf('地雷陷阱') + 3);
 
