@@ -14,6 +14,10 @@ import { PromptPanel } from '../components/PromptPanel';
 import { CheatPanel } from '../components/CheatPanel';
 import { isCheatUnlocked } from '../../cheatUnlock';
 import { useWide } from '../useWide';
+import { usePhone } from '../layoutMode';
+import { useCardDrag } from '../useCardDrag';
+import { promptSheet } from '../promptSheet';
+import { MyDock, OppBar, Sheet, SheetBody, type SheetTarget } from '../components/PhoneBoard';
 import type { Session } from '../../net/session';
 import type { PlayerId } from '../../engine/types';
 
@@ -22,6 +26,7 @@ const ZONE_NAME: Record<ZoneKey, string> = { discard: '棄牌區', rage: '怒氣
 export function Battle({ session, onExit }: { session: Session; onExit: () => void }) {
   const st = useSyncExternalStore(session.subscribe, session.getState);
   const wide = useWide();
+  const phone = usePhone();
   const [selected, setSelected] = useState<string[]>([]);
   // exp：這張卡在經驗區且經驗效果生效中（說明欄多一行狀態）
   const [inspect, setInspect] = useState<{ id: string; exp: boolean } | null>(null);
@@ -33,6 +38,11 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const [zone, setZone] = useState<{ p: PlayerId; z: ZoneKey; anchor: DOMRect } | null>(null);
   const zoneRef = useRef(zone);
   zoneRef.current = zone;
+  // 手機版面：從底部滑出的面板，看角色效果或某個牌區；autoSheet 表示是提示要在面板裡選牌而自動打開的
+  const [sheet, setSheet] = useState<SheetTarget | null>(null);
+  const sheetRef = useRef(sheet);
+  sheetRef.current = sheet;
+  const autoSheet = useRef(false);
   const [copied, setCopied] = useState(false);
   const [flowOpen, setFlowOpen] = useState(false);
   // 作弊模式：開關記在連線層（對方才看得到提示），離開或下一局都會回到關閉；面板的開合只是這個畫面的事
@@ -66,6 +76,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         return;
       }
       if (zoneRef.current) setZone(null);
+      else if (sheetRef.current) setSheet(null);
       else if (cheatOpenRef.current) setCheatOpen(false);
       else {
         setPinned(null);
@@ -78,6 +89,29 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
 
   // 每次收到新狀態或換影格，就清掉上一個提示的選擇
   useEffect(() => setSelected([]), [final, fxKey]);
+
+  // 手拿著的牌可以拖到提示指定的放置區直接使用（動畫播放中不啟用）
+  const livePrompt = v && !pres.playing ? v.prompt : null;
+  const { api: drag, ghost: dragGhost } = useCardDrag(livePrompt, (keys) => session.submit(keys), phone || wide);
+
+  // 提示物件每次收到狀態都可能是新的，內容沒變就不算換了提示；效果只看這個簽章，否則會一直重新設定面板而無限重繪
+  const promptSig = livePrompt ? `${livePrompt.title}|${livePrompt.options.map((o) => o.key).join(',')}` : '';
+  // 手機版面：提示要選的牌在牌區（經驗區等）裡時，自動打開那個牌區的面板；提示換掉就收回
+  useEffect(() => {
+    if (!phone || !v) return;
+    const found = promptSheet(v, livePrompt);
+    const handOpt = !!livePrompt && livePrompt.options.some((o) => v.players[v.me].hand.some((c) => c.uid === o.uid));
+    if (found) {
+      autoSheet.current = true;
+      setSheet((cur) => (cur && cur.p === found.p && cur.tab === found.tab ? cur : found));
+    } else if (autoSheet.current || (sheetRef.current && handOpt)) {
+      // 自動打開的面板用完收回；手動打開的面板會擋住手牌，要選手牌時也收起來
+      autoSheet.current = false;
+      setSheet(null);
+    }
+    // 只在提示換了時判斷；影格更新同一個提示不必重開
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [promptSig, phone]);
 
   const leave = () => {
     session.leave();
@@ -140,15 +174,24 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const shown = pinned ?? inspect;
   const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} />;
   const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={pres.hits[opp]} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
-  const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={pres.hits[me]} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
+  const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} drag={drag} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={pres.hits[me]} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
   const combat = <CombatArea v={v} fx={fx} caption={pres.caption} fxKey={fxKey} changes={changes} />;
-  const promptBar = pres.playing ? (
+  // 手機版面：選項已經在手牌列上了，提示欄不再重複畫一次手牌
+  const handUids = phone ? new Set(v.players[me].hand.map((c) => c.uid)) : undefined;
+  const oppBar = <OppBar v={v} p={opp} changes={changes} fxKey={fxKey} hit={pres.hits[opp]} outcome={outcomeOf(opp)} onOpen={setSheet} />;
+  const myDock = (
+    <MyDock
+      v={v} p={me} changes={changes} fxKey={fxKey} hit={pres.hits[me]} outcome={outcomeOf(me)} onOpen={setSheet}
+      prompt={prompt} selected={selected} onPick={toggle} drag={drag} shuffling={fx?.type === 'shuffle'}
+    />
+  );
+  const promptBarOf = (skipHand?: Set<number>) => pres.playing ? (
     <div className="prompt wait">
       <span>動畫播放中…</span>
       <div className="btns"><button onClick={skip}>跳過動畫</button></div>
     </div>
   ) : prompt ? (
-    <PromptPanel prompt={prompt} selected={selected} onPick={toggle} onSubmit={(k) => session.submit(k)} />
+    <PromptPanel prompt={prompt} selected={selected} onPick={toggle} onSubmit={(k) => session.submit(k)} skipUids={skipHand} />
   ) : (
     <div className="prompt wait">{waitingOpp ? '等待對手操作…' : v.winner !== null ? '遊戲結束' : '處理中…'}</div>
   );
@@ -156,7 +199,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   return (
     <InspectContext.Provider value={inspectCard}>
       <PinContext.Provider value={togglePin}>
-      <div className={`battle${wide ? ' wide' : ''}`} style={{ ['--spd' as string]: scale }}>
+      <div className={`battle${wide ? ' wide' : phone ? ' phone' : ''}`} style={{ ['--spd' as string]: scale }}>
         <div className="topbar">
           <span className="ver" title={VERSION_TITLE}>連擊大師 {VERSION_SHORT}</span>
           <b>第 {v.turn} 回合</b>
@@ -199,16 +242,16 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
                 {combat}
                 <div className="sidecol"><LogPanel lines={v.log} /></div>
               </div>
-              {promptBar}
+              {promptBarOf(handUids)}
               {myBoard}
             </div>
           ) : (
             <>
               <div className={`board${pres.playing ? ' playing' : ''}`}>
-                {oppBoard}
+                {phone ? oppBar : oppBoard}
                 {combat}
-                {myBoard}
-                {promptBar}
+                {phone ? myDock : myBoard}
+                {!(phone && sheet) && promptBarOf(handUids)}
               </div>
               {drawer && (
                 <div className="drawer">
@@ -226,9 +269,15 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         {session.cheat && cheatUnlocked && cheatOn && cheatOpen && v.winner === null && (
           <CheatPanel cheat={session.cheat} me={me} snapshotKey={final} locked={!pres.settled} onClose={() => setCheatOpen(false)} />
         )}
+        {phone && sheet && !result && (
+          <Sheet v={v} target={sheet} onTab={(tab) => setSheet({ ...sheet, tab })} onClose={() => { autoSheet.current = false; setSheet(null); }} footer={promptBarOf()}>
+            <SheetBody v={v} target={sheet} optKeys={new Set(prompt?.options.map((o) => o.key) ?? [])} selected={selected} single={prompt?.min === 1 && prompt?.max === 1} onPick={toggle} fxKey={fxKey} changes={changes} />
+          </Sheet>
+        )}
+        {dragGhost}
         <PhaseBanner fx={fx} n={fxKey} me={me} />
         <Spotlight fx={fx} caption={pres.caption} n={fxKey} scale={scale} />
-        <FlightLayer view={v} fx={fx} playing={pres.playing} n={fxKey} scale={scale} />
+        <FlightLayer view={v} fx={fx} playing={pres.playing} n={fxKey} scale={scale} extraPile={phone ? (owner, z) => z === 'exp' || z === 'gear' || z === 'buff' || (owner !== me && z === 'hand') : undefined} />
 
         {flowOpen && <FlowChartModal phase={v.phase} onClose={() => setFlowOpen(false)} />}
         {zone && !(zone.z === 'rage' && zone.p !== me) && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} exp={zone.z === 'exp'} anchor={zone.anchor} onClose={() => setZone(null)} />}

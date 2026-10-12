@@ -514,11 +514,11 @@ h1, h2, h3 { margin: 0 0 8px; }
 .card.sm.short .art { height: 28px; }
 .card.sm.short .nm { display: none; }
 /* 滑過矮卡：展開成完整小卡，第一列往下、第二列往上，浮在其他牌上面（不用過渡動畫，所以不受減少動態影響） */
-.expslot.r1:hover, .expslot.r2:hover { z-index: 6; }
-.expslot:hover .card.sm.short { height: 106px; }
-.expslot:hover .card.sm.short .art { height: 34px; }
-.expslot:hover .card.sm.short .nm { display: block; }
-.expslot.r2:hover .card.sm.short { position: absolute; bottom: 0; left: 0; }
+.expslot.r1:hover, .expslot.r2:hover, .expslot.open { z-index: 6; }
+.expslot:hover .card.sm.short, .expslot.open .card.sm.short { height: 106px; }
+.expslot:hover .card.sm.short .art, .expslot.open .card.sm.short .art { height: 34px; }
+.expslot:hover .card.sm.short .nm, .expslot.open .card.sm.short .nm { display: block; }
+.expslot.r2:hover .card.sm.short, .expslot.r2.open .card.sm.short { position: absolute; bottom: 0; left: 0; }
 
 /* ───────── 手牌：放得下並排，放不下水平重疊（滑過的牌浮到最上面，不用過渡動畫；選中的牌只抬起，不蓋住右邊的鄰牌） ───────── */
 .handrow { display: flex; gap: 6px; align-items: flex-start; padding: 14px 4px 10px; }
@@ -526,6 +526,9 @@ h1, h2, h3 { margin: 0 0 8px; }
 .handrow.overlap { display: grid; grid-auto-flow: column; grid-auto-columns: var(--hstep); gap: 0; overflow-x: auto; }
 .handslot { position: relative; flex: none; min-width: 0; }
 .handslot:hover { z-index: 6; }
+.handwrap { position: relative; }
+/* 寬螢幕版不會上下捲動：觸控往上拖手牌才不會被瀏覽器當成捲動 */
+.battle.wide .handrow, .battle.wide .handslot { touch-action: pan-x; }
 @media (prefers-reduced-motion: reduce) { .handrow .card.clickable { transition: none; } }
 
 /* ───────── 牌區就地展開：貼著該區，不推擠其他區域 ───────── */
@@ -646,3 +649,136 @@ h1, h2, h3 { margin: 0 0 8px; }
 /* 彈窗要蓋過對戰動畫層（聚光燈、飛牌、階段橫幅） */
 .overlay:has(.flowchart) { z-index: 70; }
 .overlay:has(.flowchart) .modal { max-height: 94vh; }
+
+/* ───────── 手機版面（寬 ≤ 640 且直立）：整頁不捲動 ─────────
+   頂欄、步驟提示、對手條、戰鬥區、我方牌堆與手牌、提示欄由上到下排滿一個畫面。
+   經驗區與裝備增益區是牌堆，點開從底部滑出面板。 */
+.battle.phone { --mdw: 72px; --mdh: 101px; --pile-step: 1px; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.battle.phone > .topbar, .battle.phone > .steps, .battle.phone > .banner { flex: none; }
+.battle.phone .topbar { gap: 4px 6px; padding: 4px 8px; font-size: 12px; flex-wrap: wrap; }
+.battle.phone .topbar .ver, .battle.phone .topbar > .muted { display: none; }
+.battle.phone .topbar button, .battle.phone .topbar select { padding: 2px 7px; font-size: 12px; }
+.battle.phone .steps { padding: 2px 8px; font-size: 12px; }
+.battle.phone .steps ol { display: none; }
+.battle.phone .steps .hint { margin-left: 0; }
+.battle.phone .banner { padding: 2px 8px; font-size: 12px; }
+.battle.phone .main { flex: 1; min-height: 0; }
+.battle.phone .board { height: 100%; padding: 4px 6px; gap: 4px; overflow: hidden; }
+.battle.phone .pboard { padding: 4px 8px; gap: 3px; border-radius: 8px; }
+
+/* 資訊列與對手條 */
+.infoline { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; min-width: 0; }
+.infoline .pill { white-space: nowrap; flex: none; }
+.charbtn { display: flex; align-items: baseline; gap: 6px; min-width: 0; padding: 0; background: none; border: 0; color: inherit; text-align: left; }
+.charbtn .muted { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chips { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.chip { flex: none; padding: 1px 7px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel2); color: var(--text); font-size: 11px; white-space: nowrap; }
+button.chip { font: inherit; font-size: 11px; }
+.chip.click { cursor: pointer; }
+.chip.awake { color: #1b1405; background: var(--accent); border-color: var(--accent); font-weight: 700; }
+
+/* 戰鬥區：對方疊牌｜範圍與算式｜我方疊牌，疊牌高度由版面決定 */
+.battle.phone .combatarea { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 3px 4px; overflow: hidden; }
+.battle.phone .combatarea .caption { min-height: 20px; margin-bottom: 0; font-size: 13px; }
+.battle.phone .combatarea .cols { flex: 1; min-height: 0; flex-wrap: nowrap; align-items: stretch; gap: 4px; }
+.battle.phone .combatarea .colwrap { display: flex; flex-direction: column; flex: none; }
+.battle.phone .combatarea .col { flex: 1; min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; gap: 2px; }
+.battle.phone .combatarea .col h4 { font-size: 12px; }
+.battle.phone .combatarea .mid { order: 0; flex: 1 1 0; min-width: 0; max-width: none; align-self: flex-start; padding-top: 22px; }
+.battle.phone .combatarea .mid > .muted { display: none; }
+.battle.phone .range { font-size: 12px; }
+.battle.phone .calc { padding: 5px 6px; gap: 5px; }
+.battle.phone .calc .eq { font-size: 12px; }
+.battle.phone .calc b.atk, .battle.phone .calc b.def { font-size: 15px; }
+.battle.phone .calc .dm { font-size: 20px; }
+.battle.phone .midnotes { margin-top: 4px; font-size: 11px; }
+.battle.phone .sumbox { min-width: 0; width: var(--mdw); padding: 2px 2px; }
+.battle.phone .sumbox b { font-size: 15px; }
+.battle.phone .vstack { container-type: size; width: var(--mdw); min-height: 0; justify-content: flex-start; }
+.battle.phone .vstack .card { flex: none; width: var(--mdw); height: var(--mdh); font-size: 9px; --ov: max(3px, min(24px, calc((100cqh - var(--mdh)) / var(--n1, 1)))); }
+.battle.phone .vstack .card + .card { margin-top: calc(var(--ov) - var(--mdh)); }
+.battle.phone .vstack .card .hd { height: 18px; padding: 0 4px; }
+.battle.phone .vstack .card .hd .c { min-width: 24px; line-height: 1.1; }
+.battle.phone .vstack .card .art { flex: 1 1 auto; height: auto; min-height: 30px; }
+.battle.phone .vstack .empty { font-size: 11px; text-align: center; }
+.battle.phone .vstack .card .ef { display: none; }
+
+/* 我方牌堆：五個小牌堆（牌組、怒氣、棄牌、經驗、裝備增益） */
+.battle.phone .minipiles { display: flex; justify-content: space-between; gap: 4px; padding: 0 2px; }
+.battle.phone .pile { gap: 2px; min-width: 0; }
+.battle.phone .pile .pilestack { margin: 0 3px 3px 0; border-radius: 6px; }
+.battle.phone .pile .card { width: 42px; height: 58px; font-size: 7px; border-width: 1px; border-radius: 6px; }
+.battle.phone .pile .card .hd { height: 12px; padding: 0 2px; font-size: 8px; }
+.battle.phone .pile .card .hd .c { min-width: 14px; padding: 0; border-width: 1px; }
+.battle.phone .pile .card .art { flex: 1 1 auto; height: auto; min-height: 16px; }
+.battle.phone .pile .card .nm { padding: 0 1px; font-size: 7px; }
+.battle.phone .pilelabel { font-size: 10px; white-space: nowrap; }
+.pile.awake .pilelabel, .pile.awake .pilelabel b { color: var(--accent); }
+.pile.awake .pilestack { filter: drop-shadow(0 0 4px var(--accent)); }
+.pile.click { -webkit-tap-highlight-color: transparent; }
+
+/* 手牌：固定在底部的單列，放不下時水平重疊並可橫向捲動 */
+.battle.phone .handzone .zonelabel { display: none; }
+.battle.phone .handwrap { position: relative; }
+.battle.phone .handrow { touch-action: pan-x; padding: 14px 2px 2px; margin: 0; min-height: 106px; scrollbar-width: none; }
+.battle.phone .handrow.overlap { overflow-x: auto; }
+.battle.phone .handrow:not(.overlap) { justify-content: center; }
+.battle.phone .handslot { touch-action: pan-x; }
+.battle.phone .handrow .card { width: 64px; height: 90px; font-size: 8px; border-radius: 9px 9px 6px 6px; }
+.battle.phone .handrow .card .hd { height: 16px; padding: 0 3px; font-size: 11px; }
+.battle.phone .handrow .card .hd .c { min-width: 22px; padding: 0 3px; line-height: 1.1; border-width: 1px; }
+.battle.phone .handrow .card .art { flex: 1 1 auto; height: auto; min-height: 30px; }
+.battle.phone .handrow .card .hd .g { font-size: 8px; }
+.battle.phone .handrow .card .hd .g:last-child { display: none; }
+.battle.phone .handrow .card .hd .c { font-size: 10px; }
+.battle.phone .handrow .card .ef { display: none; }
+.battle.phone .handrow .card .nm { font-size: 9px; padding: 1px 2px; }
+.battle.phone .handrow .card.selected { transform: translateY(-10px); }
+.battle.phone .handrow .card.clickable:hover:not(.selected) { transform: none; }
+.battle.phone .handslot:hover { z-index: auto; }
+
+/* 觸控：選取的手牌預覽，浮在手牌上方 */
+.handpreview { position: fixed; left: 50%; bottom: 40%; z-index: 20; transform: translateX(-50%); display: grid; justify-items: center; gap: 3px; padding: 6px; background: #0f1320f2; border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 6px 20px #000c; }
+.handpreview .card.md { width: var(--pw, 168px); height: var(--ph, 230px); font-size: var(--pf, 13px); }
+.handpreview .card.selected { transform: none; outline: 0; }
+.previewhint { font-size: 11px; color: var(--accent); }
+
+/* 提示欄：高度不限制整頁，內容多時內部捲動 */
+.battle.phone .prompt { position: static; flex: none; max-height: 30%; overflow-y: auto; padding: 5px 8px; gap: 4px; box-shadow: none; }
+.battle.phone .prompt .ptitle { font-size: 13px; }
+.battle.phone .prompt .btns { gap: 6px; }
+.battle.phone .prompt .btns button { padding: 4px 10px; }
+.battle.phone .prompt .cardrow { flex-wrap: nowrap; overflow-x: auto; padding-top: 8px; }
+.battle.phone .prompt .card.md { width: 64px; height: 90px; font-size: 8px; }
+.battle.phone .prompt .card.md .ef { display: none; }
+.battle.phone .prompt .card.md .art { height: 34px; }
+
+/* ───────── 底部面板 ───────── */
+.sheetback { position: fixed; inset: 0; z-index: 11; background: #0006; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 12; max-height: 62%; display: flex; flex-direction: column; background: var(--panel); border-top: 2px solid var(--accent); border-radius: 14px 14px 0 0; box-shadow: 0 -8px 24px #000b; }
+@media (prefers-reduced-motion: no-preference) { .sheet { animation: sheetUp .2s ease-out; } }
+@keyframes sheetUp { from { transform: translateY(40%); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheethead { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.sheethead button { padding: 3px 9px; font-size: 12px; }
+.sheettabs { flex: 1; min-width: 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.sheettabs button { flex: none; white-space: nowrap; }
+.sheettabs button.on { border-color: var(--accent); color: var(--accent); }
+.sheetbody { flex: 1; min-height: 80px; overflow-y: auto; padding: 8px; }
+.sheetchar { display: grid; gap: 8px; line-height: 1.55; }
+.sheetcards { gap: 8px; }
+.sheetnote { width: 100%; font-size: 11px; }
+.sheet .prompt { position: static; flex: none; border-radius: 0; border-width: 2px 0 0; box-shadow: none; max-height: 45%; overflow-y: auto; }
+.sheet .prompt .card.md { width: 64px; height: 90px; font-size: 8px; }
+.sheet .prompt .card.md .ef { display: none; }
+
+/* ───────── 拖曳使用手牌：只有提示指定的放置區亮起 ───────── */
+.handslot.draggable { cursor: grab; }
+.handslot.dragging { opacity: .25; }
+.dragghost { position: fixed; z-index: 80; pointer-events: none; transform: translate(-50%, -65%) rotate(-4deg); filter: drop-shadow(0 8px 12px #000b); }
+body[data-drag] { cursor: grabbing; }
+body[data-drag="moves"] [data-dropzone="moves"],
+body[data-drag="exp"] [data-dropzone="exp"],
+body[data-drag="gear"] [data-dropzone="gear"] { outline: 2px dashed var(--accent); outline-offset: 2px; border-radius: 10px; }
+body[data-drag] [data-dropzone][data-dragover] { outline-style: solid; background: color-mix(in srgb, var(--accent) 22%, transparent); }
+/* 窄螢幕版的裝備增益區空的時候是隱藏的，拖曳時先露出來當放置區 */
+body[data-drag="gear"] .gearzone.empty { display: block; min-height: 44px; }

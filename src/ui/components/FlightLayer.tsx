@@ -7,6 +7,9 @@ import { CardFace } from './CardFace';
 /** 牌堆（沒有逐張畫出卡片）的區域：飛行以牌堆元件當起訖點 */
 const PILE_ZONES = new Set(['deck', 'discard', 'rage']);
 
+/** 增益與裝備放在同一個牌堆（手機版面）：牌堆的 data-pile 以裝備增益區的 gear 為準 */
+const pileKey = (zone: string) => (zone === 'buff' ? 'gear' : zone);
+
 interface Placed {
   key: string;
   flight: Flight;
@@ -49,15 +52,18 @@ function captureRects(): Map<number, DOMRect> {
 }
 
 const pileRect = (owner: number, zone: string): DOMRect | undefined =>
-  document.querySelector<HTMLElement>(`[data-pile="${owner}-${zone}"]`)?.getBoundingClientRect();
+  document.querySelector<HTMLElement>(`[data-pile="${owner}-${pileKey(zone)}"]`)?.getBoundingClientRect();
 
 /**
  * 蓋滿畫面的圖層：播放動畫時，比對上一個顯示的桌面與目前影格的桌面，
  * 讓移動過的卡片從原區域飛到新區域。scale 為播放速度倍率（0 以外）。
  */
-export function FlightLayer({ view, fx, playing, n, scale }: {
+export function FlightLayer({ view, fx, playing, n, scale, extraPile }: {
   view: GameView | null; fx?: FrameFx; playing: boolean; n: number; scale: number;
+  /** 這個版面額外以牌堆呈現的區域（手機版面的經驗區與裝備增益區、對手的手牌） */
+  extraPile?: (owner: number, zone: string) => boolean;
 }) {
+  const isPile = (owner: number, zone: string) => PILE_ZONES.has(zone) || (extraPile?.(owner, zone) ?? false);
   const [flights, setFlights] = useState<Placed[]>([]);
   const prev = useRef<{ view: GameView; fx?: FrameFx; rects: Map<number, DOMRect>; spot?: DOMRect } | null>(null);
   const active = useRef<Animation[]>([]);
@@ -95,11 +101,11 @@ export function FlightLayer({ view, fx, playing, n, scale }: {
         let f: Flight = spot && before.fx?.type === 'flip' ? { ...f0, id: before.fx.cardId, faceUpFrom: true } : f0;
         // 淡出、淡入的牌不翻面
         if (mode !== 'fly') f = { ...f, faceUpTo: f.faceUpFrom };
-        const destEl = mode === 'out' || PILE_ZONES.has(f.to) ? null : document.querySelector<HTMLElement>(`[data-uid="${f.uid}"]`);
+        const destEl = mode === 'out' || isPile(f.owner, f.to) ? null : document.querySelector<HTMLElement>(`[data-uid="${f.uid}"]`);
         const dest = mode === 'out'
           ? before.rects.get(f.uid)
-          : destEl ? fullRect(destEl) : PILE_ZONES.has(f.to) ? pileRect(f.owner, f.to) : undefined;
-        const src = mode !== 'fly' ? dest : spot ?? (PILE_ZONES.has(f.from) ? pileRect(f.owner, f.from) : before.rects.get(f.uid));
+          : destEl ? fullRect(destEl) : isPile(f.owner, f.to) ? pileRect(f.owner, f.to) : undefined;
+        const src = mode !== 'fly' ? dest : spot ?? (f.from !== 'spawn' && isPile(f.owner, f.from) ? pileRect(f.owner, f.from) : before.rects.get(f.uid));
         if (!dest || !src) continue;
         const a = center(src);
         const b = center(dest);

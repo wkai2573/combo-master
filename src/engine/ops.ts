@@ -6,6 +6,7 @@ import { faceVisibleTo } from './visibility';
 import {
   other,
   type CardInst,
+  type DropZone,
   type FrameFx,
   type GameState,
   type Opt,
@@ -152,12 +153,12 @@ export function* ask(g: GameCtx, req: Request): Gen<string[]> {
 }
 
 export function* chooseCards(
-  g: GameCtx, p: PlayerId, title: string, cards: CardInst[], min: number, max: number,
+  g: GameCtx, p: PlayerId, title: string, cards: CardInst[], min: number, max: number, dropZone?: DropZone,
 ): Gen<CardInst[]> {
   if (cards.length === 0) return [];
   const mn = Math.min(min, cards.length);
   const mx = Math.min(max, cards.length);
-  const keys = yield* ask(g, { player: p, title, options: cards.map((c) => cardOpt(c, p)), min: mn, max: mx });
+  const keys = yield* ask(g, { player: p, title, options: cards.map((c) => cardOpt(c, p)), min: mn, max: mx, dropZone });
   return keys.map((k) => cards.find((c) => `c${c.uid}` === k)!).filter(Boolean);
 }
 

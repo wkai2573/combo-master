@@ -23,6 +23,15 @@ describe('手牌版面', () => {
     expect(handLayout(40, W, 112, MIN).step).toBe(MIN);
   });
 
+  // 手機版面：卡寬 64、間距 6，可用寬約 378，每張至少露出 28
+  it('手機版面：5 張並排放得下、6 張起重疊，張數多時每張露出 28 並可橫向捲動', () => {
+    expect(handLayout(5, 378, 64, 28).overlap).toBe(false);
+    const l = handLayout(6, 378, 64, 28);
+    expect(l.overlap).toBe(true);
+    expect(l.step).toBeCloseTo((378 - 64) / 5);
+    expect(handLayout(30, 378, 64, 28).step).toBe(28);
+  });
+
   it('還沒量到寬度或卡寬時先當作不重疊', () => {
     expect(handLayout(20, 0, 112, MIN).overlap).toBe(false);
     expect(handLayout(20, W, 0, MIN).overlap).toBe(false);

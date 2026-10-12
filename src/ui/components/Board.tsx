@@ -3,10 +3,13 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { expLayout } from '../expLayout';
 import { handLayout } from '../handLayout';
 import { useWide } from '../useWide';
+import { useCoarsePointer, usePhone } from '../layoutMode';
+import type { DragApi } from '../useCardDrag';
+import { tapCard } from '../touchTap';
 import { getCard, getCharacter } from '../../data/cards';
 import type { CardView, GameView, PlayerView } from '../../engine/view';
 import type { StatChanges } from '../../engine/stats';
-import type { FrameFx, PlayerId, Request } from '../../engine/types';
+import type { DropZone, FrameFx, PlayerId, Request } from '../../engine/types';
 import { CardFace, expEffectActive } from './CardFace';
 import { Delta } from './Delta';
 
@@ -20,6 +23,8 @@ interface BoardProps {
   onPick: (key: string) => void;
   /** anchor 是被點的區域在畫面上的位置，展開面板貼著它出現 */
   onZone: (p: PlayerId, z: ZoneKey, anchor: DOMRect) => void;
+  /** 手牌拖曳使用（只有我方的面板用得到） */
+  drag?: DragApi;
   /** 這位玩家剛受到傷害：震動並浮出傷害數字（key 變動時重播） */
   hit?: { amount: number; key: number; /** 第一張牌落進怒氣區要等多久（毫秒） */ delay: number };
   /** 這個影格與上一個顯示的桌面之間的數值變化（key 變動時重播） */
@@ -32,13 +37,20 @@ interface BoardProps {
 }
 
 /** 牌堆：牌組、怒氣區、棄牌區。飛行圖層以 data-pile 找到它在畫面上的位置 */
-function Pile({ p, zone, label, count, top, delta, k, shuffling, onClick }: {
-  p: PlayerId; zone: 'deck' | 'discard' | 'rage'; label: string; count: number; top?: CardView; delta?: number; k?: number; shuffling?: boolean; onClick?: (anchor: DOMRect) => void;
+export function Pile({ p, zone, label, count, top, delta, k, shuffling, awake, extra, dropZone, onClick }: {
+  p: PlayerId; zone: 'deck' | 'discard' | 'rage' | 'exp' | 'gear'; label: string; count: number; top?: CardView; delta?: number; k?: number; shuffling?: boolean;
+  /** 經驗堆已覺醒：標籤醒目顯示 */
+  awake?: boolean;
+  /** 張數後面接的補充（例如經驗的 /需求） */
+  extra?: string;
+  /** 拖曳使用時，這個牌堆是哪種放置區 */
+  dropZone?: DropZone;
+  onClick?: (anchor: DOMRect) => void;
 }) {
   const depth = Math.min(count, 6);
-  const edge = Array.from({ length: depth }, (_, i) => `${(i + 1) * 2}px ${(i + 1) * 2}px 0 var(--pile-edge)`).join(', ');
+  const edge = Array.from({ length: depth }, (_, i) => `calc(${i + 1} * var(--pile-step, 2px)) calc(${i + 1} * var(--pile-step, 2px)) 0 var(--pile-edge)`).join(', ');
   return (
-    <div className={`pile ${zone}${onClick ? ' click' : ''}`} onClick={onClick && ((e) => onClick(e.currentTarget.getBoundingClientRect()))}>
+    <div className={`pile ${zone}${onClick ? ' click' : ''}${awake ? ' awake' : ''}`} data-dropzone={dropZone} onClick={onClick && ((e) => onClick(e.currentTarget.getBoundingClientRect()))}>
       <div className={`pilestack${shuffling ? ' shuffling' : ''}`} data-pile={`${p}-${zone}`} style={{ boxShadow: edge || undefined }}>
         {count === 0 ? (
           <div className="card sm slot">空</div>
@@ -48,7 +60,7 @@ function Pile({ p, zone, label, count, top, delta, k, shuffling, onClick }: {
           <CardFace id={null} size="sm" />
         )}
       </div>
-      <div className="pilelabel">{label} <b>{count}</b><Delta d={delta} k={k ?? 0} tone="neutral" /></div>
+      <div className="pilelabel">{label} <b>{count}{extra}</b><Delta d={delta} k={k ?? 0} tone="neutral" /></div>
     </div>
   );
 }
@@ -68,17 +80,30 @@ function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optK
   }, []);
   const layout = expLayout(cards.length, width);
   const short = layout.mode !== 'one';
+  // 觸控沒有滑過：點矮卡先展開成完整小卡，同一張再點一下才送出（不是選項的卡再點就收起）
+  const coarse = useCoarsePointer();
+  const [open, setOpen] = useState<number | null>(null);
+  useEffect(() => {
+    if (open !== null && !cards.some((c) => c.uid === open)) setOpen(null);
+  }, [cards, open]);
+  const optSig = [...optKeys].join(',');
+  useEffect(() => setOpen(null), [optSig]);
+  const tapShort = (c: CardView) => () => {
+    const r = tapCard(open, c.uid, optKeys.has(`c${c.uid}`));
+    setOpen(r.preview);
+    if (r.submit) onPick(`c${c.uid}`);
+  };
   return (
     <div
       ref={ref} className={`expcards ${layout.mode}`}
       style={short ? { ['--step' as string]: `${layout.step}px`, ['--cols' as string]: layout.cols } : undefined}
     >
       {cards.map((c, i) => (
-        <div key={c.uid} className={`expslot${short ? (i < layout.firstRow ? ' r1' : ' r2') : ''}`}>
+        <div key={c.uid} className={`expslot${short ? (i < layout.firstRow ? ' r1' : ' r2') : ''}${open === c.uid ? ' open' : ''}`}>
           <CardFace
             uid={c.uid} id={c.id} size="sm" short={short} expEffect={expEffectActive(c)} covered={c.covered}
             glow={optKeys.has(`c${c.uid}`)} selected={selected.includes(`c${c.uid}`)}
-            onClick={optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
+            onClick={coarse && short ? tapShort(c) : optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
           />
         </div>
       ))}
@@ -87,9 +112,38 @@ function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optK
   );
 }
 
-/** 手牌：沒有張數上限。放得下就並排，放不下就水平重疊（我方每張至少露出約 36px），滑過浮出完整卡 */
-function HandRow({ cards, mine, optKeys, selected, onPick }: { cards: CardView[]; mine: boolean; optKeys: Set<string>; selected: string[]; onPick: (key: string) => void }) {
+/**
+ * 手牌：沒有張數上限。放得下就並排，放不下就水平重疊（我方每張至少露出 minStep 像素），滑過浮出完整卡。
+ * 觸控裝置沒有滑過：點一下先選取並在上方預覽，同一張再點一下才送出。我方的牌可以拖到放置區使用
+ */
+export function HandRow({ cards, mine, optKeys, selected, single, minStep, drag, onPick }: {
+  cards: CardView[]; mine: boolean; optKeys: Set<string>; selected: string[];
+  /** 提示是必選 1 個：點選就送出（觸控則是第二下） */
+  single: boolean;
+  minStep?: number;
+  drag?: DragApi;
+  onPick: (key: string) => void;
+}) {
+  const coarse = useCoarsePointer() && mine;
+  const [preview, setPreview] = useState<number | null>(null);
+  // 提示換了（選項不同）就收起預覽
+  const optSig = [...optKeys].join(',');
+  useEffect(() => setPreview(null), [optSig]);
+  useEffect(() => {
+    if (preview !== null && !cards.some((c) => c.uid === preview)) setPreview(null);
+  }, [cards, preview]);
   const ref = useRef<HTMLDivElement>(null);
+  // 預覽固定在手牌列正上方（頁面捲動、手牌列在畫面邊緣時也不會被裁掉），高度依上方剩下的空間縮小
+  const [pvBox, setPvBox] = useState<{ bottom: number; h: number } | null>(null);
+  useLayoutEffect(() => {
+    if (preview === null || !ref.current) return;
+    const top = ref.current.getBoundingClientRect().top;
+    setPvBox({ bottom: window.innerHeight - top + 4, h: Math.max(120, Math.min(230, top - 70)) });
+    // 視窗大小改變（轉向）後位置作廢，直接收起
+    const close = () => setPreview(null);
+    window.addEventListener('resize', close);
+    return () => window.removeEventListener('resize', close);
+  }, [preview]);
   const [m, setM] = useState({ width: 0, cardW: 0 });
   // 繪製前就量好寬度與卡寬，第一幀就是對的版面；卡寬會隨版面尺寸變化，所以一併觀察第一張牌
   useLayoutEffect(() => {
@@ -108,27 +162,62 @@ function HandRow({ cards, mine, optKeys, selected, onPick }: { cards: CardView[]
     if (first) ro.observe(first);
     return () => ro.disconnect();
   }, [cards[0]?.uid]);
-  const layout = handLayout(cards.length, m.width, m.cardW, mine ? 36 : 24);
+  const layout = handLayout(cards.length, m.width, m.cardW, minStep ?? (mine ? 36 : 24));
+  const tap = (c: CardView) => {
+    const key = `c${c.uid}`;
+    const canPick = optKeys.has(key);
+    if (!single && canPick) {
+      // 多選：點一下就切換選取（確定鍵在提示欄），選取時順便預覽，取消時收起
+      setPreview(selected.includes(key) ? null : c.uid);
+      return onPick(key);
+    }
+    const r = tapCard(preview, c.uid, canPick);
+    setPreview(r.preview);
+    if (r.submit) onPick(key);
+  };
+  const shown = preview === null ? null : cards.find((c) => c.uid === preview);
   return (
-    <div
-      ref={ref} className={`handrow${layout.overlap ? ' overlap' : ''}`}
-      style={layout.overlap ? { ['--hstep' as string]: `${Math.floor(layout.step)}px` } : undefined}
-    >
-      {cards.map((c) => (
-        <div key={c.uid} className="handslot">
-          <CardFace
-            uid={c.uid} id={mine ? c.id : null} size={mine ? 'md' : 'sm'}
-            glow={mine && optKeys.has(`c${c.uid}`)} selected={mine && selected.includes(`c${c.uid}`)}
-            onClick={mine && optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
-          />
+    <div className="handwrap">
+      {coarse && shown?.id && (
+        <div
+          className="handpreview" onClick={() => setPreview(null)}
+          style={pvBox ? { bottom: pvBox.bottom, ['--ph' as string]: `${pvBox.h}px`, ['--pw' as string]: `${Math.round(pvBox.h * 0.73)}px`, ['--pf' as string]: `${(pvBox.h / 230) * 13}px` } : undefined}
+        >
+          <CardFace id={shown.id} size="md" />
+          <div className="previewhint">{!optKeys.has(`c${shown.uid}`) ? '這張現在不能使用' : single ? '再點一下手牌送出' : '已選取，按確定送出'}</div>
         </div>
-      ))}
-      {cards.length === 0 && <span className="muted">（空）</span>}
+      )}
+      <div
+        ref={ref} className={`handrow${layout.overlap ? ' overlap' : ''}`}
+        style={layout.overlap ? { ['--hstep' as string]: `${Math.floor(layout.step)}px` } : undefined}
+      >
+        {cards.map((c) => {
+          const key = `c${c.uid}`;
+          const canDrag = mine && !!drag?.zoneFor(key);
+          return (
+            <div
+              key={c.uid} className={`handslot${canDrag ? ' draggable' : ''}${drag?.draggingKey === key ? ' dragging' : ''}`}
+              onPointerDown={canDrag ? (e) => drag!.start(e, key, c.id) : undefined}
+            >
+              <CardFace
+                uid={c.uid} id={mine ? c.id : null} size={mine ? 'md' : 'sm'}
+                glow={mine && optKeys.has(key)} selected={mine && (selected.includes(key) || preview === c.uid)}
+                onClick={
+                  !mine ? undefined
+                    : coarse ? () => tap(c)
+                    : optKeys.has(key) ? () => onPick(key) : undefined
+                }
+              />
+            </div>
+          );
+        })}
+        {cards.length === 0 && <span className="muted">（空）</span>}
+      </div>
     </div>
   );
 }
 
-export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, changes, fxKey, outcome, shuffling }: BoardProps) {
+export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, drag, hit, changes, fxKey, outcome, shuffling }: BoardProps) {
   const pv = v.players[p];
   const mine = p === v.me;
   const expRef = useRef<HTMLDivElement>(null);
@@ -159,7 +248,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
         效果：<KeywordText text={ch.text} />　<span style={{ color: awake ? 'var(--accent)' : undefined }}>覺醒：<KeywordText text={ch.awakenText} /></span>
       </div>
 
-      <div className={`gearzone${pv.gear.length + pv.buff.length === 0 ? ' empty' : ''}`}>
+      <div className={`gearzone${pv.gear.length + pv.buff.length === 0 ? ' empty' : ''}`} data-dropzone={mine ? 'gear' : undefined}>
         <div className="zonelabel">裝備／增益</div>
         <div className="cardrow">
           {pv.gear.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" short={wide} />)}
@@ -173,7 +262,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
           <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} onClick={mine ? (a) => onZone(p, 'rage', a) : undefined} />
           <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={(a) => onZone(p, 'discard', a)} />
         </div>
-        <div className="expzone" ref={expRef}>
+        <div className="expzone" ref={expRef} data-dropzone={mine ? 'exp' : undefined}>
           <div className="zonelabel">經驗區（左側為最前方）</div>
           <ExpZone cards={pv.exp} optKeys={optKeys} selected={selected} onPick={onPick} />
         </div>
@@ -181,7 +270,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, hit, chang
 
       <div className="handzone">
         <div className="zonelabel">手牌</div>
-        <HandRow cards={pv.hand} mine={mine} optKeys={optKeys} selected={selected} onPick={onPick} />
+        <HandRow cards={pv.hand} mine={mine} optKeys={optKeys} selected={selected} single={prompt?.min === 1 && prompt?.max === 1} drag={mine ? drag : undefined} onPick={onPick} />
       </div>
     </div>
   );
@@ -257,7 +346,8 @@ export function CombatArea({ v, fx, caption, fxKey, changes }: {
 }) {
   const opp: PlayerId = v.me === 0 ? 1 : 0;
   const calc = fx?.type === 'calc' ? fx : null;
-  const wide = useWide();
+  // 寬螢幕版與手機版面的疊牌區高度固定，備註改放中央欄
+  const wide = useWide() || usePhone();
   const notes = [['對方', statNote(v.players[opp])], ['我方', statNote(v.players[v.me])]].filter((n): n is [string, string] => n[1] !== null);
   const hasPursuit = v.players[opp].pursuit.length + v.players[v.me].pursuit.length > 0;
   return (
@@ -287,7 +377,7 @@ export function CombatArea({ v, fx, caption, fxKey, changes }: {
             </>
           )}
         </div>
-        <div className="colwrap">
+        <div className="colwrap" data-dropzone="moves">
           <StackColumn notes={!wide} pv={v.players[v.me]} label="我方" mine fx={fx} delta={changes && { atk: changes.atk[v.me], def: changes.def[v.me] }} k={fxKey} />
           <ColumnFx fx={fx} fxKey={fxKey} player={v.me} />
         </div>

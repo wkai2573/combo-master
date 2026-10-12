@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useCoarsePointer } from '../layoutMode';
 import type { Request } from '../../engine/types';
 import { CardFace } from './CardFace';
 import { SortableList } from './SortableList';
@@ -14,6 +15,8 @@ interface Props {
   selected: string[];
   onPick: (key: string) => void;
   onSubmit: (keys: string[]) => void;
+  /** 這些牌已經在手牌列上可以直接選或拖（手機版面），提示欄不再重複畫出 */
+  skipUids?: Set<number>;
 }
 
 /** 每個提示物件一個編號：連續兩個提示的選項可能完全相同（同一批表側經驗），不能只靠選項分辨 */
@@ -48,26 +51,31 @@ function OrderPrompt({ prompt, onSubmit }: Pick<Props, 'prompt' | 'onSubmit'>) {
 }
 
 /** 目前需要你回應的選擇。必選 1 個時，點選即送出；其餘情況點選切換後按確定。 */
-export function PromptPanel({ prompt, selected, onPick, onSubmit }: Props) {
+export function PromptPanel({ prompt, selected, onPick, onSubmit, skipUids }: Props) {
+  // 觸控：必選 1 個的卡片選項，第一下只選取，同一張再點一下才送出
+  const coarse = useCoarsePointer();
+  const [armed, setArmed] = useState<string | null>(null);
+  useEffect(() => setArmed(null), [prompt]);
   if (prompt.ordered) {
     // 換了一個提示就重新開始排，不沿用上一個提示的順序
     return <OrderPrompt key={promptId(prompt)} prompt={prompt} onSubmit={onSubmit} />;
   }
   const single = prompt.min === 1 && prompt.max === 1;
   const isCard = (o: Request['options'][number]) => o.cardId !== undefined || o.hidden;
-  const cardOpts = prompt.options.filter(isCard);
+  const onHand = (o: Request['options'][number]) => o.uid !== undefined && !!skipUids?.has(o.uid);
+  const cardOpts = prompt.options.filter((o) => isCard(o) && !onHand(o));
   const btnOpts = prompt.options.filter((o) => !isCard(o));
   const countText = single ? '' : `（選 ${prompt.min === prompt.max ? prompt.min : `${prompt.min}~${prompt.max}`} 個）`;
 
   return (
     <div className="prompt">
-      <div className="ptitle">{prompt.title}{countText}</div>
+      <div className="ptitle">{prompt.title}{countText}{armed && '　再點一下送出'}</div>
       {cardOpts.length > 0 && (
         <div className="cardrow">
           {cardOpts.map((o) => (
             <CardFace
-              key={o.key} id={o.cardId ?? null} size="md" glow selected={selected.includes(o.key)}
-              onClick={() => (single ? onSubmit([o.key]) : onPick(o.key))}
+              key={o.key} id={o.cardId ?? null} size="md" glow selected={selected.includes(o.key) || armed === o.key}
+              onClick={() => (single ? (coarse && armed !== o.key ? setArmed(o.key) : onSubmit([o.key])) : onPick(o.key))}
             />
           ))}
         </div>

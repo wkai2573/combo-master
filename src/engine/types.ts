@@ -86,6 +86,9 @@ export interface Opt {
   hidden?: boolean;
 }
 
+/** 提示指定的放置區：戰鬥區、裝備增益區、經驗區 */
+export type DropZone = 'moves' | 'gear' | 'exp';
+
 export interface Request {
   player: PlayerId;
   title: string;
@@ -94,6 +97,8 @@ export interface Request {
   max: number;
   /** 要求玩家把全部選項排好順序：回應是依序排好的選項 key（min、max 都是選項數） */
   ordered?: boolean;
+  /** 選的是手牌時，放開後該去的區域（介面讓手牌拖曳使用）；沒有就不能拖曳 */
+  dropZone?: DropZone;
 }
 
 export interface DeckSpec {

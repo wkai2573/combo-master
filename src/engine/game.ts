@@ -298,7 +298,7 @@ function* burstPhase(g: Game): Gen {
     const hand = Z(g, p, 'hand');
     if (hand.length === 0) continue;
     const keys = yield* ask(g, {
-      player: p, title: '爆發階段：可選擇 1 張手牌放入經驗區，然後抽 2', min: 0, max: 1,
+      player: p, title: '爆發階段：可選擇 1 張手牌放入經驗區，然後抽 2', min: 0, max: 1, dropZone: 'exp',
       options: hand.map((c) => cardOpt(c, p)),
     });
     if (keys.length === 0) continue;
@@ -341,7 +341,7 @@ function* buffPhase(g: Game): Gen {
     });
     if (options.length === 0) continue;
     const keys = yield* ask(g, {
-      player: p, title: '增益階段：可打出 1 張裝備或增益', min: 0, max: 1,
+      player: p, title: '增益階段：可打出 1 張裝備或增益', min: 0, max: 1, dropZone: 'gear',
       options: options.map((c) => cardOpt(c, p)),
     });
     if (keys.length === 0) continue;

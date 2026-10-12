@@ -207,7 +207,7 @@ export function* combatPhase(g: GameCtx): Gen {
     log(g, `${pname(g, first)} 沒有可出的招式，展示手牌：${hand}`);
     mark(g, `${pname(g, first)} 沒有可出的招式，展示手牌`, { type: 'info' });
   } else {
-    const [c] = yield* chooseCards(g, first, '先手步驟：選擇 1 張招式出招', opening, 1, 1);
+    const [c] = yield* chooseCards(g, first, '先手步驟：選擇 1 張招式出招', opening, 1, 1, 'moves');
     yield* playMove(g, first, c, true);
   }
   s.flags.opened = true;
@@ -228,7 +228,7 @@ export function* combatPhase(g: GameCtx): Gen {
       const keys = yield* ask(g, {
         player: cur,
         title: '反擊步驟：選擇 1 張招式出招，或收招',
-        min: 1, max: 1,
+        min: 1, max: 1, dropZone: 'moves',
         options: [...options.map((c) => cardOpt(c, cur)), { key: 'pass', label: '收招' }],
       });
       playedCard = options.find((c) => `c${c.uid}` === keys[0]);
