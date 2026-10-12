@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.43.8',
+    date: '2026-10-12',
+    items: [
+      { type: 'fix', text: '遊俠的瞄準：牌頂是裝備或增益時，提示會正確說明這次追擊判定一定失敗，不再看連擊值範圍' },
+      { type: 'change', text: '職業專精書：提示會列出看到的 5 張牌；上方沒有職業卡時也會讓你看到這幾張，再按略過繼續' },
+    ],
+  },
+  {
     version: '0.43.7',
     date: '2026-10-12',
     items: [

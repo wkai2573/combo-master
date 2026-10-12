@@ -17,6 +17,13 @@ export function inRange(g: GameCtx, p: PlayerId, c: CardInst): boolean {
   return v >= Math.min(m, o) && v <= Math.max(m, o);
 }
 
+/** 這張卡被翻出做追擊判定時會不會成功：必須是招式；追擊判定失敗的卡一律失敗，必定成功的卡一律成功，其餘看連擊值在不在範圍內 */
+export function pursuitWouldSucceed(g: GameCtx, p: PlayerId, card: CardInst): boolean {
+  if (data(card).kind !== 'move') return false;
+  const rules = moveRules(card.id);
+  return !rules.pursuitFails && (rules.pursuitSucceeds || !inRange(g, p, card));
+}
+
 export function* becomePursuitCard(g: GameCtx, p: PlayerId, card: CardInst): Gen {
   move(g, card, 'pursuit');
   g.state.flags.pursuitSuccess[p]++;
@@ -37,8 +44,7 @@ export function* judge(g: GameCtx, p: PlayerId, card: CardInst): Gen<boolean> {
   mark(g, `${pname(g, p)} 追擊判定：翻開【${cd.name}】${desc}`,
     { type: 'flip', player: p, cardId: card.id });
 
-  const rules = moveRules(card.id);
-  const success = isMove && !rules.pursuitFails && (rules.pursuitSucceeds || !inRange(g, p, card));
+  const success = pursuitWouldSucceed(g, p, card);
   if (success) {
     yield* becomePursuitCard(g, p, card);
     return true;

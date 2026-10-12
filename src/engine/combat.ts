@@ -2,7 +2,7 @@ import {
   ask, cardOpt, chooseCards, combatZone, data, draw, log, mark, markIfLogged, move,
   order, pname, takeDamage, Z, type GameCtx, type Gen,
 } from './ops';
-import { inRange, judge } from './judge';
+import { inRange, judge, pursuitWouldSucceed } from './judge';
 import { canPay, pay } from './cost';
 import { fire, fireEach, moveRules, query } from './effects';
 import { checkWin } from './win';
@@ -119,8 +119,7 @@ function* aim(g: GameCtx, p: PlayerId, used: { n: number }): Gen {
     }
     if (deck.length < 2) return;
     const top = deck[0];
-    const topRules = moveRules(top.id);
-    const hit = !topRules.pursuitFails && (topRules.pursuitSucceeds || !inRange(g, p, top));
+    const hit = pursuitWouldSucceed(g, p, top);
     const keys = yield* ask(g, {
       player: p,
       title: `【瞄準】牌組頂是【${data(top).name}】（連擊值 ${data(top).combo}），以目前範圍會判定${hit ? '成功' : '失敗'}。（剩 ${left} 次）`,

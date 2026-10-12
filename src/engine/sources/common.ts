@@ -83,7 +83,12 @@ export const 職業專精書 = defineSource({
     onPlay: (c) => c.effect({ label: '【職業專精書】看牌組上方 5 張，選 1 張職業卡加入手牌（蓋1）', cost: { cover: 1 } }, function* () {
       const { g, p } = c;
       const seen = Z(g, p, 'deck').slice(0, 5);
-      const [pick] = yield* chooseCards(g, p, '【職業專精書】選擇 1 張職業卡加入手牌', seen.filter((card) => isClassCard(data(card))), 1, 1);
+      const classCards = seen.filter((card) => isClassCard(data(card)));
+      const looked = `【職業專精書】看到：${seen.map((card) => data(card).name).join('、')}`;
+      // 沒有職業卡時開一個什麼都不能選的提示，讓玩家看得到這幾張牌（按略過繼續）
+      const [pick] = classCards.length > 0
+        ? yield* chooseCards(g, p, `${looked}。選擇 1 張職業卡加入手牌`, classCards, 1, 1)
+        : yield* chooseCards(g, p, `${looked}。沒有職業卡，全部隨機放到牌組底`, seen, 0, 0);
       if (pick) move(g, pick, 'hand');
       const rest = g.rng.shuffle(seen.filter((card) => card !== pick));
       for (const card of rest) move(g, card, 'deck', 'bottom');

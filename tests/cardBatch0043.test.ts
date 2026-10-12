@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getCard } from '../src/data/cards';
 import { isClassCard } from '../src/data/enabledCards';
 import { Z } from '../src/engine/ops';
-import { names, pick, scenario } from './helpers';
+import { names, pass, pick, scenario } from './helpers';
 
 const sorted = (xs: string[]) => [...xs].sort();
 
@@ -42,6 +42,8 @@ describe('職業專精書：[發_蓋1] 看牌組上方 5 張卡，選擇其中 1
     const handBefore = Z(g, 0, 'hand').length;
     pick(g, '職業專精書');
     pick(g, '發動');
+    expect(g.pending!.title).toContain('看到：黑桃5、黑桃6、黑桃7、黑桃8、黑桃9'); // 沒有職業卡也要讓玩家看到這幾張
+    pass(g);
     expect(Z(g, 0, 'hand')).toHaveLength(handBefore - 1); // 只有打出的那張離開手牌
     expect(Z(g, 0, 'deck')).toHaveLength(25);
     expect(sorted(names(g, 0, 'deck').slice(-5))).toEqual(sorted(['黑桃5', '黑桃6', '黑桃7', '黑桃8', '黑桃9']));
@@ -51,6 +53,7 @@ describe('職業專精書：[發_蓋1] 看牌組上方 5 張卡，選擇其中 1
     const g = book(['黑桃5', '黑桃6', '黑桃7', '黑桃8', '黑桃9', '戒備打擊', ...FILL]);
     pick(g, '職業專精書');
     pick(g, '發動');
+    pass(g);
     expect(names(g, 0, 'hand')).not.toContain('戒備打擊');
     expect(Z(g, 0, 'deck')).toHaveLength(26);
   });
@@ -226,6 +229,13 @@ describe('追跡箭矢：此卡追擊判定必定成功；[發_蓋2] 抽1；[追
     pick(g, '黑桃6');
     expect(g.state.flags.pursuitSuccess[0]).toBe(0);
     expect(names(g, 0, 'hand')).toEqual(['黑桃5']);
+  });
+
+  it('瞄準提示：牌頂是非招式卡一律失敗，不看連擊值範圍', () => {
+    const g = arrow('木棍', ['遊俠', '勇者']);
+    pick(g, '黑桃6');
+    expect(g.pending!.title).toContain('木棍');
+    expect(g.pending!.title).toContain('失敗');
   });
 
   it('遊俠的瞄準提示會說這張以目前範圍會判定成功', () => {
