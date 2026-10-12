@@ -23,12 +23,12 @@ export const 冰與雷之曲 = defineSource({
   },
 });
 
-// 火球（法師）：[先_蓋3] 對方直擊 2
+// 火球（法師）：[發_蓋3] 對方直擊 2
 export const 火球 = defineSource({
   id: '火球',
   at: 'moves',
   on: {
-    onOpen: (c) => c.effect(
+    onPlay: (c) => c.effect(
       { label: '【火球】對方直擊 2（蓋3）', cost: { cover: 3 } },
       () => void directHit(c.g, other(c.p), 2),
     ),

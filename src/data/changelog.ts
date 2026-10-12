@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.43.0',
+    date: '2026-10-12',
+    items: [
+      { type: 'change', text: '火球：時機從先手出招時改成打出時，後攻方在反擊步驟打出也能發動' },
+      { type: 'change', text: 'Ex-中毒、Ex-流血：新增特徵「減益」' },
+    ],
+  },
+  {
     version: '0.42.0',
     date: '2026-10-12',
     items: [

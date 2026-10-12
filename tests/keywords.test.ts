@@ -36,7 +36,7 @@ describe('關鍵字', () => {
     const segs = segmentsOf('當歸還時，將 [Ex-中毒] 移入對方的經驗區。');
     const ex = segs.find((s) => s.text === '[Ex-中毒]')!;
     expect(ex.kws.map((k) => [k.name, k.group])).toEqual([['Ex-中毒', 'Ex卡']]);
-    expect(ex.kws[0].desc).toContain('特徵：毒');
+    expect(ex.kws[0].desc).toContain('特徵：減益、毒');
     expect(ex.kws[0].desc).toContain('直擊我方1');
     expect(keywordsIn('將 [Ex-流血] 加入對方經驗區。').map((k) => k.name)).toEqual(['Ex-流血']);
   });

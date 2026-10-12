@@ -443,7 +443,7 @@ describe('新卡（第二批）', () => {
     expect(Z(none, 1, 'exp').filter((c) => c.covered)).toHaveLength(0);
   });
 
-  it('火球：[先_蓋3] 對方直擊 2', () => {
+  it('火球：[發_蓋3] 對方直擊 2', () => {
     const g = scenario({
       chars: ['法師', '勇者'],
       p0: { hand: ['火球', '黑桃2'], exp: ['黑桃3', '黑桃4', '黑桃5'] },
@@ -452,6 +452,18 @@ describe('新卡（第二批）', () => {
     pick(g, '火球');
     pick(g, '發動');
     expect(Z(g, 1, 'discard')).toHaveLength(2);
+  });
+
+  it('火球：[發] 後攻方在反擊步驟打出也會發動', () => {
+    const g = scenario({
+      chars: ['勇者', '法師'],
+      p0: { hand: ['黑桃5'] },
+      p1: { hand: ['火球', '黑桃6'], exp: ['黑桃3', '黑桃4', '黑桃7'] },
+    });
+    pick(g, '火球');
+    pick(g, '發動');
+    expect(Z(g, 0, 'discard')).toHaveLength(2);
+    expect(Z(g, 1, 'exp').filter((c) => c.covered)).toHaveLength(3);
   });
 
   it('Explosion!：[先_怒10] 對方直擊 4，我方收招（對方仍可反擊），並跳過我方下個回合的抽牌階段', () => {
