@@ -15,20 +15,92 @@ const KEY = 'lianji.decks.v1';
 
 type Saved = Omit<DeckEntry, 'preset'>;
 
-function readSaved(): Saved[] {
+export interface StorageLike {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+/** 讀不進來的資料：整份不是合法 JSON 陣列，或單筆缺 id、cards 不是陣列。raw 是要給玩家複製的原文 */
+export interface CorruptDeck {
+  kind: 'whole' | 'entry';
+  raw: string;
+}
+
+function defaultStorage(): StorageLike | null {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw) as Saved[];
-    return Array.isArray(arr) ? arr.filter((d) => d && typeof d.id === 'string' && Array.isArray(d.cards)) : [];
+    return localStorage;
   } catch {
-    return [];
+    return null;
   }
+}
+
+function isValidSaved(d: unknown): d is Saved {
+  return !!d && typeof (d as Saved).id === 'string' && Array.isArray((d as Saved).cards);
+}
+
+function entryRaw(d: unknown): string {
+  return JSON.stringify(d, null, 2);
+}
+
+/** 讀出自訂牌組，並把讀不進來的資料分開回報，不靜默丟棄 */
+export function inspectSavedDecks(storage: StorageLike | null = defaultStorage()): { decks: Saved[]; corrupt: CorruptDeck[] } {
+  try {
+    const raw = storage?.getItem(KEY);
+    if (!raw) return { decks: [], corrupt: [] };
+    let arr: unknown;
+    try {
+      arr = JSON.parse(raw);
+    } catch {
+      return { decks: [], corrupt: [{ kind: 'whole', raw }] };
+    }
+    if (!Array.isArray(arr)) return { decks: [], corrupt: [{ kind: 'whole', raw }] };
+    const decks: Saved[] = [];
+    const corrupt: CorruptDeck[] = [];
+    for (const d of arr) {
+      if (isValidSaved(d)) decks.push(d);
+      else corrupt.push({ kind: 'entry', raw: entryRaw(d) });
+    }
+    return { decks, corrupt };
+  } catch {
+    return { decks: [], corrupt: [] };
+  }
+}
+
+/** 刪除一筆損壞資料：整份壞掉就清掉整個 key，單筆壞掉只移除該筆，其餘原樣保留 */
+export function discardCorruptDeck(item: CorruptDeck, storage: StorageLike | null = defaultStorage()): void {
+  try {
+    if (!storage) return;
+    const raw = storage.getItem(KEY);
+    if (!raw) return;
+    if (item.kind === 'whole') {
+      // 內容已被改寫（例如另一個分頁存過牌組）就不動，免得刪掉好的資料
+      if (raw === item.raw) storage.removeItem(KEY);
+      return;
+    }
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return;
+    let removed = false;
+    const rest = arr.filter((d) => {
+      if (removed || isValidSaved(d) || entryRaw(d) !== item.raw) return true;
+      removed = true;
+      return false;
+    });
+    storage.setItem(KEY, JSON.stringify(rest));
+  } catch {
+    // 儲存失敗：忽略，玩家下次載入仍會看到提示
+  }
+}
+
+function readSaved(): Saved[] {
+  return inspectSavedDecks().decks;
 }
 
 function writeSaved(list: Saved[]): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(list));
+    // 單筆損壞的資料先留著，等玩家在提示裡複製、決定刪除，不能因為存別的牌組就被吃掉
+    const kept = inspectSavedDecks().corrupt.filter((c) => c.kind === 'entry').map((c) => JSON.parse(c.raw) as unknown);
+    localStorage.setItem(KEY, JSON.stringify([...list, ...kept]));
   } catch {
     // 儲存失敗（私密模式或容量滿）：忽略，介面仍可繼續使用
   }

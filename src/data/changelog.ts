@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.47.4',
+    date: '2026-10-13',
+    items: [
+      { type: 'fix', text: '牌組資料損壞無法讀取時，不再讓牌組默默消失：開啟時會提示並顯示內容，可複製留存，再選擇刪除或關閉' },
+    ],
+  },
+  {
     version: '0.47.3',
     date: '2026-10-13',
     items: [
