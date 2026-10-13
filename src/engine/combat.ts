@@ -1,17 +1,25 @@
+import { isVanilla } from '../data/enabledCards';
 import {
   ask, cardOpt, chooseCards, combatZone, data, draw, log, mark, markIfLogged, move,
   order, pname, takeDamage, Z, type GameCtx, type Gen,
 } from './ops';
-import { inRange, judge, pursuitWouldSucceed } from './judge';
 import { canPay, pay } from './cost';
 import { fire, fireEach, moveRules, query } from './effects';
 import { checkWin } from './win';
 import { other, type CardInst, type PlayerId } from './types';
-import {
-  resolveCombatStats, totalAtk, totalDef, type CombatStats, type CombatStatsBreakdown,
-} from './combatStats';
 
 // ───────────────────────── 範圍內／可出招判定 ─────────────────────────
+
+/** 該卡是否在 p 的「範圍內」：雙方招式卡疊最後一張招式的連擊值（含）之間 */
+export function inRange(g: GameCtx, p: PlayerId, c: CardInst): boolean {
+  const mine = Z(g, p, 'moves');
+  const opp = Z(g, other(p), 'moves');
+  if (mine.length === 0 || opp.length === 0) return true;
+  const m = data(mine[mine.length - 1]).combo;
+  const o = data(opp[opp.length - 1]).combo;
+  const v = data(c).combo;
+  return v >= Math.min(m, o) && v <= Math.max(m, o);
+}
 
 /** p 目前可以打出的招式（手牌）；opening 為先手步驟，只能在先手步驟出招的卡只有這時才算 */
 export function playables(g: GameCtx, p: PlayerId, opening = false): CardInst[] {
@@ -58,11 +66,51 @@ export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: bool
   }
 }
 
-// ───────────────────────── 總攻擊／總防禦 ─────────────────────────
+// ───────────────────────── 追擊判定 ─────────────────────────
 
-export { resolveCombatStats, totalAtk, totalDef, type CombatStats, type CombatStatsBreakdown };
+/** 這張卡被翻出做追擊判定時會不會成功：必須是招式；追擊判定失敗的卡一律失敗，必定成功的卡一律成功，其餘看連擊值在不在範圍內 */
+export function pursuitWouldSucceed(g: GameCtx, p: PlayerId, card: CardInst): boolean {
+  if (data(card).kind !== 'move') return false;
+  const rules = moveRules(card.id);
+  return !rules.pursuitFails && (rules.pursuitSucceeds || !inRange(g, p, card));
+}
 
-// ───────────────────────── 追擊 ─────────────────────────
+export function* becomePursuitCard(g: GameCtx, p: PlayerId, card: CardInst): Gen {
+  move(g, card, 'pursuit');
+  g.state.flags.pursuitSuccess[p]++;
+  log(g, `追擊成功：【${data(card).name}】成為追擊卡`);
+  mark(g, `追擊成功！【${data(card).name}】成為追擊卡（攻擊 +${data(card).atk}）`,
+    { type: 'flipResult', player: p, cardId: card.id, ok: true });
+  // 追擊成功時：角色與常駐效果，和該卡自己的 [追] 效果進同一個窗口
+  yield* fire(g, p, ['onPursuitSuccess', 'onPursuitCard'], { card });
+}
+
+/** 對 card 做追擊判定。回傳是否成功。 */
+export function* judge(g: GameCtx, p: PlayerId, card: CardInst): Gen<boolean> {
+  const cd = data(card);
+  const isMove = cd.kind === 'move';
+  const desc = isMove ? `（連擊值 ${cd.combo}）` : '（非招式卡）';
+
+  log(g, `${pname(g, p)} 追擊判定：翻開【${cd.name}】${desc}`);
+  mark(g, `${pname(g, p)} 追擊判定：翻開【${cd.name}】${desc}`,
+    { type: 'flip', player: p, cardId: card.id });
+
+  const success = pursuitWouldSucceed(g, p, card);
+  if (success) {
+    yield* becomePursuitCard(g, p, card);
+    return true;
+  }
+  log(g, '追擊判定失敗，該卡加入手中');
+  move(g, card, 'hand');
+  const failReason = isMove
+    ? `【${cd.name}】的連擊值 ${cd.combo} 在範圍內`
+    : `【${cd.name}】為非招式卡`;
+  mark(g, `追擊失敗：${failReason}，加入手中`,
+    { type: 'flipResult', player: p, cardId: card.id, ok: false });
+  return false;
+}
+
+// ───────────────────────── 追擊階段與流程 ─────────────────────────
 
 export function pursuitCount(g: GameCtx, p: PlayerId): number {
   return Math.max(0, 1 + query(g, p, 'pursuitBonus'));
@@ -148,6 +196,113 @@ export function* pursuitPhase(g: GameCtx): Gen {
   mark(g, '追擊階段：雙方翻開牌組頂的牌做追擊判定', { type: 'banner', kind: 'phase', name: '追擊階段' });
   for (const p of order(g)) yield* pursuitStep(g, p);
   checkWin(g);
+}
+
+// ───────────────────────── 總攻擊／總防禦與結算明細 ─────────────────────────
+
+export interface CombatStatsBreakdown {
+  combatZoneAtk: number;
+  combatZoneDef: number;
+  /** 盾擊把攻擊力補到原始防禦力的總增加量 */
+  shieldLift: number;
+  pursuitAtk: number;
+  pursuitDef: number;
+  flagBonusAtk: number;
+  flagBonusDef: number;
+  vanillaBonus: number;
+  charBonusAtk: number;
+  charBonusDef: number;
+}
+
+export interface CombatStats {
+  atk: number;
+  def: number;
+  breakdown: CombatStatsBreakdown;
+}
+
+/** 我方戰鬥區白板卡（無特徵、無效果的招式）數量 */
+function vanillaCount(g: GameCtx, p: PlayerId): number {
+  return combatZone(g, p).filter((c) => isVanilla(data(c))).length;
+}
+
+/** 完整結算該玩家目前的攻守數據與明細 */
+export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
+  const moves = Z(g, p, 'moves');
+  let combatZoneAtk = 0;
+  let combatZoneDef = 0;
+  let shieldLift = 0;
+
+  // [頂] 盾擊：位於招式卡疊最上方時，戰鬥區（含追擊卡疊）每張招式卡的攻擊力至少是它的原始防禦力（先補，再套用其他加成與修正）
+  const lift = moves.length > 0 && moveRules(moves[moves.length - 1].id).liftAtkToDef;
+
+  // 盾擊補的攻擊力累計進 shieldLift
+  const liftedAtk = (c: CardInst): number => {
+    const printedAtk = data(c).atk;
+    const atk = lift ? Math.max(printedAtk, data(c).def) : printedAtk;
+    shieldLift += atk - printedAtk;
+    return atk;
+  };
+
+  moves.forEach((c, i) => {
+    const isTop = i === moves.length - 1;
+    const rules = moveRules(c.id);
+    const atkMod = isTop ? rules.topAtk : 0;
+    const defMod = isTop ? rules.topDef : 0;
+    const atk = liftedAtk(c);
+    combatZoneAtk += Math.max(0, atk + atkMod);
+    combatZoneDef += Math.max(0, data(c).def + defMod);
+  });
+
+  let pursuitAtk = 0;
+  let pursuitDef = 0;
+  for (const c of Z(g, p, 'pursuit')) {
+    const rules = moveRules(c.id);
+    const atk = liftedAtk(c);
+    pursuitAtk += atk + rules.pursuitAtk;
+    pursuitDef += rules.pursuitDef;
+  }
+
+  const flagBonusAtk = query(g, p, 'flatAtk');
+  const flagBonusDef = query(g, p, 'flatDef');
+  const vanillaBonus = query(g, p, 'vanillaBoost') * vanillaCount(g, p);
+
+  // 基礎攻擊力（未加角色被動前）
+  const baseAtk = Math.max(0, combatZoneAtk + pursuitAtk + flagBonusAtk + vanillaBonus);
+  let baseDef = Math.max(0, combatZoneDef + pursuitDef + flagBonusDef + vanillaBonus);
+
+  // 角色專屬攻防修正
+  const bonus = query(g, p, 'combatBonus', { baseAtk });
+  if (bonus.pursuitDef) {
+    pursuitDef += bonus.pursuitDef;
+    baseDef += bonus.pursuitDef;
+  }
+
+  return {
+    atk: baseAtk + bonus.atk,
+    def: baseDef + bonus.def,
+    breakdown: {
+      combatZoneAtk,
+      combatZoneDef,
+      shieldLift,
+      pursuitAtk,
+      pursuitDef,
+      flagBonusAtk,
+      flagBonusDef,
+      vanillaBonus,
+      charBonusAtk: bonus.atk,
+      charBonusDef: bonus.def,
+    },
+  };
+}
+
+/** 相容轉接器：取得總攻擊 */
+export function totalAtk(g: GameCtx, p: PlayerId): number {
+  return resolveCombatStats(g, p).atk;
+}
+
+/** 相容轉接器：取得總防禦 */
+export function totalDef(g: GameCtx, p: PlayerId): number {
+  return resolveCombatStats(g, p).def;
 }
 
 // ───────────────────────── 傷害、歸還 ─────────────────────────

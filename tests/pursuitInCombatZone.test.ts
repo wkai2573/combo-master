@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { playables, pursuitCount, totalAtk, totalDef } from '../src/engine/combat';
-import { inRange } from '../src/engine/judge';
+import { inRange, playables, pursuitCount, totalAtk, totalDef } from '../src/engine/combat';
 import { Z } from '../src/engine/ops';
 import { atkOf, defOf, liftedAtkOf, pick, scenario, setZones } from './helpers';
 

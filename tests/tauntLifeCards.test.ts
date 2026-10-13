@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { totalDef } from '../src/engine/combat';
-import { becomePursuitCard } from '../src/engine/judge';
+import { becomePursuitCard, totalDef } from '../src/engine/combat';
 import { newCard, Z } from '../src/engine/ops';
 import { defOf, drive, names, pick, scenario, setZones } from './helpers';
 

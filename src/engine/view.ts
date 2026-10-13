@@ -1,4 +1,4 @@
-import { resolveCombatStats } from './combatStats';
+import { resolveCombatStats } from './combat';
 import type { Game } from './game';
 import { faceVisibleTo } from './visibility';
 import type { CardInst, FrameFx, GameState, PlayerId, Request, Phase, ZoneName } from './types';

@@ -8,8 +8,6 @@ const MODULES = [
   '../src/engine/effectKit',
   '../src/engine/effects',
   '../src/engine/cost',
-  '../src/engine/judge',
-  '../src/engine/combatStats',
   '../src/engine/combat',
   '../src/engine/game',
   '../src/engine/sources',

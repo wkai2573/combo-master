@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ENABLED_EFFECT_CARDS } from '../src/data/enabledCards';
 import { randomResponse } from '../src/engine/bot';
-import { resolveCombatStats } from '../src/engine/combatStats';
+import { resolveCombatStats } from '../src/engine/combat';
 import { createEffects, createRegistry, hasEffect } from '../src/engine/effects';
 import { defineSource, lasting, NO_MOVE_RULES, slot, type EffectSource } from '../src/engine/effectKit';
 import { move, Z } from '../src/engine/ops';
