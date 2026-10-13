@@ -20,11 +20,14 @@ const g = scenario({
 const card = (zone: ZoneName, i = 0) => Z(g, 0, zone)[i];
 
 describe('牌面可見性', () => {
-  it('手牌與怒氣區只有擁有者看得到牌面', () => {
-    for (const zone of ['hand', 'rage'] as const) {
-      expect(faceVisibleTo(card(zone), 0)).toBe(true);
-      expect(faceVisibleTo(card(zone), 1)).toBe(false);
-    }
+  it('手牌只有擁有者看得到牌面', () => {
+    expect(faceVisibleTo(card('hand'), 0)).toBe(true);
+    expect(faceVisibleTo(card('hand'), 1)).toBe(false);
+  });
+
+  it('怒氣區誰都看不到牌面，連擁有者也不行（ADR 0006）', () => {
+    expect(faceVisibleTo(card('rage'), 0)).toBe(false);
+    expect(faceVisibleTo(card('rage'), 1)).toBe(false);
   });
 
   it('經驗區：表側的卡雙方都看得到，裏側的卡只有擁有者看得到', () => {

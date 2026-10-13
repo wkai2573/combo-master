@@ -3,7 +3,7 @@ import type { Game } from './game';
 import { faceVisibleTo } from './visibility';
 import type { CardInst, FrameFx, GameState, PlayerId, Request, Phase, ZoneName } from './types';
 
-/** 玩家看到的卡：id 為 null 表示看不到內容（對手的手牌、怒氣、裏側的經驗） */
+/** 玩家看到的卡：id 為 null 表示看不到內容（對手的手牌、雙方的怒氣、對手裏側的經驗） */
 export interface CardView {
   uid: number;
   id: string | null;
@@ -33,6 +33,11 @@ export interface PlayerView {
 export function pileTop(pv: PlayerView, zone: 'exp' | 'gear'): CardView | null {
   const cards = zone === 'exp' ? pv.exp : [...pv.gear, ...pv.buff];
   return cards[cards.length - 1] ?? null;
+}
+
+/** 經驗區的張數：表側幾張、總共幾張（裏側的牌也算在總數裡，雙方都看得到張數與是否裏側） */
+export function expCounts(pv: PlayerView): { faceUp: number; total: number } {
+  return { faceUp: pv.exp.filter((c) => !c.covered).length, total: pv.exp.length };
 }
 
 export interface GameView {

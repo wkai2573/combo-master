@@ -17,12 +17,12 @@ import { isCheatUnlocked } from '../../cheatUnlock';
 import { useWide } from '../useWide';
 import { usePhone } from '../layoutMode';
 import { useCardDrag } from '../useCardDrag';
-import { promptPlacement, promptSheet } from '../promptSheet';
+import { promptPlacement } from '../promptPlacement';
 import { CardSheet, MyDock, OppBar, PhoneMenu, PromptSheet, Sheet, SheetBody, type SheetTarget } from '../components/PhoneBoard';
 import type { Session } from '../../net/session';
 import type { PlayerId } from '../../engine/types';
 
-const ZONE_NAME: Record<ZoneKey, string> = { discard: '棄牌區', rage: '怒氣區', exp: '經驗區' };
+const ZONE_NAME: Record<ZoneKey, string> = { discard: '棄牌區', exp: '經驗區' };
 
 export function Battle({ session, onExit }: { session: Session; onExit: () => void }) {
   const st = useSyncExternalStore(session.subscribe, session.getState);
@@ -52,11 +52,10 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   menuRef.current = menuOpen;
   const cardSheetRef = useRef(cardSheet);
   cardSheetRef.current = cardSheet;
-  // 手機版面：從底部滑出的面板，看角色效果或某個牌區；autoSheet 表示是提示要在面板裡選牌而自動打開的
+  // 手機版面：全螢幕的面板，看角色效果或某個牌區的列表（只能看，玩家手動打開）
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
   const sheetRef = useRef(sheet);
   sheetRef.current = sheet;
-  const autoSheet = useRef(false);
   const [copied, setCopied] = useState(false);
   const [flowOpen, setFlowOpen] = useState(false);
   // 作弊模式：開關記在連線層（對方才看得到提示），離開或下一局都會回到關閉；面板的開合只是這個畫面的事
@@ -79,7 +78,6 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   useEffect(() => {
     if (lastLayout.current === layoutKey) return;
     lastLayout.current = layoutKey;
-    autoSheet.current = false;
     setSheet(null);
     setZone(null);
     setLogOpen(false);
@@ -121,22 +119,9 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
 
   // 提示物件每次收到狀態都可能是新的，內容沒變就不算換了提示；效果只看這個簽章，否則會一直重新設定面板而無限重繪
   const promptSig = livePrompt ? `${livePrompt.title}|${livePrompt.options.map((o) => o.key).join(',')}` : '';
-  // 手機版面：提示要選的牌在牌區（經驗區等）裡時，自動打開那個牌區的面板；提示換掉就收回
+  // 手機版面：來了新的提示就收起全螢幕面板，免得提示被擋住（要選的牌都列在提示欄或底部提示面板裡）
   useEffect(() => {
-    if (!phone || !v) return;
-    const found = promptSheet(v, livePrompt);
-    const panel = promptPlacement(v, livePrompt) === 'panel';
-    const handOpt = !!livePrompt && livePrompt.options.some((o) => v.players[v.me].hand.some((c) => c.uid === o.uid));
-    if (found) {
-      autoSheet.current = true;
-      setSheet((cur) => (cur && cur.p === found.p && cur.tab === found.tab ? cur : found));
-    } else if (autoSheet.current || (sheetRef.current && (handOpt || panel))) {
-      // 自動打開的面板用完收回；手動打開的面板會擋住手牌或提示面板，要選手牌、或提示改用底部面板時也收起來
-      autoSheet.current = false;
-      setSheet(null);
-    }
-    // 只在提示換了時判斷；影格更新同一個提示不必重開
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (phone && promptSig) setSheet(null);
   }, [promptSig, phone]);
 
   const leave = () => {
@@ -226,16 +211,12 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
     <div className="prompt wait">{waitText}</div>
   );
   // 手機版面的提示欄：固定高度，播放動畫時留白（不提供跳過）；放不下的提示改由牌區面板或底部提示面板承接
-  const zoneTarget = prompt ? promptSheet(v, prompt) : null;
   const phoneBar = pres.playing ? null : !prompt ? (
     <div className="prompt wait">{waitText}</div>
   ) : placement === 'bar' ? (
     promptPanel(handUids)
   ) : (
-    <div className="prompt wait">
-      <span>{placement === 'zone' ? '要選的牌在牌區裡' : '請在面板中選擇'}</span>
-      {placement === 'zone' && !sheet && zoneTarget && <div className="btns"><button className="primary" onClick={() => setSheet(zoneTarget)}>打開牌區</button></div>}
-    </div>
+    <div className="prompt wait"><span>請在面板中選擇</span></div>
   );
 
   return (
@@ -316,8 +297,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           <CheatPanel cheat={session.cheat} me={me} snapshotKey={final} locked={!pres.settled} onClose={() => setCheatOpen(false)} />
         )}
         {phone && sheet && !result && (
-          <Sheet v={v} target={sheet} onTab={(tab) => setSheet({ ...sheet, tab })} onClose={() => { autoSheet.current = false; setSheet(null); }} footer={pres.playing ? null : prompt ? promptPanel() : <div className="prompt wait">{waitText}</div>}>
-            <SheetBody v={v} target={sheet} optKeys={new Set(prompt?.options.map((o) => o.key) ?? [])} selected={selected} single={prompt?.min === 1 && prompt?.max === 1} onPick={toggle} fxKey={fxKey} changes={changes} />
+          <Sheet v={v} target={sheet} onClose={() => setSheet(null)}>
+            <SheetBody v={v} target={sheet} fxKey={fxKey} changes={changes} />
           </Sheet>
         )}
         {phone && cardSheet && !result && <CardSheet id={cardSheet.id} exp={cardSheet.exp} onClose={closeCardSheet} />}
@@ -328,7 +309,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         <FlightLayer view={v} fx={fx} playing={pres.playing} n={fxKey} scale={scale} extraPile={phone ? (owner, z) => z === 'exp' || z === 'gear' || z === 'buff' || (owner !== me && z === 'hand') : undefined} />
 
         {flowOpen && <FlowChartModal phase={v.phase} onClose={() => setFlowOpen(false)} />}
-        {zone && !(zone.z === 'rage' && zone.p !== me) && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} exp={zone.z === 'exp'} anchor={zone.anchor} onClose={() => setZone(null)} />}
+        {zone && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} exp={zone.z === 'exp'} anchor={zone.anchor} onClose={() => setZone(null)} />}
 
         {result && (
           <Modal>

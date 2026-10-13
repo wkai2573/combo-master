@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CARDS } from '../src/data/cards';
-import { pileTop, viewFor } from '../src/engine/view';
+import { expCounts, pileTop, viewFor } from '../src/engine/view';
 import { scenario } from './helpers';
 
 const GEAR = ALL_CARDS.find((c) => c.kind === 'equip')!.id;
@@ -42,5 +42,22 @@ describe('牌堆頂牌', () => {
   it('裝備增益堆只有裝備時，頂牌是那張裝備', () => {
     const v = viewFor(scenario({ p0: { gear: [GEAR] } }), 0);
     expect(pileTop(v.players[0], 'gear')!.id).toBe(GEAR);
+  });
+});
+
+// 經驗區的標示：表側張數與總張數，雙方都看得到
+describe('經驗區張數', () => {
+  const g = scenario({ p0: { exp: ['黑桃3', '~黑桃4', '黑桃5', '~黑桃6', '~黑桃7'] } });
+
+  it('表側不含裏側，總數含裏側', () => {
+    expect(expCounts(viewFor(g, 0).players[0])).toEqual({ faceUp: 2, total: 5 });
+  });
+
+  it('對手視角算出一樣的張數，不用看到牌面', () => {
+    expect(expCounts(viewFor(g, 1).players[0])).toEqual({ faceUp: 2, total: 5 });
+  });
+
+  it('沒有經驗：0 與 0', () => {
+    expect(expCounts(viewFor(scenario({ p0: { exp: [] } }), 0).players[0])).toEqual({ faceUp: 0, total: 0 });
   });
 });

@@ -70,7 +70,7 @@ interface Loc {
   pos: number;
 }
 
-/** 怒氣區的牌與裏側的經驗卡一律背面朝上：自己看得到內容，但飛進飛出時仍顯示牌背 */
+/** 怒氣區的牌與裏側的經驗卡一律背面朝上：怒氣區誰都看不到，裏側經驗卡自己看得到內容，但飛進飛出時仍顯示牌背 */
 const faceUp = (zone: ZoneName, card: CardView) => zone !== 'rage' && !card.covered && card.id !== null;
 
 function locate(v: GameView): Map<number, Loc> {

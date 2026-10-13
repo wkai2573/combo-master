@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { coverChanges, diffFlights, FLY, flightTiming, fromSpotlight, SPOTLIGHT_HOLD_MS, type Flight } from '../../engine/flights';
 import type { FrameFx } from '../../engine/types';
 import type { GameView } from '../../engine/view';
+import { flyFrames } from '../flightFrames';
 import { CardFace } from './CardFace';
 
 /** 牌堆（沒有逐張畫出卡片）的區域：飛行以牌堆元件當起訖點 */
@@ -18,6 +19,8 @@ interface Placed {
   flight: Flight;
   /** fly：飛向終點；out：離開遊戲的牌在原地淡出；in：憑空出現的牌在原地淡入；tuck：牌組頂的牌繞出來塞到牌組底 */
   mode: 'fly' | 'out' | 'in' | 'tuck';
+  /** 從中央放大的那張牌出發（停在中央時先不顯示，開始飛才淡入） */
+  fromSpot: boolean;
   /** 起點相對終點的位移與縮放 */
   dx: number;
   dy: number;
@@ -113,7 +116,7 @@ export function FlightLayer({ view, fx, playing, n, scale, extraPile }: {
         const a = center(src);
         const b = center(dest);
         placed.push({
-          key: `${n}-${f.uid}`, flight: f, mode,
+          key: `${n}-${f.uid}`, flight: f, mode, fromSpot: !!spot,
           dx: a.x - b.x, dy: a.y - b.y, sx: src.width / dest.width, sy: src.height / dest.height,
           to: { left: dest.left, top: dest.top, width: dest.width, height: dest.height },
           size: (destEl ? destEl.classList.contains('md') : dest.width > 90) ? 'md' : 'sm',
@@ -133,7 +136,7 @@ export function FlightLayer({ view, fx, playing, n, scale, extraPile }: {
         placed.push({
           key: `${n}-tuck`, mode: 'tuck',
           flight: { uid: -1, owner: fx.player, id: null, from: 'deck', to: 'deck', faceUpFrom: false, faceUpTo: false, order: 0 },
-          dx: 0, dy: 0, sx: 1, sy: 1, to: { left: pile.left, top: pile.top, width: pile.width, height: pile.height },
+          fromSpot: false, dx: 0, dy: 0, sx: 1, sy: 1, to: { left: pile.left, top: pile.top, width: pile.width, height: pile.height },
           size: 'sm', delay: 0, ms: FLY.ms * 2, pileTop: null, hide: null,
         });
       }
@@ -195,10 +198,7 @@ export function FlightLayer({ view, fx, playing, n, scale, extraPile }: {
           ? [{ transform: 'none', opacity: 1 }, { transform: 'translateY(-14px) scale(.85)', opacity: 0 }]
           : pl.mode === 'in'
             ? [{ transform: 'scale(.85)', opacity: 0 }, { transform: 'none', opacity: 1 }]
-            : [
-                { transform: `translate(${pl.dx}px, ${pl.dy}px) scale(${pl.sx}, ${pl.sy})`, opacity: 1 },
-                { transform: 'none', opacity: 1 },
-              ];
+            : flyFrames(pl, pl.fromSpot);
       const fly = el.animate(
         frames,
         { duration: pl.ms * scale, delay: pl.delay * scale, easing: ease, fill: 'both' },

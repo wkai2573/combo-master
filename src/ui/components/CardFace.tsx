@@ -40,6 +40,8 @@ export interface CardFaceProps {
   counterDelta?: number;
   deltaKey?: number;
   onClick?: () => void;
+  /** 牌堆的頂牌：點擊交給外層的牌堆處理（開列表），不單獨開卡片說明；右鍵仍可固定說明 */
+  inert?: boolean;
 }
 
 export function kindLabel(c: CardData): string {
@@ -53,7 +55,7 @@ export function expEffectActive(c: Pick<CardView, 'id' | 'covered'>): boolean {
   return c.id !== null && !c.covered && hasExpEffect(c.id);
 }
 
-export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, uid, counterDelta, deltaKey, onClick }: CardFaceProps) {
+export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, uid, counterDelta, deltaKey, onClick, inert }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const pin = useContext(PinContext);
   const cls = ['card', size];
@@ -66,7 +68,7 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
   if (glow) cls.push('glow');
   if (dim) cls.push('dim');
   if (onClick) cls.push('clickable');
-  else cls.push('inspectable');
+  else if (!inert) cls.push('inspectable');
 
   if (id === null) {
     return <div className={[...cls, 'back'].join(' ')} data-uid={uid} onClick={onClick}>?</div>;
@@ -78,7 +80,7 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
       className={cls.join(' ')}
       data-uid={uid}
       style={{ ['--cc' as string]: cardColor(c), ['--cb' as string]: cardBorderColor(c) }}
-      onClick={onClick ?? (() => pin(id, expEffect))}
+      onClick={inert ? undefined : (onClick ?? (() => pin(id, expEffect)))}
       onContextMenu={(e) => {
         e.preventDefault();
         pin(id, expEffect);

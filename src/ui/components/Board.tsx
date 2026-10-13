@@ -7,14 +7,14 @@ import { useCoarsePointer } from '../layoutMode';
 import type { DragApi } from '../useCardDrag';
 import { tapCard } from '../touchTap';
 import { getCard, getCharacter } from '../../data/cards';
-import type { CardView, GameView, PlayerView } from '../../engine/view';
+import { expCounts, type CardView, type GameView, type PlayerView } from '../../engine/view';
 import type { StatChanges } from '../../engine/stats';
 import type { DropZone, FrameFx, PlayerId, Request } from '../../engine/types';
 import type { StepHint } from '../../data/turnSteps';
 import { CardFace, expEffectActive } from './CardFace';
 import { Delta } from './Delta';
 
-export type ZoneKey = 'discard' | 'rage' | 'exp';
+export type ZoneKey = 'discard' | 'exp';
 
 interface BoardProps {
   v: GameView;
@@ -38,12 +38,10 @@ interface BoardProps {
 }
 
 /** 牌堆：牌組、怒氣區、棄牌區。飛行圖層以 data-pile 找到它在畫面上的位置 */
-export function Pile({ p, zone, label, count, top, delta, k, shuffling, awake, extra, dropZone, onClick }: {
+export function Pile({ p, zone, label, count, top, delta, k, shuffling, countText, dropZone, onClick }: {
   p: PlayerId; zone: 'deck' | 'discard' | 'rage' | 'exp' | 'gear'; label: string; count: number; top?: CardView; delta?: number; k?: number; shuffling?: boolean;
-  /** 經驗堆已覺醒：標籤醒目顯示 */
-  awake?: boolean;
-  /** 張數後面接的補充（例如經驗的 /需求） */
-  extra?: string;
+  /** 標籤下方的數字文字，不給就是張數（經驗堆寫「表 N／共 M」） */
+  countText?: string;
   /** 拖曳使用時，這個牌堆是哪種放置區 */
   dropZone?: DropZone;
   onClick?: (anchor: DOMRect) => void;
@@ -51,17 +49,17 @@ export function Pile({ p, zone, label, count, top, delta, k, shuffling, awake, e
   const depth = Math.min(count, 6);
   const edge = Array.from({ length: depth }, (_, i) => `calc(${i + 1} * var(--pile-step, 2px)) calc(${i + 1} * var(--pile-step, 2px)) 0 var(--pile-edge)`).join(', ');
   return (
-    <div className={`pile ${zone}${onClick ? ' click' : ''}${awake ? ' awake' : ''}`} data-dropzone={dropZone} onClick={onClick && ((e) => onClick(e.currentTarget.getBoundingClientRect()))}>
+    <div className={`pile ${zone}${onClick ? ' click' : ''}`} data-dropzone={dropZone} onClick={onClick && ((e) => onClick(e.currentTarget.getBoundingClientRect()))}>
       <div className={`pilestack${shuffling ? ' shuffling' : ''}`} data-pile={`${p}-${zone}`} style={{ boxShadow: edge || undefined }}>
         {count === 0 ? (
           <div className="card sm slot">空</div>
         ) : top?.id ? (
-          <CardFace id={top.id} size="sm" covered={top.covered} />
+          <CardFace id={top.id} size="sm" covered={top.covered} inert />
         ) : (
-          <CardFace id={null} size="sm" />
+          <CardFace id={null} size="sm" inert />
         )}
       </div>
-      <div className="pilelabel">{label} <b>{count}{extra}</b><Delta d={delta} k={k ?? 0} tone="neutral" /></div>
+      <div className="pilelabel"><span>{label}</span> <b>{countText ?? count}</b><Delta d={delta} k={k ?? 0} tone="neutral" /></div>
     </div>
   );
 }
@@ -226,6 +224,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, drag, hit,
   const wide = useWide();
   const ch = getCharacter(pv.charId);
   const awake = pv.exp.length >= ch.expReq;
+  const { faceUp, total } = expCounts(pv);
   const optKeys = new Set(prompt?.options.map((o) => o.key) ?? []);
   const name = p === 0 ? '玩家A' : '玩家B';
 
@@ -238,15 +237,16 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, drag, hit,
         </span>
         <span className="muted">{name}{mine ? '（你）' : ''}・{ch.cls}</span>
         {v.first === p && <span className="pill awake">先攻</span>}
+        {awake && <span className="pill awake">覺醒</span>}
         <span className={`pill hp${changes?.life[p] ? ' flash' : ''}`} key={`hp${fxKey}`} title="牌組張數就是生命值">生命 {pv.deckCount}<Delta d={changes?.life[p]} k={fxKey} /></span>
         <span className="pill">手牌 {pv.hand.length}</span>
-        <span className={`pill click${awake ? ' awake' : ''}${changes?.exp[p] ? ' flash' : ''}`} key={`exp${fxKey}`} onClick={() => expRef.current && onZone(p, 'exp', expRef.current.getBoundingClientRect())}>
-          經驗 {pv.exp.length}/{ch.expReq}{awake ? ' 覺醒' : ''}<Delta d={changes?.exp[p]} k={fxKey} tone="neutral" />
+        <span className={`pill click${changes?.exp[p] ? ' flash' : ''}`} key={`exp${fxKey}`} onClick={() => expRef.current && onZone(p, 'exp', expRef.current.getBoundingClientRect())}>
+          經驗區 表 {faceUp}／共 {total}<Delta d={changes?.exp[p]} k={fxKey} tone="neutral" />
         </span>
         {pv.passed && <span className="pill">已收招</span>}
       </div>
       <div className="muted peffect" style={{ fontSize: 12 }}>
-        效果：<KeywordText text={ch.text} />　<span style={{ color: awake ? 'var(--accent)' : undefined }}>覺醒：<KeywordText text={ch.awakenText} /></span>
+        效果：<KeywordText text={ch.text} />　<span style={{ color: awake ? 'var(--accent)' : undefined }}>覺醒（需 {ch.expReq} 張經驗）：<KeywordText text={ch.awakenText} /></span>
       </div>
 
       <div className={`gearzone${pv.gear.length + pv.buff.length === 0 ? ' empty' : ''}`} data-dropzone={mine ? 'gear' : undefined}>
@@ -260,7 +260,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, drag, hit,
       <div className="zonesrow">
         <div className="piles">
           <Pile p={p} zone="deck" label="牌組" count={pv.deckCount} shuffling={shuffling} />
-          <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} onClick={mine ? (a) => onZone(p, 'rage', a) : undefined} />
+          <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} />
           <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={(a) => onZone(p, 'discard', a)} />
         </div>
         <div className="expzone" ref={expRef} data-dropzone={mine ? 'exp' : undefined}>

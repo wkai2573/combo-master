@@ -667,7 +667,6 @@ h1, h2, h3 { margin: 0 0 8px; }
 .chip { flex: none; padding: 1px 7px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel2); color: var(--text); font-size: 11px; white-space: nowrap; }
 button.chip { font: inherit; font-size: 11px; }
 .chip.click { cursor: pointer; }
-.chip.awake { color: #1b1405; background: var(--accent); border-color: var(--accent); font-weight: 700; }
 
 /* 戰鬥區：對方疊牌｜範圍與算式｜我方疊牌，疊牌高度由版面決定 */
 .battle.phone .combatarea { --mdw: clamp(72px, 21vw, 96px); --mdh: calc(var(--mdw) * 1.4); flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 3px 4px; overflow: hidden; }
@@ -707,8 +706,6 @@ button.chip { font: inherit; font-size: 11px; }
 .battle.phone .pile .card .art { flex: 1 1 auto; height: auto; min-height: 16px; }
 .battle.phone .pile .card .nm { padding: 0 1px; font-size: 7px; }
 .battle.phone .pilelabel { font-size: 10px; white-space: nowrap; }
-.pile.awake .pilelabel, .pile.awake .pilelabel b { color: var(--accent); }
-.pile.awake .pilestack { filter: drop-shadow(0 0 4px var(--accent)); }
 .pile.click { -webkit-tap-highlight-color: transparent; }
 
 /* 手牌：固定在底部的單列，放不下時水平重疊並可橫向捲動 */
@@ -759,9 +756,6 @@ button.chip { font: inherit; font-size: 11px; }
 @keyframes sheetUp { from { transform: translateY(40%); opacity: 0; } to { transform: none; opacity: 1; } }
 .sheethead { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .sheethead button { padding: 3px 9px; font-size: 12px; }
-.sheettabs { flex: 1; min-width: 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
-.sheettabs button { flex: none; white-space: nowrap; }
-.sheettabs button.on { border-color: var(--accent); color: var(--accent); }
 .sheetbody { flex: 1; min-height: 80px; overflow-y: auto; padding: 8px; }
 .sheetchar { display: grid; gap: 8px; line-height: 1.55; }
 .sheetcards { gap: 8px; }
@@ -807,8 +801,20 @@ body[data-drag="moves"] .combatarea { outline-offset: -3px; }
 .battle.phone .phonemenu .speeds { display: flex; gap: 6px; }
 .battle.phone .phonemenu .speeds button { flex: 1; text-align: center; padding: 8px 4px; }
 .sheetback.passive { pointer-events: none; }
-.sheet.cardsheet { max-height: 62%; }
+/* 全螢幕牌區面板：只有標題、列表與底部一顆大黃色關閉鈕 */
+.sheet.full { top: 0; max-height: none; border-top: 0; border-radius: 0; box-shadow: 0 0 0 1px var(--line); }
+@media (prefers-reduced-motion: no-preference) { .sheet.full { animation: sheetFade .15s ease-out; } }
+@keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
+.sheet.full .sheethead { padding: 10px 12px; font-size: 16px; }
+.sheet.full .sheetbody { padding: 12px; }
+.sheetclose { flex: none; margin: 8px 12px calc(10px + env(safe-area-inset-bottom, 0px)); min-height: 56px; font-size: 18px; font-weight: 800; color: #1b1405; background: var(--accent); border: 0; border-radius: 12px; }
+.sheetclose:active { filter: brightness(.9); }
+/* 卡片說明：從頂部滑下，沒有關閉鈕，點空白處收起；要蓋過全螢幕牌區面板 */
+.sheet.cardsheet { top: 0; bottom: auto; z-index: 13; max-height: 70%; border-top: 0; border-bottom: 2px solid var(--accent); border-radius: 0 0 14px 14px; box-shadow: 0 8px 24px #000b; }
+@media (prefers-reduced-motion: no-preference) { .sheet.cardsheet { animation: sheetDown .2s ease-out; } }
+@keyframes sheetDown { from { transform: translateY(-40%); opacity: 0; } to { transform: none; opacity: 1; } }
 .sheet.cardsheet .inspect { border: 0; padding: 0; }
+.sheet.cardsheet .cardsheethint { flex: none; padding: 0 8px 6px; text-align: center; }
 .sheetback { z-index: 11; }
 .sheethead .spacer { flex: 1; }
 
@@ -822,8 +828,10 @@ body[data-drag="moves"] .combatarea { outline-offset: -3px; }
 .battle.phone .oppbar .chip { position: relative; height: 44px; overflow: hidden; }
 .battle.phone .oppbar .chip .delta { position: absolute; top: 1px; right: 4px; margin: 0; font-size: 12px; }
 .battle.phone .infoline { height: 28px; overflow: hidden; }
-.battle.phone .pilelabel { height: 16px; line-height: 16px; overflow: visible; }
-.battle.phone .pilelabel .delta { font-size: 11px; line-height: 1; vertical-align: top; }
+/* 牌堆標籤固定兩行：名稱在上、張數在下（經驗堆是「表 N／共 M」），高度固定戰鬥區才不會跳 */
+.battle.phone .pilelabel { position: relative; display: grid; justify-items: center; height: 28px; line-height: 14px; overflow: visible; text-align: center; }
+.battle.phone .oppbar .chip b.expcount { font-size: 11px; }
+.battle.phone .pilelabel .delta { position: absolute; top: 0; right: -14px; margin: 0; font-size: 11px; line-height: 1; }
 
 /* 手機版面的流程圖：直式單欄，全螢幕，不需要橫向捲動 */
 .flowchart.vertical { width: 100%; }

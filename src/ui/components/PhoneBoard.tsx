@@ -1,10 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { useCoarsePointer } from '../layoutMode';
-import { tapCard } from '../touchTap';
+import { useEffect, type ReactNode } from 'react';
 import { getCharacter } from '../../data/cards';
 import type { StatChanges } from '../../engine/stats';
 import type { PlayerId, Request } from '../../engine/types';
-import { pileTop, type CardView, type GameView, type PlayerView } from '../../engine/view';
+import { expCounts, pileTop, type CardView, type GameView, type PlayerView } from '../../engine/view';
 import type { DragApi } from '../useCardDrag';
 import type { Speed } from '../playback';
 import { HandRow, Pile } from './Board';
@@ -12,17 +10,20 @@ import { CardFace, expEffectActive, InspectPanel } from './CardFace';
 import { Delta } from './Delta';
 import { KeywordText } from './KeywordText';
 
-/** 手機版面的底部面板裡能看的內容 */
-export type SheetTab = 'char' | 'exp' | 'gear' | 'discard' | 'rage';
+/** 手機版面的全螢幕面板裡能看的內容：角色效果，或某個牌區的列表（怒氣區誰都看不到，不在其中） */
+export type SheetTab = 'char' | 'exp' | 'gear' | 'discard';
 export interface SheetTarget { p: PlayerId; tab: SheetTab }
 
-const TAB_NAME: Record<SheetTab, string> = { char: '角色', exp: '經驗區', gear: '裝備增益區', discard: '棄牌區', rage: '怒氣區' };
-
-/** 這位玩家的面板在手機版面能點開看的分頁：怒氣區只有擁有者看得到 */
-export const sheetTabs = (mine: boolean): SheetTab[] => (mine ? ['char', 'exp', 'gear', 'discard', 'rage'] : ['char', 'exp', 'gear', 'discard']);
+const TAB_NAME: Record<SheetTab, string> = { char: '角色', exp: '經驗區', gear: '裝備增益區', discard: '棄牌區' };
 
 const tabCount = (pv: PlayerView, tab: SheetTab): number | null =>
-  tab === 'exp' ? pv.exp.length : tab === 'gear' ? pv.gear.length + pv.buff.length : tab === 'discard' ? pv.discard.length : tab === 'rage' ? pv.rage.length : null;
+  tab === 'exp' ? pv.exp.length : tab === 'gear' ? pv.gear.length + pv.buff.length : tab === 'discard' ? pv.discard.length : null;
+
+/** 經驗牌堆下方的數字：表側幾張、總共幾張 */
+const expCountText = (pv: PlayerView) => {
+  const { faceUp, total } = expCounts(pv);
+  return `表${faceUp}／共${total}`;
+};
 
 interface InfoProps {
   v: GameView;
@@ -42,6 +43,7 @@ function InfoLine({ v, p, changes, fxKey, onOpen }: Pick<InfoProps, 'v' | 'p' | 
   const pv = v.players[p];
   const ch = getCharacter(pv.charId);
   const mine = p === v.me;
+  const awake = pv.exp.length >= ch.expReq;
   return (
     <div className="infoline">
       <button className="charbtn" onClick={() => onOpen({ p, tab: 'char' })} title="看角色效果">
@@ -49,6 +51,7 @@ function InfoLine({ v, p, changes, fxKey, onOpen }: Pick<InfoProps, 'v' | 'p' | 
         <span className="muted">{mine ? '我方' : '對手'}・{ch.cls}</span>
       </button>
       {v.first === p && <span className="pill awake">先攻</span>}
+      {awake && <span className="pill awake">覺醒</span>}
       <span className={`pill hp${changes?.life[p] ? ' flash' : ''}`} key={`hp${fxKey}`} title="牌組張數就是生命值">生命 {pv.deckCount}<Delta d={changes?.life[p]} k={fxKey} /></span>
       <span className="pill" data-pile={mine ? undefined : `${p}-hand`}>手牌 {pv.hand.length}</span>
       {pv.passed && <span className="pill">已收招</span>}
@@ -59,18 +62,16 @@ function InfoLine({ v, p, changes, fxKey, onOpen }: Pick<InfoProps, 'v' | 'p' | 
 /** 對手縮成一條：角色、生命、手牌數，加上各牌區的張數，點開看內容 */
 export function OppBar({ v, p, changes, fxKey, hit, outcome, onOpen }: InfoProps) {
   const pv = v.players[p];
-  const ch = getCharacter(pv.charId);
-  const awake = pv.exp.length >= ch.expReq;
-  const chip = (zone: string, label: string, text: string | number, tab?: SheetTab, delta?: number, cls = '') => {
+  const chip = (zone: string, label: string, text: string | number, tab?: SheetTab, delta?: number, numCls?: string) => {
     const body = (
       <>
-        {label} <b>{text}</b>{delta !== undefined && <Delta d={delta} k={fxKey} tone="neutral" />}
+        {label} <b className={numCls}>{text}</b>{delta !== undefined && <Delta d={delta} k={fxKey} tone="neutral" />}
       </>
     );
     return tab ? (
-      <button className={`chip click${cls}`} data-pile={`${p}-${zone}`} onClick={() => onOpen({ p, tab })}>{body}</button>
+      <button className="chip click" data-pile={`${p}-${zone}`} onClick={() => onOpen({ p, tab })}>{body}</button>
     ) : (
-      <span className={`chip${cls}`} data-pile={`${p}-${zone}`}>{body}</span>
+      <span className="chip" data-pile={`${p}-${zone}`}>{body}</span>
     );
   };
   return (
@@ -81,7 +82,7 @@ export function OppBar({ v, p, changes, fxKey, hit, outcome, onOpen }: InfoProps
         {chip('deck', '牌組', pv.deckCount)}
         {chip('rage', '怒氣', pv.rage.length, undefined, changes?.rage[p])}
         {chip('discard', '棄牌', pv.discard.length, 'discard')}
-        {chip('exp', awake ? '覺醒' : '經驗', `${pv.exp.length}/${ch.expReq}`, 'exp', changes?.exp[p], awake ? ' awake' : '')}
+        {chip('exp', '經驗區', expCountText(pv), 'exp', changes?.exp[p], 'expcount')}
         {chip('gear', '裝備增益', pv.gear.length + pv.buff.length, 'gear')}
       </div>
     </div>
@@ -99,8 +100,6 @@ interface DockProps extends InfoProps {
 /** 我方面板：資訊列、五個牌堆（牌組、怒氣、棄牌、經驗、裝備增益）、單列手牌 */
 export function MyDock({ v, p, changes, fxKey, hit, outcome, onOpen, prompt, selected, onPick, drag, shuffling }: DockProps) {
   const pv = v.players[p];
-  const ch = getCharacter(pv.charId);
-  const awake = pv.exp.length >= ch.expReq;
   const optKeys = new Set(prompt?.options.map((o) => o.key) ?? []);
   const open = (tab: SheetTab) => () => onOpen({ p, tab });
   return (
@@ -110,10 +109,10 @@ export function MyDock({ v, p, changes, fxKey, hit, outcome, onOpen, prompt, sel
       {/* 爆發與增益階段拖曳使用手牌：整排牌堆列是放置區，放在列上任何位置都算，不必瞄準小小的牌堆 */}
       <div className="piles minipiles" data-dropzone={prompt?.dropZone === 'exp' || prompt?.dropZone === 'gear' ? prompt.dropZone : undefined}>
         <Pile p={p} zone="deck" label="牌組" count={pv.deckCount} shuffling={shuffling} />
-        <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} onClick={open('rage')} />
+        <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} />
         <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={open('discard')} />
         <Pile
-          p={p} zone="exp" label={awake ? '覺醒' : '經驗'} count={pv.exp.length} extra={`/${ch.expReq}`} awake={awake}
+          p={p} zone="exp" label="經驗" count={pv.exp.length} countText={expCountText(pv)}
           top={pileTop(pv, 'exp') ?? undefined} delta={changes?.exp[p]} k={fxKey} onClick={open('exp')}
         />
         <Pile p={p} zone="gear" label="裝備增益" count={pv.gear.length + pv.buff.length} top={pileTop(pv, 'gear') ?? undefined} onClick={open('gear')} />
@@ -125,46 +124,29 @@ export function MyDock({ v, p, changes, fxKey, hit, outcome, onOpen, prompt, sel
   );
 }
 
-/** 底部面板的內容：依分頁顯示角色效果或某個牌區的牌 */
-export function SheetBody({ v, target, optKeys, selected, single, onPick, fxKey, changes }: {
-  v: GameView; target: SheetTarget; optKeys: Set<string>; selected: string[]; /** 提示是必選 1 個：點選就送出（觸控則是第二下） */ single: boolean;
-  onPick: (key: string) => void; fxKey: number; changes?: StatChanges;
-}) {
-  const coarse = useCoarsePointer();
-  const [armed, setArmed] = useState<number | null>(null);
-  const optSig = [...optKeys].join(',');
-  useEffect(() => setArmed(null), [optSig, target.tab, target.p]);
+/** 全螢幕面板的內容：角色效果，或某個牌區的牌（只能看，要選牌的提示改在底部提示面板裡選） */
+export function SheetBody({ v, target, fxKey, changes }: { v: GameView; target: SheetTarget; fxKey: number; changes?: StatChanges }) {
   const pv = v.players[target.p];
   const ch = getCharacter(pv.charId);
-  const mine = target.p === v.me;
   const awake = pv.exp.length >= ch.expReq;
   if (target.tab === 'char') {
+    const { faceUp, total } = expCounts(pv);
     return (
       <div className="sheetchar">
         <div><b className="charname">{ch.name}</b>　<span className="muted">{ch.cls}</span></div>
-        <div>經驗 {pv.exp.length}/{ch.expReq}{awake ? '　覺醒中' : ''}</div>
+        <div>經驗區 表 {faceUp}／共 {total}　覺醒需要 {ch.expReq} 張{awake ? '　覺醒中' : ''}</div>
         <div className="peffect">效果：<KeywordText text={ch.text} /></div>
         <div className="peffect" style={{ color: awake ? 'var(--accent)' : undefined }}>覺醒：<KeywordText text={ch.awakenText} /></div>
       </div>
     );
   }
-  const pick = (c: CardView) => {
-    if (!mine || !optKeys.has(`c${c.uid}`)) return undefined;
-    if (!coarse || !single) return () => onPick(`c${c.uid}`);
-    return () => {
-      const r = tapCard(armed, c.uid, true);
-      setArmed(r.preview);
-      if (r.submit) onPick(`c${c.uid}`);
-    };
-  };
   const face = (c: CardView) => (
     <CardFace
       key={c.uid} id={c.id} size="md" expEffect={target.tab === 'exp' && expEffectActive(c)} covered={target.tab === 'exp' && c.covered}
-      glow={mine && optKeys.has(`c${c.uid}`)} selected={mine && (selected.includes(`c${c.uid}`) || armed === c.uid)} onClick={pick(c)}
       counters={target.tab === 'gear' ? c.counters : undefined} counterDelta={target.tab === 'gear' ? changes?.buff[c.uid] : undefined} deltaKey={fxKey}
     />
   );
-  const cards = target.tab === 'exp' ? pv.exp : target.tab === 'gear' ? [...pv.gear, ...pv.buff] : target.tab === 'discard' ? pv.discard : pv.rage;
+  const cards = target.tab === 'exp' ? pv.exp : target.tab === 'gear' ? [...pv.gear, ...pv.buff] : pv.discard;
   return (
     <div className="cardrow sheetcards">
       {cards.map(face)}
@@ -174,32 +156,21 @@ export function SheetBody({ v, target, optKeys, selected, single, onPick, fxKey,
   );
 }
 
-/** 手機版面從底部滑出的面板：分頁列、內容、提示欄（要在面板裡選牌時，提示欄跟著面板一起出現） */
-export function Sheet({ v, target, onTab, onClose, footer, children }: {
-  v: GameView; target: SheetTarget; onTab: (t: SheetTab) => void; onClose: () => void; footer?: ReactNode; children: ReactNode;
-}) {
+/**
+ * 手機版面的全螢幕面板：看角色效果或某個牌區的列表。只有標題、內容與底部一顆大黃色關閉鈕，
+ * 不能切到別的牌區，也不顯示提示欄與動作按鈕
+ */
+export function Sheet({ v, target, onClose, children }: { v: GameView; target: SheetTarget; onClose: () => void; children: ReactNode }) {
   const mine = target.p === v.me;
-  const pv = v.players[target.p];
+  const n = tabCount(v.players[target.p], target.tab);
+  const title = `${mine ? '我方' : '對手'}${TAB_NAME[target.tab]}${n === null ? '' : `（${n}）`}`;
   return (
     <>
-      <div className="sheetback" onClick={onClose} />
-      <div className="sheet" role="dialog" aria-label={`${mine ? '我方' : '對手'}${TAB_NAME[target.tab]}`}>
-        <div className="sheethead">
-          <b>{mine ? '我方' : '對手'}</b>
-          <div className="sheettabs">
-            {sheetTabs(mine).map((t) => {
-              const n = tabCount(pv, t);
-              return (
-                <button key={t} className={t === target.tab ? 'on' : ''} aria-pressed={t === target.tab} onClick={() => onTab(t)}>
-                  {TAB_NAME[t]}{n === null ? '' : ` ${n}`}
-                </button>
-              );
-            })}
-          </div>
-          <button onClick={onClose}>關閉</button>
-        </div>
+      <div className="sheetback" />
+      <div className="sheet full" role="dialog" aria-label={title}>
+        <div className="sheethead"><b>{title}</b></div>
         <div className="sheetbody">{children}</div>
-        {footer}
+        <button className="sheetclose" onClick={onClose}>關閉</button>
       </div>
     </>
   );
@@ -216,7 +187,7 @@ export function PromptSheet({ children }: { children: ReactNode }) {
 }
 
 /**
- * 手機版面的卡片說明：點不能操作的卡從底部滑出。沒有固定機制，點面板以外的地方就收起，
+ * 手機版面的卡片說明：點不能操作的卡從頂部滑下，沒有關閉鈕。沒有固定機制，點面板以外的地方就收起，
  * 那一下點擊不會穿透去操作別的東西；只有另一張不能操作的卡例外，點它是換成那張的說明
  */
 export function CardSheet({ id, exp, onClose }: { id: string; exp: boolean; onClose: () => void }) {
@@ -236,12 +207,8 @@ export function CardSheet({ id, exp, onClose }: { id: string; exp: boolean; onCl
     <>
       <div className="sheetback passive" />
       <div className="sheet cardsheet" role="dialog" aria-label="卡片說明">
-        <div className="sheethead">
-          <b>卡片說明</b>
-          <span className="spacer" />
-          <button onClick={onClose}>關閉</button>
-        </div>
         <div className="sheetbody"><InspectPanel id={id} expActive={exp} /></div>
+        <div className="muted sheetnote cardsheethint">點空白處關閉</div>
       </div>
     </>
   );

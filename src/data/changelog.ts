@@ -21,6 +21,18 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.46.0',
+    date: '2026-10-13',
+    items: [
+      { type: 'change', text: '規則：怒氣區的牌面誰都不能查看，連自己也不行，只看得到張數。怒氣堆不再能點開，作弊面板不受影響' },
+      { type: 'change', text: '經驗區的標示改成「表側張數／總張數」，不再顯示覺醒需求；覺醒改成顯示在角色旁邊的「覺醒」標籤' },
+      { type: 'change', text: '手機版面：點牌區會全螢幕顯示列表，底部一顆大黃色關閉鈕，不能切換到別的牌區，也不顯示提示欄與動作按鈕；要選牌區裡的牌時，改成在底部提示面板裡列出可選的卡' },
+      { type: 'change', text: '手機版面：卡片說明改成從上方滑下，沒有關閉鈕，點空白處收起' },
+      { type: 'fix', text: '修正手機版面點牌堆時，會同時打開列表和頂牌的卡片說明；棄牌堆、裝備增益堆也一併修正' },
+      { type: 'fix', text: '修正追擊成功時，放大的卡片和飛向戰鬥區的卡片疊在一起，出現殘影和被截斷的卡面' },
+    ],
+  },
+  {
     version: '0.45.0',
     date: '2026-10-12',
     items: [
