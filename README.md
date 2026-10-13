@@ -24,7 +24,7 @@ https://wkai2573.github.io/combo-master/
 ```
 bun install
 bun run dev        # 開發伺服器（預設 http://localhost:5173）
-bun run test           # 單元測試（規則、卡片效果、牌組驗證）
+bun run test       # 單元測試（規則、卡片效果、牌組驗證）
 bun run sim 40     # 機器人壓測：每種角色組合各打 40 局，檢查卡死與例外
 bun run presets    # 列出各角色預設牌組的連擊值分佈與平均攻守
 bun run data       # 修改 docs/連擊大師.xlsx 後，重新產生 src/data/generated/*.json

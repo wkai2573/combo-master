@@ -1,7 +1,9 @@
 import { isExCardId } from '../data/exCards';
+import { smartChoice } from './ai';
 import { Game } from './game';
 import type { Rng } from './rng';
 import { type PlayerId, type Request, type ZoneName } from './types';
+import type { GameView } from './view';
 
 /** 隨機合法回應（壓測與單機練習用） */
 export function randomResponse(req: Request, rng: Rng): string[] {
@@ -11,10 +13,15 @@ export function randomResponse(req: Request, rng: Rng): string[] {
 }
 
 /**
- * 單機練習用的對手：比純隨機稍微積極一點。
- * 選擇性提示 50% 機率發動；有「收招」以外的選項時，80% 機率優先出招。
+ * 單機練習用的對手：
+ * 若傳入桌面視角（view），使用遵守牌面可見性的啟發式決策 AI；
+ * 若未傳入視角（測試或舊調用），平滑降級為原有的機率/隨機回應。
  */
-export function botChoice(req: Request, rng: Rng): string[] {
+export function botChoice(req: Request, rng: Rng, view?: GameView): string[] {
+  if (view) {
+    const smart = smartChoice(req, view, rng);
+    if (smart !== null) return smart;
+  }
   if (req.min === 0) {
     if (req.options.length === 0 || rng.next() < 0.5) return [];
     return [req.options[rng.int(req.options.length)].key];

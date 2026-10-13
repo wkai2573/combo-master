@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.47.0',
+    date: '2026-10-13',
+    items: [
+      { type: 'change', text: '單機練習的電腦全面升級啟發式決策：先手避開 0 攻招式、能破防時積極組織連擊、無法破防時及時收招保留手牌、殘血時不再自殘爆發，並優先穿戴長效裝備' },
+    ],
+  },
+  {
     version: '0.46.3',
     date: '2026-10-13',
     items: [

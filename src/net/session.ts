@@ -191,8 +191,11 @@ export class LocalSession extends Base {
     this.sync(r.update);
   }
 
+  private botView: GameView | undefined;
+
   /** 只更新畫面：不重設機器人的出招計時，連續作弊也不會讓它一直等 */
-  private publish([mine]: MatchUpdate) {
+  private publish([mine, theirs]: MatchUpdate) {
+    this.botView = theirs.view;
     this.show(mine, this.match.over);
   }
 
@@ -203,7 +206,8 @@ export class LocalSession extends Base {
     if (!m.over && m.pending?.player === 1) {
       this.timer = setTimeout(() => {
         if (this.closed || m.pending?.player !== 1) return;
-        const r = m.submit(1, botChoice(m.pending, this.rng));
+        const view = this.botView ?? m.snapshot()[1].view;
+        const r = m.submit(1, botChoice(m.pending, this.rng, view));
         if (r.error) throw new Error(`機器人的出招不合法：${r.error}`);
         this.sync(r.update);
       }, 900);
