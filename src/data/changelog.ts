@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.47.1',
+    date: '2026-10-13',
+    items: [
+      { type: 'change', text: '精進單機練習電腦戰術：先手出招改依手牌分佈優先出邊緣牌以保留連擊空間；反擊出招依受傷威脅動態提升防守權重，破防時追加溢出攻擊激勵，並於手牌優勢時大膽維持連擊開口' },
+    ],
+  },
+  {
     version: '0.47.0',
     date: '2026-10-13',
     items: [

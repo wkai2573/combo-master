@@ -47,11 +47,17 @@ export function chooseOpeningMove(req: Request, myView: PlayerView): string[] {
   });
   const pool = nonZero.length > 0 ? nonZero : req.options;
 
-  // 手牌中的其他招式
+  // 手牌中的招式
   const handMoves = myView.hand.filter((c) => {
     if (!c.id) return false;
     return getCard(c.id).kind === 'move';
   });
+
+  // 計算手牌招式的連擊值重心（avgCombo）
+  const avgCombo =
+    handMoves.length > 0
+      ? handMoves.reduce((sum, c) => sum + (c.id ? getCard(c.id).combo : 5), 0) / handMoves.length
+      : 5;
 
   let bestKey = pool[0].key;
   let bestScore = -Infinity;
@@ -60,8 +66,9 @@ export function chooseOpeningMove(req: Request, myView: PlayerView): string[] {
     if (!opt.cardId) continue;
     const card = getCard(opt.cardId);
 
-    // 1. 中間值優先（4～6 最容易銜接後續連擊）
-    const centrality = 10 - Math.abs(card.combo - 5) * 1.8;
+    // 1. 手牌密集端之邊緣牌優先（避免先出中間值卡死後續邊緣牌）
+    // 若手牌偏低端（< 5），優先出低端邊緣（1～2）；若偏高端（>= 5），優先出高端邊緣（8～9）
+    const edgeScore = avgCombo < 5 ? (9 - card.combo) * 1.8 : card.combo * 1.8;
 
     // 2. 攻防數值權重
     const statScore = card.atk * 1.2 + card.def * 0.4;
@@ -78,7 +85,7 @@ export function chooseOpeningMove(req: Request, myView: PlayerView): string[] {
     }
     const connectScore = connects * 2.5;
 
-    const totalScore = centrality + statScore + openingTagBonus + connectScore;
+    const totalScore = edgeScore + statScore + openingTagBonus + connectScore;
     if (totalScore > bestScore) {
       bestScore = totalScore;
       bestKey = opt.key;
@@ -329,22 +336,34 @@ export function chooseCounterMove(req: Request, myView: PlayerView, oppView: Pla
   const handDelta = myView.hand.length - oppView.hand.length;
   const isStrategyA = handDelta >= 2;
 
+  // 動態防禦權重：受傷威脅越重（oppAtk > myDef），防禦權重越高（0.4 ~ 2.0）
+  const threat = Math.max(0, oppView.atk - myView.def);
+  const defWeight = 0.4 + Math.min(threat, 8) * 0.2;
+
   let bestKey = evaluations[0].opt.key;
   let bestScore = -Infinity;
 
   for (const ev of evaluations) {
     const { opt, candCard, chainableCount } = ev;
+
+    // 動態攻擊權重：基礎攻擊力 + 此卡打出後破防溢出攻擊力激勵（breakthrough * 1.5）
+    const breakthrough = Math.max(0, myView.atk + candCard.atk - oppView.def);
+    const atkScore = candCard.atk * 1.0 + breakthrough * 1.5;
+    const defScore = candCard.def * defWeight;
+
     let score = 0;
 
     if (isStrategyA) {
-      // 策略 A（連擊潛力優先）：最大化傾瀉手牌
-      score = candCard.atk * 1.5 + candCard.def * 0.5 + chainableCount * 4.0;
+      // 策略 A（對手手牌少，全力連擊）：維持較寬開口，最大化自身出招張數
+      const newWidth = oppLastCombo !== null ? Math.abs(candCard.combo - oppLastCombo) : 5;
+      const openWidthBonus = newWidth * 1.5;
+      score = atkScore + defScore + openWidthBonus + chainableCount * 4.0;
     } else {
-      // 策略 C（逼退對手優先）：壓縮連擊範圍迫使對手收招
+      // 策略 C（對手手牌多，壓縮連擊範圍迫使對手收招）
       const newWidth = oppLastCombo !== null ? Math.abs(candCard.combo - oppLastCombo) : 5;
       const compressionScore = (9 - newWidth) * 2.2;
       const pinBonus = oppLastCombo !== null && candCard.combo === oppLastCombo ? 6 : 0;
-      score = candCard.atk * 1.2 + candCard.def * 0.5 + compressionScore + pinBonus + chainableCount * 1.5;
+      score = atkScore + defScore + compressionScore + pinBonus + chainableCount * 1.5;
     }
 
     if (score > bestScore) {

@@ -119,6 +119,75 @@ describe('AI 決策：先手步驟出招', () => {
     const choice = botChoice(req, rng, view);
     expect(choice).toEqual(['c1']);
   });
+
+  it('手牌重心偏低（avgCombo < 5）時，先手優先打出低端邊緣牌', () => {
+    // 黑桃1 (combo 1, atk 6, def 0)
+    // 梅花5 (combo 5, atk 5, def 2)
+    // 其他手牌：黑桃2 (combo 2), 黑桃3 (combo 3) -> avgCombo = (1 + 5 + 2 + 3) / 4 = 2.75 < 5
+    const options: Opt[] = [
+      { key: 'c1', label: '梅花5', uid: 1, cardId: '梅花5' },
+      { key: 'c2', label: '黑桃1', uid: 2, cardId: '黑桃1' },
+    ];
+    const req: Request = {
+      player: 1,
+      title: '先手步驟：選擇 1 張招式出招',
+      options,
+      min: 1,
+      max: 1,
+      dropZone: 'moves',
+    };
+    const view = makeGameView({
+      players: [
+        makePlayerView(),
+        makePlayerView({
+          hand: [
+            { uid: 1, id: '梅花5', covered: false, counters: 0 },
+            { uid: 2, id: '黑桃1', covered: false, counters: 0 },
+            { uid: 3, id: '黑桃2', covered: false, counters: 0 },
+            { uid: 4, id: '黑桃3', covered: false, counters: 0 },
+          ],
+        }),
+      ],
+    });
+
+    const choice = botChoice(req, rng, view);
+    // 應優先出黑桃1 (低端邊緣)，以便後續接出 2、3
+    expect(choice).toEqual(['c2']);
+  });
+
+  it('手牌重心偏高（avgCombo >= 5）時，先手優先打出高端邊緣牌', () => {
+    // 黑桃9 (combo 9, atk 5, def 2)
+    // 梅花5 (combo 5, atk 5, def 2)
+    // 其他手牌：黑桃8 (combo 8, atk 6, def 0) -> avgCombo = (9 + 5 + 8) / 3 = 7.33 >= 5
+    const options: Opt[] = [
+      { key: 'c1', label: '梅花5', uid: 1, cardId: '梅花5' },
+      { key: 'c2', label: '黑桃9', uid: 2, cardId: '黑桃9' },
+    ];
+    const req: Request = {
+      player: 1,
+      title: '先手步驟：選擇 1 張招式出招',
+      options,
+      min: 1,
+      max: 1,
+      dropZone: 'moves',
+    };
+    const view = makeGameView({
+      players: [
+        makePlayerView(),
+        makePlayerView({
+          hand: [
+            { uid: 1, id: '梅花5', covered: false, counters: 0 },
+            { uid: 2, id: '黑桃9', covered: false, counters: 0 },
+            { uid: 3, id: '黑桃8', covered: false, counters: 0 },
+          ],
+        }),
+      ],
+    });
+
+    const choice = botChoice(req, rng, view);
+    // 應優先出黑桃9 (高端邊緣)，以便後續接出 8
+    expect(choice).toEqual(['c2']);
+  });
 });
 
 describe('AI 決策：爆發階段', () => {
@@ -442,6 +511,134 @@ describe('AI 決策：反擊步驟出招與收招保留', () => {
 
     const choice = botChoice(req, rng, view);
     // 策略 C 下，梅花5 (combo 5) 壓迫度與定住連擊值加分最高，優先打出逼退對手
+    expect(choice).toEqual(['c1']);
+  });
+
+  it('受傷威脅高時，動態防禦權重提升，優先打出高防招式防守', () => {
+    // 對手出黑桃2 (combo 2)，總攻擊 8，我方總防禦 0（threat = 8，defWeight = 2.0）
+    // 我方手牌候選卡（同為 combo 1，連擊結構完全一致）：
+    // c1: 黑桃1 (combo 1, atk 6, def 0)
+    // c2: 梅花1 (combo 1, atk 2, def 6)
+    const req: Request = {
+      player: 1,
+      title: '反擊步驟：選擇 1 張招式出招，或收招',
+      options: [
+        { key: 'c1', label: '黑桃1', uid: 1, cardId: '黑桃1' },
+        { key: 'c2', label: '梅花1', uid: 2, cardId: '梅花1' },
+        { key: 'pass', label: '收招' },
+      ],
+      min: 1,
+      max: 1,
+      dropZone: 'moves',
+    };
+    const view = makeGameView({
+      phase: '反擊',
+      players: [
+        makePlayerView({
+          atk: 8,
+          def: 0,
+          moves: [{ uid: 99, id: '黑桃2', covered: false, counters: 0 }],
+          hand: [{ uid: 10, id: '黑桃2', covered: false, counters: 0 }],
+        }),
+        makePlayerView({
+          atk: 0,
+          def: 0,
+          hand: [
+            { uid: 1, id: '黑桃1', covered: false, counters: 0 },
+            { uid: 2, id: '梅花1', covered: false, counters: 0 },
+          ],
+        }),
+      ],
+    });
+
+    const choice = botChoice(req, rng, view);
+    // 高威脅下梅花1 (def 6 * 2.0 = 12) 權重顯著超越黑桃1，優先出梅花1減傷
+    expect(choice).toEqual(['c2']);
+  });
+
+  it('威脅低且確認破防時，溢出攻擊力享有更高權重，優先打出高攻招式', () => {
+    // 對手出黑桃2 (combo 2)，總攻擊 0，我方總防禦 5（threat = 0，defWeight = 0.4）
+    // 對手總防禦 0（確認破防，溢出攻擊享有 1.5 倍加成）
+    // 我方手牌候選卡（同為 combo 1）：
+    // c1: 黑桃1 (combo 1, atk 6, def 0)
+    // c2: 梅花1 (combo 1, atk 2, def 6)
+    const req: Request = {
+      player: 1,
+      title: '反擊步驟：選擇 1 張招式出招，或收招',
+      options: [
+        { key: 'c1', label: '黑桃1', uid: 1, cardId: '黑桃1' },
+        { key: 'c2', label: '梅花1', uid: 2, cardId: '梅花1' },
+        { key: 'pass', label: '收招' },
+      ],
+      min: 1,
+      max: 1,
+      dropZone: 'moves',
+    };
+    const view = makeGameView({
+      phase: '反擊',
+      players: [
+        makePlayerView({
+          atk: 0,
+          def: 0,
+          moves: [{ uid: 99, id: '黑桃2', covered: false, counters: 0 }],
+          hand: [{ uid: 10, id: '黑桃2', covered: false, counters: 0 }],
+        }),
+        makePlayerView({
+          atk: 0,
+          def: 5,
+          hand: [
+            { uid: 1, id: '黑桃1', covered: false, counters: 0 },
+            { uid: 2, id: '梅花1', covered: false, counters: 0 },
+          ],
+        }),
+      ],
+    });
+
+    const choice = botChoice(req, rng, view);
+    // 低威脅下破防溢出攻擊激勵黑桃1 (atk 6 + 9 = 15)，大幅超越梅花1
+    expect(choice).toEqual(['c1']);
+  });
+
+  it('對手手牌少時（策略 A），優先選擇維持較寬連擊範圍之招式', () => {
+    // 對手出黑桃3 (combo 3)，對手手牌 1 張，我方手牌 3 張（handDelta = 2 >= 2，策略 A）
+    // 兩張候選卡攻守數值完全相同（皆為 atk 3, def 5）：
+    // c1: 梅花7 (combo 7，出招後範圍為 3~7，寬度為 4)
+    // c2: 黑桃4 (combo 4，出招後範圍為 3~4，寬度為 1)
+    const req: Request = {
+      player: 1,
+      title: '反擊步驟：選擇 1 張招式出招，或收招',
+      options: [
+        { key: 'c1', label: '梅花7', uid: 1, cardId: '梅花7' },
+        { key: 'c2', label: '黑桃4', uid: 2, cardId: '黑桃4' },
+        { key: 'pass', label: '收招' },
+      ],
+      min: 1,
+      max: 1,
+      dropZone: 'moves',
+    };
+    const view = makeGameView({
+      phase: '反擊',
+      players: [
+        makePlayerView({
+          atk: 0,
+          def: 0,
+          moves: [{ uid: 99, id: '黑桃3', covered: false, counters: 0 }],
+          hand: [{ uid: 10, id: '黑桃3', covered: false, counters: 0 }],
+        }),
+        makePlayerView({
+          atk: 0,
+          def: 0,
+          hand: [
+            { uid: 1, id: '梅花7', covered: false, counters: 0 },
+            { uid: 2, id: '黑桃4', covered: false, counters: 0 },
+            { uid: 3, id: '黑桃9', covered: false, counters: 0 },
+          ],
+        }),
+      ],
+    });
+
+    const choice = botChoice(req, rng, view);
+    // 策略 A 下，梅花7 的開口寬度 (4) 享有 openWidthBonus 加分，優於黑桃4 (寬度 1)
     expect(choice).toEqual(['c1']);
   });
 });
