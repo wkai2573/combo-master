@@ -10,6 +10,7 @@
     "test": "vitest run",
     "data": "tsx scripts/build-data.ts",
     "sim": "tsx scripts/simulate.ts",
+    "duel": "tsx scripts/duel.ts",
     "presets": "tsx scripts/preset-report.ts",
     "table": "tsx scripts/sync-card-table.ts",
     "stats": "tsx scripts/traffic-stats.ts",
