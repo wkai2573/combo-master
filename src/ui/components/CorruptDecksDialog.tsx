@@ -21,7 +21,7 @@ function CorruptItem({ item, onDiscard }: { item: CorruptDeck; onDiscard: () => 
 
   return (
     <div style={{ marginTop: 10 }}>
-      <div className="muted">{item.kind === 'whole' ? '整份牌組資料無法讀取' : '一組牌組資料格式損壞'}</div>
+      <div className="muted">{item.reason}</div>
       <textarea
         ref={ref}
         readOnly

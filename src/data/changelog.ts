@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.47.5',
+    date: '2026-10-13',
+    items: [
+      { type: 'fix', text: '牌組含已被移除的卡片或角色時，不再讓組牌畫面當掉：開啟時會提示失效原因並顯示內容，可複製留存，再選擇刪除或關閉' },
+    ],
+  },
+  {
     version: '0.47.4',
     date: '2026-10-13',
     items: [

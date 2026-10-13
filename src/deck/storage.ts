@@ -1,4 +1,4 @@
-import { ALL_CHARACTERS } from '../data/cards';
+import { ALL_CARDS, ALL_CHARACTERS } from '../data/cards';
 import { presetDeck, PRESET_CHARACTER_IDS } from '../data/presetDecks';
 import { validateDeck } from './validate';
 
@@ -21,10 +21,15 @@ export interface StorageLike {
   removeItem(key: string): void;
 }
 
-/** 讀不進來的資料：整份不是合法 JSON 陣列，或單筆缺 id、cards 不是陣列。raw 是要給玩家複製的原文 */
+/**
+ * 失效的資料：整份不是合法 JSON 陣列、單筆缺 id 或 cards 不是陣列，
+ * 或牌組含已不存在的卡片或角色（編輯器開不起來，玩家也無從修起）。
+ * raw 是要給玩家複製的內容，reason 是失效原因
+ */
 export interface CorruptDeck {
   kind: 'whole' | 'entry';
   raw: string;
+  reason: string;
 }
 
 function defaultStorage(): StorageLike | null {
@@ -35,12 +40,24 @@ function defaultStorage(): StorageLike | null {
   }
 }
 
+const WHOLE_REASON = '整份牌組資料無法讀取';
+
 function isValidSaved(d: unknown): d is Saved {
   return !!d && typeof (d as Saved).id === 'string' && Array.isArray((d as Saved).cards);
 }
 
 function entryRaw(d: unknown): string {
   return JSON.stringify(d, null, 2);
+}
+
+/** 單筆資料失效的原因；沒有問題回傳 null。只看「讀得進來、用得起來」，張數與職業之類的驗證錯誤留給編輯器 */
+function brokenReason(d: unknown): string | null {
+  if (!isValidSaved(d)) return '資料格式損壞（缺少 id，或 cards 不是陣列）';
+  const charId = (d as { charId?: unknown }).charId;
+  if (!ALL_CHARACTERS.some((c) => c.id === charId)) return `角色已不存在：${String(charId)}`;
+  const known = new Set(ALL_CARDS.map((c) => c.id));
+  const missing = [...new Set(d.cards.filter((id) => !known.has(id)).map(String))];
+  return missing.length > 0 ? `含已不存在的卡片：${missing.join('、')}` : null;
 }
 
 /** 讀出自訂牌組，並把讀不進來的資料分開回報，不靜默丟棄 */
@@ -52,14 +69,15 @@ export function inspectSavedDecks(storage: StorageLike | null = defaultStorage()
     try {
       arr = JSON.parse(raw);
     } catch {
-      return { decks: [], corrupt: [{ kind: 'whole', raw }] };
+      return { decks: [], corrupt: [{ kind: 'whole', raw, reason: WHOLE_REASON }] };
     }
-    if (!Array.isArray(arr)) return { decks: [], corrupt: [{ kind: 'whole', raw }] };
+    if (!Array.isArray(arr)) return { decks: [], corrupt: [{ kind: 'whole', raw, reason: WHOLE_REASON }] };
     const decks: Saved[] = [];
     const corrupt: CorruptDeck[] = [];
     for (const d of arr) {
-      if (isValidSaved(d)) decks.push(d);
-      else corrupt.push({ kind: 'entry', raw: entryRaw(d) });
+      const reason = brokenReason(d);
+      if (reason === null) decks.push(d as Saved);
+      else corrupt.push({ kind: 'entry', raw: entryRaw(d), reason });
     }
     return { decks, corrupt };
   } catch {
@@ -82,7 +100,7 @@ export function discardCorruptDeck(item: CorruptDeck, storage: StorageLike | nul
     if (!Array.isArray(arr)) return;
     let removed = false;
     const rest = arr.filter((d) => {
-      if (removed || isValidSaved(d) || entryRaw(d) !== item.raw) return true;
+      if (removed || entryRaw(d) !== item.raw) return true;
       removed = true;
       return false;
     });
