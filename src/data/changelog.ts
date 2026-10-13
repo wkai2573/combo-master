@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.46.3',
+    date: '2026-10-13',
+    items: [
+      { type: 'change', text: '畫面上的文字不能再選取，長按不會跳出複製、翻譯等瀏覽器選單，也不會再提示翻譯整個網頁；輸入框與錯誤訊息仍可選取' },
+      { type: 'fix', text: '修正手機版面點了手牌預覽後再打開牌區列表，手牌預覽會浮在列表上面' },
+    ],
+  },
+  {
     version: '0.46.2',
     date: '2026-10-13',
     items: [

@@ -23,8 +23,12 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+/* 輸入框必須可選（iOS 上設成不可選會打不了字），錯誤訊息留給使用者複製回報 */
+input, textarea, .errormsg { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 html, body, #root { height: 100%; margin: 0; }
 body {
+  /* 畫面上的文字一律不可選取，免得長按跳出複製、翻譯等瀏覽器選單；輸入框與錯誤訊息例外（見下方） */
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
   background: var(--bg);
   color: var(--text);
   font-family: 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;
@@ -732,7 +736,8 @@ button.chip { font: inherit; font-size: 11px; }
 .battle.phone .handslot:hover { z-index: auto; }
 
 /* 觸控：選取的手牌預覽，浮在手牌上方 */
-.handpreview { position: fixed; left: 50%; bottom: 40%; z-index: 20; transform: translateX(-50%); display: grid; justify-items: center; gap: 3px; padding: 6px; background: #0f1320f2; border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 6px 20px #000c; }
+/* 手牌預覽要在全螢幕牌區與卡片說明（z-index 11 以上）底下，免得浮在它們上面 */
+.handpreview { position: fixed; left: 50%; bottom: 40%; z-index: 10; transform: translateX(-50%); display: grid; justify-items: center; gap: 3px; padding: 6px; background: #0f1320f2; border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 6px 20px #000c; }
 .handpreview .card.md { width: var(--pw, 168px); height: var(--ph, 230px); font-size: var(--pf, 13px); }
 .handpreview .card.selected { transform: none; outline: 0; }
 .previewhint { font-size: 11px; color: var(--accent); }
