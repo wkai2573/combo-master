@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { SPEED_LABEL, useSpeed, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { InspectContext, InspectPanel, PinContext } from '../components/CardFace';
@@ -19,7 +19,8 @@ import { useWide } from '../useWide';
 import { usePhone } from '../layoutMode';
 import { useCardDrag } from '../useCardDrag';
 import { promptPlacement } from '../promptPlacement';
-import { CardSheet, MyDock, OppBar, PhoneMenu, PromptSheet, Sheet, SheetBody, type SheetTarget } from '../components/PhoneBoard';
+import { CardSheet, MyDock, OppBar, PhoneMenu, PromptSheet, Sheet, SheetBody } from '../components/PhoneBoard';
+import { useOverlays } from '../useOverlays';
 import type { Session } from '../../net/session';
 import type { PlayerId } from '../../engine/types';
 
@@ -28,93 +29,19 @@ const ZONE_NAME: Record<ZoneKey, string> = { discard: '棄牌區', exp: '經驗�
 export function Battle({ session, onExit }: { session: Session; onExit: () => void }) {
   const st = useSyncExternalStore(session.subscribe, session.getState);
   const wide = useWide();
+  const phone = usePhone();
   const [selected, setSelected] = useState<string[]>([]);
   // exp：這張卡在經驗區且經驗效果生效中（說明欄多一行狀態）
   const [inspect, setInspect] = useState<{ id: string; exp: boolean } | null>(null);
-  const [pinned, setPinned] = useState<{ id: string; exp: boolean } | null>(null);
   const inspectCard = useCallback((id: string | null, exp?: boolean) => setInspect(id ? { id, exp: !!exp } : null), []);
-  // 手機版面沒有固定說明：點不能操作的卡，從底部滑出那張的說明；其他版面維持固定／取消固定
-  const [cardSheet, setCardSheet] = useState<{ id: string; exp: boolean } | null>(null);
-  const phone = usePhone();
-  const phoneRef = useRef(phone);
-  phoneRef.current = phone;
-  const togglePin = useCallback((id: string, exp?: boolean) => {
-    if (phoneRef.current) setCardSheet({ id, exp: !!exp });
-    else setPinned((p) => (p?.id === id && p.exp === !!exp ? null : { id, exp: !!exp }));
-  }, []);
-  const closeCardSheet = useCallback(() => setCardSheet(null), []);
-  const [menuOpen, setMenuOpen] = useState(false);
-  // 手機版面：遊戲紀錄收成可開關的抽屜（從頂列選單打開）
-  const [logOpen, setLogOpen] = useState(false);
-  const [zone, setZone] = useState<{ p: PlayerId; z: ZoneKey; anchor: DOMRect } | null>(null);
-  const zoneRef = useRef(zone);
-  zoneRef.current = zone;
-  const menuRef = useRef(menuOpen);
-  menuRef.current = menuOpen;
-  const cardSheetRef = useRef(cardSheet);
-  cardSheetRef.current = cardSheet;
-  // 手機版面：全螢幕的面板，看角色效果或某個牌區的列表（只能看，玩家手動打開）
-  const [sheet, setSheet] = useState<SheetTarget | null>(null);
-  const sheetRef = useRef(sheet);
-  sheetRef.current = sheet;
   const [copied, setCopied] = useState(false);
-  const [flowOpen, setFlowOpen] = useState(false);
-  // 作弊模式：開關記在連線層（對方才看得到提示），離開或下一局都會回到關閉；面板的開合只是這個畫面的事
-  const [cheatOpen, setCheatOpen] = useState(false);
   // 作弊模式預設隱藏：瀏覽器裡有解鎖旗標才顯示開關與面板（對手開啟時的提示橫幅不受影響）
   const [cheatUnlocked] = useState(isCheatUnlocked);
-  const cheatOpenRef = useRef(cheatOpen);
-  cheatOpenRef.current = cheatOpen;
-  // 面板跟著連線層確認過的開關走：開啟被確認才打開，關閉就收起（房主沒回應或遊戲已結束時不會憑空彈出）
   const cheatOnState = st.cheatOn[session.me];
-  useEffect(() => setCheatOpen(cheatOnState), [cheatOnState]);
   const [speed, setSpeed] = useSpeed();
   const final = st.view;
   const { presentation: pres, skip } = usePlayback(st.batch, final, speed);
   const { view: v, changes, fx, fxKey, scale } = pres;
-  // 戰鬥區的列表開著時那一方的戰鬥區清空了（回合結算歸還）：列表跟著收起，免得留下「（空）」的面板
-  const combatEmpty = !!v && !!zone && zone.z === 'combat' && v.players[zone.p].moves.length + v.players[zone.p].pursuit.length === 0;
-  useEffect(() => {
-    if (combatEmpty) setZone(null);
-  }, [combatEmpty]);
-
-  // 版面在寬螢幕版與手機版面之間切換：各版面專屬的面板與抽屜收起，免得換回來時殘留看不到的狀態（對局狀態不受影響）
-  const layoutKey = wide ? 'wide' : 'phone';
-  const lastLayout = useRef(layoutKey);
-  useEffect(() => {
-    if (lastLayout.current === layoutKey) return;
-    lastLayout.current = layoutKey;
-    setSheet(null);
-    setZone(null);
-    setLogOpen(false);
-    setPinned(null);
-    setInspect(null);
-    setCardSheet(null);
-    setMenuOpen(false);
-  }, [layoutKey]);
-
-  // Esc：先關閉展開的牌區，沒有展開的牌區才取消固定的說明
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      // 在輸入框裡按 Esc 只離開輸入框，不連帶關掉面板
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
-        e.target.blur();
-        return;
-      }
-      if (zoneRef.current) setZone(null);
-      else if (menuRef.current) setMenuOpen(false);
-      else if (cardSheetRef.current) setCardSheet(null);
-      else if (sheetRef.current) setSheet(null);
-      else if (cheatOpenRef.current) setCheatOpen(false);
-      else {
-        setPinned(null);
-        setLogOpen(false);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
 
   // 每次收到新狀態或換影格，就清掉上一個提示的選擇
   useEffect(() => setSelected([]), [final, fxKey]);
@@ -125,10 +52,14 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
 
   // 提示物件每次收到狀態都可能是新的，內容沒變就不算換了提示；效果只看這個簽章，否則會一直重新設定面板而無限重繪
   const promptSig = livePrompt ? `${livePrompt.title}|${livePrompt.options.map((o) => o.key).join(',')}` : '';
-  // 手機版面：來了新的提示就收起全螢幕面板，免得提示被擋住（要選的牌都列在提示欄或底部提示面板裡）
-  useEffect(() => {
-    if (phone && promptSig) setSheet(null);
-  }, [promptSig, phone]);
+
+  const overlays = useOverlays({
+    isPhone: phone,
+    isCombatEmpty: (p) => !!v && v.players[p].moves.length + v.players[p].pursuit.length === 0,
+    promptSig,
+    cheatOn: cheatOnState,
+    onLayoutChange: () => setInspect(null),
+  });
 
   const leave = () => {
     session.leave();
@@ -184,23 +115,23 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
     setSelected((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : cur.length < prompt.max ? [...cur, key] : cur));
   };
 
-  const zoneCombat = zone?.z === 'combat' ? combatCards(v.players[zone.p]) : null;
-  const zoneCards = !zone ? [] : zoneCombat ? zoneCombat.cards : v.players[zone.p][zone.z as 'exp' | 'discard'];
+  const zoneCombat = overlays.zone?.z === 'combat' ? combatCards(v.players[overlays.zone.p]) : null;
+  const zoneCards = !overlays.zone ? [] : zoneCombat ? zoneCombat.cards : v.players[overlays.zone.p][overlays.zone.z as 'exp' | 'discard'];
   // 結束演出播完（或跳過）才顯示結果視窗；演出期間先讓勝負在桌面上呈現
   const result = pres.playing || v.winner === null ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
   const outcomeOf = (p: PlayerId) => (v.winner === null ? undefined : v.winner === 'draw' ? 'draw' : v.winner === p ? 'win' : 'lose');
-  const shown = pinned ?? inspect;
-  const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} />;
-  const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={pres.hits[opp]} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
-  const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} drag={drag} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={pres.hits[me]} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
+  const shown = overlays.pinned ?? inspect;
+  const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={overlays.pinned !== null} onUnpin={overlays.unpin} />;
+  const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={overlays.openZone} hit={pres.hits[opp]} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
+  const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} drag={drag} onZone={overlays.openZone} hit={pres.hits[me]} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
   const combat = <CombatArea v={v} fx={fx} caption={pres.caption} fxKey={fxKey} changes={changes} hint={phone ? stepHint(v.phase, v.waitingFor, me) : undefined}
-    onOpen={(p, anchor) => (phone ? setSheet({ p, tab: 'combat' }) : setZone({ p, z: 'combat', anchor }))} />;
+    onOpen={(p, anchor) => (phone ? overlays.openSheet({ p, tab: 'combat' }) : overlays.openZone(p, 'combat', anchor))} />;
   // 手機版面：選項已經在手牌列上了，提示欄不再重複畫一次手牌
   const handUids = phone ? new Set(v.players[me].hand.map((c) => c.uid)) : undefined;
-  const oppBar = <OppBar v={v} p={opp} changes={changes} fxKey={fxKey} hit={pres.hits[opp]} outcome={outcomeOf(opp)} onOpen={setSheet} />;
+  const oppBar = <OppBar v={v} p={opp} changes={changes} fxKey={fxKey} hit={pres.hits[opp]} outcome={outcomeOf(opp)} onOpen={overlays.openSheet} />;
   const myDock = (
     <MyDock
-      v={v} p={me} changes={changes} fxKey={fxKey} hit={pres.hits[me]} outcome={outcomeOf(me)} onOpen={setSheet}
+      v={v} p={me} changes={changes} fxKey={fxKey} hit={pres.hits[me]} outcome={outcomeOf(me)} onOpen={overlays.openSheet}
       prompt={prompt} selected={selected} onPick={toggle} drag={drag} shuffling={fx?.type === 'shuffle'}
     />
   );
@@ -229,7 +160,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
 
   return (
     <InspectContext.Provider value={inspectCard}>
-      <PinContext.Provider value={togglePin}>
+      <PinContext.Provider value={overlays.togglePin}>
       <div className={`battle${wide ? ' wide' : ' phone'}`} style={{ ['--spd' as string]: scale }}>
         <div className="topbar">
           <span className="ver" title={VERSION_TITLE}>連擊大師 {VERSION_SHORT}</span>
@@ -240,19 +171,19 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           {st.message && <span style={{ color: 'var(--bad)' }}>{st.message}</span>}
           {phone ? (
             <PhoneMenu
-              open={menuOpen} onToggle={() => setMenuOpen((o) => !o)} onClose={() => setMenuOpen(false)}
-              speed={speed} onSpeed={setSpeed} onLog={() => setLogOpen(true)} onFlow={() => setFlowOpen(true)} onLeave={leave}
-              cheat={session.cheat && cheatUnlocked ? { on: cheatOn, panelOpen: cheatOpen, onToggle: () => session.cheat?.setOn(!cheatOn), onPanel: () => setCheatOpen(!cheatOpen) } : undefined}
+              open={overlays.menuOpen} onToggle={overlays.toggleMenu} onClose={overlays.closeMenu}
+              speed={speed} onSpeed={setSpeed} onLog={overlays.openLog} onFlow={overlays.openFlow} onLeave={leave}
+              cheat={session.cheat && cheatUnlocked ? { on: cheatOn, panelOpen: overlays.cheatOpen, onToggle: () => session.cheat?.setOn(!cheatOn), onPanel: overlays.toggleCheat } : undefined}
             />
           ) : (
             <>
               {session.cheat && cheatUnlocked && (
                 <>
                   <button className={cheatOn ? 'on' : ''} aria-pressed={cheatOn} title="開啟後可以隨意加入手牌、移除手牌，調整、刪除、新增牌堆的卡，以及翻面經驗卡" onClick={() => session.cheat?.setOn(!cheatOn)}>作弊模式</button>
-                  {cheatOn && <button className={cheatOpen ? 'on' : ''} aria-pressed={cheatOpen} onClick={() => setCheatOpen(!cheatOpen)}>作弊面板</button>}
+                  {cheatOn && <button className={overlays.cheatOpen ? 'on' : ''} aria-pressed={overlays.cheatOpen} onClick={overlays.toggleCheat}>作弊面板</button>}
                 </>
               )}
-              <button title="開啟戰鬥流程圖" onClick={() => setFlowOpen(true)}>流程圖</button>
+              <button title="開啟戰鬥流程圖" onClick={overlays.openFlow}>流程圖</button>
               <select value={speed} onChange={(e) => setSpeed(e.target.value as Speed)} title="動畫速度">
                 {(Object.keys(SPEED_LABEL) as Speed[]).map((s) => <option key={s} value={s}>{SPEED_LABEL[s]}</option>)}
               </select>
@@ -288,11 +219,11 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
                 {myDock}
                 <div className="promptslot">{phoneBar}</div>
               </div>
-              {logOpen && (
+              {overlays.logOpen && (
                 <div className="drawer">
                   <div className="drawerhead">
                     <b>遊戲紀錄</b>
-                    <button onClick={() => setLogOpen(false)}>關閉</button>
+                    <button onClick={overlays.closeLog}>關閉</button>
                   </div>
                   <LogPanel lines={v.log} />
                 </div>
@@ -301,23 +232,23 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
           )}
         </div>
 
-        {session.cheat && cheatUnlocked && cheatOn && cheatOpen && v.winner === null && (
-          <CheatPanel cheat={session.cheat} me={me} snapshotKey={final} locked={!pres.settled} onClose={() => setCheatOpen(false)} />
+        {session.cheat && cheatUnlocked && cheatOn && overlays.cheatOpen && v.winner === null && (
+          <CheatPanel cheat={session.cheat} me={me} snapshotKey={final} locked={!pres.settled} onClose={overlays.closeCheat} />
         )}
-        {phone && sheet && !result && (
-          <Sheet v={v} target={sheet} onClose={() => setSheet(null)}>
-            <SheetBody v={v} target={sheet} fxKey={fxKey} changes={changes} />
+        {phone && overlays.sheet && !result && (
+          <Sheet v={v} target={overlays.sheet} onClose={overlays.closeSheet}>
+            <SheetBody v={v} target={overlays.sheet} fxKey={fxKey} changes={changes} />
           </Sheet>
         )}
-        {phone && cardSheet && !result && <CardSheet id={cardSheet.id} exp={cardSheet.exp} onClose={closeCardSheet} />}
+        {phone && overlays.cardSheet && !result && <CardSheet id={overlays.cardSheet.id} exp={overlays.cardSheet.exp} onClose={overlays.closeCardSheet} />}
         {phone && !result && !pres.playing && prompt && placement === 'panel' && <PromptSheet>{promptPanel()}</PromptSheet>}
         {dragGhost}
         <PhaseBanner fx={fx} n={fxKey} me={me} />
         <Spotlight fx={fx} caption={pres.caption} n={fxKey} scale={scale} />
         <FlightLayer view={v} fx={fx} playing={pres.playing} n={fxKey} scale={scale} extraPile={phone ? (owner, z) => z === 'exp' || z === 'gear' || z === 'buff' || (owner !== me && z === 'hand') : undefined} />
 
-        {flowOpen && <FlowChartModal phase={v.phase} onClose={() => setFlowOpen(false)} />}
-        {zone && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} exp={zone.z === 'exp'} pursuitFrom={zoneCombat?.pursuitFrom} note={zoneCombat ? COMBAT_LIST_NOTE : undefined} anchor={zone.anchor} onClose={() => setZone(null)} />}
+        {overlays.flowOpen && <FlowChartModal phase={v.phase} onClose={overlays.closeFlow} />}
+        {overlays.zone && <ZoneViewer title={`${overlays.zone.p === me ? '我方' : '對手'}${ZONE_NAME[overlays.zone.z]}`} cards={zoneCards} exp={overlays.zone.z === 'exp'} pursuitFrom={zoneCombat?.pursuitFrom} note={zoneCombat ? COMBAT_LIST_NOTE : undefined} anchor={overlays.zone.anchor as DOMRect} onClose={overlays.closeZone} />}
 
         {result && (
           <Modal>
