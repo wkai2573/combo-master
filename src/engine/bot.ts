@@ -57,6 +57,41 @@ export function checkInvariants(game: Game, expectedCounts: [number, number]): v
   }
 }
 
+/**
+ * 機器人決策模式定義：
+ *
+ * 【mode1】第一代基礎機率模式（無牌面視野）
+ * 策略打法：
+ * - 爆發階段：50% 機率爆發換牌，隨機選 1 張手牌放進經驗區
+ * - 出招階段：若有非收招選項，80% 機率隨機出 1 張招式，20% 隨機收招
+ * - 觸發窗口與瞄準：隨機選擇合法選項
+ * - 完全不考慮牌面攻防、連擊值與血量，作為壓測不變量與實力對照基準。
+ *
+ * 【mode2】第二代啟發式決策模式（遵守牌面可見性）
+ * 策略打法：
+ * - 先手步驟：依手牌招式連擊值重心（avgCombo）優先出邊緣牌（偏低出 1~2，偏高出 8~9），避開 0 攻牌，[先] 標籤加分
+ * - 反擊步驟：
+ *   1. 精算淨破防 ≥ 3 認定為划算進攻；
+ *   2. 無法破防且受傷威脅低（≤ 3）及時「收招保留」手牌；受傷威脅高（≥ 4）出高防招式減傷；
+ *   3. 受傷威脅動態提升防禦權重（最高 2.0）；破防時溢出攻擊享有 1.5 倍加成；
+ *   4. 手牌資源領先（≥ 2 張）大膽維持較寬連擊開口，手牌劣勢時縮小範圍逼退對手。
+ * - 爆發階段：牌組 ≤ 6 張停止爆發，健康時優先棄置同部位已滿裝備或多餘白板。
+ * - 增益階段：長效裝備優先於暫時增益。
+ * - 觸發窗口：減傷效果僅在實際受傷時發動；遊俠瞄準 LV1 成功保留、失敗換底。
+ */
+export type BotMode = 'mode1' | 'mode2';
+
+export const BOT_MODE_DESCRIPTIONS: Record<BotMode, { name: string; strategy: string }> = {
+  mode1: {
+    name: '第 1 代基礎機率',
+    strategy: '無牌面視野。50% 爆發換牌，80% 隨機出招，20% 隨機收招。',
+  },
+  mode2: {
+    name: '第 2 代啟發式決策',
+    strategy: '遵守牌面可見性。手牌密集端邊緣牌起手、動態攻防權重精算、受傷威脅減傷、破防溢出激勵、低威脅收招保留手牌。',
+  },
+};
+
 export interface PlayOutResult {
   steps: number;
   finished: boolean;
@@ -64,7 +99,8 @@ export interface PlayOutResult {
 
 export interface PlayOutOptions {
   maxSteps?: number;
-  mode?: 'random' | 'smart';
+  mode?: BotMode;
+  modes?: [BotMode, BotMode];
 }
 
 export function playOut(
@@ -74,14 +110,19 @@ export function playOut(
   opts: number | PlayOutOptions = 20000,
 ): PlayOutResult {
   const maxSteps = typeof opts === 'number' ? opts : opts.maxSteps ?? 20000;
-  const mode = typeof opts === 'object' ? opts.mode ?? 'random' : 'random';
+  const modes: [BotMode, BotMode] =
+    typeof opts === 'object'
+      ? opts.modes ?? [opts.mode ?? 'mode1', opts.mode ?? 'mode1']
+      : ['mode1', 'mode1'];
+
   let steps = 0;
   while (game.pending && steps < maxSteps) {
     const req = game.pending;
+    const mode = modes[req.player];
     const response =
-      mode === 'smart'
+      mode === 'mode2'
         ? botChoice(req, rng, viewFor(game, req.player))
-        : randomResponse(req, rng);
+        : botChoice(req, rng, undefined);
     game.submit(req.player, response);
     checkInvariants(game, expectedCounts);
     steps++;

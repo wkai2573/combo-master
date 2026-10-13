@@ -1,7 +1,7 @@
 {
   "name": "combo-master-tcg",
   "private": true,
-  "version": "0.47.2",
+  "version": "0.47.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,6 @@
     "test": "vitest run",
     "data": "tsx scripts/build-data.ts",
     "sim": "tsx scripts/simulate.ts",
-    "duel": "tsx scripts/duel.ts",
     "presets": "tsx scripts/preset-report.ts",
     "table": "tsx scripts/sync-card-table.ts",
     "stats": "tsx scripts/traffic-stats.ts",

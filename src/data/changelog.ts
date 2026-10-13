@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.47.3',
+    date: '2026-10-13',
+    items: [
+      { type: 'change', text: '模擬工具整併 duel 與 sim，支援 AI 跨模式對抗評測（--mode mode1:mode2）與鏡像平衡分析' },
+    ],
+  },
+  {
     version: '0.47.2',
     date: '2026-10-13',
     items: [

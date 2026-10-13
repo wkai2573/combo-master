@@ -56,14 +56,25 @@ describe('新卡（嘲諷、生命偷取、生命藥水、公開資訊）的對�
   });
 });
 
-describe('啟發式決策 AI 互打壓測（playOut smart 模式）', () => {
-  it('雙方皆採用 smart 模式的對局能跑完，沒有卡死也沒有違反守恆', () => {
+describe('機器人決策模式壓測（playOut mode2 與跨模式）', () => {
+  it('雙方皆採用 mode2 的對局能跑完，沒有卡死也沒有違反守恆', () => {
     for (const [a, b] of [['勇者', '刺客'], ['刺客', '遊俠']] as const) {
       for (let seed = 1; seed <= 3; seed++) {
         const decks = [{ charId: a, cards: presetDeck(a) }, { charId: b, cards: presetDeck(b) }] as const;
         const game = new Game({ decks: [decks[0], decks[1]], seed: seed * 7919 });
-        const r = playOut(game, new Rng(seed), [decks[0].cards.length, decks[1].cards.length], { mode: 'smart' });
+        const r = playOut(game, new Rng(seed), [decks[0].cards.length, decks[1].cards.length], { mode: 'mode2' });
         expect(r.finished, `${a} vs ${b} seed=${seed}`).toBe(true);
+      }
+    }
+  });
+
+  it('跨模式（mode1 vs mode2）對局能正常跑完', () => {
+    for (const [a, b] of [['勇者', '刺客'], ['法師', '商人']] as const) {
+      for (let seed = 1; seed <= 2; seed++) {
+        const decks = [{ charId: a, cards: presetDeck(a) }, { charId: b, cards: presetDeck(b) }] as const;
+        const game = new Game({ decks: [decks[0], decks[1]], seed: seed * 104729 });
+        const r = playOut(game, new Rng(seed), [decks[0].cards.length, decks[1].cards.length], { modes: ['mode1', 'mode2'] });
+        expect(r.finished, `${a}(mode1) vs ${b}(mode2) seed=${seed}`).toBe(true);
       }
     }
   });
