@@ -4,7 +4,6 @@ import { FORFEIT_AFTER_S, OFFLINE_AFTER_MS } from '../src/net/protocol';
 import { HostSession, LocalSession } from '../src/net/session';
 import { setPlayTracker } from '../src/stats/analytics';
 import type { Opponent } from '../src/stats/records';
-import { setRecordSink } from '../src/stats/sink';
 import { FakeTransport } from './fakeTransport';
 
 // 流量統計：對局開始與打完各通知一次；中途離開、離線判負不算打完
@@ -12,7 +11,7 @@ let plays: Array<[string, Opponent]> = [];
 const restores: Array<() => void> = [];
 beforeEach(() => {
   plays = [];
-  restores.push(setPlayTracker((kind, opponent) => plays.push([kind, opponent])), setRecordSink(() => {}));
+  restores.push(setPlayTracker((kind, opponent) => plays.push([kind, opponent])));
   vi.useFakeTimers();
   vi.setSystemTime(1);
   const data = new Map<string, string>();

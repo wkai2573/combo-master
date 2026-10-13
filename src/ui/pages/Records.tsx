@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ALL_CHARACTERS } from '../../data/cards';
-import { defaultStore } from '../../stats/upload';
+import { defaultStore } from '../../stats/cloud';
 import { APP_VERSION } from '../../version';
 import { characterSeats, characterSummary, filterByOpponent, legacyCount, matchupTable, MIN_WIN_RATE_VERSION, seatStats, turnStats, unseatedCount, type Cell, type OpponentFilter, type SeatStats } from '../../stats/summary';
 import { TurnChart } from '../components/TurnChart';

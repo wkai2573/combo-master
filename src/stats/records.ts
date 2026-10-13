@@ -23,8 +23,6 @@ export interface BattleRecord {
   first?: boolean;
 }
 
-const KEY = 'lianji.records.v1';
-
 /**
  * 對局結束時的視角轉成戰績。還沒結束、因離線或認輸結束、對局期間有人開過作弊的對局不留紀錄，回傳 null。
  * 訪客收到的視角若來自舊版房主，沒有這兩個旗標：當成不知道，一樣不記。
@@ -51,35 +49,3 @@ export const isRecord = (r: unknown): r is BattleRecord => {
     && typeof o.turns === 'number' && Number.isInteger(o.turns) && o.turns >= 0
     && (o.first === undefined || typeof o.first === 'boolean');
 };
-
-/** 讀不到、資料損毀、格式不符的筆數都當成沒有 */
-export function listRecords(): BattleRecord[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw) as unknown;
-    return Array.isArray(arr) ? arr.filter(isRecord) : [];
-  } catch {
-    return [];
-  }
-}
-
-function write(list: BattleRecord[]): void {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(list));
-  } catch {
-    // 儲存失敗（私密模式或容量滿）：忽略，不影響遊戲
-  }
-}
-
-export function addRecord(record: BattleRecord): void {
-  write([...listRecords(), record]);
-}
-
-export function clearRecords(): void {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    // 無法清除：忽略
-  }
-}

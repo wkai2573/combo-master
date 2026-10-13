@@ -3,16 +3,19 @@ import { presetDeck } from '../src/data/presetDecks';
 import { FORFEIT_AFTER_S, OFFLINE_AFTER_MS, type HostMsg } from '../src/net/protocol';
 import { HostSession } from '../src/net/session';
 import type { BattleRecord } from '../src/stats/records';
-import { setRecordSink } from '../src/stats/sink';
+import type { RecordReporter } from '../src/stats/reporter';
 import { FakeTransport } from './fakeTransport';
 
 // 房主有定時器（心跳偵測、離線倒數），一律用假計時器
-// 戰績不再寫本機，而是交給上傳；測試換成自己的接收函式，直接看交出去了什麼
+// 戰績交給 reporter 依賴注入；測試傳入自己的接收器，直接看交出去了什麼
 let captured: BattleRecord[] = [];
-let restoreSink = () => {};
+const testReporter: RecordReporter = {
+  submit: (r) => captured.push(r),
+  flush: async () => ({ sent: 0, left: 0 }),
+};
+
 beforeEach(() => {
   captured = [];
-  restoreSink = setRecordSink((r) => captured.push(r));
   vi.useFakeTimers();
   const data = new Map<string, string>();
   vi.stubGlobal('localStorage', {
@@ -23,7 +26,6 @@ beforeEach(() => {
 });
 const hosts: HostSession[] = [];
 afterEach(() => {
-  restoreSink();
   hosts.splice(0).forEach((h) => h.leave());
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -31,7 +33,7 @@ afterEach(() => {
 
 function open() {
   const transport = new FakeTransport();
-  const host = new HostSession({ charId: '勇者', cards: presetDeck('勇者') }, transport);
+  const host = new HostSession({ charId: '勇者', cards: presetDeck('勇者') }, transport, testReporter);
   hosts.push(host);
   return { host, transport };
 }

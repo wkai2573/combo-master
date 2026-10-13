@@ -5,7 +5,7 @@ import type { CheatSnapshot, CheatZone } from '../engine/cheat';
 import { Rng } from '../engine/rng';
 import { trackPlay } from '../stats/analytics';
 import { recordFromView, type Opponent } from '../stats/records';
-import { submitRecord } from '../stats/sink';
+import { defaultRecordReporter, type RecordReporter } from '../stats/reporter';
 import { APP_VERSION } from '../version';
 import type { Frame, GameView } from '../engine/view';
 import type { PlayerId } from '../engine/types';
@@ -136,6 +136,7 @@ abstract class Base implements Session {
       trackPlay('finish', this.opponent);
     }
   }
+  constructor(protected reporter: RecordReporter = defaultRecordReporter()) {}
   /** 這個場次是不是負責上傳戰績：連線對局只由房主上傳，一場只留一筆，訪客不上傳 */
   protected readonly uploadsRecord: boolean = true;
   /** 對局第一次進入結束狀態時留下戰績並交給上傳；離線判負、作弊過的對局由 recordFromView 排除 */
@@ -144,7 +145,7 @@ abstract class Base implements Session {
     this.recorded = true;
     if (!this.uploadsRecord) return;
     const record = recordFromView(this.s.view, this.opponent, APP_VERSION);
-    if (record) submitRecord(record);
+    if (record) this.reporter.submit(record);
   }
   abstract submit(keys: string[]): void;
   abstract leave(): void;
@@ -171,8 +172,8 @@ export class LocalSession extends Base {
     closed: () => this.closed,
   });
 
-  constructor(mine: DeckPayload, theirs: DeckPayload) {
-    super();
+  constructor(mine: DeckPayload, theirs: DeckPayload, reporter: RecordReporter = defaultRecordReporter()) {
+    super(reporter);
     this.match = new Match([mine, theirs]);
     this.sync(this.match.flush());
   }
@@ -241,8 +242,12 @@ export class HostSession extends Base {
     closed: () => this.left,
   });
 
-  constructor(private deck: DeckPayload, private transport: HostTransport = peerTransport) {
-    super();
+  constructor(
+    private deck: DeckPayload,
+    private transport: HostTransport = peerTransport,
+    reporter: RecordReporter = defaultRecordReporter(),
+  ) {
+    super(reporter);
     this.open();
   }
 

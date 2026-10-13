@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { applyCheatParam } from './cheatUnlock';
 import { applyTrackParam, startAnalytics } from './stats/analytics';
-import { defaultUploader } from './stats/upload';
+import { defaultRecordReporter } from './stats/reporter';
 import { App } from './ui/App';
 import './ui/styles.css';
 
@@ -24,7 +24,7 @@ try {
 }
 
 // 補傳上次沒傳成功的戰績（沒有設定伺服器時什麼都不做；任何失敗都不影響進站）
-void defaultUploader().flush().catch(() => {});
+void defaultRecordReporter().flush().catch(() => {});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

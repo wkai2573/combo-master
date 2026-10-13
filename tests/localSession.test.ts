@@ -2,15 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { presetDeck } from '../src/data/presetDecks';
 import { LocalSession } from '../src/net/session';
 import type { BattleRecord } from '../src/stats/records';
-import { setRecordSink } from '../src/stats/sink';
+import type { RecordReporter } from '../src/stats/reporter';
 
 // 時間固定在 1：亂數種子是現在時間，這樣玩家先攻，而且第一次出招後輪到機器人
-// 戰績不再寫本機，而是交給上傳；測試換成自己的接收函式，直接看交出去了什麼
+// 戰績交給 reporter 依賴注入；測試傳入自己的接收器，直接看交出去了什麼
 let captured: BattleRecord[] = [];
-let restoreSink = () => {};
+const testReporter: RecordReporter = {
+  submit: (r) => captured.push(r),
+  flush: async () => ({ sent: 0, left: 0 }),
+};
+
 beforeEach(() => {
   captured = [];
-  restoreSink = setRecordSink((r) => captured.push(r));
   vi.useFakeTimers();
   vi.setSystemTime(1);
   const data = new Map<string, string>();
@@ -22,7 +25,6 @@ beforeEach(() => {
 });
 const sessions: LocalSession[] = [];
 afterEach(() => {
-  restoreSink();
   sessions.splice(0).forEach((s) => s.leave());
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -31,6 +33,7 @@ afterEach(() => {
 function start() {
   const s = new LocalSession(
     { charId: '勇者', cards: presetDeck('勇者') }, { charId: '刺客', cards: presetDeck('刺客') },
+    testReporter,
   );
   sessions.push(s);
   return s;

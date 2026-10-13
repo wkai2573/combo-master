@@ -1,7 +1,7 @@
 import { APP_VERSION } from '../version';
 import { RECORDS_API } from './config';
 import type { Opponent } from './records';
-import { getDeviceId, randomId } from './upload';
+import { getDeviceId, randomId } from './reporter';
 
 /**
  * 匿名流量統計：造訪、停留、有沒有開始或打完對局。

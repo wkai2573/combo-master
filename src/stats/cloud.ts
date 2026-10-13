@@ -1,3 +1,4 @@
+import { RECORDS_API } from './config';
 import { isRecord, type BattleRecord } from './records';
 
 /** 上傳的一筆：戰績加上對局代號（補傳去重）與裝置代號（伺服器限流用） */
@@ -87,6 +88,9 @@ export function createCloudStore(base: string, fetchFn: typeof fetch = (...a) =>
     },
   };
 }
+
+/** 戰績頁用的倉庫；沒有設定伺服器時是 null */
+export const defaultStore = (): RecordStore | null => (RECORDS_API ? createCloudStore(RECORDS_API) : null);
 
 /** 記憶體版：測試與沒有伺服器時用。可以讓下一次上傳指定失敗的結果。 */
 export function createMemoryStore(): RecordStore & { all(): UploadRecord[]; failNext(result: Exclude<SubmitResult, 'ok'>, times?: number): void } {
