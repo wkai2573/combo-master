@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCoarsePointer } from '../layoutMode';
 import type { Request } from '../../engine/types';
 import { CardFace } from './CardFace';
-import { orderPromptButtons } from '../promptButtons';
+import { confirmButton, orderPromptButtons } from '../promptButtons';
 import { SortableList } from './SortableList';
 
 /** 選項對應畫面上的某張卡（例如窗口裡的效果來源）：滑過或聚焦選項時讓那張卡亮起來 */
@@ -66,6 +66,7 @@ export function PromptPanel({ prompt, selected, onPick, onSubmit, skipUids }: Pr
   const onHand = (o: Request['options'][number]) => o.uid !== undefined && !!skipUids?.has(o.uid);
   const cardOpts = prompt.options.filter((o) => isCard(o) && !onHand(o));
   const btnOpts = prompt.options.filter((o) => !isCard(o));
+  const confirm = confirmButton(selected.length, prompt.min, prompt.max);
   const countText = single ? '' : `（選 ${prompt.min === prompt.max ? prompt.min : `${prompt.min}~${prompt.max}`} 個）`;
 
   return (
@@ -97,11 +98,11 @@ export function PromptPanel({ prompt, selected, onPick, onSubmit, skipUids }: Pr
         ))}
         {!single && (
           <button
-            className="primary"
+            className={confirm.primary ? 'primary' : ''}
             disabled={selected.length < prompt.min || selected.length > prompt.max}
             onClick={() => onSubmit(selected)}
           >
-            {selected.length === 0 && prompt.min === 0 ? '略過' : `確定（${selected.length}）`}
+            {confirm.label}
           </button>
         )}
       </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Opt } from '../src/engine/types';
-import { orderPromptButtons } from '../src/ui/promptButtons';
+import { confirmButton, orderPromptButtons } from '../src/ui/promptButtons';
 
 const o = (key: string, label: string): Opt => ({ key, label });
 
@@ -38,5 +38,24 @@ describe('提示按鈕的排列與強調色', () => {
     const r = orderPromptButtons([o('a', '效果甲'), o('b', '效果乙')]);
     expect(r.map((b) => b.opt.label)).toEqual(['效果甲', '效果乙']);
     expect(r.every((b) => b.primary)).toBe(true);
+  });
+});
+
+// 多選提示的確定鈕：沒選牌的略過是放棄類，用一般色；選了牌的確定才用強調色
+describe('多選提示的確定鈕', () => {
+  it('可以不選、一張都沒選：略過，一般色', () => {
+    expect(confirmButton(0, 0, 2)).toEqual({ label: '略過', primary: false });
+  });
+
+  it('完全不能選、只能按略過繼續（看完牌）：略過是唯一的前進鈕，用強調色', () => {
+    expect(confirmButton(0, 0, 0)).toEqual({ label: '略過', primary: true });
+  });
+
+  it('選了牌：確定與張數，強調色', () => {
+    expect(confirmButton(2, 0, 2)).toEqual({ label: '確定（2）', primary: true });
+  });
+
+  it('至少要選 1 張、還沒選：仍是確定（會停用），強調色', () => {
+    expect(confirmButton(0, 1, 2)).toEqual({ label: '確定（0）', primary: true });
   });
 });

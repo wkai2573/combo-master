@@ -14,6 +14,7 @@
   /* 動畫語彙：緩動、色彩語意（飛行時長在引擎的 FLY） */
   --ease-fly: cubic-bezier(.25, .8, .3, 1);
   --pile-edge: #2d3652;
+  --steel: #3a4668;
   --fx-atk: #ff8f78;
   --fx-def: #7dbcff;
   --fx-dmg: var(--bad);
@@ -801,13 +802,15 @@ body[data-drag="moves"] .combatarea { outline-offset: -3px; }
 .battle.phone .phonemenu .speeds { display: flex; gap: 6px; }
 .battle.phone .phonemenu .speeds button { flex: 1; text-align: center; padding: 8px 4px; }
 .sheetback.passive { pointer-events: none; }
-/* 全螢幕牌區面板：只有標題、列表與底部一顆大黃色關閉鈕 */
+/* 全螢幕牌區面板：只有標題、列表與底部一顆大的鋼灰藍關閉鈕（黃色留給前進與確認） */
 .sheet.full { top: 0; max-height: none; border-top: 0; border-radius: 0; box-shadow: 0 0 0 1px var(--line); }
 @media (prefers-reduced-motion: no-preference) { .sheet.full { animation: sheetFade .15s ease-out; } }
 @keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
 .sheet.full .sheethead { padding: 10px 12px; font-size: 16px; }
 .sheet.full .sheetbody { padding: 12px; }
-.sheetclose { flex: none; margin: 8px 12px calc(10px + env(safe-area-inset-bottom, 0px)); min-height: 56px; font-size: 18px; font-weight: 800; color: #1b1405; background: var(--accent); border: 0; border-radius: 12px; }
+.sheetclose { flex: none; margin: 8px 12px calc(10px + env(safe-area-inset-bottom, 0px)); min-height: 56px; font-size: 18px; font-weight: 800; color: var(--text); background: var(--steel); border: 0; border-radius: 12px; }
+.sheetclose:hover:not(:disabled) { filter: brightness(1.15); }
+.sheetclose:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .sheetclose:active { filter: brightness(.9); }
 /* 卡片說明：從頂部滑下，沒有關閉鈕，點空白處收起；要蓋過全螢幕牌區面板 */
 .sheet.cardsheet { top: 0; bottom: auto; z-index: 13; max-height: 70%; border-top: 0; border-bottom: 2px solid var(--accent); border-radius: 0 0 14px 14px; box-shadow: 0 8px 24px #000b; }

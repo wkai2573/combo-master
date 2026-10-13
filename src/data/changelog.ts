@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.46.1',
+    date: '2026-10-13',
+    items: [
+      { type: 'change', text: '多選提示沒選牌時的「略過」改用一般色（和「不發動」一樣），選了牌變成「確定」才用黃色；手機版面牌區的「關閉」鈕改成鋼灰藍，黃色只留給發動與確認' },
+    ],
+  },
+  {
     version: '0.46.0',
     date: '2026-10-13',
     items: [
