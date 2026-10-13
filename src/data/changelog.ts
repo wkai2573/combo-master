@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.47.2',
+    date: '2026-10-13',
+    items: [
+      { type: 'change', text: '模擬對戰工具支援啟發式 AI 互打模式（--smart），並追加先手勝率統計以供平衡性分析' },
+    ],
+  },
+  {
     version: '0.47.1',
     date: '2026-10-13',
     items: [

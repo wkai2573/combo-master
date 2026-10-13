@@ -3,13 +3,21 @@ import { playOut } from '../src/engine/bot';
 import { Game } from '../src/engine/game';
 import { Rng } from '../src/engine/rng';
 
-const perPair = Number(process.argv[2] ?? 30);
+const args = process.argv.slice(2);
+const isSmart = args.some((arg) => arg === '--smart' || arg === 'smart' || arg === '-s');
+const mode: 'random' | 'smart' = isSmart ? 'smart' : 'random';
+const numArg = args.find((arg) => /^\d+$/.test(arg));
+const perPair = numArg ? Number(numArg) : 30;
+
 const ids = PRESET_CHARACTER_IDS;
 const wins: Record<string, { win: number; games: number }> = {};
 for (const id of ids) wins[id] = { win: 0, games: 0 };
 
 let games = 0, draws = 0, unfinished = 0, turns = 0, steps = 0;
+let firstWins = 0, decisiveGames = 0;
 const errors: string[] = [];
+
+console.log(`[對戰模擬] 模式：${mode === 'smart' ? '啟發式 AI（smart）' : '純隨機壓測（random）'}，每組對陣 ${perPair} 局（共 ${ids.length * ids.length * perPair} 局）`);
 
 for (const a of ids) {
   for (const b of ids) {
@@ -21,7 +29,7 @@ for (const a of ids) {
       ] as const;
       try {
         const game = new Game({ decks: [decks[0], decks[1]], seed });
-        const r = playOut(game, new Rng(seed ^ 0x9e3779b9), [decks[0].cards.length, decks[1].cards.length]);
+        const r = playOut(game, new Rng(seed ^ 0x9e3779b9), [decks[0].cards.length, decks[1].cards.length], { mode });
         games++;
         steps += r.steps;
         turns += game.state.turn;
@@ -32,8 +40,13 @@ for (const a of ids) {
         }
         wins[a].games++;
         wins[b].games++;
-        if (game.state.winner === 'draw') draws++;
-        else wins[game.state.winner === 0 ? a : b].win++;
+        if (game.state.winner === 'draw') {
+          draws++;
+        } else {
+          decisiveGames++;
+          if (game.state.winner === game.state.openingFirst) firstWins++;
+          wins[game.state.winner === 0 ? a : b].win++;
+        }
       } catch (e) {
         games++;
         errors.push(`${a} vs ${b} seed=${seed}：${(e as Error).stack?.split('\n').slice(0, 4).join(' | ')}`);
@@ -43,7 +56,8 @@ for (const a of ids) {
 }
 
 console.log(`共 ${games} 局，平手 ${draws}，未結束 ${unfinished}，錯誤 ${errors.length}`);
-console.log(`平均回合數 ${(turns / games).toFixed(1)}，平均提示數 ${(steps / games).toFixed(0)}`);
+const firstWinRate = decisiveGames > 0 ? ((firstWins / decisiveGames) * 100).toFixed(1) : '0.0';
+console.log(`平均回合數 ${(turns / games).toFixed(1)}，平均提示數 ${(steps / games).toFixed(0)}，先手勝率 ${firstWinRate}%（${firstWins}/${decisiveGames}）`);
 for (const id of ids) {
   const w = wins[id];
   console.log(`${id.padEnd(4, '　')} 勝率 ${((w.win / w.games) * 100).toFixed(1)}%（${w.win}/${w.games}）`);

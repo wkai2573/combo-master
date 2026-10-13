@@ -3,7 +3,7 @@ import { smartChoice } from './ai';
 import { Game } from './game';
 import type { Rng } from './rng';
 import { type PlayerId, type Request, type ZoneName } from './types';
-import type { GameView } from './view';
+import { viewFor, type GameView } from './view';
 
 /** 隨機合法回應（壓測與單機練習用） */
 export function randomResponse(req: Request, rng: Rng): string[] {
@@ -62,11 +62,27 @@ export interface PlayOutResult {
   finished: boolean;
 }
 
-export function playOut(game: Game, rng: Rng, expectedCounts: [number, number], maxSteps = 20000): PlayOutResult {
+export interface PlayOutOptions {
+  maxSteps?: number;
+  mode?: 'random' | 'smart';
+}
+
+export function playOut(
+  game: Game,
+  rng: Rng,
+  expectedCounts: [number, number],
+  opts: number | PlayOutOptions = 20000,
+): PlayOutResult {
+  const maxSteps = typeof opts === 'number' ? opts : opts.maxSteps ?? 20000;
+  const mode = typeof opts === 'object' ? opts.mode ?? 'random' : 'random';
   let steps = 0;
   while (game.pending && steps < maxSteps) {
     const req = game.pending;
-    game.submit(req.player, randomResponse(req, rng));
+    const response =
+      mode === 'smart'
+        ? botChoice(req, rng, viewFor(game, req.player))
+        : randomResponse(req, rng);
+    game.submit(req.player, response);
     checkInvariants(game, expectedCounts);
     steps++;
   }
