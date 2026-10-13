@@ -7,14 +7,17 @@ import { useCoarsePointer } from '../layoutMode';
 import type { DragApi } from '../useCardDrag';
 import { tapCard } from '../touchTap';
 import { getCard, getCharacter } from '../../data/cards';
-import { expCounts, type CardView, type GameView, type PlayerView } from '../../engine/view';
+import { combatCards, expCounts, type CardView, type GameView, type PlayerView } from '../../engine/view';
 import type { StatChanges } from '../../engine/stats';
 import type { DropZone, FrameFx, PlayerId, Request } from '../../engine/types';
 import type { StepHint } from '../../data/turnSteps';
 import { CardFace, expEffectActive } from './CardFace';
 import { Delta } from './Delta';
 
-export type ZoneKey = 'discard' | 'exp';
+export type ZoneKey = 'discard' | 'exp' | 'combat';
+
+/** 戰鬥區列表底下的備註：招式在前、追擊卡在後，[頂] 指的是最後一張招式（追擊卡不算） */
+export const COMBAT_LIST_NOTE = '招式在前、追擊卡在後（白色內線）；最後一張招式是 [頂] 所指的招式';
 
 interface BoardProps {
   v: GameView;
@@ -299,16 +302,23 @@ function statNote(pv: PlayerView): string | null {
   return `卡面合計 ${rawAtk} ／ ${rawDef}${diff(pv.atk, rawAtk)}`;
 }
 
-function StackColumn({ pv, label, mine, fx, delta, k }: { pv: PlayerView; label: string; mine: boolean; fx?: FrameFx; delta?: { atk: number; def: number }; k: number }) {
-  const cards = [...pv.moves, ...pv.pursuit];
+function StackColumn({ pv, label, mine, fx, delta, k, onOpen }: {
+  pv: PlayerView; label: string; mine: boolean; fx?: FrameFx; delta?: { atk: number; def: number }; k: number;
+  /** 點疊牌開這一方戰鬥區的列表（疊牌只露出上面一條，下方的牌靠列表檢查） */
+  onOpen: (anchor: DOMRect) => void;
+}) {
+  const { cards } = combatCards(pv);
   return (
     <div className={`col ${mine ? 'mine' : 'opp'}`}>
       <h4>{label}</h4>
-      <div className="vstack" style={{ ['--n1' as string]: Math.max(cards.length - 1, 1) }}>
+      <div
+        className={`vstack${cards.length > 0 ? ' click' : ''}`} style={{ ['--n1' as string]: Math.max(cards.length - 1, 1) }}
+        onClick={cards.length > 0 ? (e) => onOpen(e.currentTarget.getBoundingClientRect()) : undefined}
+      >
         {cards.map((c, i) => (
           <CardFace
             key={c.uid} uid={c.uid} id={c.id} size="md" pursuit={i >= pv.moves.length}
-            fresh={fx?.type === 'play' && fx.uid === c.uid}
+            fresh={fx?.type === 'play' && fx.uid === c.uid} inert
           />
         ))}
         {cards.length === 0 && <span className="empty">（尚未出招）</span>}
@@ -344,8 +354,10 @@ function Equation({ who, atk, def, dmg, from }: { who: string; atk: number; def:
   );
 }
 
-export function CombatArea({ v, fx, caption, fxKey, changes, hint }: {
+export function CombatArea({ v, fx, caption, fxKey, changes, hint, onOpen }: {
   v: GameView; fx?: FrameFx; caption?: string; fxKey: number; changes?: StatChanges;
+  /** 點某一方的疊牌：開那一方的戰鬥區列表 */
+  onOpen: (p: PlayerId, anchor: DOMRect) => void;
   /** 回合步驟的規則提示：手機版面沒有步驟列，改放在戰鬥區中央 */
   hint?: StepHint | null;
 }) {
@@ -358,7 +370,7 @@ export function CombatArea({ v, fx, caption, fxKey, changes, hint }: {
       <div className="caption" key={`c${fxKey}`}>{caption ?? ' '}</div>
       <div className="cols">
         <div className="colwrap">
-          <StackColumn pv={v.players[opp]} label="對方" mine={false} fx={fx} delta={changes && { atk: changes.atk[opp], def: changes.def[opp] }} k={fxKey} />
+          <StackColumn pv={v.players[opp]} label="對方" mine={false} fx={fx} delta={changes && { atk: changes.atk[opp], def: changes.def[opp] }} k={fxKey} onOpen={(a) => onOpen(opp, a)} />
           <ColumnFx fx={fx} fxKey={fxKey} player={opp} />
         </div>
         <div className="mid">
@@ -385,7 +397,7 @@ export function CombatArea({ v, fx, caption, fxKey, changes, hint }: {
           )}
         </div>
         <div className="colwrap">
-          <StackColumn pv={v.players[v.me]} label="我方" mine fx={fx} delta={changes && { atk: changes.atk[v.me], def: changes.def[v.me] }} k={fxKey} />
+          <StackColumn pv={v.players[v.me]} label="我方" mine fx={fx} delta={changes && { atk: changes.atk[v.me], def: changes.def[v.me] }} k={fxKey} onOpen={(a) => onOpen(v.me, a)} />
           <ColumnFx fx={fx} fxKey={fxKey} player={v.me} />
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CARDS } from '../src/data/cards';
-import { expCounts, pileTop, viewFor } from '../src/engine/view';
+import { combatCards, expCounts, pileTop, viewFor } from '../src/engine/view';
 import { scenario } from './helpers';
 
 const GEAR = ALL_CARDS.find((c) => c.kind === 'equip')!.id;
@@ -59,5 +59,26 @@ describe('經驗區張數', () => {
 
   it('沒有經驗：0 與 0', () => {
     expect(expCounts(viewFor(scenario({ p0: { exp: [] } }), 0).players[0])).toEqual({ faceUp: 0, total: 0 });
+  });
+});
+
+// 戰鬥區的列表：招式卡疊在前、追擊卡疊接在後，由先到後
+describe('戰鬥區列表', () => {
+  const g = scenario({ p0: { moves: ['黑桃4', '黑桃5'], pursuit: ['黑桃6'] } });
+
+  it('招式在前、追擊接在後，標出第一張追擊卡的位置', () => {
+    const { cards, pursuitFrom } = combatCards(viewFor(g, 0).players[0]);
+    expect(cards.map((c) => c.id)).toEqual(['黑桃4', '黑桃5', '黑桃6']);
+    expect(pursuitFrom).toBe(2);
+  });
+
+  it('沒有追擊卡：追擊的起點等於張數', () => {
+    const r = combatCards(viewFor(scenario({ p0: { moves: ['黑桃4'] } }), 0).players[0]);
+    expect(r.cards).toHaveLength(1);
+    expect(r.pursuitFrom).toBe(1);
+  });
+
+  it('對手的戰鬥區是公開的，雙方看到一樣的牌', () => {
+    expect(combatCards(viewFor(g, 1).players[0]).cards.map((c) => c.id)).toEqual(['黑桃4', '黑桃5', '黑桃6']);
   });
 });

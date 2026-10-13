@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.46.2',
+    date: '2026-10-13',
+    items: [
+      { type: 'add', text: '點戰鬥區的疊牌，會列出那一方戰鬥區的所有牌（招式在前、追擊卡在後），可以檢查被蓋住的下方牌；手機版全螢幕顯示，寬螢幕版貼著疊牌展開，列表裡的卡再點才看說明' },
+    ],
+  },
+  {
     version: '0.46.1',
     date: '2026-10-13',
     items: [

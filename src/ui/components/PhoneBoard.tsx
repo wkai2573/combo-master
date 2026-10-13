@@ -2,22 +2,22 @@ import { useEffect, type ReactNode } from 'react';
 import { getCharacter } from '../../data/cards';
 import type { StatChanges } from '../../engine/stats';
 import type { PlayerId, Request } from '../../engine/types';
-import { expCounts, pileTop, type CardView, type GameView, type PlayerView } from '../../engine/view';
+import { combatCards, expCounts, pileTop, type CardView, type GameView, type PlayerView } from '../../engine/view';
 import type { DragApi } from '../useCardDrag';
 import type { Speed } from '../playback';
-import { HandRow, Pile } from './Board';
+import { COMBAT_LIST_NOTE, HandRow, Pile } from './Board';
 import { CardFace, expEffectActive, InspectPanel } from './CardFace';
 import { Delta } from './Delta';
 import { KeywordText } from './KeywordText';
 
 /** 手機版面的全螢幕面板裡能看的內容：角色效果，或某個牌區的列表（怒氣區誰都看不到，不在其中） */
-export type SheetTab = 'char' | 'exp' | 'gear' | 'discard';
+export type SheetTab = 'char' | 'exp' | 'gear' | 'discard' | 'combat';
 export interface SheetTarget { p: PlayerId; tab: SheetTab }
 
-const TAB_NAME: Record<SheetTab, string> = { char: '角色', exp: '經驗區', gear: '裝備增益區', discard: '棄牌區' };
+const TAB_NAME: Record<SheetTab, string> = { char: '角色', exp: '經驗區', gear: '裝備增益區', discard: '棄牌區', combat: '戰鬥區' };
 
 const tabCount = (pv: PlayerView, tab: SheetTab): number | null =>
-  tab === 'exp' ? pv.exp.length : tab === 'gear' ? pv.gear.length + pv.buff.length : tab === 'discard' ? pv.discard.length : null;
+  tab === 'exp' ? pv.exp.length : tab === 'gear' ? pv.gear.length + pv.buff.length : tab === 'discard' ? pv.discard.length : tab === 'combat' ? pv.moves.length + pv.pursuit.length : null;
 
 /** 經驗牌堆下方的數字：表側幾張、總共幾張 */
 const expCountText = (pv: PlayerView) => {
@@ -140,18 +140,20 @@ export function SheetBody({ v, target, fxKey, changes }: { v: GameView; target: 
       </div>
     );
   }
-  const face = (c: CardView) => (
+  const pursuitFrom = target.tab === 'combat' ? combatCards(pv).pursuitFrom : Infinity;
+  const face = (c: CardView, i: number) => (
     <CardFace
-      key={c.uid} id={c.id} size="md" expEffect={target.tab === 'exp' && expEffectActive(c)} covered={target.tab === 'exp' && c.covered}
+      key={c.uid} id={c.id} size="md" pursuit={i >= pursuitFrom} expEffect={target.tab === 'exp' && expEffectActive(c)} covered={target.tab === 'exp' && c.covered}
       counters={target.tab === 'gear' ? c.counters : undefined} counterDelta={target.tab === 'gear' ? changes?.buff[c.uid] : undefined} deltaKey={fxKey}
     />
   );
-  const cards = target.tab === 'exp' ? pv.exp : target.tab === 'gear' ? [...pv.gear, ...pv.buff] : pv.discard;
+  const cards = target.tab === 'exp' ? pv.exp : target.tab === 'gear' ? [...pv.gear, ...pv.buff] : target.tab === 'combat' ? combatCards(pv).cards : pv.discard;
   return (
     <div className="cardrow sheetcards">
       {cards.map(face)}
       {cards.length === 0 && <span className="muted">（空）</span>}
       {target.tab === 'exp' && cards.length > 0 && <div className="muted sheetnote">左側為最前方</div>}
+      {target.tab === 'combat' && cards.length > 0 && <div className="muted sheetnote">{COMBAT_LIST_NOTE}</div>}
     </div>
   );
 }

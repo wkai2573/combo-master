@@ -169,6 +169,8 @@ h1, h2, h3 { margin: 0 0 8px; }
 /* 窗口選項滑過時，亮起對應的那張卡 */
 .card.hint { outline: 3px solid var(--accent); outline-offset: 1px; box-shadow: 0 0 14px 3px var(--accent); z-index: 3; }
 .card.pursuit { outline: 2px solid #fff; outline-offset: -2px; }
+.vstack.click { cursor: pointer; }
+.zonenote { width: 100%; font-size: 11px; }
 /* 自成一層：「裏側」字樣只在這張卡裡，疊在上面的卡會把它一起蓋住 */
 .card.facedown { isolation: isolate; }
 /* 裏側：壓暗加斜紋，和表側一眼分得出來；標籤是醒目色塊，字級隨卡片大小縮放 */

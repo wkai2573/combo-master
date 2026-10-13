@@ -40,6 +40,11 @@ export function expCounts(pv: PlayerView): { faceUp: number; total: number } {
   return { faceUp: pv.exp.filter((c) => !c.covered).length, total: pv.exp.length };
 }
 
+/** 一方的戰鬥區：招式卡疊在前、追擊卡疊接在後，由先到後；pursuitFrom 是第一張追擊卡的位置（沒有追擊卡就等於張數） */
+export function combatCards(pv: PlayerView): { cards: CardView[]; pursuitFrom: number } {
+  return { cards: [...pv.moves, ...pv.pursuit], pursuitFrom: pv.moves.length };
+}
+
 export interface GameView {
   me: PlayerId;
   players: [PlayerView, PlayerView];

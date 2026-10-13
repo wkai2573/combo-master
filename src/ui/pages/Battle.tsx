@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { SPEED_LABEL, useSpeed, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { InspectContext, InspectPanel, PinContext } from '../components/CardFace';
-import { CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
+import { COMBAT_LIST_NOTE, CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
 import { FlightLayer } from '../components/FlightLayer';
 import { PhaseBanner } from '../components/PhaseBanner';
 import { Spotlight } from '../components/Spotlight';
@@ -11,6 +11,7 @@ import { Modal } from '../components/Modal';
 import { ZoneViewer } from '../components/ZoneViewer';
 import { StepTracker } from '../components/StepTracker';
 import { stepHint } from '../../data/turnSteps';
+import { combatCards } from '../../engine/view';
 import { PromptPanel } from '../components/PromptPanel';
 import { CheatPanel } from '../components/CheatPanel';
 import { isCheatUnlocked } from '../../cheatUnlock';
@@ -22,7 +23,7 @@ import { CardSheet, MyDock, OppBar, PhoneMenu, PromptSheet, Sheet, SheetBody, ty
 import type { Session } from '../../net/session';
 import type { PlayerId } from '../../engine/types';
 
-const ZONE_NAME: Record<ZoneKey, string> = { discard: '棄牌區', exp: '經驗區' };
+const ZONE_NAME: Record<ZoneKey, string> = { discard: '棄牌區', exp: '經驗區', combat: '戰鬥區' };
 
 export function Battle({ session, onExit }: { session: Session; onExit: () => void }) {
   const st = useSyncExternalStore(session.subscribe, session.getState);
@@ -71,6 +72,11 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const final = st.view;
   const { presentation: pres, skip } = usePlayback(st.batch, final, speed);
   const { view: v, changes, fx, fxKey, scale } = pres;
+  // 戰鬥區的列表開著時那一方的戰鬥區清空了（回合結算歸還）：列表跟著收起，免得留下「（空）」的面板
+  const combatEmpty = !!v && !!zone && zone.z === 'combat' && v.players[zone.p].moves.length + v.players[zone.p].pursuit.length === 0;
+  useEffect(() => {
+    if (combatEmpty) setZone(null);
+  }, [combatEmpty]);
 
   // 版面在寬螢幕版與手機版面之間切換：各版面專屬的面板與抽屜收起，免得換回來時殘留看不到的狀態（對局狀態不受影響）
   const layoutKey = wide ? 'wide' : 'phone';
@@ -178,7 +184,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
     setSelected((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : cur.length < prompt.max ? [...cur, key] : cur));
   };
 
-  const zoneCards = zone ? v.players[zone.p][zone.z] : [];
+  const zoneCombat = zone?.z === 'combat' ? combatCards(v.players[zone.p]) : null;
+  const zoneCards = !zone ? [] : zoneCombat ? zoneCombat.cards : v.players[zone.p][zone.z as 'exp' | 'discard'];
   // 結束演出播完（或跳過）才顯示結果視窗；演出期間先讓勝負在桌面上呈現
   const result = pres.playing || v.winner === null ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
   const outcomeOf = (p: PlayerId) => (v.winner === null ? undefined : v.winner === 'draw' ? 'draw' : v.winner === p ? 'win' : 'lose');
@@ -186,7 +193,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={pinned !== null} onUnpin={() => setPinned(null)} />;
   const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={pres.hits[opp]} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
   const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} drag={drag} onZone={(p, z, anchor) => setZone({ p, z, anchor })} hit={pres.hits[me]} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
-  const combat = <CombatArea v={v} fx={fx} caption={pres.caption} fxKey={fxKey} changes={changes} hint={phone ? stepHint(v.phase, v.waitingFor, me) : undefined} />;
+  const combat = <CombatArea v={v} fx={fx} caption={pres.caption} fxKey={fxKey} changes={changes} hint={phone ? stepHint(v.phase, v.waitingFor, me) : undefined}
+    onOpen={(p, anchor) => (phone ? setSheet({ p, tab: 'combat' }) : setZone({ p, z: 'combat', anchor }))} />;
   // 手機版面：選項已經在手牌列上了，提示欄不再重複畫一次手牌
   const handUids = phone ? new Set(v.players[me].hand.map((c) => c.uid)) : undefined;
   const oppBar = <OppBar v={v} p={opp} changes={changes} fxKey={fxKey} hit={pres.hits[opp]} outcome={outcomeOf(opp)} onOpen={setSheet} />;
@@ -309,7 +317,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         <FlightLayer view={v} fx={fx} playing={pres.playing} n={fxKey} scale={scale} extraPile={phone ? (owner, z) => z === 'exp' || z === 'gear' || z === 'buff' || (owner !== me && z === 'hand') : undefined} />
 
         {flowOpen && <FlowChartModal phase={v.phase} onClose={() => setFlowOpen(false)} />}
-        {zone && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} exp={zone.z === 'exp'} anchor={zone.anchor} onClose={() => setZone(null)} />}
+        {zone && <ZoneViewer title={`${zone.p === me ? '我方' : '對手'}${ZONE_NAME[zone.z]}`} cards={zoneCards} exp={zone.z === 'exp'} pursuitFrom={zoneCombat?.pursuitFrom} note={zoneCombat ? COMBAT_LIST_NOTE : undefined} anchor={zone.anchor} onClose={() => setZone(null)} />}
 
         {result && (
           <Modal>
