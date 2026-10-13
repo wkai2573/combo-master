@@ -1,4 +1,3 @@
-import Peer, { type DataConnection } from 'peerjs';
 import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
 import type { CheatSnapshot, CheatZone } from '../engine/cheat';
@@ -9,10 +8,14 @@ import { defaultRecordReporter, type RecordReporter } from '../stats/reporter';
 import { APP_VERSION } from '../version';
 import type { Frame, GameView } from '../engine/view';
 import type { PlayerId } from '../engine/types';
-import { peerTransport, type HostLink, type HostTransport, type Room } from './hostTransport';
+import {
+  peerHostTransport, peerGuestTransport,
+  type HostLink, type GuestLink, type HostTransport, type GuestTransport,
+  type Room, type GuestConnection,
+} from './transport';
 import { Match, type MatchUpdate, type SeatUpdate } from './match';
 import {
-  FORFEIT_AFTER_S, OFFLINE_AFTER_MS, PING_EVERY_MS, peerIdOf, randomRoomCode,
+  FORFEIT_AFTER_S, OFFLINE_AFTER_MS, PING_EVERY_MS, randomRoomCode,
   type CheatOp, type ClientMsg, type DeckPayload, type HostMsg,
 } from './protocol';
 
@@ -244,7 +247,7 @@ export class HostSession extends Base {
 
   constructor(
     private deck: DeckPayload,
-    private transport: HostTransport = peerTransport,
+    private transport: HostTransport = peerHostTransport,
     reporter: RecordReporter = defaultRecordReporter(),
   ) {
     super(reporter);
@@ -394,8 +397,8 @@ export class GuestSession extends Base {
   readonly me: PlayerId = 1;
   protected readonly opponent = 'player' as const;
   protected readonly uploadsRecord = false;
-  private peer: Peer;
-  private conn: DataConnection | undefined;
+  private link: GuestLink | undefined;
+  private conn: GuestConnection | undefined;
   private pingTimer: ReturnType<typeof setInterval> | undefined;
   private hostSeen = Date.now();
   private connectTimer: ReturnType<typeof setTimeout> | undefined;
@@ -420,7 +423,7 @@ export class GuestSession extends Base {
 
   /** 傳給房主執行，等房主回報結果；連線中斷或太久沒回應就當成失敗 */
   private cheatOp(op: CheatOp): Promise<string | null> {
-    if (!this.conn?.open) return Promise.resolve('與房主的連線中斷');
+    if (!this.link?.open) return Promise.resolve('與房主的連線中斷');
     return new Promise((resolve) => {
       const id = ++this.cheatSeq;
       const timer = setTimeout(() => {
@@ -435,14 +438,20 @@ export class GuestSession extends Base {
     });
   }
 
-  constructor(code: string, private deck: DeckPayload) {
+  constructor(
+    code: string,
+    private deck: DeckPayload,
+    private transport: GuestTransport = peerGuestTransport,
+  ) {
     super();
-    this.set({ message: '連線中…', roomCode: code.trim().toUpperCase() });
-    this.peer = new Peer();
-    this.peer.on('open', () => this.connect(code));
-    this.peer.on('error', (err: Error & { type?: string }) => {
-      const msg = err.type === 'peer-unavailable' ? '找不到這個房間，請確認房號' : `連線發生錯誤（${err.type ?? err.message}）`;
-      this.fail(msg);
+    const cleanCode = code.trim().toUpperCase();
+    this.set({ message: '連線中…', roomCode: cleanCode });
+    this.conn = this.transport.connect(cleanCode, {
+      connected: (link) => this.onConnected(link),
+      failed: (err) => {
+        const msg = err.kind === 'not-found' ? '找不到這個房間，請確認房號' : `連線發生錯誤（${err.detail}）`;
+        this.fail(msg);
+      },
     });
     this.connectTimer = setTimeout(() => {
       if (this.s.status === 'connecting') this.fail('連線逾時，請確認房號或網路');
@@ -454,24 +463,20 @@ export class GuestSession extends Base {
     this.set({ status: 'error', message });
   }
 
-  private connect(code: string) {
-    // 使用預設的二進位序列化：PeerJS 會自動把大訊息（動畫影格可能超過 16KB）分塊傳送
-    const conn = this.peer.connect(peerIdOf(code), { reliable: true });
-    this.conn = conn;
-    conn.on('open', () => {
-      clearTimeout(this.connectTimer);
+  private onConnected(link: GuestLink) {
+    clearTimeout(this.connectTimer);
+    this.link = link;
+    this.hostSeen = Date.now();
+    this.send({ t: 'hello', deck: this.deck });
+    this.set({ message: '已連上房主，等待開局…' });
+    this.pingTimer = setInterval(() => this.send({ t: 'ping' }), PING_EVERY_MS);
+    this.watchTimer = setInterval(() => {
+      const offline = Date.now() - this.hostSeen > OFFLINE_AFTER_MS;
+      if (offline === this.s.opponentOnline) this.set({ opponentOnline: !offline });
+    }, 1000);
+
+    link.onMessage((msg) => {
       this.hostSeen = Date.now();
-      this.send({ t: 'hello', deck: this.deck });
-      this.set({ message: '已連上房主，等待開局…' });
-      this.pingTimer = setInterval(() => this.send({ t: 'ping' }), PING_EVERY_MS);
-      this.watchTimer = setInterval(() => {
-        const offline = Date.now() - this.hostSeen > OFFLINE_AFTER_MS;
-        if (offline === this.s.opponentOnline) this.set({ opponentOnline: !offline });
-      }, 1000);
-    });
-    conn.on('data', (raw) => {
-      this.hostSeen = Date.now();
-      const msg = raw as HostMsg;
       if (msg.t === 'view') {
         this.set({
           status: msg.view.winner !== null ? 'over' : 'playing', view: msg.view, message: '', opponentOnline: true,
@@ -484,14 +489,15 @@ export class GuestSession extends Base {
         this.set({ message: msg.reason, ...(this.s.view ? {} : { status: 'error' as const }) });
       }
     });
-    conn.on('close', () => {
+
+    link.onClose(() => {
       this.failCheatWaiters('與房主的連線中斷');
       if (this.s.status !== 'over') this.fail('與房主的連線中斷');
     });
   }
 
   private send(msg: ClientMsg) {
-    if (this.conn?.open) this.conn.send(msg);
+    if (this.link?.open) this.link.send(msg);
   }
 
   submit(keys: string[]) {
@@ -504,7 +510,7 @@ export class GuestSession extends Base {
     clearInterval(this.pingTimer);
     clearInterval(this.watchTimer);
     clearTimeout(this.connectTimer);
+    this.link?.close();
     this.conn?.close();
-    this.peer.destroy();
   }
 }

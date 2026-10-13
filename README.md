@@ -106,7 +106,7 @@ bun run build      # 型別檢查＋打包
 - `src/engine/`：規則引擎（不依賴介面與網路）。`game.ts` 回合流程、`combat.ts` 戰鬥、`effects.ts` 效果來源（各卡與角色的效果條目依職業放在 `sources/`）、`win.ts` 勝負。
 - `src/data/`：卡表（花色招式與角色來自 xlsx，其餘由卡表網頁同步）、預設牌組。
 - `src/deck/`：牌組驗證與儲存。
-- `src/net/`：網路與單機練習。`match.ts` 的對局持有引擎與作弊中樞，每次變化同時為兩位玩家產生更新；`session.ts` 的單機、房主、訪客三種連線方式交給介面使用，單機與房主建立在對局之上。房主透過 `hostTransport.ts` 的傳輸介面收發訊息，正式環境用 PeerJS，測試用記憶體內的假傳輸；訪客與房主之間的訊息格式在 `protocol.ts`。
+- `src/net/`：網路與單機練習。`match.ts` 的對局持有引擎與作弊中樞，每次變化同時為兩位玩家產生更新；`session.ts` 的單機、房主、訪客三種連線方式交給介面使用，單機與房主建立在對局之上。雙方透過 `transport.ts` 的傳輸介面收發訊息，正式環境用 PeerJS，測試用記憶體內的假傳輸；訪客與房主之間的訊息格式在 `protocol.ts`。
 - `src/stats/`：戰績。`records.ts` 把對局結果轉成戰績，`summary.ts` 是統計純函式，`cloud.ts` 的戰績倉庫上傳與取得全站戰績，`outbox.ts` 是補傳佇列，`upload.ts` 是上傳器，`analytics.ts` 是匿名流量統計（見「流量統計」）。
 - `server/`：戰績伺服器（Cloudflare Workers 加 D1），見上一節。
 - `src/ui/`：畫面。
