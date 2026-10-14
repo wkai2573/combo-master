@@ -6,6 +6,7 @@ export interface Tip {
   left: number;
   top: number;
   kws: Keyword[];
+  originEl?: HTMLElement;
 }
 
 let tip: Tip | null = null;
@@ -14,7 +15,7 @@ const emit = () => subs.forEach((f) => f());
 
 export function showTip(el: HTMLElement, kws: Keyword[]) {
   const r = el.getBoundingClientRect();
-  tip = { left: r.left, top: r.bottom + 6, kws };
+  tip = { left: r.left, top: r.bottom + 6, kws, originEl: el };
   emit();
 }
 
@@ -22,6 +23,25 @@ export function hideTip() {
   if (!tip) return;
   tip = null;
   emit();
+}
+
+export function toggleTip(el: HTMLElement, kws: Keyword[]) {
+  if (tip?.originEl === el) {
+    hideTip();
+  } else {
+    showTip(el, kws);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', (e) => {
+    if (!tip) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('.kwtip') || target?.closest('.kw')) {
+      return;
+    }
+    hideTip();
+  }, { capture: true });
 }
 
 export const useTip = () =>

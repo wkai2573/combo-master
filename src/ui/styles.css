@@ -237,6 +237,11 @@ h1, h2, h3 { margin: 0 0 8px; }
 .combatarea .col.mine { --from: 110px; }
 .combatarea .col.opp { --from: -110px; }
 .combatarea .mid { align-self: center; text-align: center; min-width: 190px; max-width: 240px; }
+.combatpiles { display: flex; gap: 10px; align-items: stretch; justify-content: center; width: 100%; }
+.pilewrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pilesub { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 1px; }
+.vstack.empty-slot { border: 1px dashed #ffffff28; border-radius: 8px; justify-content: center; background: #ffffff05; }
+.vstack.empty-slot .empty { color: var(--muted); font-size: 12px; margin: auto; }
 .range { color: var(--combo); font-weight: 700; line-height: 1.5; }
 
 /* ───────── 動畫 ───────── */
@@ -379,7 +384,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .kw { text-decoration: underline dotted; text-underline-offset: 2px; color: var(--accent); cursor: help; }
 .kw:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
 .kwtip {
-  position: fixed; z-index: 100; max-width: 290px; padding: 8px 10px; pointer-events: none;
+  position: fixed; z-index: 100; max-width: 290px; padding: 8px 10px; pointer-events: auto; cursor: pointer;
   background: #0f1219; border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 6px 18px #000b;
   font-size: 12px; line-height: 1.5; color: #dfe5f6; display: grid; gap: 6px;
 }
@@ -457,9 +462,9 @@ h1, h2, h3 { margin: 0 0 8px; }
 
 /* ───────── 橫幅：回合開頭與戰鬥階段 ───────── */
 .phasebanner { position: fixed; left: 0; right: 0; top: 36%; z-index: 56; pointer-events: none; display: grid; place-items: center; animation: bannerIn calc(.65s * var(--spd, 1)) ease-out both; }
-.phasebanner .bannerband { display: flex; align-items: baseline; gap: 14px; padding: 14px 90px; border-block: 2px solid var(--fx-act); background: linear-gradient(90deg, transparent, #0f1320ee 18%, #0f1320ee 82%, transparent); }
-.phasebanner b { font-size: 34px; letter-spacing: 6px; color: var(--fx-act); text-shadow: 0 2px 10px #000; }
-.phasebanner small { font-size: 16px; color: var(--text); }
+.phasebanner .bannerband { display: flex; align-items: baseline; gap: 14px; padding: 14px 90px; border-block: 2px solid var(--fx-act); background: linear-gradient(90deg, transparent, #0f1320ee 18%, #0f1320ee 82%, transparent); white-space: nowrap; }
+.phasebanner b { font-size: 34px; letter-spacing: 6px; color: var(--fx-act); text-shadow: 0 2px 10px #000; white-space: nowrap; }
+.phasebanner small { font-size: 16px; color: var(--text); white-space: nowrap; }
 @keyframes bannerIn { 0% { opacity: 0; transform: translateX(-70px); } 18% { opacity: 1; transform: none; } 78% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(70px); } }
 
 /* ───────── 開局洗牌、結束演出 ───────── */
@@ -488,16 +493,19 @@ h1, h2, h3 { margin: 0 0 8px; }
   display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 6px; height: 100%; padding: 6px 10px; overflow: hidden auto;
 }
 .battle.wide .card.md { width: var(--mdw); height: var(--mdh); }
-.battle.wide .midrow { display: grid; grid-template-columns: minmax(240px, 1fr) 560px minmax(240px, 1fr); gap: 8px; min-height: 0; }
+.battle.wide .midrow { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(660px, auto) minmax(220px, 1fr); gap: 8px; min-height: 0; }
 .battle.wide .midrow > * { min-height: 0; }
 .battle.wide .sidecol { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
 .battle.wide .sidecol .inspect { flex: 1; min-height: 0; overflow-y: auto; border-bottom: 0; }
 .battle.wide .sidecol .inspect .bigart { height: 72px; }
 .battle.wide .combatarea { display: flex; flex-direction: column; padding: 6px 10px; overflow: hidden auto; }
-.battle.wide .combatarea .cols { flex: 1; min-height: 0; align-items: stretch; gap: 24px; }
+.battle.wide .combatarea .cols { flex: 1; min-height: 0; align-items: stretch; gap: 16px; }
 .battle.wide .combatarea .caption { min-height: 24px; margin-bottom: 2px; font-size: 15px; }
 .battle.wide .combatarea .colwrap { display: flex; flex-direction: column; }
 .battle.wide .combatarea .col { flex: 1; min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; gap: 4px; }
+.battle.wide .combatpiles { flex: 1; min-height: 0; }
+.battle.wide .pilewrap { flex: 1; min-height: 0; }
+.battle.wide .combatpiles .vstack { height: 100%; }
 .battle.wide .prompt { position: static; box-shadow: none; height: 122px; overflow: hidden; align-content: center; padding: 6px 12px; gap: 4px; }
 .battle.wide .pboard {
   grid-template-columns: minmax(200px, 260px) minmax(0, 4.2fr) 170px minmax(0, 3.8fr); grid-template-rows: auto; align-items: start; column-gap: 12px;
@@ -681,9 +689,12 @@ button.chip { font: inherit; font-size: 11px; }
 .battle.phone .combatarea .cols { flex: 1; min-height: 0; flex-wrap: nowrap; align-items: stretch; gap: 4px; }
 .battle.phone .combatarea .colwrap { display: flex; flex-direction: column; flex: none; }
 .battle.phone .combatarea .col { flex: 1; min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; gap: 2px; }
-.battle.phone .combatarea .col h4 { font-size: 12px; }
-.battle.phone .combatarea .mid { order: 0; flex: 1 1 0; min-width: 0; max-width: none; align-self: flex-start; padding-top: 22px; }
+.battle.phone .combatarea .mid { order: 0; flex: 1 1 0; min-width: 0; max-width: none; align-self: center; padding-top: 0; }
 .battle.phone .combatarea .mid > .muted { display: none; }
+.battle.phone .stephint { background: #00000066; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin-bottom: 6px; }
+.battle.phone .phasebanner .bannerband { padding: 10px 16px; gap: 10px; max-width: 96vw; box-sizing: border-box; }
+.battle.phone .phasebanner b { font-size: 24px; letter-spacing: 3px; }
+.battle.phone .phasebanner small { font-size: 14px; }
 .battle.phone .range { font-size: 12px; }
 .battle.phone .calc { padding: 5px 6px; gap: 5px; }
 .battle.phone .calc .eq { font-size: 12px; }
@@ -737,7 +748,7 @@ button.chip { font: inherit; font-size: 11px; }
 
 /* 觸控：選取的手牌預覽，浮在手牌上方 */
 /* 手牌預覽要在全螢幕牌區與卡片說明（z-index 11 以上）底下，免得浮在它們上面 */
-.handpreview { position: fixed; left: 50%; bottom: 40%; z-index: 10; transform: translateX(-50%); display: grid; justify-items: center; gap: 3px; padding: 6px; background: #0f1320f2; border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 6px 20px #000c; }
+.handpreview { position: fixed; left: 50%; bottom: 40%; z-index: 10; transform: translateX(-50%); display: grid; justify-items: center; gap: 3px; padding: 6px; background: #0f1320f2; border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 6px 20px #000c; cursor: pointer; }
 .handpreview .card.md { width: var(--pw, 168px); height: var(--ph, 230px); font-size: var(--pf, 13px); }
 .handpreview .card.selected { transform: none; outline: 0; }
 .previewhint { font-size: 11px; color: var(--accent); }

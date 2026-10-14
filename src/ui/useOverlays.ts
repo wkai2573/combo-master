@@ -32,7 +32,7 @@ import {
 export interface UseOverlaysOptions {
   isPhone: boolean;
   combatEmpty?: boolean;
-  isCombatEmpty?: (p: PlayerId) => boolean;
+  isCombatEmpty?: (p: PlayerId, z: ZoneKey) => boolean;
   promptSig?: string;
   cheatOn?: boolean;
   onLayoutChange?: () => void;
@@ -121,8 +121,8 @@ export function useOverlays({
   }, [combatEmpty]);
 
   useEffect(() => {
-    if (isCombatEmpty && state.active?.type === 'zone' && state.active.z === 'combat') {
-      if (isCombatEmpty(state.active.p)) {
+    if (isCombatEmpty && state.active?.type === 'zone' && (state.active.z === 'combat' || state.active.z === 'moves' || state.active.z === 'pursuit')) {
+      if (isCombatEmpty(state.active.p, state.active.z)) {
         setState((s) => syncCombatEmptyState(s, true));
       }
     }

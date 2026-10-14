@@ -169,9 +169,15 @@ describe('對戰畫面浮層協調模組（Overlays Coordinator）', () => {
   });
 
   describe('業務信號自動收合規則', () => {
-    it('戰鬥區清空（combatEmpty）：若目前開著戰鬥區檢視則自動收起', () => {
+    it('戰鬥區清空（combatEmpty）：若目前開著戰鬥區檢視（含招式、追擊）則自動收起', () => {
       const sCombat = openZone(INITIAL_OVERLAY_STATE, 0, 'combat', dummyAnchor);
       expect(syncCombatEmpty(sCombat, true).active).toBeNull();
+
+      const sMoves = openZone(INITIAL_OVERLAY_STATE, 0, 'moves', dummyAnchor);
+      expect(syncCombatEmpty(sMoves, true).active).toBeNull();
+
+      const sPursuit = openZone(INITIAL_OVERLAY_STATE, 0, 'pursuit', dummyAnchor);
+      expect(syncCombatEmpty(sPursuit, true).active).toBeNull();
 
       // 非戰鬥區（如棄牌區）不因戰鬥區清空而收起
       const sDiscard = openZone(INITIAL_OVERLAY_STATE, 0, 'discard', dummyAnchor);

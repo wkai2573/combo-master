@@ -24,7 +24,13 @@ import { useOverlays } from '../useOverlays';
 import type { Session } from '../../net/session';
 import type { PlayerId } from '../../engine/types';
 
-const ZONE_NAME: Record<ZoneKey, string> = { discard: '棄牌區', exp: '經驗區', combat: '戰鬥區' };
+const ZONE_NAME: Record<ZoneKey, string> = {
+  discard: '棄牌區',
+  exp: '經驗區',
+  combat: '戰鬥區',
+  moves: '招式卡疊',
+  pursuit: '追擊卡疊',
+};
 
 export function Battle({ session, onExit }: { session: Session; onExit: () => void }) {
   const st = useSyncExternalStore(session.subscribe, session.getState);
@@ -55,7 +61,12 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
 
   const overlays = useOverlays({
     isPhone: phone,
-    isCombatEmpty: (p) => !!v && v.players[p].moves.length + v.players[p].pursuit.length === 0,
+    isCombatEmpty: (p, z) => {
+      if (!v) return true;
+      if (z === 'moves') return v.players[p].moves.length === 0;
+      if (z === 'pursuit') return v.players[p].pursuit.length === 0;
+      return v.players[p].moves.length + v.players[p].pursuit.length === 0;
+    },
     promptSig,
     cheatOn: cheatOnState,
     onLayoutChange: () => setInspect(null),
@@ -116,7 +127,15 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   };
 
   const zoneCombat = overlays.zone?.z === 'combat' ? combatCards(v.players[overlays.zone.p]) : null;
-  const zoneCards = !overlays.zone ? [] : zoneCombat ? zoneCombat.cards : v.players[overlays.zone.p][overlays.zone.z as 'exp' | 'discard'];
+  const zoneCards = !overlays.zone
+    ? []
+    : zoneCombat
+      ? zoneCombat.cards
+      : overlays.zone.z === 'moves'
+        ? v.players[overlays.zone.p].moves
+        : overlays.zone.z === 'pursuit'
+          ? v.players[overlays.zone.p].pursuit
+          : v.players[overlays.zone.p][overlays.zone.z as 'exp' | 'discard'];
   // 結束演出播完（或跳過）才顯示結果視窗；演出期間先讓勝負在桌面上呈現
   const result = pres.playing || v.winner === null ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
   const outcomeOf = (p: PlayerId) => (v.winner === null ? undefined : v.winner === 'draw' ? 'draw' : v.winner === p ? 'win' : 'lose');
@@ -124,8 +143,20 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={overlays.pinned !== null} onUnpin={overlays.unpin} />;
   const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={overlays.openZone} hit={pres.hits[opp]} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
   const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} drag={drag} onZone={overlays.openZone} hit={pres.hits[me]} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
-  const combat = <CombatArea v={v} fx={fx} caption={pres.caption} fxKey={fxKey} changes={changes} hint={phone ? stepHint(v.phase, v.waitingFor, me) : undefined}
-    onOpen={(p, anchor) => (phone ? overlays.openSheet({ p, tab: 'combat' }) : overlays.openZone(p, 'combat', anchor))} />;
+  const combat = (
+    <CombatArea
+      v={v}
+      fx={fx}
+      caption={pres.caption}
+      fxKey={fxKey}
+      changes={changes}
+      phone={phone}
+      hint={phone ? stepHint(v.phase, v.waitingFor, me) : undefined}
+      onOpen={(p, z, anchor) =>
+        phone ? overlays.openSheet({ p, tab: 'combat' }) : overlays.openZone(p, z, anchor)
+      }
+    />
+  );
   // 手機版面：選項已經在手牌列上了，提示欄不再重複畫一次手牌
   const handUids = phone ? new Set(v.players[me].hand.map((c) => c.uid)) : undefined;
   const oppBar = <OppBar v={v} p={opp} changes={changes} fxKey={fxKey} hit={pres.hits[opp]} outcome={outcomeOf(opp)} onOpen={overlays.openSheet} />;

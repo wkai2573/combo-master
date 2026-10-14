@@ -142,9 +142,9 @@ export function switchLayout(_state: OverlayState): OverlayState {
   return INITIAL_OVERLAY_STATE;
 }
 
-/** 戰鬥區清空業務信號：若目前正在檢視戰鬥區列表則自動收起 */
+/** 戰鬥區清空業務信號：若目前正在檢視戰鬥區列表（含招式卡疊、追擊卡疊）則自動收起 */
 export function syncCombatEmpty(state: OverlayState, combatEmpty: boolean): OverlayState {
-  if (combatEmpty && state.active?.type === 'zone' && state.active.z === 'combat') {
+  if (combatEmpty && state.active?.type === 'zone' && (state.active.z === 'combat' || state.active.z === 'moves' || state.active.z === 'pursuit')) {
     return { ...state, active: null };
   }
   return state;

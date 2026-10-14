@@ -21,6 +21,17 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.48.0',
+    date: '2026-10-14',
+    items: [
+      { type: 'add', text: '戰鬥畫面：桌面版追擊成功的卡獨立成堆，招式卡疊與追擊卡疊分開展示，並可個別點選檢視' },
+      { type: 'change', text: '手機版面：戰鬥區中央步驟提示垂直置中並加入聚焦襯底，提升小螢幕易讀性' },
+      { type: 'fix', text: '手機版面：修復回合開始橫幅（第 1 回合／先攻）文字擠壓換行問題' },
+      { type: 'fix', text: '卡片說明：點擊畫面任意處或說明卡本身即可關閉關鍵字提示（Tooltip）' },
+      { type: 'change', text: '手牌操作：手牌放大確認框支援點擊卡片本身直接出牌，點擊畫面任意處即可取消關閉' },
+    ],
+  },
+  {
     version: '0.47.5',
     date: '2026-10-13',
     items: [
