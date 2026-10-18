@@ -14,6 +14,8 @@ const MIN_HOLD_MS = 150;
 export interface Batch {
   id: number;
   frames: Frame[];
+  /** 最後一格播完後不收掉，停在那一格的畫面（連同它的特效），直到下一批影格到來 */
+  hold?: boolean;
 }
 
 /** 一側的傷害震動：第一張牌落進怒氣區的時候才開始，延遲已乘上速度倍率 */
@@ -36,8 +38,10 @@ export interface Presentation {
   hits: [Hit | undefined, Hit | undefined];
   /** 有一個影格正在播 */
   playing: boolean;
-  /** 播完，而且不在空檔：這時才顯示結果視窗、允許作弊面板操作 */
+  /** 播完，而且不在空檔：這時才顯示結果視窗、允許作弊面板操作。停住的那一格也算播完 */
   settled: boolean;
+  /** 這一格是標了停住的批次的最後一格（正在播或已停住）：它的特效不要自己收掉 */
+  holding: boolean;
   scale: number;
 }
 
@@ -59,6 +63,10 @@ export class Playback {
   private counter = 0;
   private shown: GameView | null = null;
   private _version = 0;
+  /** 目前這批影格播完後要停住 */
+  private holdLast = false;
+  /** 已經停在最後一格 */
+  private held = false;
 
   /** 內部狀態每改變一次就加一；呈現依賴它重算 */
   get version(): number {
@@ -73,7 +81,14 @@ export class Playback {
     if (!batch || batch.id === this.seen) return null;
     this.seen = batch.id;
     this._version++;
+    // 新的一批到了，放開停住的那一格
+    if (this.held) {
+      this.held = false;
+      this.cur = null;
+    }
+    this.holdLast = false;
     if (SCALE[speed] === 0) return null;
+    this.holdLast = !!batch.hold;
     this.queue.push(...batch.frames);
     return this.cur ? null : this.advance(speed);
   }
@@ -83,6 +98,10 @@ export class Playback {
     const frame = this.queue.shift();
     this._version++;
     if (!frame) {
+      if (this.holdLast && this.cur) {
+        this.held = true;
+        return null;
+      }
       this.cur = null;
       return null;
     }
@@ -97,6 +116,8 @@ export class Playback {
     if (this.queue.length > 0 || this.cur) this._version++;
     this.queue = [];
     this.cur = null;
+    this.held = false;
+    this.holdLast = false;
   }
 
   /** 卸載（或 StrictMode 的模擬卸載）時重置；重新掛載後同一批影格會再排入 */
@@ -130,7 +151,8 @@ export class Playback {
       dmg && dmg[p] > 0 ? { amount: dmg[p], key: fxKey, delay: flightTiming(Math.max(...dmg) - 1).ms * scale } : undefined;
     return {
       view, changes: cur?.changes, fx, fxKey, caption: cur?.frame.caption, hits: [hit(0), hit(1)],
-      playing: cur !== null, settled: cur === null && !gap, scale,
+      playing: cur !== null && !this.held, settled: (cur === null || this.held) && !gap, scale,
+      holding: this.holdLast && cur !== null && this.queue.length === 0,
     };
   }
 

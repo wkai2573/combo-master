@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.48.2',
+    date: '2026-10-18',
+    items: [
+      { type: 'add', text: '新手教學補完整段腳本：對手收招、重複連擊值、追擊判定的失敗與成功、傷害計算，一路打到你獲勝；動畫會在收招、翻出判定卡、追擊結果、傷害計算與勝負停下來，說明裡的數字就是這一局實際算出的值' },
+      { type: 'add', text: '新手教學的說明框會自動移到上半部或下半部，不再蓋住被框起來的目標' },
+    ],
+  },
+  {
     version: '0.48.1',
     date: '2026-10-18',
     items: [

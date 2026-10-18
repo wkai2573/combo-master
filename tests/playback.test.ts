@@ -274,3 +274,79 @@ describe('播放：沒有狀態時', () => {
     expect(p.settled).toBe(true);
   });
 });
+
+describe('播放：停住', () => {
+  const held = (id: number, fs: Frame[] = frames) => ({ id, frames: fs, hold: true });
+
+  it('一批影格標了停住：最後一格播完後不收掉，停在那一格，畫面靜止', () => {
+    const pb = new Playback();
+    pb.ingest(held(1), 'normal');
+    for (let i = 1; i < frames.length; i++) expect(pb.advance('normal')).not.toBeNull();
+    expect(pb.advance('normal')).toBeNull();
+    const p = pb.present(held(1), final, 'normal');
+    expect(p.playing).toBe(false);
+    expect(p.settled).toBe(true);
+    expect(p.holding).toBe(true);
+    expect(p.fx).toEqual(frames.at(-1)!.fx);
+    expect(p.fxKey).toBe(frames.length);
+    expect(p.caption).toBe(frames.at(-1)!.caption);
+  });
+
+  it('播放最後一格的時候就已經是停住中，這一格的特效不提早收掉', () => {
+    const pb = new Playback();
+    pb.ingest(held(1, [frames[0]]), 'normal');
+    expect(pb.present(held(1, [frames[0]]), final, 'normal').holding).toBe(true);
+  });
+
+  it('沒有標停住的批次照舊：播完就收掉', () => {
+    const pb = new Playback();
+    pb.ingest(batch(1, [frames[0]]), 'normal');
+    expect(pb.advance('normal')).toBeNull();
+    const p = pb.present(batch(1, [frames[0]]), final, 'normal');
+    expect(p.holding).toBe(false);
+    expect(p.fx).toBeUndefined();
+    expect(p.fxKey).toBe(0);
+  });
+
+  it('停住的時候來了新批次：放開，接著播新批次的第一格', () => {
+    const pb = new Playback();
+    pb.ingest(held(1, [frames[0]]), 'normal');
+    pb.advance('normal');
+    const next = batch(2, [frames[1]]);
+    const hold = pb.ingest(next, 'normal');
+    expect(hold).toBe(Math.max(150, frames[1].ms));
+    const p = pb.present(next, final, 'normal');
+    expect(p.playing).toBe(true);
+    expect(p.holding).toBe(false);
+    expect(p.fx).toEqual(frames[1].fx);
+  });
+
+  it('停住的時候來了沒有影格的新批次：放開，畫面回到真實桌面', () => {
+    const pb = new Playback();
+    pb.ingest(held(1, [frames[0]]), 'normal');
+    pb.advance('normal');
+    const next = batch(2, []);
+    expect(pb.ingest(next, 'normal')).toBeNull();
+    const p = pb.present(next, final, 'normal');
+    expect(p.holding).toBe(false);
+    expect(p.settled).toBe(true);
+    expect(p.fx).toBeUndefined();
+    expect(p.view).toBe(final);
+  });
+
+  it('停住的時候跳過：放開', () => {
+    const pb = new Playback();
+    pb.ingest(held(1, [frames[0]]), 'normal');
+    pb.advance('normal');
+    pb.skip();
+    expect(pb.present(held(1, [frames[0]]), final, 'normal').holding).toBe(false);
+  });
+
+  it('動畫關閉：影格直接丟掉，沒有停住', () => {
+    const pb = new Playback();
+    expect(pb.ingest(held(1), 'off')).toBeNull();
+    const p = pb.present(held(1), final, 'off');
+    expect(p.holding).toBe(false);
+    expect(p.settled).toBe(true);
+  });
+});

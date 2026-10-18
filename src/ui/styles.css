@@ -850,14 +850,14 @@ body[data-drag="moves"] .combatarea { outline-offset: -3px; }
 .overlay:has(.flowchart.vertical) .modal { width: min(100vw, 560px); max-width: 100vw; height: 100vh; height: 100dvh; max-height: none; min-width: 0; padding: 10px; border: 0; border-radius: 0; }
 
 /* ───────── 新手教學 ───────── */
-/* 說明框在畫面中央、高亮是虛線外框加光暈；兩者都不擋操作，畫面其他地方也不壓暗 */
+/* 說明框的位置由程式算（預設置中，會蓋住目標時移到上半部或下半部），高亮是虛線外框加光暈；兩者都不擋操作，畫面其他地方也不壓暗。要蓋過中央放大的壓暗，所以比它高 */
 .tutorial-caption {
-  position: fixed; left: 50%; top: 50%; z-index: 25; transform: translate(-50%, -50%); width: max-content; max-width: min(520px, calc(100vw - 32px)); pointer-events: none;
+  position: fixed; left: 0; top: 0; z-index: 58; width: max-content; max-width: min(520px, calc(100vw - 32px)); pointer-events: none;
   padding: 18px 26px; background: #0f1320f2; border: 2px solid var(--accent); border-radius: 12px;
   box-shadow: 0 8px 28px #000c; font-size: 18px; line-height: 1.7; text-align: center; white-space: pre-line;
 }
 .tutorial-hl {
-  position: fixed; z-index: 26; pointer-events: none; box-sizing: border-box; border: 3px dashed var(--accent); border-radius: 10px;
+  position: fixed; z-index: 59; pointer-events: none; box-sizing: border-box; border: 3px dashed var(--accent); border-radius: 10px;
   box-shadow: 0 0 14px 3px var(--accent), inset 0 0 10px 1px rgba(240, 185, 58, .35);
 }
 /* 不能點的東西不要看起來能點 */

@@ -18,12 +18,14 @@ function flipIn(el: HTMLElement, dur: number, anims: Animation[]) {
  * - 追擊翻牌：牌從牌組飛到中央、翻成正面；結果影格停一下，之後由飛行圖層接手飛向去處
  * - 效果發動：牌從它所在的位置放大到中央，顯示效果說明，停一下再縮回原位
  */
-export function Spotlight({ fx, caption, n, scale }: { fx?: FrameFx; caption?: string; n: number; scale: number }) {
+export function Spotlight({ fx, caption, n, scale, holding }: { fx?: FrameFx; caption?: string; n: number; scale: number; /** 這一格播完後要停住（新手教學的停點）：結果影格的放大不自己收掉 */ holding?: boolean }) {
   const on = fx?.type === 'flip' || fx?.type === 'flipResult' || fx?.type === 'activate';
   const [released, setReleased] = useState(false);
   const inner = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
+  const holdingRef = useRef(holding);
+  holdingRef.current = holding;
 
   useLayoutEffect(() => {
     if (!fx || (fx.type !== 'flip' && fx.type !== 'flipResult' && fx.type !== 'activate')) return;
@@ -49,7 +51,7 @@ export function Spotlight({ fx, caption, n, scale }: { fx?: FrameFx; caption?: s
       }
     } else if (fx.type === 'flipResult') {
       // 牌留在中央顯示結果，時間到就放手（接著由飛行圖層飛向去處）
-      timers.push(window.setTimeout(() => setReleased(true), SPOTLIGHT_HOLD_MS * sc));
+      if (!holdingRef.current) timers.push(window.setTimeout(() => setReleased(true), SPOTLIGHT_HOLD_MS * sc));
     } else {
       // 效果發動：從牌所在的位置放大到中央，停一下，再縮回去
       const origin = document.querySelector<HTMLElement>(`[data-uid="${fx.uid}"]`);

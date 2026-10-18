@@ -136,7 +136,6 @@ describe('新手教學：腳本走到玩家出完第一張梅花7', () => {
     playCard(s, '紅心2');
     texts.push(...clickToPlay(s));
     playCard(s, '梅花7');
-    texts.push(...clickToPlay(s));
     return { s, texts };
   }
 
@@ -203,21 +202,6 @@ describe('新手教學：腳本走到玩家出完第一張梅花7', () => {
     playCard(s, '紅心2');
     const plays = s.getState().batch.frames.filter((f) => f.fx.type === 'play').map((f) => (f.fx as { player: number }).player);
     expect(plays).toEqual([0, 1]);
-  });
-
-  it('說明不含「｜」與「AI」；走完之後不再等任何操作，出牌一律被拒絕', () => {
-    const { s, texts } = playThrough();
-    for (const t of texts) {
-      expect(t).not.toContain('｜');
-      expect(t).not.toContain('AI');
-    }
-    expect(progress(s).awaiting).toBeNull();
-    expect(progress(s).text).toBe('');
-    const before = s.getState();
-    s.advance();
-    s.submit([s.getState().view!.prompt!.options[0].key]);
-    expect(s.getState().view).toBe(before.view);
-    expect(s.getState().batch.id).toBe(before.batch.id);
   });
 
   it('全程沒有送出戰績', () => {

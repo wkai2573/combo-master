@@ -53,7 +53,7 @@ function InfoLine({ v, p, changes, fxKey, onOpen }: Pick<InfoProps, 'v' | 'p' | 
       {v.first === p && <span className="pill awake">先攻</span>}
       {awake && <span className="pill awake">覺醒</span>}
       <span className={`pill hp${changes?.life[p] ? ' flash' : ''}`} key={`hp${fxKey}`} title="牌組張數就是生命值">生命 {pv.deckCount}<Delta d={changes?.life[p]} k={fxKey} /></span>
-      <span className="pill" data-pile={mine ? undefined : `${p}-hand`}>手牌 {pv.hand.length}</span>
+      <span className="pill" data-hand-count={p} data-pile={mine ? undefined : `${p}-hand`}>手牌 {pv.hand.length}</span>
       {pv.passed && <span className="pill">已收招</span>}
     </div>
   );

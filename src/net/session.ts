@@ -3,7 +3,7 @@ import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
 import type { CheatSnapshot, CheatZone } from '../engine/cheat';
 import { Rng } from '../engine/rng';
-import { CORE_COMBAT_1, resolveText, type TutorialChapter, type TutorialProgress } from '../tutorial/script';
+import { CORE_COMBAT_1, matchesFrame, resolveText, type TutorialChapter, type TutorialProgress } from '../tutorial/script';
 import { chapterSetup } from '../tutorial/setup';
 import { trackPlay } from '../stats/analytics';
 import { recordFromView, type Opponent } from '../stats/records';
@@ -34,7 +34,7 @@ export interface SessionState {
   /** 對手離線後，剩餘幾秒判負 */
   forfeitIn: number | null;
   /** 最新一批要播放的動畫影格（id 每次遞增，介面據此判斷是否有新的一批） */
-  batch: { id: number; frames: Frame[] };
+  batch: { id: number; frames: Frame[]; /** 最後一格播完後停在那一格（新手教學的停點） */ hold?: boolean };
   /** 各玩家是否開啟作弊模式（索引為玩家編號）；對方開啟時畫面頂端會提示 */
   cheatOn: [boolean, boolean];
   /** 訪客收到的作弊檢視（只有自己開啟作弊時房主才會附上）；單機與房主直接讀引擎，用不到 */
@@ -108,8 +108,8 @@ abstract class Base implements Session {
     batch: { id: 0, frames: [] }, cheatOn: [false, false], cheatSnap: null, tutorial: null,
   };
   private batchId = 0;
-  protected nextBatch(frames: Frame[]) {
-    return { id: ++this.batchId, frames };
+  protected nextBatch(frames: Frame[], hold = false) {
+    return { id: ++this.batchId, frames, ...(hold ? { hold } : {}) };
   }
   private subs = new Set<() => void>();
   getState = () => this.s;
@@ -118,10 +118,10 @@ abstract class Base implements Session {
     return () => this.subs.delete(cb);
   };
   /** 持有引擎的一方（單機與房主）把自己那份對局更新呈現到畫面 */
-  protected show(mine: SeatUpdate, over: boolean, extra: Partial<SessionState> = {}) {
+  protected show(mine: SeatUpdate, over: boolean, extra: Partial<SessionState> = {}, hold = false) {
     this.set({
       status: over ? 'over' : 'playing', view: mine.view, message: '', cheatOn: mine.cheatOn,
-      batch: this.nextBatch(mine.frames), ...extra,
+      batch: this.nextBatch(mine.frames, hold), ...extra,
     });
   }
   protected set(patch: Partial<SessionState>) {
@@ -244,56 +244,114 @@ export class TutorialSession extends Base {
   /** 目前執行到腳本的第幾步；等於步驟數表示腳本走完 */
   private step = 0;
   private closed = false;
+  /** 引擎已經走到、但還沒交給畫面的影格：停在影格的步驟只送到停點為止，剩下的先扣著 */
+  private held: Frame[] = [];
+  /** 引擎目前的桌面（最新一次更新） */
+  private live!: SeatUpdate;
+  /** 畫面上的桌面就是引擎目前的桌面：沒有停在某一格，也沒有還沒送出的變化 */
+  private shownLive = false;
+  /** 正在一個停點裡：接在後面的說明維持停住的那一格，不放開扣著的影格 */
+  private pauseFrame: Frame | null = null;
 
   constructor(reporter: RecordReporter = defaultRecordReporter(), private chapter: TutorialChapter = CORE_COMBAT_1) {
     super(reporter);
     const { decks, setup } = chapterSetup(chapter);
     this.match = new Match(decks, setup);
-    const [mine] = this.match.flush();
-    this.proceed({ ...mine, frames: mine.frames.filter((f) => !SETUP_FX.has(f.fx.type)) });
+    this.take(this.match.flush());
+    this.proceed();
   }
 
+  /** 引擎有了新的更新：桌面記下來，影格先扣著 */
+  private take([mine]: MatchUpdate) {
+    this.live = mine;
+    this.held.push(...mine.frames.filter((f) => !SETUP_FX.has(f.fx.type)));
+    this.shownLive = false;
+  }
 
   /**
-   * 腳本往下走：對手的出牌立刻執行，直到遇到要等玩家的步驟（點擊或出牌），再把這一路累積的影格一次交給畫面。
-   * 分批交出去的話，後一批會蓋掉前一批，玩家就看不到前面的動畫。桌面沒有變（update 為 null、對手也沒出牌）時只更新教學進度。
+   * 腳本往下走，直到遇到要等玩家的步驟：
+   * - 對手的出牌立刻執行
+   * - 停在影格：只把影格送到符合的那一格，畫面停在那裡
+   * - 其他要等玩家的步驟：把扣著的影格都送出去，畫面回到引擎目前的桌面
+   * 一路累積的影格一次交給畫面；分批交出去的話，後一批會蓋掉前一批，玩家就看不到前面的動畫。
+   * 畫面上的桌面沒有變時只更新教學進度。
    */
-  private proceed(update: SeatUpdate | null) {
-    let seat = update;
-    const frames = [...(update?.frames ?? [])];
-    for (let step = this.chapter.steps[this.step]; step?.kind === 'opponent-play'; step = this.chapter.steps[this.step]) {
-      const pending = this.match.pending;
-      const opt = pending?.player === 1 ? pending.options.find((o) => o.cardId === step.card) : undefined;
-      if (!opt) throw new Error(`教學腳本的第 ${this.step + 1} 步：對手現在不能打出【${step.card}】`);
-      const r = this.match.submit(1, [opt.key]);
-      if (r.error) throw new Error(`教學腳本的第 ${this.step + 1} 步：${r.error}`);
-      seat = r.update[0];
-      frames.push(...seat.frames);
-      this.step++;
+  private proceed() {
+    const sent: Frame[] = [];
+    let stop: Frame | null = null;
+    for (;;) {
+      const step = this.chapter.steps[this.step];
+      if (step?.kind === 'opponent-play') {
+        this.opponentPlay(step.card);
+        this.step++;
+        this.pauseFrame = null;
+        continue;
+      }
+      if (step?.kind === 'at-frame') {
+        const at = this.held.findIndex((f) => matchesFrame(step.match, f.fx, this.me));
+        if (at < 0) throw new Error(`教學腳本的第 ${this.step + 1} 步：找不到要停的影格`);
+        sent.push(...this.held.splice(0, at + 1));
+        stop = sent[sent.length - 1];
+        this.pauseFrame = stop;
+        break;
+      }
+      if (step?.kind === 'explain' && this.pauseFrame) {
+        stop = this.pauseFrame;
+        break;
+      }
+      // 說明（不在停點裡）、要求出牌、腳本走完：放開扣著的影格
+      sent.push(...this.held.splice(0));
+      this.pauseFrame = null;
+      break;
     }
-    if (!seat) {
-      this.set({ tutorial: this.progress(this.s.view!), message: '' });
-      return;
-    }
-    this.show({ ...seat, frames }, this.match.over, { tutorial: this.progress(seat.view) });
+    this.publish(sent, stop);
   }
 
-  private progress(view: GameView): TutorialProgress {
+  /** stop 是畫面要停住的那一格（null 表示回到引擎目前的桌面） */
+  private publish(sent: Frame[], stop: Frame | null) {
+    const frameChanged = stop !== null && sent.length > 0;
+    if (!frameChanged && (stop !== null || this.shownLive)) {
+      // 畫面上的桌面沒有變：維持停住的那一格，或本來就是目前的桌面
+      this.set({ tutorial: this.progress(this.s.view!, stop), message: '' });
+      return;
+    }
+    const view = stop ? this.pausedView(stop) : this.live.view;
+    this.shownLive = stop === null;
+    this.show({ ...this.live, view, frames: sent }, stop === null && this.match.over, { tutorial: this.progress(view, stop) }, stop !== null);
+  }
+
+  /** 停在某一格時的桌面：那一格的桌面，紀錄只到當時，沒有提示 */
+  private pausedView(frame: Frame): GameView {
+    return { ...frame.view, log: this.live.view.log.slice(0, frame.logLen), prompt: null, waitingFor: null };
+  }
+
+  private opponentPlay(card: string) {
+    const pending = this.match.pending;
+    const opt = pending?.player === 1 ? pending.options.find((o) => o.cardId === card) : undefined;
+    if (!opt) throw new Error(`教學腳本的第 ${this.step + 1} 步：對手現在不能打出【${card}】`);
+    const r = this.match.submit(1, [opt.key]);
+    if (r.error) throw new Error(`教學腳本的第 ${this.step + 1} 步：${r.error}`);
+    this.take(r.update);
+  }
+
+  private progress(view: GameView, frame: Frame | null): TutorialProgress {
     const step = this.chapter.steps[this.step];
     if (!step) return { text: '', highlight: [], awaiting: null };
-    if (step.kind === 'explain') {
-      return { text: resolveText(step.text, view), highlight: step.highlight ?? [], awaiting: 'click' };
+    const ctx = { view, frame: frame ?? undefined };
+    if (step.kind === 'explain' || step.kind === 'at-frame') {
+      return { text: resolveText(step.text, ctx), highlight: step.highlight ?? [], awaiting: 'click' };
     }
     if (step.kind === 'play') {
-      return { text: resolveText(step.text, view), highlight: [{ kind: 'hand-card', cardId: step.card }], awaiting: { play: step.card } };
+      return { text: resolveText(step.text, ctx), highlight: [{ kind: 'hand-card', cardId: step.card }], awaiting: { play: step.card } };
     }
     throw new Error('教學腳本：對手的步驟應該已經執行完');
   }
 
   advance() {
-    if (this.closed || this.chapter.steps[this.step]?.kind !== 'explain') return;
+    const kind = this.chapter.steps[this.step]?.kind;
+    if (this.closed || (kind !== 'explain' && kind !== 'at-frame')) return;
     this.step++;
-    this.proceed(null);
+    this.proceed();
   }
 
   submit(keys: string[]) {
@@ -311,8 +369,9 @@ export class TutorialSession extends Base {
     }
     const r = this.match.submit(0, keys);
     if (r.error) throw new Error(`教學腳本的第 ${this.step + 1} 步：${r.error}`);
+    this.take(r.update);
     this.step++;
-    this.proceed(r.update[0]);
+    this.proceed();
   }
 
   leave() {

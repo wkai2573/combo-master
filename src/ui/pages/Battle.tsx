@@ -128,7 +128,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const zoneCombat = overlays.zone?.z === 'combat' ? combatCards(v.players[overlays.zone.p]) : null;
   const zoneCards = !overlays.zone ? [] : zoneCombat ? zoneCombat.cards : v.players[overlays.zone.p][overlays.zone.z as 'exp' | 'discard'];
   // 結束演出播完（或跳過）才顯示結果視窗；演出期間先讓勝負在桌面上呈現
-  const result = pres.playing || v.winner === null ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
+  // 教學要等腳本走完（點完勝負那一步）才輪到結果視窗
+  const result = pres.playing || v.winner === null || (tut && tut.awaiting !== null) ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
   const outcomeOf = (p: PlayerId) => (v.winner === null ? undefined : v.winner === 'draw' ? 'draw' : v.winner === p ? 'win' : 'lose');
   const shown = overlays.pinned ?? inspect;
   const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={overlays.pinned !== null} onUnpin={overlays.unpin} />;
@@ -254,10 +255,10 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         {phone && !result && !pres.playing && prompt && placement === 'panel' && <PromptSheet>{promptPanel()}</PromptSheet>}
         {dragGhost}
         <PhaseBanner fx={fx} n={fxKey} me={me} />
-        <Spotlight fx={fx} caption={pres.caption} n={fxKey} scale={scale} />
+        <Spotlight fx={fx} caption={pres.caption} n={fxKey} scale={scale} holding={pres.holding} />
         <FlightLayer view={v} fx={fx} playing={pres.playing} n={fxKey} scale={scale} extraPile={phone ? (owner, z) => z === 'exp' || z === 'gear' || z === 'buff' || (owner !== me && z === 'hand') : undefined} />
 
-        {st.tutorial && <TutorialLayer progress={st.tutorial} view={v} active={pres.settled} onNext={() => session.advance?.()} />}
+        {st.tutorial && <TutorialLayer progress={st.tutorial} view={v} active={pres.settled && !overlays.menuOpen && !overlays.cardSheet} onNext={() => session.advance?.()} />}
 
         {overlays.flowOpen && <FlowChartModal phase={v.phase} onClose={overlays.closeFlow} />}
         {overlays.zone && <ZoneViewer title={`${overlays.zone.p === me ? '我方' : '對手'}${ZONE_NAME[overlays.zone.z]}`} cards={zoneCards} exp={overlays.zone.z === 'exp'} pursuitFrom={zoneCombat?.pursuitFrom} note={zoneCombat ? COMBAT_LIST_NOTE : undefined} anchor={overlays.zone.anchor as DOMRect} onClose={overlays.closeZone} />}
