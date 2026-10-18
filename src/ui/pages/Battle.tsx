@@ -14,6 +14,7 @@ import { stepHint } from '../../data/turnSteps';
 import { combatCards } from '../../engine/view';
 import { PromptPanel } from '../components/PromptPanel';
 import { CheatPanel } from '../components/CheatPanel';
+import { TutorialLayer } from '../components/TutorialLayer';
 import { isCheatUnlocked } from '../../cheatUnlock';
 import { useWide } from '../useWide';
 import { usePhone } from '../layoutMode';
@@ -161,7 +162,7 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   return (
     <InspectContext.Provider value={inspectCard}>
       <PinContext.Provider value={overlays.togglePin}>
-      <div className={`battle${wide ? ' wide' : ' phone'}`} style={{ ['--spd' as string]: scale }}>
+      <div className={`battle${wide ? ' wide' : ' phone'}${st.tutorial ? ' tutorial' : ''}`} style={{ ['--spd' as string]: scale }}>
         <div className="topbar">
           <span className="ver" title={VERSION_TITLE}>連擊大師 {VERSION_SHORT}</span>
           <b>第 {v.turn} 回合</b>
@@ -246,6 +247,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         <PhaseBanner fx={fx} n={fxKey} me={me} />
         <Spotlight fx={fx} caption={pres.caption} n={fxKey} scale={scale} />
         <FlightLayer view={v} fx={fx} playing={pres.playing} n={fxKey} scale={scale} extraPile={phone ? (owner, z) => z === 'exp' || z === 'gear' || z === 'buff' || (owner !== me && z === 'hand') : undefined} />
+
+        {st.tutorial && <TutorialLayer progress={st.tutorial} active={pres.settled} onNext={() => session.advance?.()} />}
 
         {overlays.flowOpen && <FlowChartModal phase={v.phase} onClose={overlays.closeFlow} />}
         {overlays.zone && <ZoneViewer title={`${overlays.zone.p === me ? '我方' : '對手'}${ZONE_NAME[overlays.zone.z]}`} cards={zoneCards} exp={overlays.zone.z === 'exp'} pursuitFrom={zoneCombat?.pursuitFrom} note={zoneCombat ? COMBAT_LIST_NOTE : undefined} anchor={overlays.zone.anchor as DOMRect} onClose={overlays.closeZone} />}

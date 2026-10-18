@@ -2,6 +2,8 @@ import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
 import type { CheatSnapshot, CheatZone } from '../engine/cheat';
 import { Rng } from '../engine/rng';
+import { CORE_COMBAT_1, type TutorialChapter, type TutorialProgress } from '../tutorial/script';
+import { chapterSetup } from '../tutorial/setup';
 import { trackPlay } from '../stats/analytics';
 import { recordFromView, type Opponent } from '../stats/records';
 import { defaultRecordReporter, type RecordReporter } from '../stats/reporter';
@@ -36,6 +38,8 @@ export interface SessionState {
   cheatOn: [boolean, boolean];
   /** 訪客收到的作弊檢視（只有自己開啟作弊時房主才會附上）；單機與房主直接讀引擎，用不到 */
   cheatSnap: CheatSnapshot | null;
+  /** 新手教學的進度；一般對局是 null */
+  tutorial: TutorialProgress | null;
 }
 
 /**
@@ -64,6 +68,8 @@ export interface Session {
   getState(): SessionState;
   subscribe(cb: () => void): () => void;
   submit(keys: string[]): void;
+  /** 新手教學：進入下一步（只有教學場次有） */
+  advance?(): void;
   leave(): void;
 }
 
@@ -98,7 +104,7 @@ abstract class Base implements Session {
   private finished = false;
   protected s: SessionState = {
     status: 'connecting', view: null, message: '', opponentOnline: true, forfeitIn: null,
-    batch: { id: 0, frames: [] }, cheatOn: [false, false], cheatSnap: null,
+    batch: { id: 0, frames: [] }, cheatOn: [false, false], cheatSnap: null, tutorial: null,
   };
   private batchId = 0;
   protected nextBatch(frames: Frame[]) {
@@ -129,7 +135,7 @@ abstract class Base implements Session {
    */
   private trackPlay() {
     const view = this.s.view;
-    if (!view) return;
+    if (!view || !this.tracksPlay) return;
     if (!this.started) {
       this.started = true;
       trackPlay('start', this.opponent);
@@ -140,6 +146,8 @@ abstract class Base implements Session {
     }
   }
   constructor(protected reporter: RecordReporter = defaultRecordReporter()) {}
+  /** 這個場次要不要記流量統計的開始與打完 */
+  protected readonly tracksPlay: boolean = true;
   /** 這個場次是不是負責上傳戰績：連線對局只由房主上傳，一場只留一筆，訪客不上傳 */
   protected readonly uploadsRecord: boolean = true;
   /** 對局第一次進入結束狀態時留下戰績並交給上傳；離線判負、作弊過的對局由 recordFromView 排除 */
@@ -217,6 +225,51 @@ export class LocalSession extends Base {
   leave() {
     this.closed = true;
     clearTimeout(this.timer);
+  }
+}
+
+// ───────────────────────── 新手教學 ─────────────────────────
+
+/** 開局的洗牌與抽起始手牌不播：教學的牌面是開局後改寫的，播了會先看到 5 張起始手牌再被換掉 */
+const SETUP_FX = new Set(['shuffle', 'deal']);
+
+export class TutorialSession extends Base {
+  readonly me: PlayerId = 0;
+  // 教學不送戰績（uploadsRecord）；流量統計的教學類型還沒接上，所以也先不記
+  protected readonly opponent = 'cpu' as const;
+  protected readonly uploadsRecord = false;
+  protected readonly tracksPlay = false;
+  private match: Match;
+  private step = 0;
+  private closed = false;
+
+  constructor(reporter: RecordReporter = defaultRecordReporter(), private chapter: TutorialChapter = CORE_COMBAT_1) {
+    super(reporter);
+    const { decks, setup } = chapterSetup(chapter);
+    this.match = new Match(decks, setup);
+    const [mine] = this.match.flush();
+    this.show({ ...mine, frames: mine.frames.filter((f) => !SETUP_FX.has(f.fx.type)) }, this.match.over);
+    this.set({ tutorial: this.progress() });
+  }
+
+  private progress(): TutorialProgress {
+    const { text, highlight } = this.chapter.steps[this.step];
+    return { text, highlight: highlight ?? [], awaiting: 'click' };
+  }
+
+  advance() {
+    if (this.closed || this.step >= this.chapter.steps.length - 1) return;
+    this.step++;
+    this.set({ tutorial: this.progress(), message: '' });
+  }
+
+  submit(_keys: string[]) {
+    if (this.closed) return;
+    this.set({ message: '現在請先點擊畫面進入下一步' });
+  }
+
+  leave() {
+    this.closed = true;
   }
 }
 

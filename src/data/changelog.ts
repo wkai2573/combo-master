@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.48.0',
+    date: '2026-10-18',
+    items: [
+      { type: 'add', text: '新增新手教學：主畫面「單機練習」下方的「新手教學」，進入固定牌面的教學對局，一步步學會出招與追擊（目前先開放開頭的說明，其餘之後陸續補上）' },
+      { type: 'change', text: '主畫面選單多了一排按鈕，整體縮放比例略為調整，讓選單仍能完整放進畫面' },
+    ],
+  },
+  {
     version: '0.47.5',
     date: '2026-10-13',
     items: [

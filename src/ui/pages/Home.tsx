@@ -12,7 +12,7 @@ import type { LobbyMode } from './Lobby';
 /** 標題上方扇形排開的 5 張真實卡面：劍、盾、藥水、弓、小刀（只是外觀，不影響遊戲） */
 const FAN = ['戒備打擊', '盾擊', '生命藥水', '狙擊蓄力', '二刀連擊'];
 
-export type Route = 'home' | 'decks' | 'records' | LobbyMode;
+export type Route = 'home' | 'decks' | 'records' | 'tutorial' | LobbyMode;
 
 export function Home({ go }: { go: (r: Route) => void }) {
   const [rules, setRules] = useState(false);
@@ -51,6 +51,10 @@ export function Home({ go }: { go: (r: Route) => void }) {
         <button className="primary menu-main" onClick={() => go('practice')}>
           <b>單機練習</b>
           <span>對戰機器人，馬上開打</span>
+        </button>
+        <button onClick={() => go('tutorial')}>
+          <b>新手教學</b>
+          <span>一步步學會出招與追擊</span>
         </button>
         <div className="menu-pair">
           <button onClick={() => go('host')}>

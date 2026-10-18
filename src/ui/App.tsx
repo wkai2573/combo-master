@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Session } from '../net/session';
+import { TutorialSession, type Session } from '../net/session';
 import { Battle } from './pages/Battle';
 import { DeckBuilder } from './pages/DeckBuilder';
 import { Home, type Route } from './pages/Home';
@@ -12,6 +12,9 @@ import { KeywordTooltip } from './components/KeywordText';
 function Routes() {
   const [route, setRoute] = useState<Route>('home');
   const [session, setSession] = useState<Session | null>(null);
+
+  // 教學不經過選牌：按下去直接建立場次
+  const go = (r: Route) => (r === 'tutorial' ? setSession(new TutorialSession()) : setRoute(r));
 
   if (session) {
     return (
@@ -29,7 +32,7 @@ function Routes() {
   if (route === 'host' || route === 'join' || route === 'practice') {
     return <Lobby mode={route as LobbyMode} onStart={setSession} onBack={() => setRoute('home')} />;
   }
-  return <Home go={setRoute} />;
+  return <Home go={go} />;
 }
 
 export function App() {

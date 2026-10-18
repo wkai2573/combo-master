@@ -179,6 +179,8 @@ export class Game {
     const s = this.state;
     this.setupGame();
     this.setup.afterSetup?.(this);
+    // 改寫後的場面是新的起點：下一個影格不跟改寫前的桌面比出卡片飛行
+    if (this.setup.animate) this.lastView = viewFor(this, 0, false);
     // 開局（含測試改寫區域之後）已經覺醒的狀態不算進入覺醒
     s.awakeSeen = [awakened(g, 0), awakened(g, 1)];
     checkWin(g);

@@ -2,19 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { homeScale } from '../src/ui/homeScale';
 
 describe('主選單的縮放比例', () => {
-  it('視窗高度 958（目標畫面）時約 150%', () => {
-    expect(homeScale(882, 958)).toBeCloseTo(1.5, 1);
+  it('視窗高度 958（目標畫面）時約 135%，整個選單放得下', () => {
+    expect(homeScale(882, 958)).toBeCloseTo(1.35, 1);
   });
 
-  it('高度越高比例越大，但最大 1.6；高度低時最小 0.85', () => {
+  it('高度越高比例越大，但最大 1.6；高度低時最小 0.8', () => {
     expect(homeScale(1920, 1200)).toBe(1.6);
     expect(homeScale(1920, 2000)).toBe(1.6);
-    expect(homeScale(1200, 400)).toBe(0.85);
+    expect(homeScale(1200, 400)).toBe(0.8);
     expect(homeScale(1200, 800)).toBeLessThan(homeScale(1200, 900));
   });
 
-  it('高度 640 就是原本的大小', () => {
-    expect(homeScale(1200, 640)).toBeCloseTo(1, 5);
+  it('高度 712 就是原本的大小', () => {
+    expect(homeScale(1200, 712)).toBeCloseTo(1, 5);
   });
 
   it('窄螢幕以寬度為準，內容不會超出視窗寬度', () => {
