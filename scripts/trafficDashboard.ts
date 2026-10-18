@@ -1,11 +1,10 @@
-import type { Summary } from './trafficSummary';
+import { OPPONENT_LABEL, type Summary } from './trafficSummary';
 
 const esc = (text: string | number) =>
   String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 const pct = (part: number, whole: number) => (whole ? Math.round((part / whole) * 100) : 0);
 const duration = (seconds: number) => (seconds >= 60 ? `${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒` : `${seconds} 秒`);
-const OPPONENT_LABEL = { cpu: '對電腦', player: '對玩家' } as const;
 /** 台北時間 YYYY-MM-DD HH:mm */
 const taipei = (d: Date) => new Date(d.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 16).replace('T', ' ');
 

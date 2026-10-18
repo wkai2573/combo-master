@@ -57,7 +57,7 @@ interface EventBase {
  */
 export type NewEvent =
   | (EventBase & { name: 'visit' })
-  | (EventBase & { name: 'start' | 'finish'; opponent: 'cpu' | 'player' })
+  | (EventBase & { name: 'start' | 'finish'; opponent: 'cpu' | 'player' | 'tutorial' })
   | (EventBase & { name: 'beat'; activeMs: number });
 
 export function validateNewEvent(body: unknown): Validated<NewEvent> {
@@ -73,7 +73,7 @@ export function validateNewEvent(body: unknown): Validated<NewEvent> {
       return { ok: true, value: { name: 'visit', ...base } };
     case 'start':
     case 'finish':
-      if (o.opponent !== 'cpu' && o.opponent !== 'player') return { ok: false, error: 'opponent 必須是 cpu 或 player' };
+      if (o.opponent !== 'cpu' && o.opponent !== 'player' && o.opponent !== 'tutorial') return { ok: false, error: 'opponent 必須是 cpu、player 或 tutorial' };
       return { ok: true, value: { name: o.name, ...base, opponent: o.opponent } };
     case 'beat':
       if (typeof o.activeMs !== 'number' || !Number.isInteger(o.activeMs) || o.activeMs < 0 || o.activeMs > MAX_ACTIVE_MS) {

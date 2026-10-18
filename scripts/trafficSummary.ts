@@ -4,7 +4,7 @@ export interface EventRow {
   visit_id: string;
   device_id: string;
   version: string;
-  opponent: 'cpu' | 'player' | null;
+  opponent: 'cpu' | 'player' | 'tutorial' | null;
   created_at: number;
   last_seen_at: number;
   /** 造訪才有意義：分頁在前景可見的累計毫秒數 */
@@ -26,7 +26,7 @@ export interface Summary {
   all: GroupStats & { returnedDevices: number };
   byDay: Array<GroupStats & { day: string; newDevices: number; returningDevices: number }>;
   byVersion: Array<GroupStats & { version: string }>;
-  byOpponent: Array<{ opponent: 'cpu' | 'player'; starts: number; finishes: number; playedDevices: number; finishedDevices: number }>;
+  byOpponent: Array<{ opponent: 'cpu' | 'player' | 'tutorial'; starts: number; finishes: number; playedDevices: number; finishedDevices: number }>;
 }
 
 /** 日子依台北時間（UTC+8）切分 */
@@ -40,10 +40,12 @@ const median = (sorted: number[]) => {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 };
 
-function groupStats(rows: EventRow[]): GroupStats {
+/** 開始與打完只算真正的對局：教學另外在「依對戰類型」列出，不併進玩過與玩完（byOpponent 用 withTutorial 把它算回來） */
+function groupStats(rows: EventRow[], withTutorial = false): GroupStats {
+  const counted = (r: EventRow) => withTutorial || r.opponent !== 'tutorial';
   const visits = rows.filter((r) => r.name === 'visit');
-  const starts = rows.filter((r) => r.name === 'start');
-  const finishes = rows.filter((r) => r.name === 'finish');
+  const starts = rows.filter((r) => r.name === 'start' && counted(r));
+  const finishes = rows.filter((r) => r.name === 'finish' && counted(r));
   const stays = visits.map((v) => v.active_ms / 1000).sort((a, b) => a - b);
   return {
     visits: visits.length,
@@ -92,9 +94,9 @@ export function summarize(rows: EventRow[]): Summary {
     .map(([version, group]) => ({ version, ...groupStats(group) }))
     .sort((a, b) => compareVersion(a.version, b.version));
 
-  const byOpponent = [...groupBy(rows.filter((r) => r.opponent !== null), (r) => r.opponent as 'cpu' | 'player')]
+  const byOpponent = [...groupBy(rows.filter((r) => r.opponent !== null), (r) => r.opponent as 'cpu' | 'player' | 'tutorial')]
     .map(([opponent, group]) => {
-      const g = groupStats(group);
+      const g = groupStats(group, true);
       return { opponent, starts: g.starts, finishes: g.finishes, playedDevices: g.playedDevices, finishedDevices: g.finishedDevices };
     })
     .sort((a, b) => a.opponent.localeCompare(b.opponent));
@@ -109,7 +111,7 @@ export function summarize(rows: EventRow[]): Summary {
 
 const pct = (part: number, whole: number) => (whole ? `${Math.round((part / whole) * 100)}%` : '0%');
 const duration = (seconds: number) => (seconds >= 60 ? `${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒` : `${seconds} 秒`);
-const OPPONENT_LABEL = { cpu: '對電腦', player: '對玩家' } as const;
+export const OPPONENT_LABEL = { cpu: '對電腦', player: '對玩家', tutorial: '教學' } as const;
 
 /** 終端機看的文字報告 */
 export function formatReport(s: Summary): string {

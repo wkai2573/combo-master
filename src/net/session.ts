@@ -6,7 +6,7 @@ import { Rng } from '../engine/rng';
 import { CORE_COMBAT_1, matchesFrame, resolveText, type TutorialChapter, type TutorialProgress } from '../tutorial/script';
 import { setTutorialDone } from '../tutorial/completion';
 import { chapterSetup } from '../tutorial/setup';
-import { trackPlay } from '../stats/analytics';
+import { trackPlay, type PlayType } from '../stats/analytics';
 import { recordFromView, type Opponent } from '../stats/records';
 import { defaultRecordReporter, type RecordReporter } from '../stats/reporter';
 import { APP_VERSION } from '../version';
@@ -137,19 +137,21 @@ abstract class Base implements Session {
    */
   private trackPlay() {
     const view = this.s.view;
-    if (!view || !this.tracksPlay) return;
+    if (!view) return;
     if (!this.started) {
       this.started = true;
-      trackPlay('start', this.opponent);
+      trackPlay('start', this.playType);
     }
     if (!this.finished && this.s.status === 'over' && view.winner !== null && view.forfeited !== true) {
       this.finished = true;
-      trackPlay('finish', this.opponent);
+      trackPlay('finish', this.playType);
     }
   }
   constructor(protected reporter: RecordReporter = defaultRecordReporter()) {}
-  /** 這個場次要不要記流量統計的開始與打完 */
-  protected readonly tracksPlay: boolean = true;
+  /** 流量統計記的對戰類型：預設就是對手類型，教學另外記 */
+  protected get playType(): PlayType {
+    return this.opponent;
+  }
   /** 這個場次是不是負責上傳戰績：連線對局只由房主上傳，一場只留一筆，訪客不上傳 */
   protected readonly uploadsRecord: boolean = true;
   /** 對局第一次進入結束狀態時留下戰績並交給上傳；離線判負、作弊過的對局由 recordFromView 排除 */
@@ -237,10 +239,12 @@ const SETUP_FX = new Set(['shuffle', 'deal']);
 
 export class TutorialSession extends Base {
   readonly me: PlayerId = 0;
-  // 教學不送戰績（uploadsRecord）；流量統計的教學類型還沒接上，所以也先不記
+  // 教學不送戰績，所以對手類型用不到；流量統計另外記教學的開始與完成
   protected readonly opponent = 'cpu' as const;
   protected readonly uploadsRecord = false;
-  protected readonly tracksPlay = false;
+  protected get playType(): PlayType {
+    return 'tutorial';
+  }
   private match: Match;
   /** 目前執行到腳本的第幾步；等於步驟數表示腳本走完 */
   private step = 0;
