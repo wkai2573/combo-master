@@ -1,8 +1,9 @@
+import { getCard } from '../data/cards';
 import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
 import type { CheatSnapshot, CheatZone } from '../engine/cheat';
 import { Rng } from '../engine/rng';
-import { CORE_COMBAT_1, type TutorialChapter, type TutorialProgress } from '../tutorial/script';
+import { CORE_COMBAT_1, resolveText, type TutorialChapter, type TutorialProgress } from '../tutorial/script';
 import { chapterSetup } from '../tutorial/setup';
 import { trackPlay } from '../stats/analytics';
 import { recordFromView, type Opponent } from '../stats/records';
@@ -117,10 +118,10 @@ abstract class Base implements Session {
     return () => this.subs.delete(cb);
   };
   /** 持有引擎的一方（單機與房主）把自己那份對局更新呈現到畫面 */
-  protected show(mine: SeatUpdate, over: boolean) {
+  protected show(mine: SeatUpdate, over: boolean, extra: Partial<SessionState> = {}) {
     this.set({
       status: over ? 'over' : 'playing', view: mine.view, message: '', cheatOn: mine.cheatOn,
-      batch: this.nextBatch(mine.frames),
+      batch: this.nextBatch(mine.frames), ...extra,
     });
   }
   protected set(patch: Partial<SessionState>) {
@@ -240,6 +241,7 @@ export class TutorialSession extends Base {
   protected readonly uploadsRecord = false;
   protected readonly tracksPlay = false;
   private match: Match;
+  /** 目前執行到腳本的第幾步；等於步驟數表示腳本走完 */
   private step = 0;
   private closed = false;
 
@@ -248,24 +250,69 @@ export class TutorialSession extends Base {
     const { decks, setup } = chapterSetup(chapter);
     this.match = new Match(decks, setup);
     const [mine] = this.match.flush();
-    this.show({ ...mine, frames: mine.frames.filter((f) => !SETUP_FX.has(f.fx.type)) }, this.match.over);
-    this.set({ tutorial: this.progress() });
+    this.proceed({ ...mine, frames: mine.frames.filter((f) => !SETUP_FX.has(f.fx.type)) });
   }
 
-  private progress(): TutorialProgress {
-    const { text, highlight } = this.chapter.steps[this.step];
-    return { text, highlight: highlight ?? [], awaiting: 'click' };
+
+  /**
+   * 腳本往下走：對手的出牌立刻執行，直到遇到要等玩家的步驟（點擊或出牌），再把這一路累積的影格一次交給畫面。
+   * 分批交出去的話，後一批會蓋掉前一批，玩家就看不到前面的動畫。桌面沒有變（update 為 null、對手也沒出牌）時只更新教學進度。
+   */
+  private proceed(update: SeatUpdate | null) {
+    let seat = update;
+    const frames = [...(update?.frames ?? [])];
+    for (let step = this.chapter.steps[this.step]; step?.kind === 'opponent-play'; step = this.chapter.steps[this.step]) {
+      const pending = this.match.pending;
+      const opt = pending?.player === 1 ? pending.options.find((o) => o.cardId === step.card) : undefined;
+      if (!opt) throw new Error(`教學腳本的第 ${this.step + 1} 步：對手現在不能打出【${step.card}】`);
+      const r = this.match.submit(1, [opt.key]);
+      if (r.error) throw new Error(`教學腳本的第 ${this.step + 1} 步：${r.error}`);
+      seat = r.update[0];
+      frames.push(...seat.frames);
+      this.step++;
+    }
+    if (!seat) {
+      this.set({ tutorial: this.progress(this.s.view!), message: '' });
+      return;
+    }
+    this.show({ ...seat, frames }, this.match.over, { tutorial: this.progress(seat.view) });
+  }
+
+  private progress(view: GameView): TutorialProgress {
+    const step = this.chapter.steps[this.step];
+    if (!step) return { text: '', highlight: [], awaiting: null };
+    if (step.kind === 'explain') {
+      return { text: resolveText(step.text, view), highlight: step.highlight ?? [], awaiting: 'click' };
+    }
+    if (step.kind === 'play') {
+      return { text: resolveText(step.text, view), highlight: [{ kind: 'hand-card', cardId: step.card }], awaiting: { play: step.card } };
+    }
+    throw new Error('教學腳本：對手的步驟應該已經執行完');
   }
 
   advance() {
-    if (this.closed || this.step >= this.chapter.steps.length - 1) return;
+    if (this.closed || this.chapter.steps[this.step]?.kind !== 'explain') return;
     this.step++;
-    this.set({ tutorial: this.progress(), message: '' });
+    this.proceed(null);
   }
 
-  submit(_keys: string[]) {
+  submit(keys: string[]) {
     if (this.closed) return;
-    this.set({ message: '現在請先點擊畫面進入下一步' });
+    const step = this.chapter.steps[this.step];
+    if (step?.kind !== 'play') {
+      this.set({ message: step ? '現在請先點擊畫面進入下一步' : '教學的這一段到這裡結束了' });
+      return;
+    }
+    const pending = this.match.pending;
+    const chosen = keys.length === 1 && pending?.player === 0 ? pending.options.find((o) => o.key === keys[0]) : undefined;
+    if (chosen?.cardId !== step.card) {
+      this.set({ message: `請照說明，打出被框起來的【${getCard(step.card).name}】` });
+      return;
+    }
+    const r = this.match.submit(0, keys);
+    if (r.error) throw new Error(`教學腳本的第 ${this.step + 1} 步：${r.error}`);
+    this.step++;
+    this.proceed(r.update[0]);
   }
 
   leave() {

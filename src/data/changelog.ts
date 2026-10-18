@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.48.1',
+    date: '2026-10-18',
+    items: [
+      { type: 'add', text: '新手教學：對手會照腳本出招，並要求你點擊或拖曳指定的牌到戰鬥區；相關的區域與卡片會用閃動的虛線外框標出，教學中其他操作暫時封鎖。目前教到你打出第一張梅花7' },
+    ],
+  },
+  {
     version: '0.48.0',
     date: '2026-10-18',
     items: [
