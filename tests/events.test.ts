@@ -55,6 +55,13 @@ describe('流量事件：開始與打完對局', () => {
     expect(all.map((r) => [r.name, r.opponent])).toEqual([['visit', null], ['start', 'cpu'], ['finish', 'cpu'], ['start', 'player']]);
   });
 
+  it('對戰類型可以是教學', async () => {
+    await postEvent(visit());
+    expect((await postEvent({ ...visit(), name: 'start', opponent: 'tutorial' }, NOW + 1000)).status).toBe(201);
+    expect((await postEvent({ ...visit(), name: 'finish', opponent: 'tutorial' }, NOW + 60_000)).status).toBe(201);
+    expect((await rows()).map((r) => [r.name, r.opponent])).toEqual([['visit', null], ['start', 'tutorial'], ['finish', 'tutorial']]);
+  });
+
   it('開始與打完對局一定要有對戰類型', async () => {
     expect((await postEvent({ ...visit(), name: 'start' })).status).toBe(400);
     expect((await postEvent({ ...visit(), name: 'finish', opponent: 'robot' })).status).toBe(400);

@@ -53,7 +53,7 @@ function InfoLine({ v, p, changes, fxKey, onOpen }: Pick<InfoProps, 'v' | 'p' | 
       {v.first === p && <span className="pill awake">先攻</span>}
       {awake && <span className="pill awake">覺醒</span>}
       <span className={`pill hp${changes?.life[p] ? ' flash' : ''}`} key={`hp${fxKey}`} title="牌組張數就是生命值">生命 {pv.deckCount}<Delta d={changes?.life[p]} k={fxKey} /></span>
-      <span className="pill" data-pile={mine ? undefined : `${p}-hand`}>手牌 {pv.hand.length}</span>
+      <span className="pill" data-hand-count={p} data-pile={mine ? undefined : `${p}-hand`}>手牌 {pv.hand.length}</span>
       {pv.passed && <span className="pill">已收招</span>}
     </div>
   );
@@ -219,11 +219,13 @@ export function CardSheet({ id, exp, onClose }: { id: string; exp: boolean; onCl
 const MENU_SPEEDS: [Speed, string][] = [['normal', '標準'], ['fast', '快速'], ['off', '關閉']];
 
 /** 手機版面頂列的選單鈕（三條線）與展開的選單：紀錄、流程圖、動畫速度、作弊、離開 */
-export function PhoneMenu({ open, onToggle, onClose, speed, onSpeed, onLog, onFlow, cheat, onLeave }: {
+export function PhoneMenu({ open, onToggle, onClose, speed, onSpeed, onLog, onFlow, cheat, locked, onLeave }: {
   open: boolean; onToggle: () => void; onClose: () => void;
   speed: Speed; onSpeed: (s: Speed) => void; onLog: () => void; onFlow: () => void;
   /** 解鎖作弊的瀏覽器才有：開關、面板按鈕 */
   cheat?: { on: boolean; panelOpen: boolean; onToggle: () => void; onPanel: () => void };
+  /** 新手教學中：不能看紀錄與流程圖 */
+  locked?: boolean;
   onLeave: () => void;
 }) {
   const run = (fn: () => void) => () => { onClose(); fn(); };
@@ -236,8 +238,8 @@ export function PhoneMenu({ open, onToggle, onClose, speed, onSpeed, onLog, onFl
         <>
           <div className="menuback" onClick={onClose} />
           <div className="phonemenu" role="menu">
-            <button role="menuitem" onClick={run(onLog)}>紀錄</button>
-            <button role="menuitem" onClick={run(onFlow)}>流程圖</button>
+            {!locked && <button role="menuitem" onClick={run(onLog)}>紀錄</button>}
+            {!locked && <button role="menuitem" onClick={run(onFlow)}>流程圖</button>}
             <div className="menuspeed" role="group" aria-label="動畫速度">
               <span className="muted">動畫速度</span>
               <div className="speeds">

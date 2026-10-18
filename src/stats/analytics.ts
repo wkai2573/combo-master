@@ -3,6 +3,9 @@ import { RECORDS_API } from './config';
 import type { Opponent } from './records';
 import { getDeviceId, randomId } from './reporter';
 
+/** 流量統計的對戰類型：戰績只有電腦與玩家，教學只有流量統計記 */
+export type PlayType = Opponent | 'tutorial';
+
 /**
  * 匿名流量統計：造訪、停留、有沒有開始或打完對局。
  * 只送匿名裝置代號、版本、對戰類型與事件名稱，沒有任何個人資料；送不出去就算了，不影響遊戲。
@@ -16,7 +19,7 @@ export interface AnalyticsEvent {
   deviceId: string;
   version: string;
   /** 開始與打完對局才有 */
-  opponent?: Opponent;
+  opponent?: PlayType;
   /** 心跳才有：這次造訪到目前為止，分頁在前景可見的累計毫秒數 */
   activeMs?: number;
 }
@@ -44,7 +47,7 @@ export interface Analytics {
   /** 分頁回到前景：從這一刻起重新累計可見時間 */
   shown(): void;
   /** 開始或打完一場對局；頁面還沒登記造訪就先補登記 */
-  play(kind: 'start' | 'finish', opponent: Opponent): void;
+  play(kind: 'start' | 'finish', opponent: PlayType): void;
 }
 
 export function createAnalytics(deps: AnalyticsDeps): Analytics {
@@ -187,7 +190,7 @@ export function startAnalytics(analytics: Analytics = defaultAnalytics()): void 
 }
 
 /** 對局開始或打完時的去向；測試可以換成自己的接收函式 */
-export type PlayTracker = (kind: 'start' | 'finish', opponent: Opponent) => void;
+export type PlayTracker = (kind: 'start' | 'finish', opponent: PlayType) => void;
 
 let tracker: PlayTracker = (kind, opponent) => defaultAnalytics().play(kind, opponent);
 

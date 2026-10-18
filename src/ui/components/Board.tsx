@@ -266,7 +266,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, drag, hit,
         {v.first === p && <span className="pill awake">先攻</span>}
         {awake && <span className="pill awake">覺醒</span>}
         <span className={`pill hp${changes?.life[p] ? ' flash' : ''}`} key={`hp${fxKey}`} title="牌組張數就是生命值">生命 {pv.deckCount}<Delta d={changes?.life[p]} k={fxKey} /></span>
-        <span className="pill">手牌 {pv.hand.length}</span>
+        <span className="pill" data-hand-count={p}>手牌 {pv.hand.length}</span>
         <span className={`pill click${changes?.exp[p] ? ' flash' : ''}`} key={`exp${fxKey}`} onClick={() => expRef.current && onZone(p, 'exp', expRef.current.getBoundingClientRect())}>
           經驗區 表 {faceUp}／共 {total}<Delta d={changes?.exp[p]} k={fxKey} tone="neutral" />
         </span>

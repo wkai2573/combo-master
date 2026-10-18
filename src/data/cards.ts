@@ -3,6 +3,7 @@ import charsJson from './generated/characters.json';
 import { characterText } from './characterText';
 import tableJson from './cardTable.json';
 import { isCardEnabled } from './enabledCards';
+import { TUTORIAL_CHARACTERS } from './tutorialCharacters';
 import type { CardData, CharacterData } from './types';
 
 const table = tableJson as {
@@ -36,7 +37,8 @@ export const ALL_CHARACTERS: CharacterData[] = (charsJson as CharacterData[]).ma
 }));
 
 const cardMap = new Map(ALL_CARDS.map((c) => [c.id, c]));
-const charMap = new Map(ALL_CHARACTERS.map((c) => [c.id, c]));
+// 教學角色只供依 id 查詢，不在 ALL_CHARACTERS
+const charMap = new Map([...ALL_CHARACTERS, ...TUTORIAL_CHARACTERS].map((c) => [c.id, c]));
 
 export function getCard(id: string): CardData {
   const c = cardMap.get(id);

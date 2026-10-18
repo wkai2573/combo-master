@@ -103,6 +103,14 @@ describe('流量統計：開始與打完對局', () => {
     ]);
   });
 
+  it('教學也是一種對戰類型', () => {
+    const { analytics, sent } = setup();
+    analytics.visit();
+    analytics.play('start', 'tutorial');
+    analytics.play('finish', 'tutorial');
+    expect(sent.slice(1).map((e) => [e.name, e.opponent])).toEqual([['start', 'tutorial'], ['finish', 'tutorial']]);
+  });
+
   it('頁面還沒登記造訪就開打：先補一筆造訪，對局事件不會沒有對應的造訪', () => {
     const { analytics, sent } = setup();
     analytics.play('start', 'player');

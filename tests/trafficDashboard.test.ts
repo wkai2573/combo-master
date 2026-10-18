@@ -9,7 +9,7 @@ let n = 0;
 const visit = (device: string, at: number, stayMs = 0, version = '0.41.0'): EventRow => ({
   name: 'visit', visit_id: `v${++n}`, device_id: device, version, opponent: null, created_at: at, last_seen_at: at + stayMs, active_ms: stayMs,
 });
-const play = (name: 'start' | 'finish', device: string, at: number, opponent: 'cpu' | 'player' = 'cpu'): EventRow => ({
+const play = (name: 'start' | 'finish', device: string, at: number, opponent: 'cpu' | 'player' | 'tutorial' = 'cpu'): EventRow => ({
   name, visit_id: `p${++n}`, device_id: device, version: '0.41.0', opponent, created_at: at, last_seen_at: at, active_ms: 0,
 });
 
@@ -58,5 +58,15 @@ describe('流量儀表板', () => {
   it('資料裡的文字會被跳脫，不會變成網頁標記', () => {
     const evil = summarize([{ ...visit('a', T), version: '<img src=x>' as string }]);
     expect(renderDashboard(evil, new Date(T))).not.toContain('<img src=x>');
+  });
+});
+
+describe('流量儀表板：教學', () => {
+  it('依對戰類型的表有「教學」一列', () => {
+    const page = renderDashboard(summarize([...rows, play('start', 'c', T + MIN, 'tutorial'), play('finish', 'c', T + 2 * MIN, 'tutorial')]), new Date(Date.UTC(2026, 9, 12, 4, 0, 0)));
+    // 教學一列：開始 1 場、打完 1 場、玩過 1 個裝置、玩完 1 個裝置；對電腦那一列不含教學
+    const cells = (label: string) => [...(page.match(new RegExp(`<tr><td>${label}</td>((?:<td class="num">\\d+</td>){4})`))?.[1].matchAll(/>(\d+)</g) ?? [])].map((m) => Number(m[1]));
+    expect(cells('教學')).toEqual([1, 1, 1, 1]);
+    expect(cells('對電腦')).toEqual([1, 1, 1, 1]);
   });
 });

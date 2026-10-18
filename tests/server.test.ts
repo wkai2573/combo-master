@@ -64,6 +64,7 @@ describe('戰績伺服器：新增一筆', () => {
     ['版本格式不正確', { version: '1.2' }],
     ['版本帶了字母', { version: '1.2.x' }],
     ['對手類型不認得', { opponent: 'robot' }],
+    ['教學不送戰績', { opponent: 'tutorial' }],
     ['未知角色', { mine: '路人甲' }],
     ['對手角色未知', { theirs: '' }],
     ['非法結果', { outcome: 'won' }],

@@ -10,7 +10,7 @@ let n = 0;
 const visit = (device: string, at: number, stayMs = 0, version = '0.41.0'): EventRow => ({
   name: 'visit', visit_id: `v${++n}`, device_id: device, version, opponent: null, created_at: at, last_seen_at: at + stayMs, active_ms: stayMs,
 });
-const play = (name: 'start' | 'finish', device: string, at: number, opponent: 'cpu' | 'player' = 'cpu', version = '0.41.0'): EventRow => ({
+const play = (name: 'start' | 'finish', device: string, at: number, opponent: 'cpu' | 'player' | 'tutorial' = 'cpu', version = '0.41.0'): EventRow => ({
   name, visit_id: `p${++n}`, device_id: device, version, opponent, created_at: at, last_seen_at: at, active_ms: 0,
 });
 
@@ -109,6 +109,35 @@ describe('流量摘要：拆分', () => {
   it('依對戰類型拆分開始與打完的場次與裝置', () => {
     const byOpp = Object.fromEntries(s.byOpponent.map((o) => [o.opponent, [o.starts, o.finishes, o.playedDevices, o.finishedDevices]]));
     expect(byOpp).toEqual({ cpu: [1, 0, 1, 0], player: [1, 1, 1, 1] });
+  });
+});
+
+describe('流量摘要：教學另外列出', () => {
+  const rows: EventRow[] = [
+    visit('a', T), visit('b', T), visit('c', T),
+    play('start', 'a', T + MIN, 'cpu'), play('finish', 'a', T + 5 * MIN, 'cpu'),
+    play('start', 'b', T + MIN, 'tutorial'), play('finish', 'b', T + 5 * MIN, 'tutorial'),
+    play('start', 'c', T + MIN, 'tutorial'),
+  ];
+  const s = summarize(rows);
+
+  it('依對戰類型把教學列成獨立一列，不併進單機', () => {
+    const byOpp = Object.fromEntries(s.byOpponent.map((o) => [o.opponent, [o.starts, o.finishes, o.playedDevices, o.finishedDevices]]));
+    expect(byOpp).toEqual({ cpu: [1, 1, 1, 1], tutorial: [2, 1, 2, 1] });
+  });
+
+  it('總覽的玩過與玩完只算真正的對局，教學不算進去', () => {
+    expect(s.all.starts).toBe(1);
+    expect(s.all.finishes).toBe(1);
+    expect(s.all.playedDevices).toBe(1);
+    expect(s.all.finishedDevices).toBe(1);
+    expect(s.all.devices).toBe(3);
+  });
+
+  it('文字報告的對戰類型表有「教學」一列，完成率看開始與打完場次', () => {
+    const text = formatReport(s);
+    expect(text).toMatch(/教學　2　1　2　1/);
+    expect(text).toMatch(/對電腦　1　1　1　1/);
   });
 });
 

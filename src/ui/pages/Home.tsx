@@ -1,4 +1,5 @@
 import { useRef, useState, type CSSProperties } from 'react';
+import { isTutorialDone } from '../../tutorial/completion';
 import { createTapCounter, isCheatUnlocked, setCheatUnlocked } from '../../cheatUnlock';
 import { FEEDBACK_URL } from '../../stats/config';
 import { APP_BUILT_AT, VERSION_LABEL, VERSION_SHORT, VERSION_TITLE } from '../../version';
@@ -12,13 +13,15 @@ import type { LobbyMode } from './Lobby';
 /** 標題上方扇形排開的 5 張真實卡面：劍、盾、藥水、弓、小刀（只是外觀，不影響遊戲） */
 const FAN = ['戒備打擊', '盾擊', '生命藥水', '狙擊蓄力', '二刀連擊'];
 
-export type Route = 'home' | 'decks' | 'records' | LobbyMode;
+export type Route = 'home' | 'decks' | 'records' | 'tutorial' | LobbyMode;
 
 export function Home({ go }: { go: (r: Route) => void }) {
   const [rules, setRules] = useState(false);
   const [changelog, setChangelog] = useState(false);
   const [flow, setFlow] = useState(false);
   const scale = useHomeScale();
+  // 回到主畫面時會重新掛載，所以完成後回來讀到的是新的紀錄
+  const [tutorialDone] = useState(isTutorialDone);
   // 連點版本號那一行是作弊解鎖的備用入口；已經解鎖時只提示，不重複解鎖
   const taps = useRef(createTapCounter());
   const [note, setNote] = useState('');
@@ -51,6 +54,10 @@ export function Home({ go }: { go: (r: Route) => void }) {
         <button className="primary menu-main" onClick={() => go('practice')}>
           <b>單機練習</b>
           <span>對戰機器人，馬上開打</span>
+        </button>
+        <button onClick={() => go('tutorial')}>
+          <b>新手教學{!tutorialDone && <i className="menu-tag">推薦</i>}</b>
+          <span>一步步學會出招與追擊</span>
         </button>
         <div className="menu-pair">
           <button onClick={() => go('host')}>

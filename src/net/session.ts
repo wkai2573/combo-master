@@ -1,8 +1,12 @@
+import { getCard } from '../data/cards';
 import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
 import type { CheatSnapshot, CheatZone } from '../engine/cheat';
 import { Rng } from '../engine/rng';
-import { trackPlay } from '../stats/analytics';
+import { CORE_COMBAT_1, matchesFrame, resolveText, type TutorialChapter, type TutorialProgress } from '../tutorial/script';
+import { setTutorialDone } from '../tutorial/completion';
+import { chapterSetup } from '../tutorial/setup';
+import { trackPlay, type PlayType } from '../stats/analytics';
 import { recordFromView, type Opponent } from '../stats/records';
 import { defaultRecordReporter, type RecordReporter } from '../stats/reporter';
 import { APP_VERSION } from '../version';
@@ -31,11 +35,13 @@ export interface SessionState {
   /** 對手離線後，剩餘幾秒判負 */
   forfeitIn: number | null;
   /** 最新一批要播放的動畫影格（id 每次遞增，介面據此判斷是否有新的一批） */
-  batch: { id: number; frames: Frame[] };
+  batch: { id: number; frames: Frame[]; /** 最後一格播完後停在那一格（新手教學的停點） */ hold?: boolean };
   /** 各玩家是否開啟作弊模式（索引為玩家編號）；對方開啟時畫面頂端會提示 */
   cheatOn: [boolean, boolean];
   /** 訪客收到的作弊檢視（只有自己開啟作弊時房主才會附上）；單機與房主直接讀引擎，用不到 */
   cheatSnap: CheatSnapshot | null;
+  /** 新手教學的進度；一般對局是 null */
+  tutorial: TutorialProgress | null;
 }
 
 /**
@@ -64,6 +70,8 @@ export interface Session {
   getState(): SessionState;
   subscribe(cb: () => void): () => void;
   submit(keys: string[]): void;
+  /** 新手教學：進入下一步（只有教學場次有） */
+  advance?(): void;
   leave(): void;
 }
 
@@ -98,11 +106,11 @@ abstract class Base implements Session {
   private finished = false;
   protected s: SessionState = {
     status: 'connecting', view: null, message: '', opponentOnline: true, forfeitIn: null,
-    batch: { id: 0, frames: [] }, cheatOn: [false, false], cheatSnap: null,
+    batch: { id: 0, frames: [] }, cheatOn: [false, false], cheatSnap: null, tutorial: null,
   };
   private batchId = 0;
-  protected nextBatch(frames: Frame[]) {
-    return { id: ++this.batchId, frames };
+  protected nextBatch(frames: Frame[], hold = false) {
+    return { id: ++this.batchId, frames, ...(hold ? { hold } : {}) };
   }
   private subs = new Set<() => void>();
   getState = () => this.s;
@@ -111,10 +119,10 @@ abstract class Base implements Session {
     return () => this.subs.delete(cb);
   };
   /** 持有引擎的一方（單機與房主）把自己那份對局更新呈現到畫面 */
-  protected show(mine: SeatUpdate, over: boolean) {
+  protected show(mine: SeatUpdate, over: boolean, extra: Partial<SessionState> = {}, hold = false) {
     this.set({
       status: over ? 'over' : 'playing', view: mine.view, message: '', cheatOn: mine.cheatOn,
-      batch: this.nextBatch(mine.frames),
+      batch: this.nextBatch(mine.frames, hold), ...extra,
     });
   }
   protected set(patch: Partial<SessionState>) {
@@ -132,14 +140,18 @@ abstract class Base implements Session {
     if (!view) return;
     if (!this.started) {
       this.started = true;
-      trackPlay('start', this.opponent);
+      trackPlay('start', this.playType);
     }
     if (!this.finished && this.s.status === 'over' && view.winner !== null && view.forfeited !== true) {
       this.finished = true;
-      trackPlay('finish', this.opponent);
+      trackPlay('finish', this.playType);
     }
   }
   constructor(protected reporter: RecordReporter = defaultRecordReporter()) {}
+  /** 流量統計記的對戰類型：預設就是對手類型，教學另外記 */
+  protected get playType(): PlayType {
+    return this.opponent;
+  }
   /** 這個場次是不是負責上傳戰績：連線對局只由房主上傳，一場只留一筆，訪客不上傳 */
   protected readonly uploadsRecord: boolean = true;
   /** 對局第一次進入結束狀態時留下戰績並交給上傳；離線判負、作弊過的對局由 recordFromView 排除 */
@@ -217,6 +229,164 @@ export class LocalSession extends Base {
   leave() {
     this.closed = true;
     clearTimeout(this.timer);
+  }
+}
+
+// ───────────────────────── 新手教學 ─────────────────────────
+
+/** 開局的洗牌與抽起始手牌不播：教學的牌面是開局後改寫的，播了會先看到 5 張起始手牌再被換掉 */
+const SETUP_FX = new Set(['shuffle', 'deal']);
+
+export class TutorialSession extends Base {
+  readonly me: PlayerId = 0;
+  // 教學不送戰績，所以對手類型用不到；流量統計另外記教學的開始與完成
+  protected readonly opponent = 'cpu' as const;
+  protected readonly uploadsRecord = false;
+  protected get playType(): PlayType {
+    return 'tutorial';
+  }
+  private match: Match;
+  /** 目前執行到腳本的第幾步；等於步驟數表示腳本走完 */
+  private step = 0;
+  private closed = false;
+  private completed = false;
+  /** 引擎已經走到、但還沒交給畫面的影格：停在影格的步驟只送到停點為止，剩下的先扣著 */
+  private held: Frame[] = [];
+  /** 引擎目前的桌面（最新一次更新） */
+  private live!: SeatUpdate;
+  /** 畫面上的桌面就是引擎目前的桌面：沒有停在某一格，也沒有還沒送出的變化 */
+  private shownLive = false;
+  /** 正在一個停點裡：接在後面的說明維持停住的那一格，不放開扣著的影格 */
+  private pauseFrame: Frame | null = null;
+
+  constructor(reporter: RecordReporter = defaultRecordReporter(), private chapter: TutorialChapter = CORE_COMBAT_1) {
+    super(reporter);
+    const { decks, setup } = chapterSetup(chapter);
+    this.match = new Match(decks, setup);
+    this.take(this.match.flush());
+    this.proceed();
+  }
+
+  /** 引擎有了新的更新：桌面記下來，影格先扣著 */
+  private take([mine]: MatchUpdate) {
+    this.live = mine;
+    this.held.push(...mine.frames.filter((f) => !SETUP_FX.has(f.fx.type)));
+    this.shownLive = false;
+  }
+
+  /**
+   * 腳本往下走，直到遇到要等玩家的步驟：
+   * - 對手的出牌立刻執行
+   * - 停在影格：只把影格送到符合的那一格，畫面停在那裡
+   * - 其他要等玩家的步驟：把扣著的影格都送出去，畫面回到引擎目前的桌面
+   * 一路累積的影格一次交給畫面；分批交出去的話，後一批會蓋掉前一批，玩家就看不到前面的動畫。
+   * 畫面上的桌面沒有變時只更新教學進度。
+   */
+  private proceed() {
+    const sent: Frame[] = [];
+    let stop: Frame | null = null;
+    for (;;) {
+      const step = this.chapter.steps[this.step];
+      if (step?.kind === 'opponent-play') {
+        this.opponentPlay(step.card);
+        this.step++;
+        this.pauseFrame = null;
+        continue;
+      }
+      if (step?.kind === 'at-frame') {
+        const at = this.held.findIndex((f) => matchesFrame(step.match, f.fx, this.me));
+        if (at < 0) throw new Error(`教學腳本的第 ${this.step + 1} 步：找不到要停的影格`);
+        sent.push(...this.held.splice(0, at + 1));
+        stop = sent[sent.length - 1];
+        this.pauseFrame = stop;
+        break;
+      }
+      if (step?.kind === 'explain' && this.pauseFrame) {
+        stop = this.pauseFrame;
+        break;
+      }
+      // 說明（不在停點裡）、要求出牌、腳本走完：放開扣著的影格
+      sent.push(...this.held.splice(0));
+      this.pauseFrame = null;
+      break;
+    }
+    // 走到結束畫面才算完成；中途離開不寫
+    if (!this.chapter.steps[this.step] && !this.completed) {
+      this.completed = true;
+      setTutorialDone();
+    }
+    this.publish(sent, stop);
+  }
+
+  /** stop 是畫面要停住的那一格（null 表示回到引擎目前的桌面） */
+  private publish(sent: Frame[], stop: Frame | null) {
+    const frameChanged = stop !== null && sent.length > 0;
+    if (!frameChanged && (stop !== null || this.shownLive)) {
+      // 畫面上的桌面沒有變：維持停住的那一格，或本來就是目前的桌面
+      this.set({ tutorial: this.progress(this.s.view!, stop), message: '' });
+      return;
+    }
+    const view = stop ? this.pausedView(stop) : this.live.view;
+    this.shownLive = stop === null;
+    this.show({ ...this.live, view, frames: sent }, stop === null && this.match.over, { tutorial: this.progress(view, stop) }, stop !== null);
+  }
+
+  /** 停在某一格時的桌面：那一格的桌面，紀錄只到當時，沒有提示 */
+  private pausedView(frame: Frame): GameView {
+    return { ...frame.view, log: this.live.view.log.slice(0, frame.logLen), prompt: null, waitingFor: null };
+  }
+
+  private opponentPlay(card: string) {
+    const pending = this.match.pending;
+    const opt = pending?.player === 1 ? pending.options.find((o) => o.cardId === card) : undefined;
+    if (!opt) throw new Error(`教學腳本的第 ${this.step + 1} 步：對手現在不能打出【${card}】`);
+    const r = this.match.submit(1, [opt.key]);
+    if (r.error) throw new Error(`教學腳本的第 ${this.step + 1} 步：${r.error}`);
+    this.take(r.update);
+  }
+
+  private progress(view: GameView, frame: Frame | null): TutorialProgress {
+    const step = this.chapter.steps[this.step];
+    if (!step) return { text: '', highlight: [], awaiting: null, finished: true };
+    const ctx = { view, frame: frame ?? undefined };
+    if (step.kind === 'explain' || step.kind === 'at-frame') {
+      return { text: resolveText(step.text, ctx), highlight: step.highlight ?? [], awaiting: 'click', finished: false };
+    }
+    if (step.kind === 'play') {
+      return { text: resolveText(step.text, ctx), highlight: [{ kind: 'hand-card', cardId: step.card }], awaiting: { play: step.card }, finished: false };
+    }
+    throw new Error('教學腳本：對手的步驟應該已經執行完');
+  }
+
+  advance() {
+    const kind = this.chapter.steps[this.step]?.kind;
+    if (this.closed || (kind !== 'explain' && kind !== 'at-frame')) return;
+    this.step++;
+    this.proceed();
+  }
+
+  submit(keys: string[]) {
+    if (this.closed) return;
+    const step = this.chapter.steps[this.step];
+    if (step?.kind !== 'play') {
+      this.set({ message: step ? '現在請先點擊畫面進入下一步' : '教學的這一段到這裡結束了' });
+      return;
+    }
+    const pending = this.match.pending;
+    const chosen = keys.length === 1 && pending?.player === 0 ? pending.options.find((o) => o.key === keys[0]) : undefined;
+    if (chosen?.cardId !== step.card) {
+      this.set({ message: `請照說明，打出被框起來的【${getCard(step.card).name}】` });
+      return;
+    }
+    const r = this.match.submit(0, keys);
+    if (r.error) throw new Error(`教學腳本的第 ${this.step + 1} 步：${r.error}`);
+    this.take(r.update);
+    this.step++;
+    this.proceed();
+  }
+
+  leave() {
+    this.closed = true;
   }
 }
 

@@ -27,8 +27,8 @@ CREATE TABLE IF NOT EXISTS events (
   visit_id TEXT NOT NULL,
   device_id TEXT NOT NULL,
   version TEXT NOT NULL,
-  -- 只有開始與打完對局才有：電腦或玩家
-  opponent TEXT CHECK (opponent IN ('cpu', 'player')),
+  -- 只有開始與打完對局才有：電腦、玩家或新手教學。已上線的資料庫要先執行 migrations 裡的遷移檔，才存得進教學
+  opponent TEXT CHECK (opponent IN ('cpu', 'player', 'tutorial')),
   created_at INTEGER NOT NULL,
   last_seen_at INTEGER NOT NULL,
   active_ms INTEGER NOT NULL DEFAULT 0
