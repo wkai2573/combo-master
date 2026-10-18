@@ -4,6 +4,7 @@ import { botChoice } from '../engine/bot';
 import type { CheatSnapshot, CheatZone } from '../engine/cheat';
 import { Rng } from '../engine/rng';
 import { CORE_COMBAT_1, matchesFrame, resolveText, type TutorialChapter, type TutorialProgress } from '../tutorial/script';
+import { setTutorialDone } from '../tutorial/completion';
 import { chapterSetup } from '../tutorial/setup';
 import { trackPlay } from '../stats/analytics';
 import { recordFromView, type Opponent } from '../stats/records';
@@ -244,6 +245,7 @@ export class TutorialSession extends Base {
   /** 目前執行到腳本的第幾步；等於步驟數表示腳本走完 */
   private step = 0;
   private closed = false;
+  private completed = false;
   /** 引擎已經走到、但還沒交給畫面的影格：停在影格的步驟只送到停點為止，剩下的先扣著 */
   private held: Frame[] = [];
   /** 引擎目前的桌面（最新一次更新） */
@@ -304,6 +306,11 @@ export class TutorialSession extends Base {
       this.pauseFrame = null;
       break;
     }
+    // 走到結束畫面才算完成；中途離開不寫
+    if (!this.chapter.steps[this.step] && !this.completed) {
+      this.completed = true;
+      setTutorialDone();
+    }
     this.publish(sent, stop);
   }
 
@@ -336,13 +343,13 @@ export class TutorialSession extends Base {
 
   private progress(view: GameView, frame: Frame | null): TutorialProgress {
     const step = this.chapter.steps[this.step];
-    if (!step) return { text: '', highlight: [], awaiting: null };
+    if (!step) return { text: '', highlight: [], awaiting: null, finished: true };
     const ctx = { view, frame: frame ?? undefined };
     if (step.kind === 'explain' || step.kind === 'at-frame') {
-      return { text: resolveText(step.text, ctx), highlight: step.highlight ?? [], awaiting: 'click' };
+      return { text: resolveText(step.text, ctx), highlight: step.highlight ?? [], awaiting: 'click', finished: false };
     }
     if (step.kind === 'play') {
-      return { text: resolveText(step.text, ctx), highlight: [{ kind: 'hand-card', cardId: step.card }], awaiting: { play: step.card } };
+      return { text: resolveText(step.text, ctx), highlight: [{ kind: 'hand-card', cardId: step.card }], awaiting: { play: step.card }, finished: false };
     }
     throw new Error('教學腳本：對手的步驟應該已經執行完');
   }

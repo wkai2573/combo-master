@@ -12,7 +12,7 @@ const prompt: Request = {
     { key: 'pass', label: '收招' },
   ],
 };
-const progress = (awaiting: TutorialProgress['awaiting']): TutorialProgress => ({ text: 'x', highlight: [], awaiting });
+const progress = (awaiting: TutorialProgress['awaiting']): TutorialProgress => ({ text: 'x', highlight: [], awaiting, finished: false });
 
 describe('教學的操作封鎖：玩家看得到的提示', () => {
   it('不是教學：提示原樣給玩家', () => {

@@ -24,6 +24,10 @@ function Routes() {
           setSession(null);
           setRoute('home');
         }}
+        onPractice={() => {
+          setSession(null);
+          setRoute('practice');
+        }}
       />
     );
   }

@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.48.3',
+    date: '2026-10-18',
+    items: [
+      { type: 'add', text: '新手教學打完會出現「教學完成！」畫面，可以直接開始單機練習或回主畫面' },
+      { type: 'add', text: '還沒完成過新手教學時，主畫面的「新手教學」按鈕會顯示「推薦」標籤，完成後就不再顯示；中途離開不算完成' },
+    ],
+  },
+  {
     version: '0.48.2',
     date: '2026-10-18',
     items: [

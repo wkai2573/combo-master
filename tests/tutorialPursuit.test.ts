@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCard } from '../src/data/cards';
 import { TutorialSession } from '../src/net/session';
+import { isTutorialDone } from '../src/tutorial/completion';
 import type { BattleRecord } from '../src/stats/records';
 import type { RecordReporter } from '../src/stats/reporter';
 
@@ -12,14 +13,25 @@ const testReporter: RecordReporter = {
   flush: async () => ({ sent: 0, left: 0 }),
 };
 
+// 完成紀錄寫在這台瀏覽器的儲存；測試用記憶體取代，才看得到有沒有寫入
+let stored: Map<string, string>;
+const isDone = () => isTutorialDone();
+
 beforeEach(() => {
   captured = [];
   vi.useFakeTimers();
+  stored = new Map();
+  vi.stubGlobal('localStorage', {
+    getItem: (k: string) => stored.get(k) ?? null,
+    setItem: (k: string, v: string) => void stored.set(k, v),
+    removeItem: (k: string) => void stored.delete(k),
+  });
 });
 const sessions: TutorialSession[] = [];
 afterEach(() => {
   sessions.splice(0).forEach((s) => s.leave());
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 function start() {
@@ -281,5 +293,50 @@ describe('新手教學：整場走完（ADR 0008 的把關）', () => {
     expect(s.getState().status).toBe('over');
     expect(s.getState().batch.id).toBeGreaterThan(id);
     expect(progress(s).awaiting).toBeNull();
+  });
+});
+
+describe('新手教學：結束畫面與完成紀錄', () => {
+  /** 走到勝負影格的停點，還沒點 */
+  function toVictory() {
+    const s = toSecondSeven();
+    s.advance();
+    playCard(s, '梅花7');
+    advanceTo(s, '牌組就是生命');
+    return s;
+  }
+
+  it('一開始與走到一半都沒有到結束畫面，也沒有完成紀錄', () => {
+    const s = start();
+    expect(progress(s).finished).toBe(false);
+    expect(isDone()).toBe(false);
+    const v = toVictory();
+    expect(progress(v).finished).toBe(false);
+    expect(isDone()).toBe(false);
+  });
+
+  it('點完勝負那一步：到了結束畫面，寫入完成紀錄', () => {
+    const s = toVictory();
+    s.advance();
+    expect(progress(s).finished).toBe(true);
+    expect(isDone()).toBe(true);
+  });
+
+  it('中途離開不算完成：不寫完成紀錄', () => {
+    const s = toVictory();
+    s.leave();
+    s.advance();
+    expect(progress(s).finished).toBe(false);
+    expect(isDone()).toBe(false);
+  });
+
+  it('儲存空間不可用時走到結束畫面也不出錯', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => { throw new Error('讀取失敗'); },
+      setItem: () => { throw new Error('寫入失敗'); },
+    });
+    const s = toVictory();
+    expect(() => s.advance()).not.toThrow();
+    expect(progress(s).finished).toBe(true);
   });
 });

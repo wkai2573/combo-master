@@ -103,6 +103,8 @@ export interface TutorialProgress {
   highlight: HighlightTarget[];
   /** 在等什麼：點擊畫面、玩家打出指定的牌，或沒有（腳本走完） */
   awaiting: 'click' | { play: string } | null;
+  /** 腳本走完，到了教學結束畫面 */
+  finished: boolean;
 }
 
 /** 範圍兩端：雙方招式卡疊最上方的連擊值，小的在前；有一方沒有招式就沒有範圍 */

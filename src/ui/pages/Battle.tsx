@@ -30,7 +30,7 @@ const noop = () => {};
 
 const ZONE_NAME: Record<ZoneKey, string> = { discard: '棄牌區', exp: '經驗區', combat: '戰鬥區' };
 
-export function Battle({ session, onExit }: { session: Session; onExit: () => void }) {
+export function Battle({ session, onExit, onPractice }: { session: Session; onExit: () => void; /** 教學結束畫面的「開始單機練習」 */ onPractice: () => void }) {
   const st = useSyncExternalStore(session.subscribe, session.getState);
   const wide = useWide();
   const phone = usePhone();
@@ -71,6 +71,10 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const leave = () => {
     session.leave();
     onExit();
+  };
+  const practice = () => {
+    session.leave();
+    onPractice();
   };
 
   if (!v) {
@@ -128,8 +132,8 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
   const zoneCombat = overlays.zone?.z === 'combat' ? combatCards(v.players[overlays.zone.p]) : null;
   const zoneCards = !overlays.zone ? [] : zoneCombat ? zoneCombat.cards : v.players[overlays.zone.p][overlays.zone.z as 'exp' | 'discard'];
   // 結束演出播完（或跳過）才顯示結果視窗；演出期間先讓勝負在桌面上呈現
-  // 教學要等腳本走完（點完勝負那一步）才輪到結果視窗
-  const result = pres.playing || v.winner === null || (tut && tut.awaiting !== null) ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
+  // 教學不顯示對局的結果視窗，走完腳本改顯示教學結束畫面
+  const result = pres.playing || v.winner === null || tut ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
   const outcomeOf = (p: PlayerId) => (v.winner === null ? undefined : v.winner === 'draw' ? 'draw' : v.winner === p ? 'win' : 'lose');
   const shown = overlays.pinned ?? inspect;
   const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={overlays.pinned !== null} onUnpin={overlays.unpin} />;
@@ -263,6 +267,18 @@ export function Battle({ session, onExit }: { session: Session; onExit: () => vo
         {overlays.flowOpen && <FlowChartModal phase={v.phase} onClose={overlays.closeFlow} />}
         {overlays.zone && <ZoneViewer title={`${overlays.zone.p === me ? '我方' : '對手'}${ZONE_NAME[overlays.zone.z]}`} cards={zoneCards} exp={overlays.zone.z === 'exp'} pursuitFrom={zoneCombat?.pursuitFrom} note={zoneCombat ? COMBAT_LIST_NOTE : undefined} anchor={overlays.zone.anchor as DOMRect} onClose={overlays.closeZone} />}
 
+        {tut?.finished && pres.settled && (
+          <Modal>
+            <div className="result win">
+              <h1>教學完成！</h1>
+              <p className="muted">你已經學會出招、收招、追擊與傷害計算。</p>
+              <div className="resultbtns">
+                <button className="primary" onClick={practice}>開始單機練習</button>
+                <button onClick={leave}>回主畫面</button>
+              </div>
+            </div>
+          </Modal>
+        )}
         {result && (
           <Modal>
             <div className={`result ${result}`}>
