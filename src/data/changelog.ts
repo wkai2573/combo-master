@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.8',
+    date: '2026-10-19',
+    items: [
+      { type: 'change', text: '教學課程清單加上分段標題，目前第 1 到第 5 課在「基礎」之下，之後的卡片標籤課程會接在下一段' },
+    ],
+  },
+  {
     version: '0.50.6',
     date: '2026-10-19',
     items: [

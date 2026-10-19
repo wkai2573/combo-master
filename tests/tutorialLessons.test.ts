@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCard } from '../src/data/cards';
 import { TutorialSession } from '../src/net/session';
-import { isLessonDone } from '../src/tutorial/completion';
-import { getLesson, LESSONS } from '../src/tutorial/lessons';
+import { isLessonDone, recommendedNext } from '../src/tutorial/completion';
+import { getLesson, groupLessons, LESSON_GROUPS, LESSONS } from '../src/tutorial/lessons';
 import type { BattleRecord } from '../src/stats/records';
 import type { RecordReporter } from '../src/stats/reporter';
 import { act, driveToEnd } from './tutorialDrive';
@@ -68,6 +68,32 @@ describe('課程清單', () => {
       expect(l.summary).not.toBe('');
       expect(l.minutes).toBeGreaterThan(0);
     }
+  });
+
+  it('每課都有分組；第 1 到第 5 課是「基礎」', () => {
+    for (const l of LESSONS) expect(LESSON_GROUPS).toContain(l.group);
+    expect(LESSONS.filter((l) => l.no <= 5).every((l) => l.group === '基礎')).toBe(true);
+  });
+
+  it('清單依分組切段：段落照分組順序，每段保持編號順序，只列有課程的分組，全部課程不多不少', () => {
+    const sections = groupLessons();
+    expect(sections.map((s) => s.group)).toEqual(LESSON_GROUPS.filter((g) => LESSONS.some((l) => l.group === g)));
+    for (const s of sections) {
+      expect(s.lessons.length).toBeGreaterThan(0);
+      expect(s.lessons.every((l) => l.group === s.group)).toBe(true);
+      expect(s.lessons.map((l) => l.no)).toEqual([...s.lessons.map((l) => l.no)].sort((a, b) => a - b));
+    }
+    expect(sections.flatMap((s) => s.lessons.map((l) => l.no)).sort((a, b) => a - b)).toEqual(LESSONS.map((l) => l.no));
+    const fake = (no: number, group: (typeof LESSON_GROUPS)[number]) => ({ ...LESSONS[0], no, group });
+    expect(groupLessons([fake(1, '基礎'), fake(2, '基礎')]).map((s) => s.group)).toEqual(['基礎']);
+    expect(groupLessons([])).toEqual([]);
+  });
+
+  it('推薦下一課只看編號順序，不受分組影響', () => {
+    const nos = LESSONS.map((l) => l.no);
+    expect(recommendedNext(nos, new Set([1]))).toBe(2);
+    expect(recommendedNext(nos, new Set(nos.slice(0, 5)))).toBe(nos[5] ?? null);
+    expect(recommendedNext(nos, new Set(nos))).toBeNull();
   });
 
   it('說明文字一律稱呼對方為「對手」', () => {

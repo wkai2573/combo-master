@@ -4,10 +4,15 @@ import { COVER_COST_4 } from './lesson4';
 import { RAGE_DAMAGE_5 } from './lesson5';
 import { CORE_COMBAT_1, type TutorialChapter } from './script';
 
+/** 課程清單的分組，依這個順序顯示標題。分組只影響清單的顯示，不影響編號、完成紀錄與推薦 */
+export const LESSON_GROUPS = ['基礎', '卡片標籤'] as const;
+export type LessonGroup = (typeof LESSON_GROUPS)[number];
+
 /** 一堂教學課：課程清單上的一列，加上這一課用的章節 */
 export interface TutorialLesson {
   /** 課程編號，從 1 開始；完成紀錄與流量統計都用它 */
   no: number;
+  group: LessonGroup;
   title: string;
   /** 清單上的一句話說明 */
   blurb: string;
@@ -22,6 +27,7 @@ export interface TutorialLesson {
 export const LESSONS: TutorialLesson[] = [
   {
     no: 1,
+    group: '基礎',
     title: '核心戰鬥',
     blurb: '出招、收招、追擊與傷害計算',
     minutes: 5,
@@ -30,6 +36,7 @@ export const LESSONS: TutorialLesson[] = [
   },
   {
     no: 2,
+    group: '基礎',
     title: '爆發與經驗區',
     blurb: '爆發與歸還，看經驗區怎麼增長',
     minutes: 3,
@@ -38,6 +45,7 @@ export const LESSONS: TutorialLesson[] = [
   },
   {
     no: 3,
+    group: '基礎',
     title: '覺醒',
     blurb: '經驗達標進入覺醒，看總攻擊的加成',
     minutes: 3,
@@ -46,6 +54,7 @@ export const LESSONS: TutorialLesson[] = [
   },
   {
     no: 4,
+    group: '基礎',
     title: '蓋 X',
     blurb: '用經驗區支付費用，看表側變裏側',
     minutes: 3,
@@ -54,6 +63,7 @@ export const LESSONS: TutorialLesson[] = [
   },
   {
     no: 5,
+    group: '基礎',
     title: '怒氣區與受傷',
     blurb: '怒氣區怎麼累積、怎麼花掉',
     minutes: 3,
@@ -73,3 +83,13 @@ export const getLesson = (no: number): TutorialLesson => {
 
 /** 接在這一課後面的課；最後一課沒有 */
 export const lessonAfter = (no: number): TutorialLesson | undefined => LESSONS.find((l) => l.no > no);
+
+/** 課程清單的一段：標題加上屬於這一段的課，維持課程資料的順序 */
+export interface LessonSection {
+  group: LessonGroup;
+  lessons: TutorialLesson[];
+}
+
+/** 依分組切段，只留有課程的分組，段落順序照 LESSON_GROUPS */
+export const groupLessons = (lessons: readonly TutorialLesson[] = LESSONS): LessonSection[] =>
+  LESSON_GROUPS.map((group) => ({ group, lessons: lessons.filter((l) => l.group === group) })).filter((s) => s.lessons.length > 0);

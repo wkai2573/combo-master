@@ -863,6 +863,8 @@ body[data-drag="moves"] .combatarea { outline-offset: -3px; }
 .overlay:has(.flowchart.vertical) .modal { width: min(100vw, 560px); max-width: 100vw; height: 100vh; height: 100dvh; max-height: none; min-width: 0; padding: 10px; border: 0; border-radius: 0; }
 
 /* ───────── 教學課程清單 ───────── */
+.lessongroup + .lessongroup { margin-top: 18px; }
+.lessongrouptitle { margin: 0 0 8px; font-size: 14px; color: var(--muted); letter-spacing: 1px; }
 .lessonlist { display: grid; gap: 10px; }
 .lesson { display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left; border-radius: 10px; }
 .lessonmark { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--line); font-weight: 700; color: var(--muted); }
