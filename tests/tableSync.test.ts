@@ -139,6 +139,18 @@ describe('卡表同步：Ex 卡區域', () => {
     expect(notes).toContain('Ex 卡尚未實作效果：Ex-未實作');
   });
 
+  it('通則依所在區域：沒登記區域時經驗區、增益區的寫法都接受；登記了就必須寫對', () => {
+    const BUFF_LEAVE = '當此卡離開增益區時，移除遊戲。';
+    const exps = [ex({ name: 'Ex-經驗' }), ex({ order: 2, uid: 'X2', name: 'Ex-增益', text: `持續回合：2。
+${BUFF_LEAVE}` })];
+    const sync = (exZone?: (id: string) => 'exp' | 'buff') =>
+      buildCardTable({ cards: [], chars: [], keywords: [], exCards: exps }, { ...base, hasEffect: () => true, exZone }).notes;
+    expect(sync()).toEqual([]);
+    expect(sync((id) => (id === 'Ex-增益' ? 'buff' : 'exp'))).toEqual([]);
+    expect(sync(() => 'buff')).toEqual([`Ex 卡缺少「${BUFF_LEAVE}」：Ex-經驗`]);
+    expect(sync(() => 'exp')).toEqual([`Ex 卡缺少「${LEAVE}」：Ex-增益`]);
+  });
+
   it('卡、角色、Ex 卡的文字引用不存在的 Ex 卡就報錯，存在則通過', () => {
     expect(() => build({ exCards: [ex()], cards: [spade({ text: '[發]：將 [Ex-不存在] 移入對方經驗區。' })] })).toThrow('Ex-不存在');
     expect(() => build({ exCards: [ex()], chars: [{ uid: 'C1', name: '勇者', hp: 50, expReq: 8, cls: '劍士', awakenText: '追加：[Ex-不存在]' }] })).toThrow('Ex-不存在');

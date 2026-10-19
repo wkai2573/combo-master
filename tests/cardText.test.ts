@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isExCardId } from '../src/data/exCards';
+import { checkExLeaveRule, isExCardId } from '../src/data/exCards';
+import { exZoneOf } from '../src/engine/effects';
 import { ALL_CARDS, ALL_CHARACTERS } from '../src/data/cards';
 import { checkCardText, checkWording, lineBoxes, parseCardLine, parseCardText } from '../src/data/cardText';
 import { isCardEnabled } from '../src/data/enabledCards';
@@ -105,6 +106,15 @@ describe('全部卡片與角色文字都符合撰寫規範', () => {
     const problems: string[] = [];
     for (const c of ALL_CARDS.filter((c) => c.text !== '' && (isCardEnabled(c) || isExCardId(c.id)))) {
       for (const e of checkCardText(c.text)) problems.push(`${c.name}：${e}`);
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it('每張 Ex 卡都寫了通則，且寫的是實作登記的所在區域（經驗區或增益區）', () => {
+    const problems: string[] = [];
+    for (const c of ALL_CARDS.filter((c) => isExCardId(c.id))) {
+      const e = checkExLeaveRule(c.text, exZoneOf(c.id));
+      if (e) problems.push(`${c.name}：${e}`);
     }
     expect(problems).toEqual([]);
   });

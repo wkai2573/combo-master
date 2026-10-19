@@ -1,3 +1,4 @@
+import { isExCardId, type ExZone } from '../data/exCards';
 import { canPay, optionalPay } from './cost';
 import { awakened, confirm, order, Z, type GameCtx, type Gen } from './ops';
 import {
@@ -120,6 +121,8 @@ export interface Effects {
    * 一張卡的效果登記在單一放置位置；將來若有卡同時有經驗效果與其他位置的效果，要先擴充登記表，一致性測試會提醒
    */
   hasExpEffect(id: string): boolean;
+  /** Ex 卡的效果來源登記在哪個區域（經驗區或增益區）；不是 Ex 卡的條目、還沒登記的卡回傳 undefined */
+  exZoneOf(id: string): ExZone | undefined;
 }
 
 export function createEffects(sources: readonly EffectSource[]): Effects {
@@ -211,7 +214,12 @@ export function createEffects(sources: readonly EffectSource[]): Effects {
     return r;
   }
 
-  return { windowEffects, fire, fireEach, query, moveRules, hasEffect: registry.has, hasExpEffect: (id: string) => registry.byId.get(id)?.at === 'exp' } as unknown as Effects;
+  return { windowEffects, fire, fireEach, query, moveRules, hasEffect: registry.has, hasExpEffect: (id: string) => registry.byId.get(id)?.at === 'exp',
+    exZoneOf: (id: string) => {
+      const at = registry.byId.get(id)?.at;
+      return isExCardId(id) && (at === 'exp' || at === 'buff') ? at : undefined;
+    },
+  } as unknown as Effects;
 }
 
 /**
@@ -229,3 +237,4 @@ export const moveRules: Effects['moveRules'] = (cardId) => effects().moveRules(c
 /** 這個卡名或角色名有沒有實作效果，涵蓋招式、裝備、增益與角色 */
 export const hasEffect = (id: string): boolean => effects().hasEffect(id);
 export const hasExpEffect = (id: string): boolean => effects().hasExpEffect(id);
+export const exZoneOf = (id: string): ExZone | undefined => effects().exZoneOf(id);

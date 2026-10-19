@@ -98,8 +98,8 @@ export function move(g: GameCtx, card: CardInst, to: ZoneName, pos: 'top' | 'bot
   const from = Z(g, card.owner, card.zone);
   const i = from.indexOf(card);
   if (i >= 0) from.splice(i, 1);
-  // Ex 卡（臨時額外卡）離開經驗區時移除遊戲
-  if (isExCardId(card.id) && card.zone === 'exp' && to !== 'exp') return;
+  // Ex 卡（臨時額外卡）離開所在的經驗區或增益區時移除遊戲
+  if (isExCardId(card.id) && (card.zone === 'exp' || card.zone === 'buff') && to !== card.zone) return;
   card.zone = to;
   card.covered = false;
   const dest = Z(g, card.owner, to);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EX_LEAVE_RULE, isExCardId } from '../src/data/exCards';
+import { isExCardId } from '../src/data/exCards';
 import { hasEffect } from '../src/engine/effects';
 import { ALL_CARDS, ALL_CHARACTERS, getCard, PLAYABLE_CARDS } from '../src/data/cards';
 import { ENABLED_EFFECT_CARDS, isCardEnabled, isVanilla } from '../src/data/enabledCards';

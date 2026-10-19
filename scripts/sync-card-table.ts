@@ -19,7 +19,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import baseCards from '../src/data/generated/cards.json';
 import baseChars from '../src/data/generated/characters.json';
-import { hasEffect } from '../src/engine/effects';
+import { exZoneOf, hasEffect } from '../src/engine/effects';
 import type { CardData, CharacterData } from '../src/data/types';
 import { buildCardTable, type Doc } from './tableSync';
 
@@ -36,7 +36,7 @@ function readDocs(sub: string): Doc[] {
 
 const { table, notes } = buildCardTable(
   { cards: readDocs('cards'), chars: readDocs('chars'), keywords: readDocs('keywords'), exCards: readDocs('exCards') },
-  { cards: baseCards as CardData[], chars: baseChars as CharacterData[], hasEffect },
+  { cards: baseCards as CardData[], chars: baseChars as CharacterData[], hasEffect, exZone: exZoneOf },
 );
 
 writeFileSync(out, JSON.stringify(table, null, 2) + '\n');
