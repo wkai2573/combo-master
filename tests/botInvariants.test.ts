@@ -10,7 +10,7 @@ const counts = (g: Game): [number, number] => [0, 1].map((p) =>
   (Object.values(g.state.players[p].zones) as Array<Array<{ id: string }>>).flat().filter((c) => !c.id.startsWith('Ex-')).length) as [number, number];
 
 describe('壓測用的卡片守恆檢查', () => {
-  it('Ex 卡不算牌組的卡片總數，但只能待在經驗區', () => {
+  it('Ex 卡不算牌組的卡片總數，但只能待在它登記的區域（經驗區或增益區）', () => {
     const g = scenario({ p0: { exp: ['黑桃3'] } });
     const expected = counts(g);
     newCard(g, 'Ex-流血', 0, 'exp');
@@ -21,6 +21,13 @@ describe('壓測用的卡片守恆檢查', () => {
     expect(() => checkInvariants(g, expected)).toThrow('不在經驗區');
     Z(g, 0, 'hand').splice(Z(g, 0, 'hand').indexOf(bad), 1);
     expect(() => checkInvariants(g, expected)).not.toThrow();
+
+    // 增益區的 Ex-狂怒是對的位置，放在經驗區反而不對
+    const rage = newCard(g, 'Ex-狂怒', 0, 'buff');
+    expect(() => checkInvariants(g, expected)).not.toThrow();
+    Z(g, 0, 'buff').splice(Z(g, 0, 'buff').indexOf(rage), 1);
+    newCard(g, 'Ex-狂怒', 0, 'exp');
+    expect(() => checkInvariants(g, expected)).toThrow('不在增益區');
   });
 
   it('刺客（會把 Ex 卡放進對方經驗區）和塗毒的對局都能跑完，沒有違反守恆', () => {
