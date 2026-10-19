@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.4',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '教學新增第 3 課「覺醒」：經驗區差 1 張就覺醒，爆發放進第 8 張進入覺醒，再打一段簡短戰鬥，看覺醒的總攻擊加成反映在數字上' },
+    ],
+  },
+  {
     version: '0.50.3',
     date: '2026-10-19',
     items: [

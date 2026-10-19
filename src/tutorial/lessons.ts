@@ -1,4 +1,5 @@
 import { BURST_EXP_2 } from './lesson2';
+import { AWAKENING_3 } from './lesson3';
 import { CORE_COMBAT_1, type TutorialChapter } from './script';
 
 /** 一堂教學課：課程清單上的一列，加上這一課用的章節 */
@@ -32,6 +33,14 @@ export const LESSONS: TutorialLesson[] = [
     minutes: 3,
     summary: '你已經學會爆發，也看到招式卡與追擊卡會在歸還時回到經驗區。',
     chapter: BURST_EXP_2,
+  },
+  {
+    no: 3,
+    title: '覺醒',
+    blurb: '經驗達標進入覺醒，看總攻擊的加成',
+    minutes: 3,
+    summary: '你已經學會覺醒：經驗區達到門檻就覺醒，覺醒中的角色效果會直接反映在數字上。',
+    chapter: AWAKENING_3,
   },
 ];
 

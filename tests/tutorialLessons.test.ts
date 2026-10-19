@@ -236,7 +236,7 @@ describe('第 2 課：爆發與經驗區', () => {
     expect(progress(s).ending).toEqual({
       heading: '第 2 課完成！',
       summary: getLesson(2).summary,
-      next: { kind: 'practice', label: '開始單機練習' },
+      next: { kind: 'lesson', no: 3, label: '下一課' },
     });
     expect(isLessonDone(2)).toBe(true);
     expect(isLessonDone(1)).toBe(false);
@@ -268,6 +268,99 @@ describe('第 2 課：爆發與經驗區', () => {
   });
 });
 
+describe('第 3 課：覺醒', () => {
+  const awake = (s: TutorialSession) => {
+    const pv = view(s).players[0];
+    return pv.exp.length >= 8;
+  };
+
+  /** 爆發之前的說明點完，要求放進第 8 張 */
+  function toBurst() {
+    const s = start(3);
+    clickToAction(s);
+    return s;
+  }
+
+  it('開局：經驗區 7 張、尚未覺醒；說明帶入張數與門檻，高亮經驗區', () => {
+    const s = start(3);
+    expect(view(s).phase).toBe('爆發');
+    expect(view(s).players[0].exp).toHaveLength(7);
+    expect(awake(s)).toBe(false);
+    expect(progress(s).text).toContain('目前有 7 張卡');
+    expect(progress(s).text).toContain('覺醒需要 8 張');
+    expect(progress(s).highlight).toEqual([{ kind: 'exp-zone', owner: 'me' }]);
+  });
+
+  it('要求爆發時選別張、略過都被拒絕，桌面不變', () => {
+    const s = toBurst();
+    expect(progress(s).awaiting).toEqual({ play: '梅花9' });
+    const before = s.getState();
+    choose(s, '黑桃1');
+    s.submit([]);
+    expect(s.getState().message).not.toBe('');
+    expect(s.getState().view).toBe(before.view);
+    expect(s.getState().batch.id).toBe(before.batch.id);
+    expect(view(s).players[0].exp).toHaveLength(7);
+  });
+
+  it('放進第 8 張：進入覺醒，停在覺醒標示出現的那一格，高亮覺醒標示；沒有需要選擇的覺醒窗口', () => {
+    const s = toBurst();
+    choose(s, '梅花9');
+    expect(view(s).players[0].exp).toHaveLength(8);
+    expect(awake(s)).toBe(true);
+    expect(s.getState().batch.frames.at(-1)!.fx).toEqual({ type: 'burst', player: 0 });
+    expect(progress(s).text).toContain('進入覺醒了');
+    expect(progress(s).highlight).toEqual([{ kind: 'awaken-mark', owner: 'me' }, { kind: 'exp-zone', owner: 'me' }]);
+    // 沒有彈出提示：接下來是說明，然後對手的爆發由腳本略過
+    expect(progress(s).awaiting).toBe('click');
+    expect(view(s).prompt).toBeNull();
+  });
+
+  it('說明覺醒效果是總攻擊 +2，也說明低於門檻會退出、再次達標視為重新覺醒', () => {
+    const s = toBurst();
+    choose(s, '梅花9');
+    const all = clickToAction(s).join('\n');
+    expect(all).toContain('總攻擊 +2');
+    expect(all).toContain('低於 8 張就會退出覺醒');
+    expect(all).toContain('重新覺醒');
+  });
+
+  it('簡短戰鬥到傷害計算：玩家總攻擊包含覺醒的 +2，說明帶入實際數字', () => {
+    const s = toBurst();
+    choose(s, '梅花9');
+    clickToAction(s);
+    choose(s, '紅心5');
+    const fx = s.getState().batch.frames.at(-1)!.fx as { type: string; atk: [number, number] };
+    expect(fx.type).toBe('calc');
+    const atk = fx.atk[0];
+    expect(view(s).players[0].atk).toBe(atk);
+    // 紅心5 攻擊 0、追擊成功的方塊4 攻擊 4，再加上覺醒的 2
+    expect(atk).toBe(getCard('紅心5').atk + getCard('方塊4').atk + 2);
+    expect(progress(s).text).toContain(`你的總攻擊是 ${atk}，其中 2 點是覺醒的加成，沒有覺醒的話只有 ${atk - 2}`);
+    expect(progress(s).highlight).toEqual([{ kind: 'total', stat: 'atk' }, { kind: 'awaken-mark', owner: 'me' }]);
+  });
+
+  it('從頭走到尾：結束畫面，寫入第 3 課的完成紀錄，不送戰績', () => {
+    const s = start(3);
+    expect(isLessonDone(3)).toBe(false);
+    driveToEnd(s);
+    expect(progress(s).ending).toMatchObject({ heading: '第 3 課完成！' });
+    expect(isLessonDone(3)).toBe(true);
+    expect(isLessonDone(2)).toBe(false);
+    expect(awake(s)).toBe(true);
+    s.leave();
+    expect(captured).toEqual([]);
+  });
+
+  it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
+    const s = start(3);
+    for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
+      if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
+      act(s);
+    }
+    expect(progress(s).finished).toBe(true);
+  });
+});
 describe('第 1 課的結束畫面接第 2 課', () => {
   it('第 1 課後面有第 2 課，按鈕是「下一課」', () => {
     const s = start(1);
