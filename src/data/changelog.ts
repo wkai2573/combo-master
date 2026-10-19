@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.51.6',
+    date: '2026-10-19',
+    items: [
+      { type: 'fix', text: '財富管理放回牌組底時，紀錄不再把直接移除遊戲的 Ex 卡算成放回牌組的張數' },
+      { type: 'change', text: '單機練習的電腦在牌組只剩 3 張以下時，不再發動會把自己牌組打到 0 張的強力過件與財富管理' },
+    ],
+  },
+  {
     version: '0.51.5',
     date: '2026-10-19',
     items: [

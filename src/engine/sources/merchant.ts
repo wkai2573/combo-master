@@ -1,3 +1,4 @@
+import { isExCardId } from '../../data/exCards';
 import { canPay, chooseX, faceUpExp, pay } from '../cost';
 import { hasExpEffect } from '../effects';
 import { defineSource, type EffectSource } from '../effectKit';
@@ -159,7 +160,9 @@ export const 財富管理 = coverReaction(
     }
     const back = yield* chooseCards(g, p, '【財富管理】選擇 2 張經驗放回牌組底', Z(g, p, 'exp'), 2, 2);
     for (const card of back) move(g, card, 'deck', 'bottom');
-    log(g, `【財富管理】${pname(g, p)} 將 ${back.length} 張經驗放回牌組底`);
+    // Ex 卡離開經驗區是移除遊戲，不會進牌組，紀錄要分開寫
+    const removed = back.filter((card) => isExCardId(card.id)).length;
+    log(g, `【財富管理】${pname(g, p)} 將 ${back.length - removed} 張經驗放回牌組底${removed > 0 ? `，${removed} 張 Ex 卡移除遊戲` : ''}`);
   },
   {
     onPlay: (c) => c.effect(

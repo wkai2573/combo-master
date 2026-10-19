@@ -2,7 +2,7 @@
  * 卡表同步的核心：把「連擊大師卡表」各集合的文件，轉成 src/data/cardTable.json 的內容。
  * 純函式，不讀寫檔案；scripts/sync-card-table.ts 負責讀檔與寫檔。
  */
-import { checkExLeaveRule, EX_PREFIX, type ExZone } from '../src/data/exCards';
+import { checkExLeaveRule, EX_LEAVE_RULES, EX_PREFIX, type ExZone } from '../src/data/exCards';
 import type { CardData, CharacterData } from '../src/data/types';
 
 export type Doc = Record<string, any>;
@@ -146,6 +146,8 @@ function buildExCards(docs: TableDocs, base: TableBase, notes: string[]): CardDa
     // 放在增益區的 Ex 卡依卡文的「持續回合：N。」計時，持續回合只寫在效果裡，沒有獨立欄位
     const duration = /持續回合：(\d+)/.exec(text)?.[1];
     if (duration) card.duration = Number(duration);
+    // 放在增益區的 Ex 卡（通則寫「離開增益區」）沒有持續回合就永遠不會到期
+    else if (text.includes(EX_LEAVE_RULES.buff)) notes.push(`Ex 卡放在增益區，卻抓不到「持續回合：N。」，不會到期：${d.name}`);
     out.push(card);
   }
   // 引用檢查：所有卡、角色、Ex 卡的文字提到的 [Ex-卡名] 都要有對應的 Ex 卡

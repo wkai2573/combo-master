@@ -141,14 +141,24 @@ describe('卡表同步：Ex 卡區域', () => {
 
   it('通則依所在區域：沒登記區域時經驗區、增益區的寫法都接受；登記了就必須寫對', () => {
     const BUFF_LEAVE = '當此卡離開增益區時，移除遊戲。';
-    const exps = [ex({ name: 'Ex-經驗' }), ex({ order: 2, uid: 'X2', name: 'Ex-增益', text: `持續回合：2。
-${BUFF_LEAVE}` })];
+    const exps = [ex({ name: 'Ex-經驗' }), ex({ order: 2, uid: 'X2', name: 'Ex-增益', text: `持續回合：2。\n${BUFF_LEAVE}` })];
     const sync = (exZone?: (id: string) => 'exp' | 'buff') =>
       buildCardTable({ cards: [], chars: [], keywords: [], exCards: exps }, { ...base, hasEffect: () => true, exZone }).notes;
     expect(sync()).toEqual([]);
     expect(sync((id) => (id === 'Ex-增益' ? 'buff' : 'exp'))).toEqual([]);
     expect(sync(() => 'buff')).toEqual([`Ex 卡缺少「${BUFF_LEAVE}」：Ex-經驗`]);
     expect(sync(() => 'exp')).toEqual([`Ex 卡缺少「${LEAVE}」：Ex-增益`]);
+  });
+
+  it('增益區的 Ex 卡依卡文的「持續回合：N。」計時；抓不到就提醒', () => {
+    const BUFF_LEAVE = '當此卡離開增益區時，移除遊戲。';
+    const timed = build({ exCards: [ex({ text: `持續回合：3。\n${BUFF_LEAVE}` })] });
+    expect(timed.table.exCards[0].duration).toBe(3);
+    expect(timed.notes).toEqual([]);
+    const typo = build({ exCards: [ex({ text: `持續回合:3。\n${BUFF_LEAVE}` })] });
+    expect(typo.table.exCards[0].duration).toBeUndefined();
+    expect(typo.notes).toEqual(['Ex 卡放在增益區，卻抓不到「持續回合：N。」，不會到期：Ex-測試']);
+    expect(build({ exCards: [ex()] }).table.exCards[0].duration).toBeUndefined(); // 經驗區的 Ex 卡沒有持續回合
   });
 
   it('卡、角色、Ex 卡的文字引用不存在的 Ex 卡就報錯，存在則通過', () => {

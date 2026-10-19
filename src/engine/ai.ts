@@ -210,9 +210,13 @@ export function chooseTriggerEffect(req: Request, myView: PlayerView, oppView: P
   const incomingDamage = Math.max(0, oppView.atk - myView.def);
   const isDamageReduction = req.title.includes('護甲') || req.title.includes('減少') || req.title.includes('復仇之嚎');
 
+  // 會把自己牌組放到 0 張的效果：牌組只剩 3 張以下時不發動，免得電腦自己輸掉（真人可以自己選擇）
+  const drainsDeck = (text: string) => myView.deckCount <= 3 && (text.includes('強力過件') || text.includes('財富管理'));
+
   // 單效果發動確認 (yes/no)
   if (optKeys.includes('yes') && optKeys.includes('no')) {
     if (isDamageReduction && incomingDamage <= 0) return ['no'];
+    if (drainsDeck(req.title)) return ['no'];
     return ['yes'];
   }
 
@@ -227,6 +231,7 @@ export function chooseTriggerEffect(req: Request, myView: PlayerView, oppView: P
       if (opt.key === 'end') continue;
       const isDmgRed = opt.label.includes('護甲') || opt.label.includes('減少') || opt.label.includes('減免');
       if (isDmgRed && incomingDamage <= 0) continue;
+      if (drainsDeck(opt.label)) continue;
       return [opt.key];
     }
     return ['end'];

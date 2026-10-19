@@ -333,6 +333,41 @@ describe('AI 決策：觸發窗口與技能', () => {
   });
 });
 
+describe('AI 決策：不把自己的牌組打到 0 張', () => {
+  const rng = new Rng(42);
+  const confirmReq = (card: string): Request => ({
+    player: 1,
+    title: `是否發動【${card}】？（蓋2）`,
+    options: [{ key: 'yes', label: '發動' }, { key: 'no', label: '不發動' }],
+    min: 1,
+    max: 1,
+  });
+  const withDeck = (deckCount: number) =>
+    makeGameView({ players: [makePlayerView(), makePlayerView({ deckCount })] });
+
+  it('強力過件、財富管理：牌組只剩 3 張以下時不發動，牌組夠多時照常發動', () => {
+    for (const card of ['強力過件', '財富管理']) {
+      expect(botChoice(confirmReq(card), rng, withDeck(3)), `${card} 剩 3 張`).toEqual(['no']);
+      expect(botChoice(confirmReq(card), rng, withDeck(12)), `${card} 剩 12 張`).toEqual(['yes']);
+    }
+  });
+
+  it('窗口選單裡會打光牌組的效果被略過', () => {
+    const req: Request = {
+      player: 1,
+      title: '爆發後：選擇要發動的效果',
+      options: [
+        { key: 'e0', label: '【財富管理】將牌組上方 3 張卡以裏側放入經驗區（蓋1）' },
+        { key: 'end', label: '結束（不再發動）' },
+      ],
+      min: 1,
+      max: 1,
+    };
+    expect(botChoice(req, rng, withDeck(3))).toEqual(['end']);
+    expect(botChoice(req, rng, withDeck(20))).toEqual(['e0']);
+  });
+});
+
 describe('AI 決策：反擊步驟出招與收招保留', () => {
   const rng = new Rng(42);
 
