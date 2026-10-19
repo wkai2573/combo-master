@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { becomePursuitCard, totalDef } from '../src/engine/combat';
 import { newCard, Z } from '../src/engine/ops';
+import { getCard } from '../src/data/cards';
 import { defOf, drive, names, pick, scenario, setZones } from './helpers';
 
 const covered = (g: ReturnType<typeof scenario>, p: 0 | 1 = 0) => Z(g, p, 'exp').filter((c) => c.covered).length;
@@ -56,20 +57,17 @@ describe('嘲諷（劍士）：只能在先手步驟出招，出招時必須支�
     expect(names(g, 0, 'hand')).toEqual(['黑桃2']);
   });
 
-  it('傷害計算時總防禦 −4X，X＝我方招式卡疊的卡數，含自己；總防禦最低為 0', () => {
+  it('數值 1／6／9，傷害計算時總防禦不再被扣：只算卡面防禦，招式卡疊多張也一樣', () => {
+    expect([getCard('嘲諷').atk, getCard('嘲諷').def, getCard('嘲諷').combo]).toEqual([1, 6, 9]);
+
     const solo = scenario({ p0: { moves: ['嘲諷'] } });
-    expect(totalDef(solo, 0)).toBe(defOf('嘲諷') - 4);
+    expect(totalDef(solo, 0)).toBe(defOf('嘲諷'));
 
     const two = scenario({ p0: { moves: ['嘲諷', '黑桃2'] } });
-    expect(totalDef(two, 0)).toBe(defOf('嘲諷') + defOf('黑桃2') - 8);
+    expect(totalDef(two, 0)).toBe(defOf('嘲諷') + defOf('黑桃2'));
 
-    const floor = scenario({ p0: { moves: ['嘲諷', ...Array(5).fill('Explosion!')] } });
-    expect(totalDef(floor, 0)).toBe(0);
-  });
-
-  it('追擊卡疊的卡不算在 X 裡', () => {
-    const g = scenario({ p0: { moves: ['嘲諷'], pursuit: ['黑桃2'] } });
-    expect(totalDef(g, 0)).toBe(defOf('嘲諷') - 4);
+    const many = scenario({ p0: { moves: ['嘲諷', ...Array(5).fill('Explosion!')], pursuit: ['黑桃2'] } });
+    expect(totalDef(many, 0)).toBe(defOf('嘲諷') + 5 * defOf('Explosion!')); // 追擊卡疊的防禦照舊不計入
   });
 });
 

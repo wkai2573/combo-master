@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.51.2',
+    date: '2026-10-19',
+    items: [
+      { type: 'change', text: '嘲諷：數值改成 1／6／9，傷害計算時不再扣總防禦（拿掉「我方 +0−4X」）；只能在先手步驟出招、出招付蓋2、對方收招時可以繼續出招都不變' },
+    ],
+  },
+  {
     version: '0.51.1',
     date: '2026-10-19',
     items: [

@@ -91,17 +91,13 @@ export const 戒備打擊 = defineSource({ id: '戒備打擊', at: 'moves', asMo
 export const 盾擊 = defineSource({ id: '盾擊', at: 'moves', asMove: { liftAtkToDef: true } });
 
 // 嘲諷（劍士）：此卡只能在先手步驟出招，出招時必須支付 [蓋2]；
-// [先] 後攻方第一個動作就收招（對方沒有招式）時，我方可以繼續出招；
-// 傷害計算時，我方總防禦 −4X，X＝我方招式卡疊的卡數（含自己，總防禦最低為 0）
+// [先] 後攻方第一個動作就收招（對方沒有招式）時，我方可以繼續出招；沒有總防禦的扣減
 export const 嘲諷 = defineSource({
   id: '嘲諷',
   at: 'moves',
   asMove: { openingOnly: true, playCover: 2 },
-  ask: {
-    // 嘲諷只能在先手步驟出招，所以它在招式卡疊裡就代表這是先手出招的那張
-    continueAfterFoePass: () => true,
-    flatDef: (c) => -4 * Z(c.g, c.p, 'moves').length,
-  },
+  // 嘲諷只能在先手步驟出招，所以它在招式卡疊裡就代表這是先手出招的那張
+  ask: { continueAfterFoePass: () => true },
 });
 
 // 勇者：戰鬥結算前的基礎攻擊達到門檻時，+2+0；覺醒時門檻較低
