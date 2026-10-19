@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.51.3',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '新卡狂怒（盜賊，3／4／5）：付蓋2 打出時放 1 張 Ex-狂怒 到自己的增益區；位於招式卡疊最上方時，每張 Ex-狂怒讓總攻擊 +2。已加進組牌卡池與刺客、先人的預設牌組' },
+      { type: 'add', text: '新增 Ex 卡 Ex-狂怒：放在增益區，持續 2 個回合後移除遊戲；再放入新的會讓所有 Ex-狂怒重新計時。增益區會顯示它的剩餘持續回合' },
+    ],
+  },
+  {
     version: '0.51.2',
     date: '2026-10-19',
     items: [

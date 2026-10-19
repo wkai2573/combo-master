@@ -6,7 +6,7 @@ import { combatCards, expCounts, pileTop, type CardView, type GameView, type Pla
 import type { DragApi } from '../useCardDrag';
 import type { Speed } from '../playback';
 import { COMBAT_LIST_NOTE, HandRow, Pile } from './Board';
-import { CardFace, expEffectActive, InspectPanel } from './CardFace';
+import { buffCounter, CardFace, expEffectActive, InspectPanel } from './CardFace';
 import { Delta } from './Delta';
 import { KeywordText } from './KeywordText';
 
@@ -144,7 +144,7 @@ export function SheetBody({ v, target, fxKey, changes }: { v: GameView; target: 
   const face = (c: CardView, i: number) => (
     <CardFace
       key={c.uid} id={c.id} size="md" pursuit={i >= pursuitFrom} expEffect={target.tab === 'exp' && expEffectActive(c)} covered={target.tab === 'exp' && c.covered}
-      counters={target.tab === 'gear' ? c.counters : undefined} counterDelta={target.tab === 'gear' ? changes?.buff[c.uid] : undefined} deltaKey={fxKey}
+      {...(target.tab === 'gear' ? buffCounter(c.id, c.counters, changes?.buff[c.uid]) : {})} deltaKey={fxKey}
     />
   );
   const cards = target.tab === 'exp' ? pv.exp : target.tab === 'gear' ? [...pv.gear, ...pv.buff] : target.tab === 'combat' ? combatCards(pv).cards : pv.discard;

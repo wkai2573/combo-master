@@ -1,5 +1,6 @@
 import { isExCardId } from '../data/exCards';
 import { smartChoice } from './ai';
+import { exZoneOf } from './effects';
 import { Game } from './game';
 import type { Rng } from './rng';
 import { type PlayerId, type Request, type ZoneName } from './types';
@@ -45,9 +46,10 @@ export function checkInvariants(game: Game, expectedCounts: [number, number]): v
         if (c.owner !== p) throw new Error(`卡片 ${c.id}#${c.uid} 在別人的區域`);
         if (seen.has(c.uid)) throw new Error(`卡片 ${c.id}#${c.uid} 重複出現`);
         seen.add(c.uid);
-        // Ex 卡是效果生成的臨時卡，不算牌組的卡片總數；它只會待在經驗區，離開就移除遊戲
+        // Ex 卡是效果生成的臨時卡，不算牌組的卡片總數；它只會待在登記的區域（經驗區或增益區），離開就移除遊戲
         if (isExCardId(c.id)) {
-          if (z !== 'exp') throw new Error(`Ex 卡 ${c.id}#${c.uid} 不在經驗區（在 ${z}）`);
+          const home = exZoneOf(c.id) ?? 'exp';
+          if (z !== home) throw new Error(`Ex 卡 ${c.id}#${c.uid} 不在${home === 'exp' ? '經驗區' : '增益區'}（在 ${z}）`);
           continue;
         }
         total++;

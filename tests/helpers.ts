@@ -14,10 +14,12 @@ export function setZones(g: GameCtx, p: PlayerId, zones: Zones): void {
   for (const z of Object.keys(pl.zones) as ZoneName[]) pl.zones[z] = [];
   for (const [z, ids] of Object.entries(zones) as [ZoneName, string[]][]) {
     for (const id of ids) {
-      // 以 ~ 開頭表示覆蓋中的經驗卡
+      // 以 ~ 開頭表示覆蓋中的經驗卡；結尾 @N 表示持續時間指示物 N 個（增益區用）
       const covered = id.startsWith('~');
-      const c = newCard(g, covered ? id.slice(1) : id, p, z);
+      const [name, counters] = (covered ? id.slice(1) : id).split('@');
+      const c = newCard(g, name, p, z);
       c.covered = covered;
+      if (counters) c.counters = Number(counters);
     }
   }
 }

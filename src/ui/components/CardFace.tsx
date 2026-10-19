@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import { getCard } from '../../data/cards';
 import type { CardData } from '../../data/types';
+import { isExCardId } from '../../data/exCards';
 import { hasExpEffect } from '../../engine/effects';
 import type { CardView } from '../../engine/view';
 import { keywordsIn } from '../../data/keywords';
@@ -44,6 +45,16 @@ export interface CardFaceProps {
   inert?: boolean;
 }
 
+/**
+ * 增益區的卡顯示剩餘持續回合：有持續回合的卡顯示「持續回合 − 指示物」，指示物 +1 時剩餘 −1。
+ * 沒有持續回合的卡照舊顯示指示物
+ */
+export function buffCounter(id: string | null, counters: number, delta?: number): { counters: number; counterDelta?: number } {
+  const duration = id === null ? undefined : getCard(id).duration;
+  if (duration === undefined) return { counters, counterDelta: delta };
+  return { counters: Math.max(0, duration - counters), counterDelta: delta ? -delta : undefined };
+}
+
 export function kindLabel(c: CardData): string {
   if (c.kind === 'equip') return `裝備・${c.slot}`;
   if (c.kind === 'buff') return '增益';
@@ -75,6 +86,8 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
   }
   const c = getCard(id);
   const isMove = c.kind === 'move';
+  // 放在增益區、依持續回合計時的 Ex 卡沒有攻守連擊，卡頭改寫持續回合
+  const timedEx = isExCardId(c.id) && c.duration !== undefined;
   return (
     <div
       className={cls.join(' ')}
@@ -88,11 +101,16 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
       onMouseEnter={() => inspect(id, expEffect)}
     >
       <div className="hd">
-        {isMove ? (
+        {isMove && !timedEx ? (
           <>
             <span className="a" title="攻擊力">{c.atk}</span>
             <span className="c" title="連擊值">{c.combo}</span>
             <span className="d" title="防禦力">{c.def}</span>
+          </>
+        ) : timedEx ? (
+          <>
+            <span className="g">Ex</span>
+            <span className="g">持續{c.duration}</span>
           </>
         ) : (
           <>
@@ -109,7 +127,7 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
       </div>
       <div className="nm">{c.name}</div>
       {covered ? <span className="fdtag">裏側</span> : null}
-      {counters ? <span className="ctr">⏳{counters}<Delta d={counterDelta} k={deltaKey ?? 0} /></span> : null}
+      {counters ? <span className="ctr" title="剩餘持續回合">⏳{counters}<Delta d={counterDelta} k={deltaKey ?? 0} /></span> : null}
       {badge !== undefined ? <span className="badge">{badge}</span> : null}
     </div>
   );
@@ -142,8 +160,10 @@ export function InspectPanel({ id, expActive, pinned, onUnpin }: { id: string | 
       <div className="nm">{c.name}</div>
       <div className="muted">{c.cls}・{kindLabel(c)}</div>
       <div className="st">
-        {c.kind === 'move'
+        {c.kind === 'move' && !(isExCardId(c.id) && c.duration !== undefined)
           ? `攻擊 ${c.atk}　防禦 ${c.def}　連擊值 ${c.combo}`
+          : c.kind === 'move'
+          ? `持續回合 ${c.duration}`
           : `經驗需求 ${c.expReq}${c.kind === 'buff' ? `　持續時間 ${c.duration}` : ''}`}
       </div>
       {expActive && <div className="expnote">經驗效果：生效中</div>}

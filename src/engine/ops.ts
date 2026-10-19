@@ -82,6 +82,12 @@ export function newCard(g: GameCtx, id: string, owner: PlayerId, zone: ZoneName)
   return c;
 }
 
+/** 把 Ex 卡放進擁有者的增益區：增益區裡同名 Ex 卡的持續時間指示物全部移除（重新計時），張數疊加 */
+export function placeExInBuff(g: GameCtx, p: PlayerId, id: string): CardInst {
+  for (const c of Z(g, p, 'buff')) if (c.id === id) c.counters = 0;
+  return newCard(g, id, p, 'buff');
+}
+
 export function findCard(g: GameCtx, uid: number): CardInst | undefined {
   for (const pl of g.state.players) {
     for (const z of Object.keys(pl.zones) as ZoneName[]) {
@@ -92,14 +98,22 @@ export function findCard(g: GameCtx, uid: number): CardInst | undefined {
   return undefined;
 }
 
-/** 將卡移到持有主的指定區域。pos='top' 為該區域的「最上方」，'bottom' 為「最下方」。 */
-export function move(g: GameCtx, card: CardInst, to: ZoneName, pos: 'top' | 'bottom' = 'bottom'): void {
+/** 把卡移出遊戲：從所在的區域拿掉，不進任何區域 */
+export function removeFromGame(g: GameCtx, card: CardInst): void {
   g.touched++;
   const from = Z(g, card.owner, card.zone);
   const i = from.indexOf(card);
   if (i >= 0) from.splice(i, 1);
+}
+
+/** 將卡移到持有主的指定區域。pos='top' 為該區域的「最上方」，'bottom' 為「最下方」。 */
+export function move(g: GameCtx, card: CardInst, to: ZoneName, pos: 'top' | 'bottom' = 'bottom'): void {
   // Ex 卡（臨時額外卡）離開所在的經驗區或增益區時移除遊戲
-  if (isExCardId(card.id) && (card.zone === 'exp' || card.zone === 'buff') && to !== card.zone) return;
+  if (isExCardId(card.id) && (card.zone === 'exp' || card.zone === 'buff') && to !== card.zone) return removeFromGame(g, card);
+  g.touched++;
+  const from = Z(g, card.owner, card.zone);
+  const i = from.indexOf(card);
+  if (i >= 0) from.splice(i, 1);
   card.zone = to;
   card.covered = false;
   const dest = Z(g, card.owner, to);

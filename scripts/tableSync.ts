@@ -142,7 +142,11 @@ function buildExCards(docs: TableDocs, base: TableBase, notes: string[]): CardDa
     const leave = checkExLeaveRule(text, base.exZone?.(id));
     if (leave) notes.push(`Ex 卡${leave}：${d.name}`);
     if (!base.hasEffect(id)) notes.push(`Ex 卡尚未實作效果：${d.name}`);
-    out.push({ id, name: d.name, kind: 'move', cls: '共用', traits: d.traits ?? [], atk: 0, def: 0, combo: 0, expReq: 0, text });
+    const card: CardData = { id, name: d.name, kind: 'move', cls: '共用', traits: d.traits ?? [], atk: 0, def: 0, combo: 0, expReq: 0, text };
+    // 放在增益區的 Ex 卡依卡文的「持續回合：N。」計時，持續回合只寫在效果裡，沒有獨立欄位
+    const duration = /持續回合：(\d+)/.exec(text)?.[1];
+    if (duration) card.duration = Number(duration);
+    out.push(card);
   }
   // 引用檢查：所有卡、角色、Ex 卡的文字提到的 [Ex-卡名] 都要有對應的 Ex 卡
   const known = new Set(out.map((c) => c.name));

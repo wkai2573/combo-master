@@ -11,7 +11,7 @@ import { combatCards, expCounts, type CardView, type GameView, type PlayerView }
 import type { StatChanges } from '../../engine/stats';
 import type { DropZone, FrameFx, PlayerId, Request } from '../../engine/types';
 import type { StepHint } from '../../data/turnSteps';
-import { CardFace, expEffectActive } from './CardFace';
+import { buffCounter, CardFace, expEffectActive } from './CardFace';
 import { Delta } from './Delta';
 
 export type ZoneKey = 'discard' | 'exp' | 'combat' | 'moves' | 'pursuit';
@@ -280,7 +280,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, drag, hit,
         <div className="zonelabel">裝備／增益</div>
         <div className="cardrow">
           {pv.gear.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" short={wide} />)}
-          {pv.buff.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" short={wide} counters={c.counters} counterDelta={changes?.buff[c.uid]} deltaKey={fxKey} />)}
+          {pv.buff.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" short={wide} {...buffCounter(c.id, c.counters, changes?.buff[c.uid])} deltaKey={fxKey} />)}
         </div>
       </div>
 

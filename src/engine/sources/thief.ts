@@ -1,7 +1,8 @@
 import { canPay, chooseX, pay } from '../cost';
 import { defineSource, lasting, slot } from '../effectKit';
-import { activate, awakened, chooseCards, combatZone, data, discard, draw, isFirst, log, newCard, pname, topOfZone, Z } from '../ops';
-import { other } from '../types';
+import { isExCardId } from '../../data/exCards';
+import { activate, awakened, chooseCards, combatZone, data, discard, draw, isFirst, log, newCard, placeExInBuff, pname, topOfZone, Z, type GameCtx } from '../ops';
+import { other, type PlayerId } from '../types';
 
 // ───────────────────────── 卡片 ─────────────────────────
 
@@ -52,7 +53,8 @@ export const 卸除鎧甲 = defineSource({
   at: 'moves',
   on: {
     onPlay: (c) => {
-      const targets = () => [...Z(c.g, other(c.p), 'gear'), ...Z(c.g, other(c.p), 'buff')];
+      // 增益區裡的 Ex 卡（Ex-狂怒）是效果放進去的，不是增益卡，不能選
+      const targets = () => [...Z(c.g, other(c.p), 'gear'), ...Z(c.g, other(c.p), 'buff').filter((x) => !isExCardId(x.id))];
       return c.effect(
         { label: '【卸除鎧甲】對方 1 張裝備或增益卡送入棄牌區（蓋2）', cost: { cover: 2 }, when: () => targets().length > 0 },
         function* () {
@@ -121,6 +123,28 @@ export const 二刀連擊 = defineSource({
   at: 'moves',
   ask: { pursuitBonus: (c) => (topOfZone(c.g, c.p) === c.self ? 1 : 0) },
 });
+
+/** 我方增益區目前的 Ex-狂怒 張數 */
+export const exRageCount = (g: GameCtx, p: PlayerId): number => Z(g, p, 'buff').filter((c) => c.id === 'Ex-狂怒').length;
+
+// 狂怒（盜賊）：
+//   [發_蓋2] 將 1 張 [Ex-狂怒] 放入我方增益區（放入時，增益區裡所有 Ex-狂怒 的持續時間指示物歸零重算）
+//   [頂] 我方 +2X+0。X＝我方增益區的 [Ex-狂怒] 數量；只有位於招式卡疊最上方時才算
+export const 狂怒 = defineSource({
+  id: '狂怒',
+  at: 'moves',
+  on: {
+    onPlay: (c) => c.effect({ label: '【狂怒】將 1 張 Ex-狂怒 放入增益區（蓋2）', cost: { cover: 2 } }, () => {
+      placeExInBuff(c.g, c.p, 'Ex-狂怒');
+      log(c.g, `【狂怒】${pname(c.g, c.p)} 將 [Ex-狂怒] 放入增益區，Ex-狂怒的持續時間重新計算`);
+    }),
+  },
+  ask: { flatAtk: (c) => (topOfZone(c.g, c.p) === c.self ? 2 * exRageCount(c.g, c.p) : 0) },
+});
+
+// Ex-狂怒：持續回合 2，放在增益區。計時（增益階段開始 +1、到期移除遊戲）與放置時重設指示物都是引擎對增益區 Ex 卡的通則，
+// 效果由狂怒的 [頂] 讀它的張數；這個條目登記它待在增益區，讓卡表同步與文字檢查知道要寫「離開增益區」
+export const Ex狂怒 = defineSource({ id: 'Ex-狂怒', at: 'buff' });
 
 // ───────────────────────── 角色 ─────────────────────────
 
@@ -191,4 +215,4 @@ export const 狩獵印記 = defineSource({
   },
 });
 
-export const THIEF_SOURCES = [伏擊, 順手牽羊, 卸除鎧甲, 塗毒, 幸運兔腳, 二刀連擊, 刺客, 先人, 狩獵印記];
+export const THIEF_SOURCES = [伏擊, 順手牽羊, 卸除鎧甲, 塗毒, 幸運兔腳, 二刀連擊, 狂怒, Ex狂怒, 刺客, 先人, 狩獵印記];

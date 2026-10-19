@@ -1,9 +1,10 @@
+import { isExCardId } from '../data/exCards';
 import { cheatAdd, cheatDelete, cheatFlip, cheatInsert, cheatRemove, cheatReorder, cheatSnapshot, cheatSwitch, type CheatSnapshot, type CheatZone } from './cheat';
 import { combatPhase } from './combat';
 import { fire, fireEach, query } from './effects';
 import {
   ask, awakened, cardOpt, data, draw, drawPlain, GameOver, log, mark, move, newCard,
-  markIfLogged, order, pname, settle, toExp, Z, type Gen,
+  markIfLogged, order, pname, removeFromGame, settle, toExp, Z, type Gen,
 } from './ops';
 import { Rng } from './rng';
 import { checkWin } from './win';
@@ -318,13 +319,18 @@ function* burstPhase(g: Game): Gen {
 function* buffPhase(g: Game): Gen {
   g.state.phase = '增益';
   const logBefore = g.state.log.length;
-  // 增益階段開始時：增益的持續時間指示物（目前沒有增益卡有效果，只負責到期放入經驗區）
+  // 增益階段開始時：增益的持續時間指示物 +1，到期的增益放入經驗區；Ex 卡到期直接移除遊戲，不進經驗區
   for (const p of order(g)) {
     for (const b of [...Z(g, p, 'buff')]) {
       b.counters++;
       if (b.counters >= (data(b).duration ?? Infinity)) {
-        log(g, `增益【${data(b).name}】持續時間結束，放入經驗區`);
-        toExp(g, b);
+        if (isExCardId(b.id)) {
+          log(g, `【${data(b).name}】持續時間結束，移除遊戲`);
+          removeFromGame(g, b);
+        } else {
+          log(g, `增益【${data(b).name}】持續時間結束，放入經驗區`);
+          toExp(g, b);
+        }
       }
     }
   }
