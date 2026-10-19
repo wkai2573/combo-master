@@ -1,8 +1,8 @@
 import { canPay, chooseX, faceUpExp, pay } from '../cost';
 import { hasExpEffect } from '../effects';
 import { defineSource, type EffectSource } from '../effectKit';
-import { activate, awakened, chooseCards, confirm, data, discard, draw, log, move, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
-import type { CardInst, PlayerId } from '../types';
+import { activate, awakened, chooseCards, confirm, data, directHit, discard, draw, log, move, newCard, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
+import { other, type CardInst, type PlayerId } from '../types';
 
 /** 可以放到最前方的表側經驗：已經在經驗區最前方的那張不用選 */
 const frontCandidates = (g: GameCtx, p: PlayerId) => faceUpExp(g, p).filter((card) => card !== Z(g, p, 'exp')[0]);
@@ -96,14 +96,17 @@ export const 即時停損 = defineSource({
   },
 });
 
-/** 蓋反應：強制，自己錄發動與步驟影格，所以結算完不再補錄 */
-const coverReaction = (id: string, text: string, react: (g: GameCtx, p: PlayerId, self: CardInst) => Gen | void, extraOn: EffectSource['on'] = {}) =>
+/**
+ * 蓋反應：強制，自己錄發動與步驟影格，所以結算完不再補錄。
+ * group：好幾張同名的卡一起被蓋到、結算順序互不影響時，窗口把它們併成一個選項（每張各自結算）
+ */
+const coverReaction = (id: string, text: string, react: (g: GameCtx, p: PlayerId, self: CardInst) => Gen | void, extraOn: EffectSource['on'] = {}, group?: string) =>
   defineSource({
     id,
     at: 'exp',
     on: {
       ...extraOn,
-      onCovered: (c) => c.effect({ label: `【${data(c.self!).name}】被蓋成裏側：${text}`, mandatory: true, mark: false }, function* () {
+      onCovered: (c) => c.effect({ label: `【${data(c.self!).name}】被蓋成裏側：${text}`, mandatory: true, mark: false, group }, function* () {
         log(c.g, `【${data(c.self!).name}】被蓋成裏側`);
         activate(c.g, c.p, c.self!, `【${data(c.self!).name}】被蓋成裏側，效果發動`);
         const r = react(c.g, c.p, c.self!);
@@ -174,4 +177,40 @@ export const 財富管理 = coverReaction(
   },
 );
 
-export const MERCHANT_SOURCES = [招財貓, 商人, 交涉, 即時停損, 公開資訊, 低價買進, 高價賣出, 財富管理];
+// 強力過件（商人）：[發_蓋2] 將我方牌組上方 3 張卡移入怒氣區，將 5 張 [Ex-貸款] 加入對方經驗
+// 對象是我方自己的牌組；移入怒氣區不是直擊（直擊是進棄牌區），不經過防禦、不觸發受到傷害相關的效果。
+// 發動條件在付費之前檢查（牌組至少 3 張）；付費時被蓋的卡若讓牌組變少，就移入剩下的全部。剛好打光會落敗。
+// 怒氣區的牌面對所有人隱藏（ADR 0006），紀錄不寫卡名；Ex-貸款以表側放進對方經驗區最後方，張數沒有上限
+export const 強力過件 = defineSource({
+  id: '強力過件',
+  at: 'moves',
+  on: {
+    onPlay: (c) => c.effect(
+      { label: '【強力過件】牌組上方 3 張卡移入怒氣區，5 張 Ex-貸款加入對方經驗（蓋2）', cost: { cover: 2 }, when: () => Z(c.g, c.p, 'deck').length >= 3 },
+      () => {
+        const { g, p } = c;
+        const top = Z(g, p, 'deck').slice(0, 3);
+        for (const card of top) move(g, card, 'rage', 'top');
+        log(g, `【強力過件】${pname(g, p)} 將牌組上方 ${top.length} 張卡移入怒氣區`);
+        const foe = other(p);
+        for (let i = 0; i < 5; i++) newCard(g, 'Ex-貸款', foe, 'exp');
+        log(g, `【強力過件】5 張 [Ex-貸款] 加入${pname(g, foe)}的經驗區`);
+      },
+    ),
+  },
+});
+
+// Ex-貸款：[經] 當此卡被蓋為裏側時，我方直擊1，對方回復1。蓋反應，強制；「我方」是這張卡所在經驗區的擁有者，「對方」是他的對手。
+// 付蓋X 時被蓋到的每一張各自觸發，進同一個蓋反應窗口；結算順序互不影響，所以併成一個選項
+export const Ex貸款 = coverReaction(
+  'Ex-貸款',
+  '我方直擊 1，對方回復 1',
+  (g, p) => {
+    directHit(g, p, 1);
+    recover(g, other(p), 1);
+  },
+  {},
+  'Ex-貸款',
+);
+
+export const MERCHANT_SOURCES = [招財貓, 商人, 交涉, 即時停損, 強力過件, 公開資訊, 低價買進, 高價賣出, 財富管理, Ex貸款];

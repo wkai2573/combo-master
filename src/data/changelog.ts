@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.51.4',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '新卡強力過件（商人，2／2／7）：付蓋2 打出時，把自己牌組上方 3 張卡移入怒氣區，並把 5 張 Ex-貸款放進對方經驗區；牌組不足 3 張不能發動。已加進組牌卡池與商人的預設牌組' },
+      { type: 'add', text: '新增 Ex 卡 Ex-貸款：在經驗區被蓋為裏側時，持有者直擊 1、對手回復 1；一次蓋到幾張就各觸發幾次' },
+    ],
+  },
+  {
     version: '0.51.3',
     date: '2026-10-19',
     items: [

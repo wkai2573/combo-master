@@ -155,6 +155,8 @@ export interface EffectOpts {
   mandatory?: boolean;
   /** 設為 false 表示效果自己會錄影格，結算完不再補錄 */
   mark?: boolean;
+  /** 同組的強制效果文字相同、結算順序互不影響：窗口併成一個選項（見 WindowEffect.group） */
+  group?: string;
   /** 額外的可發動條件，每次結算後重新檢查 */
   when?: () => boolean;
 }

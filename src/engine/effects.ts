@@ -31,6 +31,7 @@ export function makeCtx(g: GameCtx, p: PlayerId, self: CardInst | null, here: ()
         card: self ?? undefined,
         mandatory: o.mandatory,
         mark: o.mark,
+        group: o.group,
         available: () => here() && (!o.when || o.when()) && (!o.cost || canPay(g, p, o.cost)),
         *run(confirmed) {
           if (o.cost) {
