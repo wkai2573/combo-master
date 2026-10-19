@@ -4,31 +4,35 @@ import { defineSource, type EffectSource } from '../effectKit';
 import { activate, awakened, chooseCards, confirm, data, discard, draw, log, move, pname, recover, settle, Z, type GameCtx, type Gen } from '../ops';
 import type { CardInst, PlayerId } from '../types';
 
-// 招財貓（商人）：[蓋2] 爆發時，額外抽 1
+/** 可以放到最前方的表側經驗：已經在經驗區最前方的那張不用選 */
+const frontCandidates = (g: GameCtx, p: PlayerId) => faceUpExp(g, p).filter((card) => card !== Z(g, p, 'exp')[0]);
+
+/** 把 1 張表側經驗放到經驗區最前方（裏側的卡位置不動，放到的是整個經驗區的最前方，之後蓋X 從最前面的表側開始蓋） */
+function* moveToFront(g: GameCtx, p: PlayerId, who: string): Gen {
+  const [pick] = yield* chooseCards(g, p, `【${who}】選擇 1 張表側經驗放到經驗區最前方`, frontCandidates(g, p), 1, 1);
+  // 提示等待期間經驗區可能被作弊改動：選到的卡已經不是表側經驗就不處理
+  const exp = Z(g, p, 'exp');
+  if (!pick || pick.covered || !exp.includes(pick)) return;
+  exp.splice(exp.indexOf(pick), 1);
+  exp.unshift(pick);
+  g.touched++;
+  log(g, `【${who}】${pname(g, p)} 將經驗【${data(pick).name}】放到經驗區最前方`);
+}
+
+// 招財貓（商人）：當爆發後，可以將 1 張表側經驗放到最前方。沒有費用；與商人角色的同類效果各是爆發後窗口的一個選項
 export const 招財貓 = defineSource({
   id: '招財貓',
   at: 'gear',
   on: {
     afterBurst: (c) => c.effect(
-      { label: '【招財貓】爆發時，抽 1（蓋2）', cost: { cover: 2 } },
-      function* () {
-        yield* draw(c.g, c.p, 1);
-        log(c.g, `【招財貓】${pname(c.g, c.p)} 爆發時額外抽 1`);
-      },
+      { label: '【招財貓】將 1 張表側經驗放到最前方', confirm: '【招財貓】要將 1 張表側經驗放到最前方嗎？', when: () => frontCandidates(c.g, c.p).length > 0 },
+      () => moveToFront(c.g, c.p, '招財貓'),
     ),
   },
 });
 
-/**
- * 商人爆發後的效果：
- * - 調整表側經驗的順序（蓋X 從最前面開始蓋，裏側的卡位置不動）
- * - 覺醒後：把 1 張表側經驗加入手牌
- */
-/** 可以放到最前方的表側經驗：已經在經驗區最前方的那張不用選 */
-const frontCandidates = (g: GameCtx, p: PlayerId) => faceUpExp(g, p).filter((card) => card !== Z(g, p, 'exp')[0]);
-
 // 商人：爆發後，可以將 1 張表側經驗放到最前方；覺醒（追加）爆發後，且我方手牌張數 ≤ 6 時，可以將 1 張表側經驗加入手牌
-// 手牌張數在窗口內選到這個效果的當下才數，所以先發動招財貓抽牌可能讓它消失
+// 手牌張數在窗口內選到這個效果的當下才數
 export const 商人 = defineSource({
   id: '商人',
   at: 'char',
@@ -39,14 +43,7 @@ export const 商人 = defineSource({
         available: () => frontCandidates(g, p).length > 0,
         *run(confirmed) {
           if (!confirmed && !(yield* confirm(g, p, '【商人】要將 1 張表側經驗放到最前方嗎？'))) return;
-          const [pick] = yield* chooseCards(g, p, '【商人】選擇 1 張表側經驗放到經驗區最前方', frontCandidates(g, p), 1, 1);
-          // 提示等待期間經驗區可能被作弊改動：選到的卡已經不是表側經驗就不處理
-          const exp = Z(g, p, 'exp');
-          if (!pick || pick.covered || !exp.includes(pick)) return;
-          exp.splice(exp.indexOf(pick), 1);
-          exp.unshift(pick);
-          g.touched++;
-          log(g, `【商人】${pname(g, p)} 將經驗【${data(pick).name}】放到經驗區最前方`);
+          yield* moveToFront(g, p, '商人');
         },
       },
       {
@@ -147,11 +144,16 @@ export const 公開資訊 = coverReaction(
 
 // 財富管理（商人）：
 //   [發_蓋1] 必須將牌組上方 3 張卡以裏側放入經驗區（牌組不足 3 張不能發動；放在經驗區最後方；牌組就是生命值，放完剩 0 張就落敗）
-//   [經] 當此卡被蓋為裏側時，必須選擇 2 張經驗放回牌組底（表側裏側都可以，可含此卡；不足 2 張全放回；Ex 卡離開經驗區就移除遊戲，不會進牌組）
+//   [經] 當此卡被蓋為裏側時，必須捨棄此卡，然後選擇 2 張經驗放回牌組底（先進棄牌區、雙方都看得到，選不到自己；表側裏側都可以選；
+//   不足 2 張全放回；Ex 卡離開經驗區就移除遊戲，不會進牌組）。做法比照公開資訊的「蓋反應時捨棄自己」
 export const 財富管理 = coverReaction(
   '財富管理',
-  '選擇 2 張經驗放回牌組底',
-  function* (g, p) {
+  '捨棄此卡，然後選擇 2 張經驗放回牌組底',
+  function* (g, p, self) {
+    if (Z(g, p, 'exp').includes(self)) {
+      discard(g, self);
+      log(g, `【財富管理】${pname(g, p)} 捨棄此卡`);
+    }
     const back = yield* chooseCards(g, p, '【財富管理】選擇 2 張經驗放回牌組底', Z(g, p, 'exp'), 2, 2);
     for (const card of back) move(g, card, 'deck', 'bottom');
     log(g, `【財富管理】${pname(g, p)} 將 ${back.length} 張經驗放回牌組底`);

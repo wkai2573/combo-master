@@ -10,7 +10,7 @@ import { 伏擊狀態 } from '../src/engine/sources/thief';
 
 const labels = (g: ReturnType<typeof scenario>) => g.pending!.options.map((o) => o.label);
 
-const CAT = '【招財貓】爆發時，抽 1（蓋2）';
+const CAT = '【招財貓】將 1 張表側經驗放到最前方';
 const ORDER = '【商人】將 1 張表側經驗放到最前方';
 const TAKE = '【商人】覺醒：將 1 張表側經驗加入手牌';
 const END = '結束（不再發動）';
@@ -26,24 +26,26 @@ const burst = (exp = ['黑桃1', '黑桃2', '黑桃4']) =>
   });
 
 describe('觸發窗口：爆發後', () => {
-  it('同時有多個可發動的效果時列出選單，標示費用，並有結束選項', () => {
+  it('同時有多個可發動的效果時列出選單，並有結束選項', () => {
     const g = burst();
     pick(g, '黑桃3');
     expect(g.pending!.title).toContain('爆發後');
     expect(labels(g)).toEqual([CAT, ORDER, END]);
   });
 
-  it('可以先發招財貓：蓋最前面的 2 張，之後剩下的單一效果維持發動與否的確認', () => {
+  it('可以先發招財貓：選 1 張放到最前方，之後剩下的單一效果維持發動與否的確認', () => {
     const g = burst();
     pick(g, '黑桃3');
     pick(g, CAT);
-    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃1', '黑桃2']);
-    expect(Z(g, 0, 'hand')).toHaveLength(3); // 爆發抽 2，招財貓再抽 1
-    expect(g.pending!.title).toContain('放到最前方'); // 只剩一個：原本的確認
+    pick(g, '黑桃3');
+    expect(names(g, 0, 'exp')).toEqual(['黑桃3', '黑桃1', '黑桃2', '黑桃4']);
+    expect(Z(g, 0, 'exp').filter((c) => c.covered)).toHaveLength(0); // 招財貓沒有費用
+    expect(Z(g, 0, 'hand')).toHaveLength(2); // 爆發抽 2，招財貓不再抽牌
+    expect(g.pending!.title).toContain('放到最前方'); // 只剩商人一個：原本的確認
     expect(labels(g)).toEqual(['發動', '不發動']);
   });
 
-  it('先把表側經驗放到最前方再發招財貓，蓋到的卡不一樣', () => {
+  it('招財貓與商人各占一個選項，一次爆發最多置前 2 次', () => {
     const g = burst();
     pick(g, '黑桃3');
     pick(g, ORDER);
@@ -51,7 +53,9 @@ describe('觸發窗口：爆發後', () => {
     expect(names(g, 0, 'exp')).toEqual(['黑桃3', '黑桃1', '黑桃2', '黑桃4']);
     expect(g.pending!.title).toContain('招財貓');
     pick(g, '發動');
-    expect(Z(g, 0, 'exp').filter((c) => c.covered).map((c) => c.id)).toEqual(['黑桃3', '黑桃1']);
+    pick(g, '黑桃4');
+    expect(names(g, 0, 'exp')).toEqual(['黑桃4', '黑桃3', '黑桃1', '黑桃2']);
+    expect(g.pending).toBeNull(); // 兩個效果各發過一次，窗口結束
   });
 
   it('可以選擇結束，什麼都不發', () => {
@@ -63,12 +67,11 @@ describe('觸發窗口：爆發後', () => {
     expect(Z(g, 0, 'hand')).toHaveLength(0 + 2); // 只有爆發抽的 2 張，招財貓沒有發
   });
 
-  it('每發完一個就重新檢查：蓋2 之後表側不足，調整順序從清單消失，窗口直接結束', () => {
-    const g = burst(['黑桃1']); // 爆發後表側只有黑桃1、黑桃3
+  it('沒有可放到最前方的對象（表側經驗只有 1 張）時，招財貓與商人都不在清單，不開窗口', () => {
+    const g = burst([]); // 爆發後表側經驗只有剛放進去的黑桃3
     pick(g, '黑桃3');
-    expect(labels(g)).toEqual([CAT, ORDER, END]);
-    pick(g, CAT);
     expect(g.pending).toBeNull();
+    expect(Z(g, 0, 'hand')).toHaveLength(2);
   });
 
   it('同一個效果在窗口內最多發動一次', () => {
@@ -115,22 +118,6 @@ describe('觸發窗口：爆發後', () => {
     const seven = run(6);
     expect(names(seven, 0, 'hand')).toHaveLength(7);
     expect(labels(seven)).toEqual([CAT, ORDER, END]);
-  });
-
-  it('覺醒商人：手牌張數在選到效果的當下才判斷，先發招財貓抽牌到 7 張，加入手牌的選項就消失', () => {
-    const g = scenario({
-      chars: ['商人', '勇者'],
-      phase: '爆發',
-      singlePhase: true,
-      p0: { hand: ['黑桃3', ...Array(4).fill('黑桃2')], gear: ['招財貓'], exp: [...Array(7).fill('黑桃1'), '黑桃4'] },
-      p1: { hand: [] },
-    });
-    pick(g, '黑桃3');
-    expect(labels(g)).toEqual([CAT, ORDER, TAKE, END]); // 手牌 6 張
-    pick(g, CAT); // 招財貓抽 1，手牌 7 張
-    expect(names(g, 0, 'hand')).toHaveLength(7);
-    expect(g.pending!.title).toContain('放到最前方'); // 只剩調整順序一個效果，維持原本的確認
-    expect(labels(g)).toEqual(['發動', '不發動']);
   });
 
   it('只有一個效果可發動時維持原本的發動與不發動確認', () => {

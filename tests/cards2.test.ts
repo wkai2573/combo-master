@@ -12,7 +12,7 @@ import { 狙擊印記狀態 } from '../src/engine/sources/archer';
 const filler = Array(20).fill('黑桃2') as string[];
 
 describe('爆發階段：抽 2', () => {
-  it('把 1 張手牌放入經驗區後抽 2；招財貓可以蓋 2 再多抽 1', () => {
+  it('把 1 張手牌放入經驗區後抽 2；招財貓不再抽牌，只能把表側經驗放到最前方', () => {
     const base = (gear: string[]) =>
       scenario({ phase: '抽牌', p0: { hand: [], gear, exp: ['黑桃1', '黑桃2'] }, p1: { hand: [] } });
     const g = base([]);
@@ -24,16 +24,19 @@ describe('爆發階段：抽 2', () => {
 
     const cat = base(['招財貓']);
     pick(cat, names(cat, 0, 'hand')[0]);
-    expect(cat.pending!.title).toContain('招財貓'); // [蓋2]：是否發動
+    expect(cat.pending!.title).toContain('招財貓'); // 沒有費用：是否發動
     pick(cat, '發動');
-    expect(Z(cat, 0, 'hand')).toHaveLength(3);
-    expect(Z(cat, 0, 'exp').filter((c) => c.covered)).toHaveLength(2);
+    const last = Z(cat, 0, 'exp').at(-1)!; // 剛爆發放進去的那張在最後方
+    cat.submit(0, [`c${last.uid}`]);
+    expect(Z(cat, 0, 'exp')[0]).toBe(last);
+    expect(Z(cat, 0, 'hand')).toHaveLength(2); // 沒有多抽
+    expect(Z(cat, 0, 'exp').filter((c) => c.covered)).toHaveLength(0); // 沒有蓋2 的費用
 
     const skip = base(['招財貓']);
     pick(skip, names(skip, 0, 'hand')[0]);
-    pick(skip, '不發動'); // 不發動就不蓋、不多抽
+    pick(skip, '不發動'); // 不發動什麼都不發生
     expect(Z(skip, 0, 'hand')).toHaveLength(2);
-    expect(Z(skip, 0, 'exp').filter((c) => c.covered)).toHaveLength(0);
+    expect(Z(skip, 0, 'exp').map((c) => c.id).slice(0, 2)).toEqual(['黑桃1', '黑桃2']);
   });
 });
 

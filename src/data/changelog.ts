@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.51.1',
+    date: '2026-10-19',
+    items: [
+      { type: 'change', text: '招財貓：改成爆發後可以將 1 張表側經驗放到最前方，沒有費用、不再抽牌；與商人的同類效果各算一次，一次爆發最多置前 2 次' },
+      { type: 'change', text: '財富管理：被蓋為裏側時，先捨棄此卡進棄牌區，再從剩下的經驗選 2 張放回牌組底（選不到自己）' },
+    ],
+  },
+  {
     version: '0.51.0',
     date: '2026-10-19',
     items: [

@@ -52,7 +52,7 @@ describe('覺醒時的效果（遊俠：可以抽 2）', () => {
     });
     pick(g, '黑桃3');
     expect(g.pending!.title).toContain('爆發後');
-    expect(labels(g)).toEqual(['【招財貓】爆發時，抽 1（蓋2）', '【遊俠】覺醒：抽 2', '結束（不再發動）']);
+    expect(labels(g)).toEqual(['【招財貓】將 1 張表側經驗放到最前方', '【遊俠】覺醒：抽 2', '結束（不再發動）']);
     pick(g, '【遊俠】覺醒：抽 2');
     expect(Z(g, 0, 'hand')).toHaveLength(4);
     pick(g, '發動'); // 只剩招財貓：原本的確認
