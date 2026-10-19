@@ -5,6 +5,7 @@ import { RAGE_DAMAGE_5 } from './lesson5';
 import { ON_PLAY_6 } from './lesson6';
 import { OPENING_7 } from './lesson7';
 import { TOP_8 } from './lesson8';
+import { PURSUIT_9 } from './lesson9';
 import { CORE_COMBAT_1, type TutorialChapter } from './script';
 
 /** 課程清單的分組，依這個順序顯示標題。分組只影響清單的顯示，不影響編號、完成紀錄與推薦 */
@@ -99,6 +100,15 @@ export const LESSONS: TutorialLesson[] = [
     minutes: 3,
     summary: '你已經學會 [頂]：只有在自己招式卡疊最上方時才有效，被後來打出的招式蓋住，加成就消失。',
     chapter: TOP_8,
+  },
+  {
+    no: 9,
+    group: '卡片標籤',
+    title: '[追] 追擊成功',
+    blurb: '追擊判定成功時翻出的那張牌才發動',
+    minutes: 3,
+    summary: '你已經學會 [追]：追擊判定成功、翻出的牌成為追擊卡時才發動，不是從手牌打出時發動。',
+    chapter: PURSUIT_9,
   },
 ];
 

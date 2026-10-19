@@ -952,6 +952,104 @@ describe('第 8 課：[頂] 疊在最上方', () => {
   });
 });
 
+describe('第 9 課：[追] 追擊成功', () => {
+  /** 出招、對手回應，停在玩家追擊判定成功的那一格 */
+  function toSuccess() {
+    const s = start(9);
+    clickToAction(s);
+    choose(s, '紅心5');
+    // 追擊階段 → 翻牌 → 判定結果
+    s.advance();
+    s.advance();
+    return s;
+  }
+
+  it('第 9 課在「卡片標籤」段；玩家先攻，牌組頂是地雷陷阱，連擊值在雙方招式的範圍之外', () => {
+    expect(getLesson(9).group).toBe('卡片標籤');
+    const s = start(9);
+    clickToAction(s);
+    expect(view(s).phase).toBe('先手');
+    const deck = getLesson(9).chapter.decks[0];
+    expect(deck[0]).toBe('地雷陷阱');
+    choose(s, '紅心5');
+    const [lo, hi] = [view(s).players[0].moves, view(s).players[1].moves].map((m) => getCard(m.at(-1)!.id!).combo).sort((a, b) => a - b);
+    const trap = getCard('地雷陷阱').combo;
+    expect(trap < lo || trap > hi).toBe(true);
+  });
+
+  it('要求出牌時，選別的、略過、收招都被拒絕，桌面不變', () => {
+    const s = start(9);
+    clickToAction(s);
+    expect(progress(s).awaiting).toEqual({ play: '紅心5' });
+    for (const a of [() => choose(s, '黑桃1'), () => s.submit([]), () => s.submit(['pass'])]) {
+      const before = s.getState();
+      a();
+      expect(s.getState().view).toBe(before.view);
+      expect(s.getState().batch.id).toBe(before.batch.id);
+      expect(s.getState().message).not.toBe('');
+    }
+  });
+
+  it('追擊判定翻出地雷陷阱且成功，它成為追擊卡，說明帶入實際的連擊值與範圍', () => {
+    const s = toSuccess();
+    const fx = s.getState().batch.frames.at(-1)!.fx;
+    expect(fx).toEqual({ type: 'flipResult', player: 0, cardId: '地雷陷阱', ok: true });
+    const me = view(s).players[0];
+    expect(names(me.pursuit)).toEqual(['地雷陷阱']);
+    const [lo, hi] = [5, 6];
+    expect(progress(s).text).toContain(`目前範圍是${lo}~${hi}，而翻出來的連擊值是${getCard('地雷陷阱').combo}`);
+    expect(progress(s).text).toContain('追擊成功');
+  });
+
+  it('[追] 發動：玩家總攻擊包含卡面攻擊與 [追] 的加成', () => {
+    const s = toSuccess();
+    s.advance();
+    const trap = getCard('地雷陷阱');
+    const me = view(s).players[0];
+    const printed = getCard('紅心5').atk + trap.atk;
+    expect(me.atk).toBeGreaterThan(printed);
+    expect(progress(s).text).toContain(`總攻擊 +${me.atk - printed}`);
+    expect(progress(s).text).toContain(`你的總攻擊是 ${me.atk}，其中包含它卡面的攻擊力 ${trap.atk}`);
+    expect(progress(s).highlight).toEqual([{ kind: 'pursuit-card', owner: 'me', parts: ['atk'] }, { kind: 'total', stat: 'atk' }]);
+  });
+
+  it('說明指出卡面最前面的 [追] 框，說明不是從手牌打出時發動', () => {
+    const all = driveToEnd(start(9)).join('\n');
+    expect(all).toContain('最前面的框寫著 [追]');
+    expect(all).toContain('不是從手牌打出時發動');
+  });
+
+  it('從頭走到尾：結束畫面，寫入第 9 課的完成紀錄，不送戰績', () => {
+    const s = start(9);
+    expect(isLessonDone(9)).toBe(false);
+    driveToEnd(s);
+    expect(progress(s).ending).toMatchObject({ heading: '第 9 課完成！', summary: getLesson(9).summary });
+    expect(isLessonDone(9)).toBe(true);
+    expect(isLessonDone(8)).toBe(false);
+    s.leave();
+    expect(captured).toEqual([]);
+  });
+
+  it('中途離開、重來都不寫完成紀錄；重來回到初始狀態', () => {
+    const initial = start(9).getState();
+    const s = toSuccess();
+    s.restart();
+    expect(s.getState().view).toEqual(initial.view);
+    expect(progress(s)).toEqual(initial.tutorial);
+    s.leave();
+    expect(isLessonDone(9)).toBe(false);
+  });
+
+  it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
+    const s = start(9);
+    for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
+      if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
+      act(s);
+    }
+    expect(progress(s).finished).toBe(true);
+  });
+});
+
 describe('最後一課的結束畫面', () => {
   it('最後一課沒有下一課，按鈕是「開始單機練習」；其餘每課都接下一課', () => {
     const last = LESSONS.at(-1)!;

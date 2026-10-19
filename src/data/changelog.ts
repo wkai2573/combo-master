@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.12',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '教學新增第 9 課「[追] 追擊成功」：牌組頂翻出地雷陷阱且追擊成功，看它成為追擊卡後總攻擊的加成出現，並說明 [追] 不是從手牌打出時發動' },
+    ],
+  },
+  {
     version: '0.50.11',
     date: '2026-10-19',
     items: [
