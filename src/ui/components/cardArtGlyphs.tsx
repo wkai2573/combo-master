@@ -528,6 +528,31 @@ const GLYPHS: Record<string, ReactNode> = {
     </>
   ),
 
+  強力過件: (
+    <>
+      <path d="M14 20 H78 V56 H14 Z" fill={W} stroke={K} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M22 30 H56 M22 38 H50 M22 46 H44" stroke={K} strokeWidth="3" strokeLinecap="round" opacity=".7" />
+      <path d="M58 42 L64 48 L76 34" fill="none" stroke={BLOOD} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="62" y="12" width="26" height="9" rx="2" fill="currentColor" stroke={W} strokeWidth="2.5" />
+      <rect x="71" y="2" width="8" height="10" rx="2" fill={WOOD} stroke={K} strokeWidth="1.5" />
+      {coin(86, 46, 7)}
+    </>
+  ),
+  閃電新星: (
+    <>
+      <circle cx="50" cy="30" r="22" fill="currentColor" fillOpacity=".3" stroke={W} strokeWidth="3" />
+      <path d="M50 2 V10 M50 50 V58 M12 30 H20 M80 30 H88 M23 7 L28 13 M72 47 L77 53 M77 7 L72 13 M28 47 L23 53" stroke={ELEC} strokeWidth="3.5" strokeLinecap="round" />
+      {bolt(50, 30, 2)}
+    </>
+  ),
+  狂怒: (
+    <>
+      <path d="M50 3 C58 14 72 20 72 36 A22 22 0 0 1 28 36 C28 28 33 24 36 18 C38 24 42 26 44 26 C42 16 45 9 50 3 Z" fill={BLOOD} stroke={W} strokeWidth="3" strokeLinejoin="round" />
+      <path d="M50 24 C54 30 60 33 60 41 A10 10 0 0 1 40 41 C40 37 43 35 44 32 C46 35 48 35 49 35 C48 31 48 27 50 24 Z" fill={FIRE2} stroke={W} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M10 14 L24 22 M10 30 L22 32 M90 14 L76 22 M90 30 L78 32" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+    </>
+  ),
+
   // ───────── Ex 卡 ─────────
   'Ex-中毒': (
     <>
@@ -546,6 +571,23 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="M40 40 Q40 48 46 52" fill="none" stroke={W} strokeWidth="3.5" strokeLinecap="round" opacity=".8" />
       <path d="M16 30 C14 36 12 38 12 41 A4.5 4.5 0 0 0 21 41 C21 38 19 36 16 30 Z" fill={BLOOD} stroke={W} strokeWidth="1.8" />
       <path d="M84 18 C82 24 80 26 80 29 A4.5 4.5 0 0 0 89 29 C89 26 87 24 84 18 Z" fill={BLOOD} stroke={W} strokeWidth="1.8" />
+    </>
+  ),
+  'Ex-貸款': (
+    <>
+      <path d="M22 4 H68 L80 16 V56 H22 Z" fill={W} stroke={K} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M68 4 V16 H80" fill="none" stroke={K} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M30 24 H62 M30 32 H56 M30 40 H48" stroke={K} strokeWidth="3" strokeLinecap="round" opacity=".7" />
+      {coin(70, 46, 9)}
+      <path d="M65 46 H75" stroke={BLOOD} strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M12 52 H24" stroke={BLOOD} strokeWidth="4" strokeLinecap="round" />
+    </>
+  ),
+  'Ex-狂怒': (
+    <>
+      <path d="M50 3 L62 22 L82 18 L70 36 L88 50 L64 50 L50 58 L36 50 L12 50 L30 36 L18 18 L38 22 Z" fill={BLOOD} stroke={W} strokeWidth="3" strokeLinejoin="round" />
+      <path d="M36 30 L46 34 M64 30 L54 34" stroke={K} strokeWidth="4" strokeLinecap="round" />
+      <path d="M40 46 Q50 40 60 46" fill="none" stroke={K} strokeWidth="4" strokeLinecap="round" />
     </>
   ),
 };

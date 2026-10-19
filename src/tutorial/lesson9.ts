@@ -2,7 +2,7 @@ import { getCard } from '../data/cards';
 import { FOE_HAND, FOE_REPLY, MY_HAND, MY_OPENING, mine } from './kit';
 import { comboRange, fxOf, NEXT, repeat, type TextContext, type TutorialChapter } from './script';
 
-/** 玩家牌組頂的牌：地雷陷阱（成為追擊卡時總攻擊 +3），連擊值 3，在雙方招式 5 和 6 的範圍之外 */
+/** 玩家牌組頂的牌：地雷陷阱（成為追擊卡時總攻擊 +4），連擊值 3，在雙方招式 5 和 6 的範圍之外 */
 const MINE_TRAP = '地雷陷阱';
 
 /** 我方戰鬥區（招式卡疊加追擊卡疊）卡面攻擊力的合計 */

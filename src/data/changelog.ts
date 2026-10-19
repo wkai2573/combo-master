@@ -21,6 +21,17 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.51.0',
+    date: '2026-10-19',
+    items: [
+      { type: 'change', text: '魅影射擊：防禦 1→0' },
+      { type: 'change', text: '地雷陷阱：成為追擊卡時總攻擊 +3→+4（教學第 9 課同步）' },
+      { type: 'change', text: '盾擊：攻擊 2→0、防禦 4→2' },
+      { type: 'change', text: '二連矢：攻擊 2→3、防禦 5→4' },
+      { type: 'change', text: '家族相片：經驗需求 0→4' },
+    ],
+  },
+  {
     version: '0.50.15',
     date: '2026-10-19',
     items: [

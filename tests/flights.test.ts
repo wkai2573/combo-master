@@ -188,7 +188,7 @@ describe('卡片飛行', () => {
     for (const viewer of [0, 1] as const) {
       const g = scenario({
         animate: true, chars: ['勇者', '勇者'], phase: '增益', singlePhase: true,
-        p0: { hand: ['家族相片'] }, p1: { hand: [] },
+        p0: { hand: ['家族相片'], exp: Array(4).fill('黑桃2') }, p1: { hand: [] },
       });
       const base = g.drainFrames().slice(-1);
       pick(g, '家族相片');

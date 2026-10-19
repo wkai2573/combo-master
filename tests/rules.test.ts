@@ -240,10 +240,10 @@ describe('角色效果（總攻擊／總防禦）', () => {
     expect(totalDef(g, 0)).toBe(defOf('黑桃1'));
   });
 
-  it('地雷陷阱（弓箭手）：[追] 成為追擊卡時，我方總攻擊 +3（含卡本身的攻擊）', () => {
+  it('地雷陷阱（弓箭手）：[追] 成為追擊卡時，我方總攻擊 +4（含卡本身的攻擊）', () => {
     const g = scenario({ chars: ['遊俠', '勇者'] });
     setZones(g, 0, { moves: ['黑桃1'], pursuit: ['地雷陷阱'] });
-    expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('地雷陷阱') + 3);
+    expect(totalAtk(g, 0)).toBe(atkOf('黑桃1') + atkOf('地雷陷阱') + 4);
   });
 
   it('二刀連擊（盜賊）：[頂] 在招式卡疊最上方時追擊 +1', () => {
@@ -287,13 +287,13 @@ describe('提示驗證', () => {
 describe('戰鬥結算深模組 (resolveCombatStats)', () => {
   it('正確結算攻守數值並提供詳細的 breakdown 明細', () => {
     const g = scenario({ chars: ['勇者', '後人'], first: 0 });
-    // 玩家 0 (勇者)：戰鬥區出 黑桃1、黑桃9，追擊 地雷陷阱 (+3 atk)
+    // 玩家 0 (勇者)：戰鬥區出 黑桃1、黑桃9，追擊 地雷陷阱 (+4 atk)
     setZones(g, 0, { moves: ['黑桃1', '黑桃9'], pursuit: ['地雷陷阱'] });
     const s0 = resolveCombatStats(g, 0);
-    const expectedBase0 = atkOf('黑桃1') + atkOf('黑桃9') + atkOf('地雷陷阱') + 3;
+    const expectedBase0 = atkOf('黑桃1') + atkOf('黑桃9') + atkOf('地雷陷阱') + 4;
     expect(s0.atk).toBe(expectedBase0 + (expectedBase0 >= 15 ? 2 : 0));
     expect(s0.breakdown.combatZoneAtk).toBe(atkOf('黑桃1') + atkOf('黑桃9'));
-    expect(s0.breakdown.pursuitAtk).toBe(atkOf('地雷陷阱') + 3);
+    expect(s0.breakdown.pursuitAtk).toBe(atkOf('地雷陷阱') + 4);
 
     // 玩家 1 (後人，後攻未覺醒)：防禦 +1
     setZones(g, 1, { moves: ['黑桃1'], pursuit: ['黑桃3'] });

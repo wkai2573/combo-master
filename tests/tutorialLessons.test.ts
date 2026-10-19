@@ -1008,7 +1008,8 @@ describe('第 9 課：[追] 追擊成功', () => {
     const me = view(s).players[0];
     const printed = getCard('紅心5').atk + trap.atk;
     expect(me.atk).toBeGreaterThan(printed);
-    expect(progress(s).text).toContain(`總攻擊 +${me.atk - printed}`);
+    expect(me.atk - printed).toBe(4); // 地雷陷阱 [追] 我方 +4+0
+    expect(progress(s).text).toContain('總攻擊 +4');
     expect(progress(s).text).toContain(`你的總攻擊是 ${me.atk}，其中包含它卡面的攻擊力 ${trap.atk}`);
     expect(progress(s).highlight).toEqual([{ kind: 'pursuit-card', owner: 'me', parts: ['atk'] }, { kind: 'total', stat: 'atk' }]);
   });

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { isExCardId } from '../src/data/exCards';
 import { ALL_CARDS, getCard } from '../src/data/cards';
 import { isCardEnabled } from '../src/data/enabledCards';
-import { createEffects, hasExpEffect } from '../src/engine/effects';
+import { createEffects, hasEffect, hasExpEffect } from '../src/engine/effects';
 import { allSources } from '../src/engine/sources';
 import { defineSource } from '../src/engine/effectKit';
 import { expEffectActive } from '../src/ui/components/CardFace';
@@ -40,7 +40,8 @@ describe('經驗效果：登記表的查詢', () => {
 });
 
 describe('經驗效果：卡文與登記表一致', () => {
-  const cards = ALL_CARDS.filter((c) => isCardEnabled(c) || isExCardId(c.id));
+  // 還沒實作效果的 Ex 卡（卡表同步只提醒）不在對照範圍
+  const cards = ALL_CARDS.filter((c) => isCardEnabled(c) || (isExCardId(c.id) && hasEffect(c.id)));
 
   it('有開放的卡與 Ex 卡可以對照', () => {
     expect(cards.length).toBeGreaterThan(20);
