@@ -13,6 +13,7 @@
     "presets": "tsx scripts/preset-report.ts",
     "table": "tsx scripts/sync-card-table.ts",
     "stats": "tsx scripts/traffic-stats.ts",
+    "db:export": "bun scripts/export-db.ts",
     "server:dev": "bunx wrangler@4 dev --local --config server/wrangler.toml",
     "server:db:local": "bunx wrangler@4 d1 execute combo-master-records --local --file server/schema.sql --config server/wrangler.toml",
     "server:db": "bunx wrangler@4 d1 execute combo-master-records --remote --file server/schema.sql --config server/wrangler.toml",
