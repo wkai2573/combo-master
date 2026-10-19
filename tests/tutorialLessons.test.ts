@@ -361,6 +361,114 @@ describe('第 3 課：覺醒', () => {
     expect(progress(s).finished).toBe(true);
   });
 });
+describe('第 4 課：蓋 X', () => {
+  const awake = (s: TutorialSession) => view(s).players[0].exp.length >= 8;
+  const faceUp = (s: TutorialSession) => view(s).players[0].exp.filter((c) => !c.covered).length;
+
+  /** 走到布甲的確認提示：要求按「發動」 */
+  function toConfirm() {
+    const s = start(4);
+    clickToAction(s);
+    choose(s, '紅心5');
+    clickToAction(s);
+    return s;
+  }
+
+  it('開局：經驗區 8 張表側、已經覺醒，裝備增益區有布甲', () => {
+    const v = view(start(4));
+    expect(v.players[0].exp).toHaveLength(8);
+    expect(v.players[0].exp.every((c) => !c.covered)).toBe(true);
+    expect(v.players[0].exp.length >= 8).toBe(true);
+    expect(names(v.players[0].gear)).toEqual(['布甲']);
+    expect(v.players[0].charId).toBe('修行者');
+  });
+
+  it('出指定一招、收招後出現費用確認：標題是「是否發動」並帶蓋 1，只能按「發動」', () => {
+    const s = toConfirm();
+    expect(progress(s).awaiting).toEqual({ choose: 'yes' });
+    expect(view(s).prompt!.title).toBe('是否發動【布甲】？（蓋1）');
+    // 窗口裡只有布甲：走確認，不是多選項的選單
+    expect(view(s).prompt!.options.map((o) => o.key)).toEqual(['yes', 'no']);
+  });
+
+  it('要求出招與要求確認時，選別的、不發動、略過都被拒絕，桌面不變', () => {
+    const s = start(4);
+    clickToAction(s);
+    expect(progress(s).awaiting).toEqual({ play: '紅心5' });
+    let before = s.getState();
+    choose(s, '黑桃1');
+    s.submit([]);
+    s.submit(['pass']);
+    expect(s.getState().view).toBe(before.view);
+    expect(s.getState().batch.id).toBe(before.batch.id);
+
+    const c = toConfirm();
+    before = c.getState();
+    c.submit(['no']);
+    c.submit([]);
+    c.submit(['yes', 'no']);
+    expect(c.getState().message).not.toBe('');
+    expect(c.getState().view).toBe(before.view);
+    expect(c.getState().batch.id).toBe(before.batch.id);
+    expect(faceUp(c)).toBe(8);
+  });
+
+  it('按「發動」：停在費用支付那一格，最前面一張表側經驗翻成裏側，仍然覺醒', () => {
+    const s = toConfirm();
+    const front = view(s).players[0].exp[0].uid;
+    s.submit(['yes']);
+    const fx = s.getState().batch.frames.at(-1)!.fx;
+    expect(fx).toEqual({ type: 'cost', player: 0, cover: 1, rage: 0 });
+    const exp = view(s).players[0].exp;
+    expect(exp[0].uid).toBe(front);
+    expect(exp[0].covered).toBe(true);
+    expect(exp.slice(1).every((c) => !c.covered)).toBe(true);
+    expect(awake(s)).toBe(true);
+    expect(progress(s).text).toContain('最前面的 1 張表側經驗翻成了裏側');
+    expect(progress(s).highlight).toEqual([{ kind: 'exp-zone', owner: 'me' }]);
+  });
+
+  it('布甲的加成立刻反映在總防禦上：多 1 點，說明帶入實際的總防禦', () => {
+    const s = toConfirm();
+    s.submit(['yes']);
+    const atCost = view(s).players[0].def;
+    s.advance();
+    s.advance();
+    expect(s.getState().batch.frames.at(-1)!.fx.type).toBe('info');
+    const def = view(s).players[0].def;
+    expect(def).toBe(atCost + 1);
+    expect(progress(s).text).toContain(`你的總防禦現在是 ${def}，多了 1 點`);
+    expect(progress(s).highlight).toEqual([{ kind: 'total', stat: 'def' }]);
+  });
+
+  it('從頭走到尾：結束畫面，仍然覺醒，寫入第 4 課的完成紀錄', () => {
+    const s = start(4);
+    driveToEnd(s);
+    expect(progress(s).ending).toMatchObject({ heading: '第 4 課完成！' });
+    expect(isLessonDone(4)).toBe(true);
+    expect(awake(s)).toBe(true);
+    expect(faceUp(s)).toBe(7);
+    expect(progress(s).text).toBe('');
+    s.leave();
+    expect(captured).toEqual([]);
+  });
+
+  it('中途離開、重來都不寫完成紀錄', () => {
+    const s = toConfirm();
+    s.restart();
+    s.leave();
+    expect(isLessonDone(4)).toBe(false);
+  });
+
+  it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
+    const s = start(4);
+    for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
+      if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
+      act(s);
+    }
+    expect(progress(s).finished).toBe(true);
+  });
+});
 describe('第 1 課的結束畫面接第 2 課', () => {
   it('第 1 課後面有第 2 課，按鈕是「下一課」', () => {
     const s = start(1);

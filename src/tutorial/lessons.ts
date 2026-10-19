@@ -1,5 +1,6 @@
 import { BURST_EXP_2 } from './lesson2';
 import { AWAKENING_3 } from './lesson3';
+import { COVER_COST_4 } from './lesson4';
 import { CORE_COMBAT_1, type TutorialChapter } from './script';
 
 /** 一堂教學課：課程清單上的一列，加上這一課用的章節 */
@@ -41,6 +42,14 @@ export const LESSONS: TutorialLesson[] = [
     minutes: 3,
     summary: '你已經學會覺醒：經驗區達到門檻就覺醒，覺醒中的角色效果會直接反映在數字上。',
     chapter: AWAKENING_3,
+  },
+  {
+    no: 4,
+    title: '蓋 X',
+    blurb: '用經驗區支付費用，看表側變裏側',
+    minutes: 3,
+    summary: '你已經學會蓋 X：從最前面的表側經驗開始蓋，裏側的經驗效果無效，但仍算在覺醒張數內。',
+    chapter: COVER_COST_4,
   },
 ];
 

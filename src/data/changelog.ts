@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.5',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '教學新增第 4 課「蓋 X」：收招時發動布甲，看最前面的表側經驗翻成裏側、總防禦立刻 +1，並說明裏側經驗仍算在覺醒張數內' },
+    ],
+  },
+  {
     version: '0.50.4',
     date: '2026-10-19',
     items: [
