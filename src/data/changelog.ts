@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.15',
+    date: '2026-10-19',
+    items: [
+      { type: 'fix', text: '電腦版追擊判定與效果發動時中央放大的牌，不再縮在外框的左上角；教學的虛線高亮框也剛好框住這張牌' },
+    ],
+  },
+  {
     version: '0.50.14',
     date: '2026-10-19',
     items: [
