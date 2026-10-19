@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.11',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '教學新增第 8 課「[頂] 疊在最上方」：打出戒備打擊看總攻擊與總防禦的加成，再打一張招式蓋住它，加成立刻消失' },
+    ],
+  },
+  {
     version: '0.50.10',
     date: '2026-10-19',
     items: [

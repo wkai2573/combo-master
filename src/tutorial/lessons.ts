@@ -4,6 +4,7 @@ import { COVER_COST_4 } from './lesson4';
 import { RAGE_DAMAGE_5 } from './lesson5';
 import { ON_PLAY_6 } from './lesson6';
 import { OPENING_7 } from './lesson7';
+import { TOP_8 } from './lesson8';
 import { CORE_COMBAT_1, type TutorialChapter } from './script';
 
 /** 課程清單的分組，依這個順序顯示標題。分組只影響清單的顯示，不影響編號、完成紀錄與推薦 */
@@ -89,6 +90,15 @@ export const LESSONS: TutorialLesson[] = [
     minutes: 3,
     summary: '你已經學會 [先]：只有先攻方在先手步驟打出的招式才發動，同一張卡在反擊步驟打出就不發動。',
     chapter: OPENING_7,
+  },
+  {
+    no: 8,
+    group: '卡片標籤',
+    title: '[頂] 疊在最上方',
+    blurb: '在招式卡疊最上方才有效，被蓋住就失效',
+    minutes: 3,
+    summary: '你已經學會 [頂]：只有在自己招式卡疊最上方時才有效，被後來打出的招式蓋住，加成就消失。',
+    chapter: TOP_8,
   },
 ];
 

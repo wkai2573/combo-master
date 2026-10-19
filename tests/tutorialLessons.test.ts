@@ -852,6 +852,106 @@ describe('第 7 課：[先] 先手步驟', () => {
   });
 });
 
+describe('第 8 課：[頂] 疊在最上方', () => {
+  /** 打出戒備打擊、停在加成出現的說明 */
+  function afterGuard() {
+    const s = start(8);
+    clickToAction(s);
+    choose(s, '戒備打擊');
+    return s;
+  }
+  /** 對手回應、再打出黑桃4 蓋住戒備打擊，停在對手收招那一格 */
+  function afterCover() {
+    const s = afterGuard();
+    clickToAction(s);
+    choose(s, '黑桃4');
+    return s;
+  }
+
+  it('第 8 課在「卡片標籤」段；玩家先攻，手牌有戒備打擊和一張可以蓋住它的招式', () => {
+    expect(getLesson(8).group).toBe('卡片標籤');
+    const v = view(start(8));
+    expect(names(v.players[0].hand)).toEqual(expect.arrayContaining(['戒備打擊', '黑桃4']));
+  });
+
+  it('要求出牌時，選別的、略過、收招都被拒絕，桌面不變', () => {
+    const first = start(8);
+    clickToAction(first);
+    const second = afterGuard();
+    clickToAction(second);
+    expect(progress(first).awaiting).toEqual({ play: '戒備打擊' });
+    expect(progress(second).awaiting).toEqual({ play: '黑桃4' });
+    for (const s of [first, second]) {
+      // 第二次出招有範圍限制，手牌裡的黑桃1 不是選項，所以用不存在的選項代替
+      for (const a of [() => s.submit(['no-such-option']), () => s.submit([]), () => s.submit(['pass'])]) {
+        const before = s.getState();
+        a();
+        expect(s.getState().view).toBe(before.view);
+        expect(s.getState().batch.id).toBe(before.batch.id);
+        expect(s.getState().message).not.toBe('');
+      }
+    }
+  });
+
+  it('打出戒備打擊：總攻擊與總防禦有 [頂] 的加成，說明帶入實際數字', () => {
+    const s = afterGuard();
+    const card = getCard('戒備打擊');
+    const me = view(s).players[0];
+    expect(me.atk).toBeGreaterThan(card.atk);
+    expect(me.def).toBeGreaterThan(card.def);
+    expect(progress(s).text).toContain(`你的總攻擊是 ${me.atk}（卡面 ${card.atk}），總防禦是 ${me.def}（卡面 ${card.def}）`);
+    expect(progress(s).highlight).toEqual([{ kind: 'total', stat: 'atk' }, { kind: 'total', stat: 'def' }]);
+  });
+
+  it('再打一張招式蓋住它：加成消失，總攻擊與總防禦只剩兩張招式本身的數字', () => {
+    const s = afterCover();
+    const guard = getCard('戒備打擊');
+    const cover = getCard('黑桃4');
+    const me = view(s).players[0];
+    expect(names(me.moves)).toEqual(['戒備打擊', '黑桃4']);
+    expect(me.atk).toBe(guard.atk + cover.atk);
+    expect(me.def).toBe(guard.def + cover.def);
+    expect(progress(s).text).toContain(`你的總攻擊變成 ${me.atk}，總防禦變成 ${me.def}`);
+  });
+
+  it('說明指出卡面最前面的 [頂] 框，提到只看自己的招式卡疊', () => {
+    const all = driveToEnd(start(8)).join('\n');
+    expect(all).toContain('最前面的框寫著 [頂]');
+    expect(all).toContain('招式卡疊最上方');
+    expect(all).toContain('[頂] 只看你自己的招式卡疊');
+  });
+
+  it('從頭走到尾：結束畫面，寫入第 8 課的完成紀錄，不送戰績', () => {
+    const s = start(8);
+    expect(isLessonDone(8)).toBe(false);
+    driveToEnd(s);
+    expect(progress(s).ending).toMatchObject({ heading: '第 8 課完成！', summary: getLesson(8).summary });
+    expect(isLessonDone(8)).toBe(true);
+    expect(isLessonDone(7)).toBe(false);
+    s.leave();
+    expect(captured).toEqual([]);
+  });
+
+  it('中途離開、重來都不寫完成紀錄；重來回到初始狀態', () => {
+    const initial = start(8).getState();
+    const s = afterCover();
+    s.restart();
+    expect(s.getState().view).toEqual(initial.view);
+    expect(progress(s)).toEqual(initial.tutorial);
+    s.leave();
+    expect(isLessonDone(8)).toBe(false);
+  });
+
+  it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
+    const s = start(8);
+    for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
+      if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
+      act(s);
+    }
+    expect(progress(s).finished).toBe(true);
+  });
+});
+
 describe('最後一課的結束畫面', () => {
   it('最後一課沒有下一課，按鈕是「開始單機練習」；其餘每課都接下一課', () => {
     const last = LESSONS.at(-1)!;
