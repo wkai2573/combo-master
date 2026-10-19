@@ -35,7 +35,7 @@ describe('教學的操作封鎖：玩家看得到的提示', () => {
     expect(gated.title).toBe(prompt.title);
   });
 
-  it('可略過的提示（例如爆發階段）改成必選：要求選牌時不會出現略過', () => {
+  it('爆發階段這類可略過的提示改成必選：要求選牌時不會出現略過', () => {
     const burst: Request = {
       player: 0, title: '爆發階段：可選擇 1 張手牌放入經驗區，然後抽 2', min: 0, max: 1, dropZone: 'exp',
       options: [{ key: 'c1', label: '黑桃1', uid: 1, cardId: '黑桃1' }, { key: 'c2', label: '梅花9', uid: 2, cardId: '梅花9' }],

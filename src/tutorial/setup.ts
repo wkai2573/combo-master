@@ -1,6 +1,6 @@
 import { newCard, type GameCtx } from '../engine/ops';
 import type { DeckSpec, GameSetup, PlayerId, ZoneName } from '../engine/types';
-import type { PresetCard, TutorialChapter, ZonePresets } from './script';
+import type { TutorialChapter, ZonePresets } from './script';
 
 /**
  * 教學對局的開局設定：指定先攻、不洗牌，開局（抽完起始手牌）後把各區域改寫成牌面配置。
@@ -32,7 +32,7 @@ const put = (g: GameCtx, p: PlayerId, zone: ZoneName, ids: string[]) => ids.forE
 
 function presetZones(g: GameCtx, p: PlayerId, zones: ZonePresets): void {
   for (const zone of ['discard', 'rage', 'gear', 'buff'] as const) put(g, p, zone, zones[zone] ?? []);
-  for (const card of zones.exp ?? ([] as PresetCard[])) {
+  for (const card of zones.exp ?? []) {
     const covered = typeof card !== 'string';
     newCard(g, covered ? card.id : card, p, 'exp').covered = covered;
   }
