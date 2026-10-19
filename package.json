@@ -1,7 +1,7 @@
 {
   "name": "combo-master-tcg",
   "private": true,
-  "version": "0.50.6",
+  "version": "0.50.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,6 +18,8 @@
     "server:db": "bunx wrangler@4 d1 execute combo-master-records --remote --file server/schema.sql --config server/wrangler.toml",
     "server:db:migrate:local": "bunx wrangler@4 d1 execute combo-master-records --local --file server/migrations/0001-events-allow-tutorial.sql --config server/wrangler.toml && bunx wrangler@4 d1 execute combo-master-records --local --file server/migrations/0002-events-add-lesson.sql --config server/wrangler.toml",
     "server:db:migrate": "bunx wrangler@4 d1 execute combo-master-records --remote --file server/migrations/0001-events-allow-tutorial.sql --config server/wrangler.toml && bunx wrangler@4 d1 execute combo-master-records --remote --file server/migrations/0002-events-add-lesson.sql --config server/wrangler.toml",
+    "server:db:migrate:0002:local": "bunx wrangler@4 d1 execute combo-master-records --local --file server/migrations/0002-events-add-lesson.sql --config server/wrangler.toml",
+    "server:db:migrate:0002": "bunx wrangler@4 d1 execute combo-master-records --remote --file server/migrations/0002-events-add-lesson.sql --config server/wrangler.toml",
     "server:deploy": "bunx wrangler@4 deploy --config server/wrangler.toml"
   },
   "dependencies": {

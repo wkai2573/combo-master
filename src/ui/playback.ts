@@ -144,7 +144,7 @@ export class Playback {
     const view: GameView | null =
       final && cur
         ? atFrame(cur.frame)
-        : gap && this.shown
+        : gap && this.shown && !batch?.fresh
           ? { ...this.shown, prompt: null, waitingFor: null }
           : final && first
             ? atFrame(first)

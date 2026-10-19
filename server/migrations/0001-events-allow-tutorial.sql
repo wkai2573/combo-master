@@ -3,6 +3,8 @@
 -- 已上線的資料庫先執行這個檔（bun run server:db:migrate），再部署伺服器；新建的資料庫用 schema.sql 就已經包含。
 -- 重複執行是安全的：搬資料用 INSERT OR IGNORE，新表不會先被清掉。如果中途失敗（舊表已刪、還沒改名），
 -- 資料還在 events_new，這時不要重跑，先用 wrangler d1 execute 查兩張表，再把 events_new 改名成 events 並補上下面的索引。
+-- 注意：0002 之後不要再跑這個檔。它重建 events 時只搬自己認得的欄位，會把 0002 加的 lesson 欄位連資料一起丟掉。
+-- 已經跑過 0002 的資料庫，要補遷移請只跑新的檔。
 -- 搬資料到換表之間（毫秒內）舊伺服器寫進來的事件會漏掉，所以選流量低的時候執行。
 CREATE TABLE IF NOT EXISTS events_new (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

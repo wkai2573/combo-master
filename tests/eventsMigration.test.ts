@@ -135,6 +135,15 @@ describe('資料庫遷移：events 多一個課程欄位', () => {
     expect(() => startLesson(db, 1)).toThrow();
   });
 
+  it('0002 之後重跑 0001 會丟掉課程資料：所以 0001 檔頭警告、README 要求只跑缺的那個', () => {
+    const db = migratedOnce();
+    db.exec(lessonMigration);
+    startLesson(db, 2);
+    db.exec(migration);
+    expect(() => startLesson(db, 2)).toThrow();
+    expect(migration).toContain('0002 之後不要再跑這個檔');
+  });
+
   it('新建的資料庫（schema.sql）一開始就有課程欄位，結構和依序遷移後一致', () => {
     const fresh = new DatabaseSync(':memory:');
     fresh.exec(readFileSync(new URL('../server/schema.sql', import.meta.url), 'utf8'));
