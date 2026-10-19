@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.10',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '教學新增第 7 課「[先] 先手步驟」：先手步驟打出第一張伏擊，總攻擊 +4；反擊步驟再打第二張伏擊就不發動，並說明後攻方沒有先手步驟、與 [發] 的差別' },
+    ],
+  },
+  {
     version: '0.50.9',
     date: '2026-10-19',
     items: [

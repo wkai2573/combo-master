@@ -735,6 +735,123 @@ describe('第 6 課：[發] 打出時發動', () => {
   });
 });
 
+describe('第 7 課：[先] 先手步驟', () => {
+  /** 走到第一張伏擊打出、[先] 發動的那一格 */
+  function afterFirst() {
+    const s = start(7);
+    clickToAction(s);
+    choose(s, '伏擊');
+    return s;
+  }
+  /** 第二張伏擊打出、停在對手收招那一格 */
+  function afterSecond() {
+    const s = afterFirst();
+    clickToAction(s);
+    choose(s, '伏擊');
+    return s;
+  }
+
+  it('第 7 課在「卡片標籤」段；玩家先攻，手牌有兩張伏擊', () => {
+    expect(getLesson(7).group).toBe('卡片標籤');
+    const s = start(7);
+    const v = view(s);
+    expect(v.players[0].charId).toBe('見習生');
+    expect(names(v.players[0].hand).filter((n) => n === '伏擊')).toHaveLength(2);
+    clickToAction(s);
+    expect(view(s).phase).toBe('先手');
+    expect(view(s).prompt!.title).toContain('先手步驟');
+  });
+
+  it('要求出牌時，選別的、略過、收招都被拒絕，桌面不變', () => {
+    const s = start(7);
+    clickToAction(s);
+    expect(progress(s).awaiting).toEqual({ play: '伏擊' });
+    for (const a of [() => choose(s, '黑桃1'), () => s.submit([]), () => s.submit(['pass'])]) {
+      const before = s.getState();
+      a();
+      expect(s.getState().view).toBe(before.view);
+      expect(s.getState().batch.id).toBe(before.batch.id);
+    }
+    expect(s.getState().message).not.toBe('');
+    const second = afterFirst();
+    clickToAction(second);
+    expect(progress(second).awaiting).toEqual({ play: '伏擊' });
+    expect(view(second).prompt!.options.some((o) => o.key === 'pass')).toBe(true);
+    const before = second.getState();
+    second.submit(['pass']);
+    expect(second.getState().view).toBe(before.view);
+  });
+
+  it('第一張伏擊：總攻擊多 4，說明帶入實際的總攻擊並高亮總攻擊', () => {
+    const s = afterFirst();
+    const atk = view(s).players[0].atk;
+    expect(atk).toBe(getCard('伏擊').atk + 4);
+    expect(progress(s).text).toContain(`你的總攻擊現在是 ${atk}`);
+    expect(progress(s).text).toContain('總攻擊 +4');
+    expect(progress(s).highlight).toEqual([{ kind: 'total', stat: 'atk' }]);
+  });
+
+  it('第二張伏擊在反擊步驟打出：不發動，總攻擊只多了卡面攻擊，沒有再加 4', () => {
+    const s = afterSecond();
+    const atkAfterFirst = getCard('伏擊').atk + 4;
+    expect(s.getState().batch.frames.at(-1)!.fx).toEqual({ type: 'pass', player: 1 });
+    expect(names(view(s).players[0].moves)).toEqual(['伏擊', '伏擊']);
+    expect(view(s).players[0].atk).toBe(atkAfterFirst + getCard('伏擊').atk);
+    expect(progress(s).text).toContain('[先] 沒有發動');
+    expect(progress(s).text).toContain(`你的總攻擊是 ${view(s).players[0].atk}`);
+  });
+
+  it('傷害計算時總攻擊只包含一次 +4', () => {
+    const s = afterSecond();
+    s.advance();
+    const fx = s.getState().batch.frames.at(-1)!.fx as { type: string; atk: [number, number] };
+    expect(fx.type).toBe('calc');
+    // 兩張伏擊 + 一次 [先] 的 +4 + 追擊成功的方塊4
+    expect(fx.atk[0]).toBe(getCard('伏擊').atk * 2 + 4 + getCard('方塊4').atk);
+    expect(progress(s).text).toContain(`你的總攻擊 ${fx.atk[0]}`);
+  });
+
+  it('說明：[先] 只在先手步驟、後攻方沒有先手步驟所以不會觸發、與 [發] 對比；稱呼先手而不是起手', () => {
+    const s = start(7);
+    const all = driveToEnd(s).join('\n');
+    expect(all).toContain('最前面的框都寫著 [先]');
+    expect(all).toContain('先手步驟打出時發動');
+    expect(all).toContain('後攻方沒有先手步驟');
+    expect(all).toContain('[發] 在哪個步驟打出都會發動');
+    expect(all).not.toContain('起手');
+  });
+
+  it('從頭走到尾：結束畫面，寫入第 7 課的完成紀錄，不送戰績', () => {
+    const s = start(7);
+    expect(isLessonDone(7)).toBe(false);
+    driveToEnd(s);
+    expect(progress(s).ending).toMatchObject({ heading: '第 7 課完成！', summary: getLesson(7).summary });
+    expect(isLessonDone(7)).toBe(true);
+    expect(isLessonDone(6)).toBe(false);
+    s.leave();
+    expect(captured).toEqual([]);
+  });
+
+  it('中途離開、重來都不寫完成紀錄；重來回到初始狀態', () => {
+    const initial = start(7).getState();
+    const s = afterSecond();
+    s.restart();
+    expect(s.getState().view).toEqual(initial.view);
+    expect(progress(s)).toEqual(initial.tutorial);
+    s.leave();
+    expect(isLessonDone(7)).toBe(false);
+  });
+
+  it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
+    const s = start(7);
+    for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
+      if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
+      act(s);
+    }
+    expect(progress(s).finished).toBe(true);
+  });
+});
+
 describe('最後一課的結束畫面', () => {
   it('最後一課沒有下一課，按鈕是「開始單機練習」；其餘每課都接下一課', () => {
     const last = LESSONS.at(-1)!;
