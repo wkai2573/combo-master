@@ -136,12 +136,15 @@ export type FrameFx =
   /** 傷害計算：atk／def／dmg 皆以玩家編號為索引（dmg[p]＝玩家 p 要受到的傷害） */
   | { type: 'calc'; atk: [number, number]; def: [number, number]; dmg: [number, number] }
   | { type: 'damage'; dmg: [number, number] }
-  | { type: 'return' };
+  /** 歸還：招式與追擊卡放入經驗區；count[p] 是玩家 p 歸還的張數 */
+  | { type: 'return'; count: [number, number] }
+  /** 支付費用：cover 是被蓋成裏側的經驗張數，rage 是捨棄的怒氣區張數（實際做到的數字） */
+  | { type: 'cost'; player: PlayerId; cover: number; rage: number };
 
 /** 各種影格停留的毫秒數（標準速度） */
 export const FRAME_MS: Record<FrameFx['type'], number> = {
   phase: 750, info: 800, burst: 800, step: 600, activate: 1100, aimSwap: 900, banner: 700, shuffle: 900, deal: 900, gameEnd: 1500, draw: 550, play: 1000, pass: 800,
-  flip: 1250, flipResult: 1150, calc: 2000, damage: 1500, return: 1000,
+  flip: 1250, flipResult: 1150, calc: 2000, damage: 1500, return: 1000, cost: 600,
 };
 
 export interface GameSetup {

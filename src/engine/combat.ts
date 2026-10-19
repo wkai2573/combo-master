@@ -346,13 +346,17 @@ export function* returnStep(g: GameCtx): Gen {
   // 歸還時，卡還在戰鬥區：整理魔導書在這裡數白板卡並抽牌
   yield* fireEach(g, 'beforeReturn');
   checkWin(g);
+  const count: [number, number] = [0, 0];
   for (const p of order(g)) {
     // 招式卡疊由最底到最頂，最後是追擊卡疊
-    for (const c of combatZone(g, p)) move(g, c, 'exp');
+    for (const c of combatZone(g, p)) {
+      move(g, c, 'exp');
+      count[p]++;
+    }
   }
   // 塗毒：歸還時，把 [Ex-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
   yield* fireEach(g, 'afterReturn');
-  mark(g, '招式與追擊卡依序放入經驗區', { type: 'return' });
+  mark(g, '招式與追擊卡依序放入經驗區', { type: 'return', count });
 }
 
 // ───────────────────────── 戰鬥階段 ─────────────────────────

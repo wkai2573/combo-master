@@ -2,7 +2,7 @@
 // 兩邊只在函式本體裡用對方，且 effects 的預設實例延後到第一次使用才建立，所以載入順序不影響。
 // tests/moduleLoad.test.ts 守著這件事。
 import { fire } from './effects';
-import { activate, ask, confirm, data, discard, log, pname, settle, Z, type GameCtx, type Gen } from './ops';
+import { activate, ask, confirm, data, discard, log, mark, pname, settle, Z, type GameCtx, type Gen } from './ops';
 import type { CardInst, PlayerId } from './types';
 
 // ───────────────────────── 費用 ─────────────────────────
@@ -33,9 +33,11 @@ export function* pay(g: GameCtx, p: PlayerId, cost: Cost): Gen {
   settle(g); // 付費之前還沒呈現的變化不算費用
   const newlyCovered: CardInst[] = [];
   if (cost.cover) newlyCovered.push(...cover(g, p, cost.cover));
-  if (cost.rage) discardRage(g, p, cost.rage);
+  const discarded = cost.rage ? discardRage(g, p, cost.rage) : 0;
   // 付費自成一段，之後的蓋反應與效果各自再成一段
-  if (cost.cover || cost.rage) settle(g, `${pname(g, p)} 支付費用（${costText(cost)}）`);
+  if (cost.cover || cost.rage) {
+    mark(g, `${pname(g, p)} 支付費用（${costText(cost)}）`, { type: 'cost', player: p, cover: newlyCovered.length, rage: discarded });
+  }
   // 同一次蓋到多張有蓋反應的卡：進同一個觸發窗口，由卡的擁有者決定先後；蓋反應是強制的
   yield* fire(g, p, 'onCovered', { cards: newlyCovered });
 }

@@ -47,6 +47,17 @@ describe('教學的操作封鎖：玩家看得到的提示', () => {
     expect(gated.dropZone).toBe('exp');
   });
 
+  it('要求選按鈕選項：只留下指定的那個，不發動與略過都拿掉', () => {
+    const confirm: Request = {
+      player: 0, title: '是否發動【布甲】？（蓋1）', min: 1, max: 1,
+      options: [{ key: 'yes', label: '發動' }, { key: 'no', label: '不發動' }],
+    };
+    const gated = gatePrompt(progress({ choose: 'yes' }), confirm)!;
+    expect(gated.options.map((o) => o.key)).toEqual(['yes']);
+    expect(gated.title).toBe(confirm.title);
+    expect(gatePrompt(progress({ choose: 'maybe' }), confirm)).toBeNull();
+  });
+
   it('原本就必選的提示維持必選', () => {
     expect(gatePrompt(progress({ play: '黑桃1' }), prompt)!.min).toBe(1);
   });

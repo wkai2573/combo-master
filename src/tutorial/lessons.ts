@@ -28,9 +28,9 @@ export const LESSONS: TutorialLesson[] = [
   {
     no: 2,
     title: '爆發與經驗區',
-    blurb: '爆發階段放進經驗區，看經驗區怎麼增長',
+    blurb: '爆發與歸還，看經驗區怎麼增長',
     minutes: 3,
-    summary: '你已經學會爆發：把 1 張手牌放進經驗區，再抽 2 張。',
+    summary: '你已經學會爆發，也看到招式卡與追擊卡會在歸還時回到經驗區。',
     chapter: BURST_EXP_2,
   },
 ];

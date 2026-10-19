@@ -5,6 +5,7 @@ import { isLessonDone } from '../src/tutorial/completion';
 import { getLesson, LESSONS } from '../src/tutorial/lessons';
 import type { BattleRecord } from '../src/stats/records';
 import type { RecordReporter } from '../src/stats/reporter';
+import { act, driveToEnd } from './tutorialDrive';
 
 // 第 2 課以後的教學課程：每課從頭走到尾的測試，就是 ADR 0008 的把關。
 // 卡表改了白板卡的數值、或某一課用到的卡，讓某一步走不通，這裡會失敗，要調整該課的牌面配置，不是把卡表數值改回來
@@ -76,9 +77,7 @@ describe('課程清單', () => {
         const t = progress(s).text;
         expect(t).not.toContain('AI');
         expect(t).not.toContain('對方');
-        const a = progress(s).awaiting;
-        if (a === 'click') s.advance();
-        else if (a) choose(s, a.play);
+        act(s);
       }
     }
   });
@@ -156,24 +155,82 @@ describe('第 2 課：爆發與經驗區', () => {
     expect(progress(s).highlight).toEqual([{ kind: 'exp-zone', owner: 'me' }, { kind: 'hand-count', owner: 'me' }]);
   });
 
-  it('表側說明與其他來源（歸還、增益到期）都有提到', () => {
+  it('爆發後的說明：表側、可以支付費用、經驗區的增長來源是爆發與歸還', () => {
     const s = start(2);
     clickToAction(s);
     choose(s, '梅花9');
-    const texts = clickToAction(s);
-    const all = texts.join('\n');
+    const all = [progress(s).text, ...clickToAction(s)].join('\n');
     expect(all).toContain('表側');
     expect(all).toContain('支付費用');
     expect(all).toContain('歸還');
-    expect(all).toContain('增益');
+  });
+
+  /** 爆發完、說明講完，走到對手不爆發、輪到玩家先攻出招 */
+  function toOpening() {
+    const s = start(2);
+    clickToAction(s);
+    choose(s, '梅花9');
+    clickToAction(s);
+    return s;
+  }
+
+  it('對手不爆發，接著輪到我先攻出招：要求打出紅心5，其他牌與收招都被拒絕，桌面不變', () => {
+    const s = toOpening();
+    expect(view(s).phase).toBe('先手');
+    expect(progress(s).awaiting).toEqual({ play: '紅心5' });
+    const before = s.getState();
+    choose(s, '黑桃1');
+    s.submit([]);
+    s.submit(['pass']);
+    expect(s.getState().message).not.toBe('');
+    expect(s.getState().view).toBe(before.view);
+    expect(s.getState().batch.id).toBe(before.batch.id);
+    expect(progress(s)).toBe(before.tutorial);
+  });
+
+  it('雙方各出一招後都沒有範圍內的招式，自動收招：停在對手收招那一格', () => {
+    const s = toOpening();
+    choose(s, '紅心5');
+    expect(names(view(s).players[1].moves)).toEqual(['梅花6']);
+    expect(names(view(s).players[0].moves)).toEqual(['紅心5']);
+    expect(s.getState().batch.frames.at(-1)!.fx).toEqual({ type: 'pass', player: 1 });
+    expect(view(s).players[0].passed && view(s).players[1].passed).toBe(true);
+    expect(progress(s).text).toContain('都收招了');
+  });
+
+  it('整段腳本都不會出現沒被處理的提示：停在說明或要求操作時，引擎等的人是我', () => {
+    const s = start(2);
+    for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
+      const a = progress(s).awaiting;
+      // 要求操作時，畫面上一定有我可以回應的提示；其餘時候不需要
+      if (a !== 'click') expect(view(s).prompt).not.toBeNull();
+      act(s);
+    }
+    expect(progress(s).finished).toBe(true);
+  });
+
+  it('歸還：停在歸還那一格，經驗區是 2 + 爆發 1 + 歸還的張數；說明帶入歸還張數與經驗張數', () => {
+    const s = toOpening();
+    choose(s, '紅心5');
+    s.advance();
+    const fx = s.getState().batch.frames.at(-1)!.fx;
+    expect(fx.type).toBe('return');
+    const returned = (fx as { count: [number, number] }).count[0];
+    expect(returned).toBe(2);
+    const v = view(s);
+    expect(v.players[0].exp).toHaveLength(2 + 1 + returned);
+    // 歸還的順序：招式卡在前、追擊卡在最後
+    expect(names(v.players[0].exp).slice(-returned)).toEqual(['紅心5', '方塊4']);
+    expect(v.players[0].moves).toHaveLength(0);
+    expect(v.players[0].pursuit).toHaveLength(0);
+    expect(progress(s).text).toContain(`你歸還了 ${returned} 張，經驗區現在有 ${v.players[0].exp.length} 張卡`);
+    expect(progress(s).highlight).toEqual([{ kind: 'exp-zone', owner: 'me' }]);
   });
 
   it('從頭走到尾：到結束畫面，寫入第 2 課的完成紀錄（第 1 課不受影響），不送戰績', () => {
     const s = start(2);
     expect(isLessonDone(2)).toBe(false);
-    clickToAction(s);
-    choose(s, '梅花9');
-    clickToAction(s);
+    driveToEnd(s);
     expect(progress(s).finished).toBe(true);
     expect(progress(s).awaiting).toBeNull();
     expect(progress(s).ending).toEqual({
@@ -183,19 +240,22 @@ describe('第 2 課：爆發與經驗區', () => {
     });
     expect(isLessonDone(2)).toBe(true);
     expect(isLessonDone(1)).toBe(false);
+    // 結束畫面蓋在停住的那一格上，不放出後面的回合
+    expect(view(s).players[0].exp).toHaveLength(5);
     s.leave();
     expect(captured).toEqual([]);
   });
 
-  it('中途離開不算完成', () => {
-    const s = start(2);
-    clickToAction(s);
-    choose(s, '梅花9');
+  it('中途離開、中途重來都不算完成', () => {
+    const s = toOpening();
+    choose(s, '紅心5');
     s.leave();
     s.advance();
     expect(isLessonDone(2)).toBe(false);
+    const r = toOpening();
+    r.restart();
+    expect(isLessonDone(2)).toBe(false);
   });
-
   it('重來本課：回到爆發階段的初始狀態，不寫完成紀錄', () => {
     const initial = start(2).getState();
     const s = start(2);
@@ -212,9 +272,7 @@ describe('第 1 課的結束畫面接第 2 課', () => {
   it('第 1 課後面有第 2 課，按鈕是「下一課」', () => {
     const s = start(1);
     for (let i = 0; i < 200 && progress(s).awaiting !== null; i++) {
-      const a = progress(s).awaiting;
-      if (a === 'click') s.advance();
-      else if (a) choose(s, a.play);
+      act(s);
     }
     expect(progress(s).ending).toEqual({
       heading: '第 1 課完成！',

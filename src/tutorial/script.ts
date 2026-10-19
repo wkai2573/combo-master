@@ -1,5 +1,5 @@
-import { getCard } from '../data/cards';
-import type { FrameFx, PlayerId, StartPhase } from '../engine/types';
+import { getCard, getCharacter } from '../data/cards';
+import { other, type FrameFx, type PlayerId, type StartPhase } from '../engine/types';
 import type { Frame, GameView } from '../engine/view';
 
 /** 我方（學習的玩家）或對手 */
@@ -36,7 +36,13 @@ export type HighlightTarget =
   /** 雙方的總攻擊或總防禦 */
   | { kind: 'total'; stat: 'atk' | 'def' }
   /** 某一方的經驗區（電腦版是整個經驗區，手機版是經驗牌堆或經驗區標籤） */
-  | { kind: 'exp-zone'; owner: Side };
+  | { kind: 'exp-zone'; owner: Side }
+  /** 某一方的覺醒標示（角色資訊列上的「覺醒」標籤） */
+  | { kind: 'awaken-mark'; owner: Side }
+  /** 某一方的怒氣區（牌堆，只有牌背與張數） */
+  | { kind: 'rage-zone'; owner: Side }
+  /** 某一方的裝備增益區 */
+  | { kind: 'gear-zone'; owner: Side };
 
 export type StatPart = 'combo' | 'atk' | 'def';
 
@@ -61,11 +67,22 @@ export type FrameMatch =
   | { fx: 'calc' }
   | { fx: 'game-end' }
   /** 爆發完成：手牌放進經驗區、抽完 2 張之後 */
-  | { fx: 'burst'; player: Side };
+  | { fx: 'burst'; player: Side }
+  /** 覺醒標示出現：爆發完成的那一格，而且那一格的經驗區剛好達到覺醒經驗 */
+  | { fx: 'awakened'; player: Side }
+  /** 歸還步驟：招式與追擊卡放進經驗區 */
+  | { fx: 'return' }
+  /** 費用支付：蓋 X 或怒 X 做完的那一格 */
+  | { fx: 'cost'; player: Side }
+  /** 效果結果：下一個效果做完、顯示結果的那一格 */
+  | { fx: 'info' }
+  /** 牌飛入怒氣區：這一方受到傷害、牌組的牌放進怒氣區的那一格 */
+  | { fx: 'rage-in'; player: Side };
 
 const sideOf = (player: PlayerId, me: PlayerId): Side => (player === me ? 'me' : 'opp');
 
-export function matchesFrame(m: FrameMatch, fx: FrameFx, me: PlayerId): boolean {
+export function matchesFrame(m: FrameMatch, frame: Frame, me: PlayerId): boolean {
+  const fx = frame.fx;
   switch (m.fx) {
     case 'pass': return fx.type === 'pass' && sideOf(fx.player, me) === m.player;
     case 'banner': return fx.type === 'banner' && fx.kind === 'phase' && fx.name === m.name;
@@ -74,6 +91,15 @@ export function matchesFrame(m: FrameMatch, fx: FrameFx, me: PlayerId): boolean 
     case 'calc': return fx.type === 'calc';
     case 'game-end': return fx.type === 'gameEnd';
     case 'burst': return fx.type === 'burst' && sideOf(fx.player, me) === m.player;
+    case 'awakened': {
+      if (fx.type !== 'burst' || sideOf(fx.player, me) !== m.player) return false;
+      const pv = frame.view.players[fx.player];
+      return pv.exp.length >= getCharacter(pv.charId).expReq;
+    }
+    case 'return': return fx.type === 'return';
+    case 'cost': return fx.type === 'cost' && sideOf(fx.player, me) === m.player;
+    case 'info': return fx.type === 'info';
+    case 'rage-in': return fx.type === 'damage' && fx.dmg[m.player === 'me' ? me : other(me)] > 0;
   }
 }
 
@@ -81,13 +107,17 @@ export function matchesFrame(m: FrameMatch, fx: FrameFx, me: PlayerId): boolean 
  * 教學的一步：
  * - explain：顯示文字與高亮目標，等玩家點畫面。接在停在影格後面時，畫面維持停住的那一格
  * - opponent-play：對手照腳本回應目前的提示，打出指定的牌
- * - play：顯示文字，要求玩家打出指定的牌（手牌中的這張牌會高亮），其他選擇都被拒絕
+ * - opponent-skip：對手略過目前可略過的提示，也就是不爆發
+ * - play：顯示文字，要求玩家選擇手牌中指定的牌（這張牌會高亮），其他選擇與略過都被拒絕
+ * - choose：顯示文字，要求玩家選擇提示裡指定的按鈕選項，像是確認發動，其他選擇、不發動與略過都被拒絕
  * - at-frame：把影格送到符合條件的那一格為止，剩下的先扣著，顯示說明等玩家點畫面；點完才繼續送
  */
 export type TutorialStep =
   | { kind: 'explain'; text: TutorialText; highlight?: HighlightTarget[] }
   | { kind: 'opponent-play'; card: string }
+  | { kind: 'opponent-skip' }
   | { kind: 'play'; card: string; text: TutorialText }
+  | { kind: 'choose'; key: string; text: TutorialText; highlight?: HighlightTarget[] }
   | { kind: 'at-frame'; match: FrameMatch; text: TutorialText; highlight?: HighlightTarget[] };
 
 /** 經驗區預設的一張牌：寫卡名是表側，要裏側就寫成物件 */
@@ -136,8 +166,8 @@ export interface TutorialProgress {
   /** 目前步驟的說明文字（已帶入數值）；腳本走完時是空字串 */
   text: string;
   highlight: HighlightTarget[];
-  /** 在等什麼：點擊畫面、玩家打出指定的牌，或沒有（腳本走完） */
-  awaiting: 'click' | { play: string } | null;
+  /** 在等什麼：點擊畫面、玩家選擇指定的手牌、玩家選擇指定的按鈕選項，或沒有（腳本走完） */
+  awaiting: 'click' | { play: string } | { choose: string } | null;
   /** 腳本走完，到了教學結束畫面 */
   finished: boolean;
   /** 結束畫面的內容；腳本還沒走完時是 null */
@@ -158,7 +188,7 @@ const rangeText = ({ view }: TextContext): string => {
 };
 
 /** 停在影格的說明才有那一格；拿來用在別的步驟是腳本寫錯了 */
-function fxOf<T extends FrameFx['type']>({ frame }: TextContext, type: T): Extract<FrameFx, { type: T }> {
+export function fxOf<T extends FrameFx['type']>({ frame }: TextContext, type: T): Extract<FrameFx, { type: T }> {
   if (frame?.fx.type !== type) throw new Error(`教學腳本：這段說明要用在停在「${type}」影格的步驟`);
   return frame.fx as Extract<FrameFx, { type: T }>;
 }
@@ -177,7 +207,7 @@ const successText = (ctx: TextContext): string => {
 };
 
 /** 傷害計算：我方打對手、對手打我方，各一行，帶入這一局實際的數字 */
-const calcText = (ctx: TextContext): string => {
+export const calcText = (ctx: TextContext): string => {
   const { atk, def, dmg } = fxOf(ctx, 'calc');
   const me = ctx.view.me;
   const opp = me === 0 ? 1 : 0;

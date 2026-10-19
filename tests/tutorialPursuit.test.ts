@@ -3,6 +3,7 @@ import { getCard } from '../src/data/cards';
 import { TutorialSession } from '../src/net/session';
 import { isLessonDone } from '../src/tutorial/completion';
 import { LESSONS } from '../src/tutorial/lessons';
+import { act } from './tutorialDrive';
 import type { BattleRecord } from '../src/stats/records';
 import type { RecordReporter } from '../src/stats/reporter';
 
@@ -245,7 +246,7 @@ describe('新手教學：整場走完（ADR 0008 的把關）', () => {
         texts.push(progress(s).text);
         s.advance();
       } else if (a) {
-        playCard(s, a.play);
+        act(s);
       }
     }
     return { s, texts };

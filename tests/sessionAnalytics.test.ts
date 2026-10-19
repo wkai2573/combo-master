@@ -5,6 +5,7 @@ import { HostSession, LocalSession, TutorialSession } from '../src/net/session';
 import { setPlayTracker } from '../src/stats/analytics';
 import type { PlayType } from '../src/stats/analytics';
 import { FakeTransport } from './fakeTransport';
+import { act } from './tutorialDrive';
 
 // 流量統計：對局開始與打完各通知一次；中途離開、離線判負不算打完
 let plays: Array<[string, PlayType]> = [];
@@ -94,8 +95,7 @@ describe('流量統計：新手教學', () => {
     for (let i = 0; i < 200; i++) {
       const t = s.getState().tutorial!;
       if (t.awaiting === null || (stopAt && t.text.includes(stopAt))) return;
-      if (t.awaiting === 'click') s.advance();
-      else playCard(s, t.awaiting.play);
+      act(s);
     }
   }
 

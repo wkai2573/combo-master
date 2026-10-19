@@ -264,7 +264,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, drag, hit,
         </span>
         <span className="muted">{name}{mine ? '（你）' : ''}・{ch.cls}</span>
         {v.first === p && <span className="pill awake">先攻</span>}
-        {awake && <span className="pill awake">覺醒</span>}
+        {awake && <span className="pill awake" data-awake={p}>覺醒</span>}
         <span className={`pill hp${changes?.life[p] ? ' flash' : ''}`} key={`hp${fxKey}`} title="牌組張數就是生命值">生命 {pv.deckCount}<Delta d={changes?.life[p]} k={fxKey} /></span>
         <span className="pill" data-hand-count={p}>手牌 {pv.hand.length}</span>
         <span className={`pill click${changes?.exp[p] ? ' flash' : ''}`} key={`exp${fxKey}`} onClick={() => expRef.current && onZone(p, 'exp', expRef.current.getBoundingClientRect())}>
@@ -276,7 +276,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, drag, hit,
         效果：<KeywordText text={ch.text} />　<span style={{ color: awake ? 'var(--accent)' : undefined }}>覺醒（需 {ch.expReq} 張經驗）：<KeywordText text={ch.awakenText} /></span>
       </div>
 
-      <div className={`gearzone${pv.gear.length + pv.buff.length === 0 ? ' empty' : ''}`} data-dropzone={mine ? 'gear' : undefined}>
+      <div className={`gearzone${pv.gear.length + pv.buff.length === 0 ? ' empty' : ''}`} data-dropzone={mine ? 'gear' : undefined} data-gear-zone={p}>
         <div className="zonelabel">裝備／增益</div>
         <div className="cardrow">
           {pv.gear.map((c) => <CardFace key={c.uid} uid={c.uid} id={c.id} size="sm" short={wide} />)}

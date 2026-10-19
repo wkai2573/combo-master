@@ -73,6 +73,18 @@ function elementsOf(target: HighlightTarget, view: GameView): Element[] {
       const stack = document.querySelector(`[data-pile="${p}-exp"]`);
       return stack ? [stack.closest('.pile') ?? stack] : [];
     }
+    case 'awaken-mark':
+      return all(`[data-awake="${playerOf(target.owner, view)}"]`);
+    case 'rage-zone':
+    case 'gear-zone': {
+      // 怒氣區是牌堆（兩種版面都有）；裝備增益區電腦版是整個區域，手機版是牌堆或對手列上的標籤
+      const p = playerOf(target.owner, view);
+      const zone = target.kind === 'rage-zone' ? 'rage' : 'gear';
+      const box = zone === 'gear' ? all(`[data-gear-zone="${p}"]`) : [];
+      if (box.length > 0) return box;
+      const stack = document.querySelector(`[data-pile="${p}-${zone}"]`);
+      return stack ? [stack.closest('.pile') ?? stack] : [];
+    }
   }
 }
 

@@ -8,7 +8,10 @@ const noEffect = (name: string): CharacterData => ({
   id: name, name, cls: '共用', hp: 50, expReq: 8, text: '沒有效果', awakenText: '沒有效果', pending: false,
 });
 
+/** 修行者覺醒中增加的總攻擊 */
+export const 修行者覺醒攻擊加成 = 2;
+
 /** 第 2 課起學習的玩家用的角色：平常沒有效果，覺醒中總攻擊 +2（效果在 src/engine/sources/common.ts） */
-const 修行者: CharacterData = { ...noEffect('修行者'), awakenText: '（追加）我方總攻擊 +2' };
+const 修行者: CharacterData = { ...noEffect('修行者'), awakenText: `（追加）我方總攻擊 +${修行者覺醒攻擊加成}` };
 
 export const TUTORIAL_CHARACTERS: CharacterData[] = [noEffect('見習生'), noEffect('教官'), 修行者];

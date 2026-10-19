@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.3',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '教學第 2 課補完簡短戰鬥：爆發之後雙方各出一招，動畫停在歸還，看招式卡與追擊卡依序回到經驗區後方，說明裡的張數就是實際的數字' },
+    ],
+  },
+  {
     version: '0.50.2',
     date: '2026-10-19',
     items: [

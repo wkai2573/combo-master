@@ -346,8 +346,14 @@ export class TutorialSession extends Base {
         this.pauseFrame = null;
         continue;
       }
+      if (step?.kind === 'opponent-skip') {
+        this.opponentSkip();
+        this.step++;
+        this.pauseFrame = null;
+        continue;
+      }
       if (step?.kind === 'at-frame') {
-        const at = this.held.findIndex((f) => matchesFrame(step.match, f.fx, this.me));
+        const at = this.held.findIndex((f) => matchesFrame(step.match, f, this.me));
         if (at < 0) throw new Error(`教學腳本的第 ${this.step + 1} 步：找不到要停的影格`);
         sent.push(...this.held.splice(0, at + 1));
         stop = sent[sent.length - 1];
@@ -355,6 +361,11 @@ export class TutorialSession extends Base {
         break;
       }
       if (step?.kind === 'explain' && this.pauseFrame) {
+        stop = this.pauseFrame;
+        break;
+      }
+      // 腳本在停點裡走完，而且對局還沒分出勝負：結束畫面蓋在停住的那一格上，不把後面的回合放出來
+      if (!step && this.pauseFrame && !this.match.over) {
         stop = this.pauseFrame;
         break;
       }
@@ -400,6 +411,15 @@ export class TutorialSession extends Base {
     this.take(r.update);
   }
 
+  /** 對手略過目前的提示：只有可以不選的提示才行 */
+  private opponentSkip() {
+    const pending = this.match.pending;
+    if (pending?.player !== 1 || pending.min > 0) throw new Error(`教學腳本的第 ${this.step + 1} 步：對手現在不能略過提示`);
+    const r = this.match.submit(1, []);
+    if (r.error) throw new Error(`教學腳本的第 ${this.step + 1} 步：${r.error}`);
+    this.take(r.update);
+  }
+
   private progress(view: GameView, frame: Frame | null): TutorialProgress {
     const step = this.chapter.steps[this.step];
     if (!step) return { text: '', highlight: [], awaiting: null, finished: true, ending: this.ending() };
@@ -410,6 +430,12 @@ export class TutorialSession extends Base {
     if (step.kind === 'play') {
       return {
         text: resolveText(step.text, ctx), highlight: [{ kind: 'hand-card', cardId: step.card }], awaiting: { play: step.card },
+        finished: false, ending: null,
+      };
+    }
+    if (step.kind === 'choose') {
+      return {
+        text: resolveText(step.text, ctx), highlight: step.highlight ?? [], awaiting: { choose: step.key },
         finished: false, ending: null,
       };
     }
@@ -437,14 +463,14 @@ export class TutorialSession extends Base {
   submit(keys: string[]) {
     if (this.closed) return;
     const step = this.chapter.steps[this.step];
-    if (step?.kind !== 'play') {
+    if (step?.kind !== 'play' && step?.kind !== 'choose') {
       this.set({ message: step ? '現在請先點擊畫面進入下一步' : '教學的這一段到這裡結束了' });
       return;
     }
     const pending = this.match.pending;
     const chosen = keys.length === 1 && pending?.player === 0 ? pending.options.find((o) => o.key === keys[0]) : undefined;
-    if (chosen?.cardId !== step.card) {
-      this.set({ message: `請照說明，打出被框起來的【${getCard(step.card).name}】` });
+    if (step.kind === 'play' ? chosen?.cardId !== step.card : chosen?.key !== step.key) {
+      this.set({ message: step.kind === 'play' ? `請照說明，選擇被框起來的【${getCard(step.card).name}】` : '請照說明，按下指定的選項' });
       return;
     }
     const r = this.match.submit(0, keys);

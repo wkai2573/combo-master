@@ -1,5 +1,6 @@
 import { defineSource, lasting, slot } from '../effectKit';
 import { isClassCard } from '../../data/enabledCards';
+import { 修行者覺醒攻擊加成 } from '../../data/tutorialCharacters';
 import { awakened, chooseCards, data, directHit, log, move, pname, recover, Z } from '../ops';
 
 // Ex-中毒：[經] 當回合開始時，直擊我方 1，強制
@@ -103,7 +104,7 @@ export const 職業專精書 = defineSource({
 export const 修行者 = defineSource({
   id: '修行者',
   at: 'char',
-  ask: { combatBonus: (c) => ({ atk: awakened(c.g, c.p) ? 2 : 0 }) },
+  ask: { combatBonus: (c) => ({ atk: awakened(c.g, c.p) ? 修行者覺醒攻擊加成 : 0 }) },
 });
 
 export const COMMON_SOURCES = [Ex中毒, Ex流血, 布甲, 木棍, 生命藥水, 職業專精書, 修行者];
