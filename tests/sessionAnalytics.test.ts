@@ -8,10 +8,16 @@ import { FakeTransport } from './fakeTransport';
 
 // 流量統計：對局開始與打完各通知一次；中途離開、離線判負不算打完
 let plays: Array<[string, PlayType]> = [];
+// 教學的事件另外帶課程編號，和 plays 同步記錄
+let lessons: Array<number | undefined> = [];
 const restores: Array<() => void> = [];
 beforeEach(() => {
   plays = [];
-  restores.push(setPlayTracker((kind, opponent) => plays.push([kind, opponent])));
+  lessons = [];
+  restores.push(setPlayTracker((kind, opponent, lesson) => {
+    plays.push([kind, opponent]);
+    lessons.push(lesson);
+  }));
   vi.useFakeTimers();
   vi.setSystemTime(1);
   const data = new Map<string, string>();
@@ -120,6 +126,37 @@ describe('流量統計：新手教學', () => {
     drive(s, '牌組就是生命');
     s.leave();
     s.advance();
+    expect(plays).toEqual([['start', 'tutorial']]);
+  });
+
+  it('開始與完成都帶這一課的課程編號；一般對局沒有', () => {
+    const s = tutorial();
+    drive(s);
+    expect(lessons).toEqual([1, 1]);
+    localSession();
+    expect(lessons).toEqual([1, 1, undefined]);
+  });
+
+  it('重來本課算一次新的開始，沒完成就重來不會有完成', () => {
+    const s = tutorial();
+    drive(s, '牌組就是生命');
+    s.restart();
+    expect(plays).toEqual([['start', 'tutorial'], ['start', 'tutorial']]);
+    expect(lessons).toEqual([1, 1]);
+  });
+
+  it('重來後再走完，各記一次完成：同一課的開始與完成成對累計', () => {
+    const s = tutorial();
+    drive(s);
+    s.restart();
+    drive(s);
+    expect(plays).toEqual([['start', 'tutorial'], ['finish', 'tutorial'], ['start', 'tutorial'], ['finish', 'tutorial']]);
+  });
+
+  it('離開之後重來沒有反應，不再記開始', () => {
+    const s = tutorial();
+    s.leave();
+    s.restart();
     expect(plays).toEqual([['start', 'tutorial']]);
   });
 });

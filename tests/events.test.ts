@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { d1Repo } from '../server/src/d1';
+import { KNOWN_LESSONS } from '../server/src/lessons';
+import { LESSONS } from '../src/tutorial/lessons';
 import { EVENT_DEVICE_MAX, EVENT_DEVICE_WINDOW_MS, EVENT_GLOBAL_MAX, EVENT_GLOBAL_WINDOW_MS, handle } from '../server/src/handler';
 import type { Repo } from '../server/src/repo';
 import { sqliteD1 } from './sqliteD1';
@@ -60,6 +62,43 @@ describe('流量事件：開始與打完對局', () => {
     expect((await postEvent({ ...visit(), name: 'start', opponent: 'tutorial' }, NOW + 1000)).status).toBe(201);
     expect((await postEvent({ ...visit(), name: 'finish', opponent: 'tutorial' }, NOW + 60_000)).status).toBe(201);
     expect((await rows()).map((r) => [r.name, r.opponent])).toEqual([['visit', null], ['start', 'tutorial'], ['finish', 'tutorial']]);
+  });
+
+  it('教學事件可以帶課程編號，存進課程欄位；沒帶（舊版遊戲）就是空的', async () => {
+    await postEvent(visit());
+    expect((await postEvent({ ...visit(), name: 'start', opponent: 'tutorial', lesson: 1 }, NOW + 1000)).status).toBe(201);
+    expect((await postEvent({ ...visit(), name: 'finish', opponent: 'tutorial', lesson: 1 }, NOW + 2000)).status).toBe(201);
+    expect((await postEvent({ ...visit(), name: 'start', opponent: 'tutorial' }, NOW + 3000)).status).toBe(201);
+    const all = await db.prepare('SELECT name, opponent, lesson FROM events ORDER BY id').all();
+    expect(all.results).toEqual([
+      { name: 'visit', opponent: null, lesson: null },
+      { name: 'start', opponent: 'tutorial', lesson: 1 },
+      { name: 'finish', opponent: 'tutorial', lesson: 1 },
+      { name: 'start', opponent: 'tutorial', lesson: null },
+    ]);
+  });
+
+  it('非教學事件帶課程欄位：拒絕，什麼都不存', async () => {
+    await postEvent(visit());
+    for (const opponent of ['cpu', 'player']) {
+      expect((await postEvent({ ...visit(), name: 'start', opponent, lesson: 1 }, NOW + 1000)).status).toBe(400);
+      expect((await postEvent({ ...visit(), name: 'finish', opponent, lesson: 1 }, NOW + 1000)).status).toBe(400);
+    }
+    expect((await postEvent(visit({ visitId: 'visit-0002', lesson: 1 }), NOW + 1000)).status).toBe(400);
+    expect((await postEvent(beat(30_000, { lesson: 1 }), NOW + 30_000)).status).toBe(400);
+    expect(await rows()).toHaveLength(1);
+  });
+
+  it('不存在的課程編號：拒絕', async () => {
+    await postEvent(visit());
+    for (const lesson of [0, -1, 1.5, 999, '1', null]) {
+      expect((await postEvent({ ...visit(), name: 'start', opponent: 'tutorial', lesson }, NOW + 1000)).status, `lesson=${String(lesson)}`).toBe(400);
+    }
+    expect(await rows()).toHaveLength(1);
+  });
+
+  it('伺服器認得的課程編號和遊戲的課程清單一致', () => {
+    expect([...KNOWN_LESSONS]).toEqual(LESSONS.map((l) => l.no));
   });
 
   it('開始與打完對局一定要有對戰類型', async () => {

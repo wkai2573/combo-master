@@ -111,6 +111,19 @@ describe('流量統計：開始與打完對局', () => {
     expect(sent.slice(1).map((e) => [e.name, e.opponent])).toEqual([['start', 'tutorial'], ['finish', 'tutorial']]);
   });
 
+  it('教學的開始與完成帶課程編號；一般對局的事件沒有課程欄位', () => {
+    const { analytics, sent } = setup();
+    analytics.visit();
+    analytics.play('start', 'tutorial', 2);
+    analytics.play('finish', 'tutorial', 2);
+    analytics.play('start', 'cpu');
+    expect(sent.slice(1)).toEqual([
+      { name: 'start', visitId: 'visit-0001', deviceId: 'device-0001', version: '0.41.0', opponent: 'tutorial', lesson: 2 },
+      { name: 'finish', visitId: 'visit-0001', deviceId: 'device-0001', version: '0.41.0', opponent: 'tutorial', lesson: 2 },
+      { name: 'start', visitId: 'visit-0001', deviceId: 'device-0001', version: '0.41.0', opponent: 'cpu' },
+    ]);
+  });
+
   it('頁面還沒登記造訪就開打：先補一筆造訪，對局事件不會沒有對應的造訪', () => {
     const { analytics, sent } = setup();
     analytics.play('start', 'player');

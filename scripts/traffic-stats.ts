@@ -14,7 +14,7 @@ import { formatReport, summarize, type EventRow } from './trafficSummary';
 
 const local = process.argv.includes('--local');
 const text = process.argv.includes('--text');
-const sql = 'SELECT name, visit_id, device_id, version, opponent, created_at, last_seen_at, active_ms FROM events ORDER BY id';
+const sql = 'SELECT name, visit_id, device_id, version, opponent, lesson, created_at, last_seen_at, active_ms FROM events ORDER BY id';
 
 const result = spawnSync(
   'bunx',

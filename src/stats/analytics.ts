@@ -20,6 +20,8 @@ export interface AnalyticsEvent {
   version: string;
   /** 開始與打完對局才有 */
   opponent?: PlayType;
+  /** 教學的開始與完成才有：第幾課 */
+  lesson?: number;
   /** 心跳才有：這次造訪到目前為止，分頁在前景可見的累計毫秒數 */
   activeMs?: number;
 }
@@ -46,8 +48,8 @@ export interface Analytics {
   hidden(): void;
   /** 分頁回到前景：從這一刻起重新累計可見時間 */
   shown(): void;
-  /** 開始或打完一場對局；頁面還沒登記造訪就先補登記 */
-  play(kind: 'start' | 'finish', opponent: PlayType): void;
+  /** 開始或打完一場對局；頁面還沒登記造訪就先補登記。教學要帶是第幾課 */
+  play(kind: 'start' | 'finish', opponent: PlayType, lesson?: number): void;
 }
 
 export function createAnalytics(deps: AnalyticsDeps): Analytics {
@@ -60,7 +62,7 @@ export function createAnalytics(deps: AnalyticsDeps): Analytics {
     settledMs = activeMs();
     visibleSince = null;
   };
-  const emit = (name: AnalyticsEvent['name'], extra: Pick<AnalyticsEvent, 'opponent' | 'activeMs'> = {}) => {
+  const emit = (name: AnalyticsEvent['name'], extra: Pick<AnalyticsEvent, 'opponent' | 'lesson' | 'activeMs'> = {}) => {
     if (deps.optedOut() || !visitId) return;
     try {
       deps.send({ name, visitId, deviceId: deps.deviceId(), version: deps.version, ...extra });
@@ -88,9 +90,9 @@ export function createAnalytics(deps: AnalyticsDeps): Analytics {
     shown() {
       if (visitId && visibleSince === null) visibleSince = deps.now();
     },
-    play(kind, opponent) {
+    play(kind, opponent, lesson) {
       visit();
-      emit(kind, { opponent });
+      emit(kind, { opponent, ...(lesson === undefined ? {} : { lesson }) });
     },
   };
 }
@@ -190,12 +192,12 @@ export function startAnalytics(analytics: Analytics = defaultAnalytics()): void 
 }
 
 /** 對局開始或打完時的去向；測試可以換成自己的接收函式 */
-export type PlayTracker = (kind: 'start' | 'finish', opponent: PlayType) => void;
+export type PlayTracker = (kind: 'start' | 'finish', opponent: PlayType, lesson?: number) => void;
 
-let tracker: PlayTracker = (kind, opponent) => defaultAnalytics().play(kind, opponent);
+let tracker: PlayTracker = (kind, opponent, lesson) => defaultAnalytics().play(kind, opponent, lesson);
 
 /** 對局開始或打完時呼叫 */
-export const trackPlay: PlayTracker = (kind, opponent) => tracker(kind, opponent);
+export const trackPlay: PlayTracker = (kind, opponent, lesson) => tracker(kind, opponent, lesson);
 
 /** 換掉接收函式，回傳還原的函式 */
 export function setPlayTracker(next: PlayTracker): () => void {

@@ -52,8 +52,8 @@ export function d1Repo(db: D1Like): Repo {
     },
     async insertEvent(e, now) {
       const res = await db
-        .prepare('INSERT OR IGNORE INTO events (name, visit_id, device_id, version, opponent, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .bind(e.name, e.visitId, e.deviceId, e.version, 'opponent' in e ? e.opponent : null, now, now)
+        .prepare('INSERT OR IGNORE INTO events (name, visit_id, device_id, version, opponent, lesson, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(e.name, e.visitId, e.deviceId, e.version, 'opponent' in e ? e.opponent : null, 'lesson' in e ? (e.lesson ?? null) : null, now, now)
         .run();
       return res.meta.changes > 0 ? 'inserted' : 'duplicate';
     },

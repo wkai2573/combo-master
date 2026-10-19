@@ -1,4 +1,4 @@
-import { OPPONENT_LABEL, type Summary } from './trafficSummary';
+import { OPPONENT_LABEL, completionRate, lessonLabel, type Summary } from './trafficSummary';
 
 const esc = (text: string | number) =>
   String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -78,6 +78,7 @@ export function renderDashboard(s: Summary, generatedAt: Date): string {
 <section><h2>從進站到玩完</h2>${funnel(s)}</section>
 <section><h2>依版本</h2>${table(['版本', '造訪', '裝置', '停留中位數', '玩過', '玩完'], s.byVersion.map((v) => [v.version, v.visits, v.devices, duration(v.medianStaySeconds), v.playedDevices, v.finishedDevices]))}</section>
 <section><h2>依對戰類型</h2>${table(['類型', '開始場次', '打完場次', '玩過裝置', '玩完裝置'], s.byOpponent.map((o) => [OPPONENT_LABEL[o.opponent], o.starts, o.finishes, o.playedDevices, o.finishedDevices]))}</section>
+<section><h2>教學（每課）</h2><p class="sub">教學不算進上面的玩過、玩完與依版本。重來本課會多記一次開始，所以完成率也反映放棄的情形。</p>${table(['課程', '開始', '完成', '完成率'], s.byLesson.map((l) => [lessonLabel(l.lesson), l.starts, l.finishes, completionRate(l.starts, l.finishes)]))}</section>
 <section><h2>每日明細</h2>${table(['日期', '造訪', '裝置', '新訪客', '回訪', '停留中位數', '玩過', '玩完'], s.byDay.map((d) => [d.day, d.visits, d.devices, d.newDevices, d.returningDevices, duration(d.medianStaySeconds), d.playedDevices, d.finishedDevices]))}</section>`;
 
   return `<!doctype html>

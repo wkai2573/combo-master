@@ -1,4 +1,5 @@
 import { KNOWN_CHARACTERS } from './characters';
+import { KNOWN_LESSONS } from './lessons';
 
 /** 伺服器收到的一筆新戰績：對局代號與裝置代號是上傳用的欄位，不會在取得清單時回傳 */
 export interface NewRecord {
@@ -57,7 +58,9 @@ interface EventBase {
  */
 export type NewEvent =
   | (EventBase & { name: 'visit' })
-  | (EventBase & { name: 'start' | 'finish'; opponent: 'cpu' | 'player' | 'tutorial' })
+  | (EventBase & { name: 'start' | 'finish'; opponent: 'cpu' | 'player'; lesson?: undefined })
+  // 教學事件可以帶是哪一課；舊版的遊戲沒有課程欄位，報表歸為第 1 課
+  | (EventBase & { name: 'start' | 'finish'; opponent: 'tutorial'; lesson?: number })
   | (EventBase & { name: 'beat'; activeMs: number });
 
 export function validateNewEvent(body: unknown): Validated<NewEvent> {
@@ -68,14 +71,23 @@ export function validateNewEvent(body: unknown): Validated<NewEvent> {
   if (!ID_PATTERN.test(str('deviceId'))) return { ok: false, error: 'deviceId 格式不正確' };
   if (!VERSION_PATTERN.test(str('version'))) return { ok: false, error: 'version 格式不正確' };
   const base = { visitId: str('visitId'), deviceId: str('deviceId'), version: str('version') };
+  const tutorialOnly = '課程欄位 lesson 只能出現在教學的開始與完成事件';
   switch (o.name) {
     case 'visit':
+      if (o.lesson !== undefined) return { ok: false, error: tutorialOnly };
       return { ok: true, value: { name: 'visit', ...base } };
     case 'start':
     case 'finish':
       if (o.opponent !== 'cpu' && o.opponent !== 'player' && o.opponent !== 'tutorial') return { ok: false, error: 'opponent 必須是 cpu、player 或 tutorial' };
-      return { ok: true, value: { name: o.name, ...base, opponent: o.opponent } };
+      if (o.opponent !== 'tutorial') {
+        if (o.lesson !== undefined) return { ok: false, error: tutorialOnly };
+        return { ok: true, value: { name: o.name, ...base, opponent: o.opponent } };
+      }
+      if (o.lesson === undefined) return { ok: true, value: { name: o.name, ...base, opponent: 'tutorial' } };
+      if (typeof o.lesson !== 'number' || !KNOWN_LESSONS.includes(o.lesson)) return { ok: false, error: 'lesson 不是已知的課程編號' };
+      return { ok: true, value: { name: o.name, ...base, opponent: 'tutorial', lesson: o.lesson } };
     case 'beat':
+      if (o.lesson !== undefined) return { ok: false, error: tutorialOnly };
       if (typeof o.activeMs !== 'number' || !Number.isInteger(o.activeMs) || o.activeMs < 0 || o.activeMs > MAX_ACTIVE_MS) {
         return { ok: false, error: 'activeMs 必須是 0 到 86400000 的整數' };
       }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatReport, summarize, type EventRow } from '../scripts/trafficSummary';
+import { completionRate, formatReport, summarize, type EventRow } from '../scripts/trafficSummary';
 
 // 時間用台北時間的日子來看：2026-10-11 08:00 台北 = 00:00 UTC
 const T = Date.UTC(2026, 9, 11, 0, 0, 0);
@@ -8,11 +8,15 @@ const DAY = 24 * 60 * MIN;
 
 let n = 0;
 const visit = (device: string, at: number, stayMs = 0, version = '0.41.0'): EventRow => ({
-  name: 'visit', visit_id: `v${++n}`, device_id: device, version, opponent: null, created_at: at, last_seen_at: at + stayMs, active_ms: stayMs,
+  name: 'visit', visit_id: `v${++n}`, device_id: device, version, opponent: null, lesson: null, created_at: at, last_seen_at: at + stayMs, active_ms: stayMs,
 });
-const play = (name: 'start' | 'finish', device: string, at: number, opponent: 'cpu' | 'player' | 'tutorial' = 'cpu', version = '0.41.0'): EventRow => ({
-  name, visit_id: `p${++n}`, device_id: device, version, opponent, created_at: at, last_seen_at: at, active_ms: 0,
+const play = (
+  name: 'start' | 'finish', device: string, at: number, opponent: 'cpu' | 'player' | 'tutorial' = 'cpu', version = '0.41.0', lesson: number | null = null,
+): EventRow => ({
+  name, visit_id: `p${++n}`, device_id: device, version, opponent, lesson, created_at: at, last_seen_at: at, active_ms: 0,
 });
+/** 教學事件：lesson 是 null 代表舊版沒有課程欄位的事件 */
+const lessonPlay = (name: 'start' | 'finish', device: string, at: number, lesson: number | null): EventRow => play(name, device, at, 'tutorial', '0.50.0', lesson);
 
 describe('流量摘要：總覽', () => {
   const rows: EventRow[] = [
@@ -116,14 +120,34 @@ describe('流量摘要：教學另外列出', () => {
   const rows: EventRow[] = [
     visit('a', T), visit('b', T), visit('c', T),
     play('start', 'a', T + MIN, 'cpu'), play('finish', 'a', T + 5 * MIN, 'cpu'),
-    play('start', 'b', T + MIN, 'tutorial'), play('finish', 'b', T + 5 * MIN, 'tutorial'),
-    play('start', 'c', T + MIN, 'tutorial'),
+    // b 是舊版的教學事件：沒有課程欄位
+    lessonPlay('start', 'b', T + MIN, null), lessonPlay('finish', 'b', T + 5 * MIN, null),
+    lessonPlay('start', 'c', T + MIN, 1),
   ];
   const s = summarize(rows);
 
-  it('依對戰類型把教學列成獨立一列，不併進單機', () => {
+  it('依對戰類型只列對電腦與對玩家，教學不在裡面', () => {
     const byOpp = Object.fromEntries(s.byOpponent.map((o) => [o.opponent, [o.starts, o.finishes, o.playedDevices, o.finishedDevices]]));
-    expect(byOpp).toEqual({ cpu: [1, 1, 1, 1], tutorial: [2, 1, 2, 1] });
+    expect(byOpp).toEqual({ cpu: [1, 1, 1, 1] });
+  });
+
+  it('舊的空課程教學事件歸第 1 課，和帶了第 1 課的事件算在同一列', () => {
+    expect(s.byLesson).toEqual([{ lesson: 1, starts: 2, finishes: 1, playedDevices: 2, finishedDevices: 1 }]);
+  });
+
+  it('教學每一課一列，課程編號由小到大，各課的開始與完成分開算', () => {
+    const lessons = summarize([
+      lessonPlay('start', 'a', T, 3), lessonPlay('start', 'a', T + MIN, 1), lessonPlay('finish', 'a', T + 2 * MIN, 1),
+      lessonPlay('start', 'b', T, 3), lessonPlay('start', 'b', T + MIN, 3), lessonPlay('finish', 'b', T + 2 * MIN, 3),
+    ]).byLesson;
+    expect(lessons.map((l) => [l.lesson, l.starts, l.finishes, l.playedDevices, l.finishedDevices])).toEqual([
+      [1, 1, 1, 1, 1],
+      [3, 3, 1, 2, 1],
+    ]);
+  });
+
+  it('沒有任何教學事件時，沒有課程列', () => {
+    expect(summarize([visit('a', T)]).byLesson).toEqual([]);
   });
 
   it('總覽的玩過與玩完只算真正的對局，教學不算進去', () => {
@@ -134,10 +158,16 @@ describe('流量摘要：教學另外列出', () => {
     expect(s.all.devices).toBe(3);
   });
 
-  it('文字報告的對戰類型表有「教學」一列，完成率看開始與打完場次', () => {
+  it('文字報告的教學表每課一列：開始數、完成數、完成率（完成場次占開始場次）', () => {
     const text = formatReport(s);
-    expect(text).toMatch(/教學　2　1　2　1/);
+    expect(text).toMatch(/第 1 課　2　1　50%/);
     expect(text).toMatch(/對電腦　1　1　1　1/);
+    expect(text).not.toMatch(/教學　\d/);
+  });
+
+  it('完成率在沒有開始時是 0%，不會算出 NaN', () => {
+    expect(completionRate(0, 0)).toBe('0%');
+    expect(completionRate(3, 1)).toBe('33%');
   });
 });
 

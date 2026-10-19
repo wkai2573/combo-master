@@ -156,17 +156,25 @@ abstract class Base implements Session {
     if (!view) return;
     if (!this.started) {
       this.started = true;
-      trackPlay('start', this.playType);
+      trackPlay('start', this.playType, this.playLesson);
     }
-    if (!this.finished && this.s.status === 'over' && view.winner !== null && view.forfeited !== true) {
+    if (!this.finished && this.playFinished(view)) {
       this.finished = true;
-      trackPlay('finish', this.playType);
+      trackPlay('finish', this.playType, this.playLesson);
     }
+  }
+  /** 這場算不算打完：正常分出勝負；教學另外看有沒有走到結束畫面 */
+  protected playFinished(view: GameView): boolean {
+    return this.s.status === 'over' && view.winner !== null && view.forfeited !== true;
   }
   constructor(protected reporter: RecordReporter = defaultRecordReporter()) {}
   /** 流量統計記的對戰類型：預設就是對手類型，教學另外記 */
   protected get playType(): PlayType {
     return this.opponent;
+  }
+  /** 流量統計記的課程編號：只有教學才有 */
+  protected get playLesson(): number | undefined {
+    return undefined;
   }
   /** 這個場次是不是負責上傳戰績：連線對局只由房主上傳，一場只留一筆，訪客不上傳 */
   protected readonly uploadsRecord: boolean = true;
@@ -260,6 +268,13 @@ export class TutorialSession extends Base {
   protected readonly uploadsRecord = false;
   protected get playType(): PlayType {
     return 'tutorial';
+  }
+  protected get playLesson(): number {
+    return this.lesson.no;
+  }
+  // 教學不一定打出勝負（第 2 課起在關鍵教學點就結束）：走到結束畫面就算完成
+  protected playFinished(): boolean {
+    return this.completed;
   }
   private match!: Match;
   /** 目前執行到腳本的第幾步；等於步驟數表示腳本走完 */

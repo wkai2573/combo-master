@@ -31,7 +31,9 @@ CREATE TABLE IF NOT EXISTS events (
   opponent TEXT CHECK (opponent IN ('cpu', 'player', 'tutorial')),
   created_at INTEGER NOT NULL,
   last_seen_at INTEGER NOT NULL,
-  active_ms INTEGER NOT NULL DEFAULT 0
+  active_ms INTEGER NOT NULL DEFAULT 0,
+  -- 只有教學的開始與打完才有：是第幾課。舊的教學事件是 NULL，報表歸為第 1 課。已上線的資料庫要先執行 0002 遷移檔
+  lesson INTEGER
 );
 
 -- 同一個造訪代號只會有一列造訪；開始與打完同一造訪可以有很多列

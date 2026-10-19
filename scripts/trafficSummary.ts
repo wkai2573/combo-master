@@ -5,6 +5,8 @@ export interface EventRow {
   device_id: string;
   version: string;
   opponent: 'cpu' | 'player' | 'tutorial' | null;
+  /** 只有教學的開始與完成才有；舊的教學事件是空的，報表歸為第 1 課 */
+  lesson: number | null;
   created_at: number;
   last_seen_at: number;
   /** 造訪才有意義：分頁在前景可見的累計毫秒數 */
@@ -26,8 +28,14 @@ export interface Summary {
   all: GroupStats & { returnedDevices: number };
   byDay: Array<GroupStats & { day: string; newDevices: number; returningDevices: number }>;
   byVersion: Array<GroupStats & { version: string }>;
-  byOpponent: Array<{ opponent: 'cpu' | 'player' | 'tutorial'; starts: number; finishes: number; playedDevices: number; finishedDevices: number }>;
+  /** 對電腦與對玩家；教學另外依課程列在 byLesson */
+  byOpponent: Array<{ opponent: 'cpu' | 'player'; starts: number; finishes: number; playedDevices: number; finishedDevices: number }>;
+  /** 教學每一課一列，課程編號由小到大 */
+  byLesson: Array<{ lesson: number; starts: number; finishes: number; playedDevices: number; finishedDevices: number }>;
 }
+
+/** 舊的教學事件沒有課程欄位，一律歸為第 1 課 */
+const FIRST_LESSON = 1;
 
 /** 日子依台北時間（UTC+8）切分 */
 const TZ_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -94,24 +102,31 @@ export function summarize(rows: EventRow[]): Summary {
     .map(([version, group]) => ({ version, ...groupStats(group) }))
     .sort((a, b) => compareVersion(a.version, b.version));
 
-  const byOpponent = [...groupBy(rows.filter((r) => r.opponent !== null), (r) => r.opponent as 'cpu' | 'player' | 'tutorial')]
-    .map(([opponent, group]) => {
-      const g = groupStats(group, true);
-      return { opponent, starts: g.starts, finishes: g.finishes, playedDevices: g.playedDevices, finishedDevices: g.finishedDevices };
-    })
+  const plays = (g: GroupStats) => ({ starts: g.starts, finishes: g.finishes, playedDevices: g.playedDevices, finishedDevices: g.finishedDevices });
+
+  const byOpponent = [...groupBy(rows.filter((r) => r.opponent === 'cpu' || r.opponent === 'player'), (r) => r.opponent as 'cpu' | 'player')]
+    .map(([opponent, group]) => ({ opponent, ...plays(groupStats(group)) }))
     .sort((a, b) => a.opponent.localeCompare(b.opponent));
+
+  const byLesson = [...groupBy(rows.filter((r) => r.opponent === 'tutorial'), (r) => r.lesson ?? FIRST_LESSON)]
+    .map(([lesson, group]) => ({ lesson, ...plays(groupStats(group, true)) }))
+    .sort((a, b) => a.lesson - b.lesson);
 
   return {
     all: { ...groupStats(rows), returnedDevices: [...visitDays.values()].filter((days) => days.size >= 2).length },
     byDay,
     byVersion,
     byOpponent,
+    byLesson,
   };
 }
 
 const pct = (part: number, whole: number) => (whole ? `${Math.round((part / whole) * 100)}%` : '0%');
 const duration = (seconds: number) => (seconds >= 60 ? `${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒` : `${seconds} 秒`);
-export const OPPONENT_LABEL = { cpu: '對電腦', player: '對玩家', tutorial: '教學' } as const;
+export const OPPONENT_LABEL = { cpu: '對電腦', player: '對玩家' } as const;
+export const lessonLabel = (lesson: number) => `第 ${lesson} 課`;
+/** 完成率：完成場次占開始場次；重來本課會多記一次開始，所以也反映有多少人中途放棄 */
+export const completionRate = (starts: number, finishes: number) => pct(finishes, starts);
 
 /** 終端機看的文字報告 */
 export function formatReport(s: Summary): string {
@@ -135,6 +150,9 @@ export function formatReport(s: Summary): string {
     '',
     '【依對戰類型】類型　開始場次　打完場次　玩過裝置　玩完裝置',
     ...s.byOpponent.map((o) => [OPPONENT_LABEL[o.opponent], o.starts, o.finishes, o.playedDevices, o.finishedDevices].join('　')),
+    '',
+    '【教學（不併進上面的總覽、每日、依版本）】課程　開始　完成　完成率',
+    ...s.byLesson.map((l) => [lessonLabel(l.lesson), l.starts, l.finishes, completionRate(l.starts, l.finishes)].join('　')),
   ];
   return lines.join('\n');
 }
