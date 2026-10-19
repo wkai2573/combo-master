@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.13',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '教學新增第 10 課「[經] 表側經驗」：布甲蓋 1 把表側的高價賣出蓋成裏側並抽 1，而一開始就是裏側的低價買進沒有反應；這是最後一課，結束後可以直接開始單機練習' },
+    ],
+  },
+  {
     version: '0.50.12',
     date: '2026-10-19',
     items: [

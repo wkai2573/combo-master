@@ -6,6 +6,7 @@ import { ON_PLAY_6 } from './lesson6';
 import { OPENING_7 } from './lesson7';
 import { TOP_8 } from './lesson8';
 import { PURSUIT_9 } from './lesson9';
+import { FACE_UP_EXP_10 } from './lesson10';
 import { CORE_COMBAT_1, type TutorialChapter } from './script';
 
 /** 課程清單的分組，依這個順序顯示標題。分組只影響清單的顯示，不影響編號、完成紀錄與推薦 */
@@ -109,6 +110,15 @@ export const LESSONS: TutorialLesson[] = [
     minutes: 3,
     summary: '你已經學會 [追]：追擊判定成功、翻出的牌成為追擊卡時才發動，不是從手牌打出時發動。',
     chapter: PURSUIT_9,
+  },
+  {
+    no: 10,
+    group: '卡片標籤',
+    title: '[經] 表側經驗',
+    blurb: '在經驗區表側才有效，被蓋成裏側就失效',
+    minutes: 3,
+    summary: '你已經學會 [經]：只有在經驗區表側時才有效，被蓋成裏側的當下觸發蓋反應，之後就不再有效。',
+    chapter: FACE_UP_EXP_10,
   },
 ];
 

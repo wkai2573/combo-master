@@ -1050,6 +1050,123 @@ describe('第 9 課：[追] 追擊成功', () => {
   });
 });
 
+describe('第 10 課：[經] 表側經驗', () => {
+  const exp = (s: TutorialSession) => view(s).players[0].exp;
+  /** 走到布甲的確認提示：要求按「發動」 */
+  function toConfirm() {
+    const s = start(10);
+    clickToAction(s);
+    choose(s, '紅心5');
+    clickToAction(s);
+    return s;
+  }
+
+  it('第 10 課在「卡片標籤」段，是最後一課；開局經驗區前兩張是表側高價賣出與裏側低價買進，裝備增益區有布甲，不會覺醒', () => {
+    expect(getLesson(10).group).toBe('卡片標籤');
+    expect(lessonAfter(10)).toBeUndefined();
+    const s = start(10);
+    const e = exp(s);
+    expect(names(e.slice(0, 2))).toEqual(['高價賣出', '低價買進']);
+    expect(e[0].covered).toBe(false);
+    expect(e[1].covered).toBe(true);
+    expect(names(view(s).players[0].gear)).toEqual(['布甲']);
+    expect(e.length).toBeLessThan(8);
+    expect(progress(s).text).toContain(`你的經驗區有 ${e.length} 張卡，其中 ${e.filter((c) => !c.covered).length} 張是表側`);
+    expect(progress(s).highlight).toEqual([{ kind: 'exp-zone', owner: 'me' }]);
+  });
+
+  it('要求出招與要求確認發動時，選別的、不發動、略過都被拒絕，桌面不變', () => {
+    const s = start(10);
+    clickToAction(s);
+    expect(progress(s).awaiting).toEqual({ play: '紅心5' });
+    let before = s.getState();
+    choose(s, '黑桃1');
+    s.submit([]);
+    s.submit(['pass']);
+    expect(s.getState().view).toBe(before.view);
+    expect(s.getState().batch.id).toBe(before.batch.id);
+
+    const c = toConfirm();
+    expect(progress(c).awaiting).toEqual({ choose: 'yes' });
+    expect(view(c).prompt!.title).toBe('是否發動【布甲】？（蓋1）');
+    expect(view(c).prompt!.options.map((o) => o.key)).toEqual(['yes', 'no']);
+    before = c.getState();
+    c.submit(['no']);
+    c.submit([]);
+    c.submit(['yes', 'no']);
+    expect(c.getState().message).not.toBe('');
+    expect(c.getState().view).toBe(before.view);
+    expect(c.getState().batch.id).toBe(before.batch.id);
+    expect(exp(c)[0].covered).toBe(false);
+  });
+
+  it('發動布甲：停在費用支付那一格，最前面的高價賣出翻成裏側', () => {
+    const s = toConfirm();
+    s.submit(['yes']);
+    expect(s.getState().batch.frames.at(-1)!.fx).toEqual({ type: 'cost', player: 0, cover: 1, rage: 0 });
+    expect(names(exp(s).slice(0, 2))).toEqual(['高價賣出', '低價買進']);
+    expect(exp(s)[0].covered).toBe(true);
+    expect(progress(s).text).toContain('最前面的 1 張表側經驗翻成了裏側，那就是高價賣出');
+  });
+
+  it('下一格：高價賣出的 [經] 發動，玩家手牌多 1 張、牌組少 1 張；低價買進仍是裏側，沒有發動', () => {
+    const s = toConfirm();
+    const hand = view(s).players[0].hand.length;
+    const deck = view(s).players[0].deckCount;
+    s.submit(['yes']);
+    s.advance();
+    expect(s.getState().batch.frames.at(-1)!.fx.type).toBe('info');
+    const v = view(s);
+    expect(v.players[0].hand).toHaveLength(hand + 1);
+    expect(v.players[0].deckCount).toBe(deck - 1);
+    expect(exp(s)[0].covered).toBe(true);
+    expect(exp(s)[1].covered).toBe(true);
+    expect(v.log.some((l) => l.includes('高價賣出'))).toBe(true);
+    expect(v.log.some((l) => l.includes('低價買進'))).toBe(false);
+    expect(progress(s).text).toContain(`你的手牌現在有 ${hand + 1} 張`);
+    expect(progress(s).highlight).toEqual([{ kind: 'hand-count', owner: 'me' }, { kind: 'exp-zone', owner: 'me' }]);
+  });
+
+  it('說明：[經] 是在經驗區表側時才有效、同樣是 [經] 表側會發動裏側不會、高價賣出之後不再有效', () => {
+    const all = driveToEnd(start(10)).join('\n');
+    expect(all).toContain('卡面最前面的框都寫著 [經]');
+    expect(all).toContain('在經驗區表側時才有效');
+    expect(all).toContain('低價買進一開始就是裏側，所以沒有反應');
+    expect(all).toContain('同樣是 [經]，表側的會發動，裏側的不會');
+    expect(all).toContain('高價賣出現在也變成裏側了，之後不再有效');
+  });
+
+  it('從頭走到尾：結束畫面，寫入第 10 課的完成紀錄，不送戰績', () => {
+    const s = start(10);
+    expect(isLessonDone(10)).toBe(false);
+    driveToEnd(s);
+    expect(progress(s).ending).toMatchObject({ heading: '第 10 課完成！', summary: getLesson(10).summary });
+    expect(isLessonDone(10)).toBe(true);
+    expect(isLessonDone(9)).toBe(false);
+    s.leave();
+    expect(captured).toEqual([]);
+  });
+
+  it('中途離開、重來都不寫完成紀錄；重來回到初始狀態', () => {
+    const initial = start(10).getState();
+    const s = toConfirm();
+    s.restart();
+    expect(s.getState().view).toEqual(initial.view);
+    expect(progress(s)).toEqual(initial.tutorial);
+    s.leave();
+    expect(isLessonDone(10)).toBe(false);
+  });
+
+  it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
+    const s = start(10);
+    for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
+      if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
+      act(s);
+    }
+    expect(progress(s).finished).toBe(true);
+  });
+});
+
 describe('最後一課的結束畫面', () => {
   it('最後一課沒有下一課，按鈕是「開始單機練習」；其餘每課都接下一課', () => {
     const last = LESSONS.at(-1)!;
