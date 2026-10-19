@@ -3,8 +3,9 @@ import { validateDeck } from '../deck/validate';
 import { botChoice } from '../engine/bot';
 import type { CheatSnapshot, CheatZone } from '../engine/cheat';
 import { Rng } from '../engine/rng';
-import { CORE_COMBAT_1, matchesFrame, resolveText, type TutorialChapter, type TutorialProgress } from '../tutorial/script';
-import { setTutorialDone } from '../tutorial/completion';
+import { matchesFrame, resolveText, type TutorialChapter, type TutorialEnding, type TutorialProgress } from '../tutorial/script';
+import { LESSONS, lessonAfter, type TutorialLesson } from '../tutorial/lessons';
+import { setLessonDone } from '../tutorial/completion';
 import { chapterSetup } from '../tutorial/setup';
 import { trackPlay, type PlayType } from '../stats/analytics';
 import { recordFromView, type Opponent } from '../stats/records';
@@ -35,7 +36,14 @@ export interface SessionState {
   /** 對手離線後，剩餘幾秒判負 */
   forfeitIn: number | null;
   /** 最新一批要播放的動畫影格（id 每次遞增，介面據此判斷是否有新的一批） */
-  batch: { id: number; frames: Frame[]; /** 最後一格播完後停在那一格（新手教學的停點） */ hold?: boolean };
+  batch: {
+    id: number;
+    frames: Frame[];
+    /** 最後一格播完後停在那一格（新手教學的停點） */
+    hold?: boolean;
+    /** 整個場面重新開始（新手教學的重來）：沒播完的舊影格作廢 */
+    fresh?: boolean;
+  };
   /** 各玩家是否開啟作弊模式（索引為玩家編號）；對方開啟時畫面頂端會提示 */
   cheatOn: [boolean, boolean];
   /** 訪客收到的作弊檢視（只有自己開啟作弊時房主才會附上）；單機與房主直接讀引擎，用不到 */
@@ -72,6 +80,8 @@ export interface Session {
   submit(keys: string[]): void;
   /** 新手教學：進入下一步（只有教學場次有） */
   advance?(): void;
+  /** 新手教學：重來本課，回到這一課的初始狀態（只有教學場次有） */
+  restart?(): void;
   leave(): void;
 }
 
@@ -109,8 +119,8 @@ abstract class Base implements Session {
     batch: { id: 0, frames: [] }, cheatOn: [false, false], cheatSnap: null, tutorial: null,
   };
   private batchId = 0;
-  protected nextBatch(frames: Frame[], hold = false) {
-    return { id: ++this.batchId, frames, ...(hold ? { hold } : {}) };
+  protected nextBatch(frames: Frame[], hold = false, fresh = false) {
+    return { id: ++this.batchId, frames, ...(hold ? { hold } : {}), ...(fresh ? { fresh } : {}) };
   }
   private subs = new Set<() => void>();
   getState = () => this.s;
@@ -119,11 +129,17 @@ abstract class Base implements Session {
     return () => this.subs.delete(cb);
   };
   /** 持有引擎的一方（單機與房主）把自己那份對局更新呈現到畫面 */
-  protected show(mine: SeatUpdate, over: boolean, extra: Partial<SessionState> = {}, hold = false) {
+  protected show(mine: SeatUpdate, over: boolean, extra: Partial<SessionState> = {}, hold = false, fresh = false) {
     this.set({
       status: over ? 'over' : 'playing', view: mine.view, message: '', cheatOn: mine.cheatOn,
-      batch: this.nextBatch(mine.frames, hold), ...extra,
+      batch: this.nextBatch(mine.frames, hold, fresh), ...extra,
     });
+  }
+  /** 重新開始一場：流量統計與戰績的「已記過」都歸零，下一次更新再算一次開始 */
+  protected rearm() {
+    this.started = false;
+    this.finished = false;
+    this.recorded = false;
   }
   protected set(patch: Partial<SessionState>) {
     this.s = { ...this.s, ...patch };
@@ -245,7 +261,7 @@ export class TutorialSession extends Base {
   protected get playType(): PlayType {
     return 'tutorial';
   }
-  private match: Match;
+  private match!: Match;
   /** 目前執行到腳本的第幾步；等於步驟數表示腳本走完 */
   private step = 0;
   private closed = false;
@@ -258,13 +274,35 @@ export class TutorialSession extends Base {
   private shownLive = false;
   /** 正在一個停點裡：接在後面的說明維持停住的那一格，不放開扣著的影格 */
   private pauseFrame: Frame | null = null;
+  /** 下一次交給畫面的是重來後的第一批：畫面上沒播完的舊影格作廢 */
+  private fresh = false;
+  private chapter: TutorialChapter;
 
-  constructor(reporter: RecordReporter = defaultRecordReporter(), private chapter: TutorialChapter = CORE_COMBAT_1) {
+  constructor(reporter: RecordReporter = defaultRecordReporter(), readonly lesson: TutorialLesson = LESSONS[0]) {
     super(reporter);
-    const { decks, setup } = chapterSetup(chapter);
+    this.chapter = lesson.chapter;
+    this.begin();
+  }
+
+  /** 照這一課的章節開一場新的對局，腳本回到第一步 */
+  private begin() {
+    const { decks, setup } = chapterSetup(this.chapter);
     this.match = new Match(decks, setup);
+    this.step = 0;
+    this.completed = false;
+    this.held = [];
+    this.shownLive = false;
+    this.pauseFrame = null;
     this.take(this.match.flush());
     this.proceed();
+  }
+
+  /** 重來本課：回到這一課的初始狀態。不寫完成紀錄，流量統計算一次新的開始 */
+  restart() {
+    if (this.closed) return;
+    this.rearm();
+    this.fresh = true;
+    this.begin();
   }
 
   /** 引擎有了新的更新：桌面記下來，影格先扣著 */
@@ -313,7 +351,7 @@ export class TutorialSession extends Base {
     // 走到結束畫面才算完成；中途離開不寫
     if (!this.chapter.steps[this.step] && !this.completed) {
       this.completed = true;
-      setTutorialDone();
+      setLessonDone(this.lesson.no);
     }
     this.publish(sent, stop);
   }
@@ -328,7 +366,9 @@ export class TutorialSession extends Base {
     }
     const view = stop ? this.pausedView(stop) : this.live.view;
     this.shownLive = stop === null;
-    this.show({ ...this.live, view, frames: sent }, stop === null && this.match.over, { tutorial: this.progress(view, stop) }, stop !== null);
+    const fresh = this.fresh;
+    this.fresh = false;
+    this.show({ ...this.live, view, frames: sent }, stop === null && this.match.over, { tutorial: this.progress(view, stop) }, stop !== null, fresh);
   }
 
   /** 停在某一格時的桌面：那一格的桌面，紀錄只到當時，沒有提示 */
@@ -347,15 +387,29 @@ export class TutorialSession extends Base {
 
   private progress(view: GameView, frame: Frame | null): TutorialProgress {
     const step = this.chapter.steps[this.step];
-    if (!step) return { text: '', highlight: [], awaiting: null, finished: true };
+    if (!step) return { text: '', highlight: [], awaiting: null, finished: true, ending: this.ending() };
     const ctx = { view, frame: frame ?? undefined };
     if (step.kind === 'explain' || step.kind === 'at-frame') {
-      return { text: resolveText(step.text, ctx), highlight: step.highlight ?? [], awaiting: 'click', finished: false };
+      return { text: resolveText(step.text, ctx), highlight: step.highlight ?? [], awaiting: 'click', finished: false, ending: null };
     }
     if (step.kind === 'play') {
-      return { text: resolveText(step.text, ctx), highlight: [{ kind: 'hand-card', cardId: step.card }], awaiting: { play: step.card }, finished: false };
+      return {
+        text: resolveText(step.text, ctx), highlight: [{ kind: 'hand-card', cardId: step.card }], awaiting: { play: step.card },
+        finished: false, ending: null,
+      };
     }
     throw new Error('教學腳本：對手的步驟應該已經執行完');
+  }
+
+  /** 結束畫面：標題與一句話總結來自課程資料，還有下一課就接下一課，最後一課接單機練習 */
+  private ending(): TutorialEnding {
+    const { no, summary } = this.lesson;
+    const next = lessonAfter(no);
+    return {
+      heading: `第 ${no} 課完成！`,
+      summary,
+      next: next ? { kind: 'lesson', no: next.no, label: '下一課' } : { kind: 'practice', label: '開始單機練習' },
+    };
   }
 
   advance() {

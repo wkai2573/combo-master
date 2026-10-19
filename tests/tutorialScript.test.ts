@@ -3,6 +3,7 @@ import { getCard } from '../src/data/cards';
 import { TutorialSession } from '../src/net/session';
 import type { BattleRecord } from '../src/stats/records';
 import type { RecordReporter } from '../src/stats/reporter';
+import { LESSONS } from '../src/tutorial/lessons';
 import { CORE_COMBAT_1 } from '../src/tutorial/script';
 
 // 教學腳本走過的每一步：說明、對手出牌、要求玩家出牌。測試只看玩家看得到的結果
@@ -71,7 +72,7 @@ describe('新手教學：對手照腳本出招', () => {
 
   it('腳本指定的出牌不合法時丟出明確的錯誤（卡表改壞教學的把關）', () => {
     const chapter = { ...CORE_COMBAT_1, steps: [{ kind: 'opponent-play' as const, card: '黑桃9' }] };
-    expect(() => new TutorialSession(testReporter, chapter)).toThrow('教學腳本');
+    expect(() => new TutorialSession(testReporter, { ...LESSONS[0], chapter })).toThrow('教學腳本');
   });
 });
 

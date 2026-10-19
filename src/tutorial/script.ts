@@ -96,6 +96,14 @@ export interface TutorialChapter {
   steps: TutorialStep[];
 }
 
+/** 課程結束畫面：標題、一句話總結，與「下一課」按鈕的去向 */
+export interface TutorialEnding {
+  heading: string;
+  summary: string;
+  /** 還有下一課就去那一課；最後一課改成開始單機練習 */
+  next: { kind: 'lesson'; no: number; label: string } | { kind: 'practice'; label: string };
+}
+
 /** 場次對外提供的教學進度 */
 export interface TutorialProgress {
   /** 目前步驟的說明文字（已帶入數值）；腳本走完時是空字串 */
@@ -105,6 +113,8 @@ export interface TutorialProgress {
   awaiting: 'click' | { play: string } | null;
   /** 腳本走完，到了教學結束畫面 */
   finished: boolean;
+  /** 結束畫面的內容；腳本還沒走完時是 null */
+  ending: TutorialEnding | null;
 }
 
 /** 範圍兩端：雙方招式卡疊最上方的連擊值，小的在前；有一方沒有招式就沒有範圍 */

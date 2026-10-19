@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCard } from '../src/data/cards';
 import { TutorialSession } from '../src/net/session';
-import { isTutorialDone } from '../src/tutorial/completion';
+import { isLessonDone } from '../src/tutorial/completion';
+import { LESSONS } from '../src/tutorial/lessons';
 import type { BattleRecord } from '../src/stats/records';
 import type { RecordReporter } from '../src/stats/reporter';
 
@@ -15,7 +16,7 @@ const testReporter: RecordReporter = {
 
 // 完成紀錄寫在這台瀏覽器的儲存；測試用記憶體取代，才看得到有沒有寫入
 let stored: Map<string, string>;
-const isDone = () => isTutorialDone();
+const isDone = () => isLessonDone(1);
 
 beforeEach(() => {
   captured = [];
@@ -338,5 +339,93 @@ describe('新手教學：結束畫面與完成紀錄', () => {
     const s = toVictory();
     expect(() => s.advance()).not.toThrow();
     expect(progress(s).finished).toBe(true);
+  });
+
+  it('結束畫面由課程資料驅動：標題是「第 1 課完成！」、內文是這一課的一句話；沒有下一課，按鈕接單機練習', () => {
+    const s = toVictory();
+    expect(progress(s).ending).toBeNull();
+    s.advance();
+    expect(progress(s).ending).toEqual({
+      heading: '第 1 課完成！',
+      summary: LESSONS[0].summary,
+      next: { kind: 'practice', label: '開始單機練習' },
+    });
+  });
+});
+
+describe('新手教學：重來本課', () => {
+  /** 走到勝負影格的停點，還沒點 */
+  function toVictory() {
+    const s = toSecondSeven();
+    s.advance();
+    playCard(s, '梅花7');
+    advanceTo(s, '牌組就是生命');
+    return s;
+  }
+
+  it('走到一半重來：回到初始狀態（桌面、說明、高亮都和剛開局一樣），並換新的一批影格', () => {
+    const initial = start().getState();
+    const s = toSecondSeven();
+    const batch = s.getState().batch.id;
+    s.restart();
+    const st = s.getState();
+    expect(st.view).toEqual(initial.view);
+    expect(st.tutorial).toEqual(initial.tutorial);
+    expect(st.status).toBe('playing');
+    expect(st.message).toBe('');
+    expect(st.batch.id).toBeGreaterThan(batch);
+    expect(st.batch.fresh).toBe(true);
+  });
+
+  it('重來後從頭走得完，並且走到結束畫面才寫入完成紀錄', () => {
+    const s = toSecondSeven();
+    s.restart();
+    clickToPlay(s);
+    playCard(s, '黑桃1');
+    clickToPlay(s);
+    playCard(s, '紅心2');
+    clickToPlay(s);
+    playCard(s, '梅花7');
+    s.advance();
+    playCard(s, '梅花7');
+    advanceTo(s, '牌組就是生命');
+    expect(isDone()).toBe(false);
+    s.advance();
+    expect(progress(s).finished).toBe(true);
+    expect(isDone()).toBe(true);
+  });
+
+  it('重來不寫完成紀錄：沒走完就重來、重來後再離開，都沒有完成', () => {
+    const s = toVictory();
+    s.restart();
+    expect(isDone()).toBe(false);
+    s.leave();
+    expect(isDone()).toBe(false);
+  });
+
+  it('在結束畫面重來：結束畫面消失，回到第一段說明', () => {
+    const s = toVictory();
+    s.advance();
+    expect(progress(s).finished).toBe(true);
+    s.restart();
+    expect(progress(s).finished).toBe(false);
+    expect(progress(s).ending).toBeNull();
+    expect(progress(s).text).toContain('雙方輪流在可出招的“範圍內”打出招式。');
+    expect(s.getState().status).toBe('playing');
+  });
+
+  it('離開之後重來沒有反應', () => {
+    const s = toSecondSeven();
+    s.leave();
+    const before = s.getState();
+    s.restart();
+    expect(s.getState()).toBe(before);
+  });
+
+  it('不送出戰績', () => {
+    const s = toVictory();
+    s.restart();
+    s.leave();
+    expect(captured).toEqual([]);
   });
 });

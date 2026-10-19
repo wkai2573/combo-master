@@ -21,6 +21,15 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.0',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '主畫面的「新手教學」改名為「教學」，點進去是課程清單：每一課都有完成標記、一句話說明與預估時間，可以任意跳著學；目前先有第 1 課「核心戰鬥」' },
+      { type: 'add', text: '每一課打完會顯示「第 N 課完成！」，可以接著上下一課、回課程清單或重來本課；教學進行中隨時能按「重來本課」從頭開始' },
+      { type: 'change', text: '完成紀錄改成逐課記錄，之前的完成紀錄作廢，所以會重新看到「推薦」標籤；第 1 課完成後，清單會把還沒完成的最前面一課標為「推薦下一課」' },
+    ],
+  },
+  {
     version: '0.49.3',
     date: '2026-10-18',
     items: [

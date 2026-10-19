@@ -350,3 +350,34 @@ describe('播放：停住', () => {
     expect(p.settled).toBe(true);
   });
 });
+
+describe('播放：重新開始（教學的重來）', () => {
+  it('舊的一批還沒播完時來了重新開始的一批：舊影格作廢，只播新的', () => {
+    const pb = new Playback();
+    pb.ingest(batch(1), 'normal');
+    const fresh = { id: 2, frames: [frames[1]], fresh: true };
+    const hold = pb.ingest(fresh, 'normal');
+    expect(hold).toBe(Math.max(150, frames[1].ms));
+    expect(pb.present(fresh, final, 'normal').fx).toEqual(frames[1].fx);
+    expect(pb.advance('normal')).toBeNull();
+  });
+
+  it('停住的時候重新開始：放開停住的那一格', () => {
+    const pb = new Playback();
+    pb.ingest({ id: 1, frames: [frames[0]], hold: true }, 'normal');
+    pb.advance('normal');
+    const fresh = { id: 2, frames: [], fresh: true };
+    pb.ingest(fresh, 'normal');
+    const p = pb.present(fresh, final, 'normal');
+    expect(p.holding).toBe(false);
+    expect(p.settled).toBe(true);
+  });
+
+  it('重新開始後的第一格不拿舊桌面比數值變化', () => {
+    const pb = new Playback();
+    pb.ingest(batch(1), 'normal');
+    pb.settle(pb.present(batch(1), final, 'normal'));
+    pb.ingest({ id: 2, frames: [frames[1]], fresh: true }, 'normal');
+    expect(pb.present({ id: 2, frames: [frames[1]], fresh: true }, final, 'normal').changes).toBeUndefined();
+  });
+});

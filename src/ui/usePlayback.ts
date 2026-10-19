@@ -64,7 +64,11 @@ export function usePlayback(batch: Batch | undefined, final: GameView | null, sp
     run(() => (pb.skip(), null));
   }, [pb, run]);
 
-  useEffect(() => run(() => pb.ingest(batch, speedRef.current)), [batch, pb, run]);
+  useEffect(() => {
+    // 重來：舊影格的計時器作廢，免得它提早推動新的一批
+    if (batch?.fresh) window.clearTimeout(timer.current);
+    run(() => pb.ingest(batch, speedRef.current));
+  }, [batch, pb, run]);
 
   // 切到「關閉動畫」時立刻結束目前的播放
   useEffect(() => {

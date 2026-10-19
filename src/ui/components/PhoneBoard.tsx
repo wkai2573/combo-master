@@ -219,13 +219,15 @@ export function CardSheet({ id, exp, onClose }: { id: string; exp: boolean; onCl
 const MENU_SPEEDS: [Speed, string][] = [['normal', '標準'], ['fast', '快速'], ['off', '關閉']];
 
 /** 手機版面頂列的選單鈕（三條線）與展開的選單：紀錄、流程圖、動畫速度、作弊、離開 */
-export function PhoneMenu({ open, onToggle, onClose, speed, onSpeed, onLog, onFlow, cheat, locked, onLeave }: {
+export function PhoneMenu({ open, onToggle, onClose, speed, onSpeed, onLog, onFlow, cheat, locked, onRestart, onLeave }: {
   open: boolean; onToggle: () => void; onClose: () => void;
   speed: Speed; onSpeed: (s: Speed) => void; onLog: () => void; onFlow: () => void;
   /** 解鎖作弊的瀏覽器才有：開關、面板按鈕 */
   cheat?: { on: boolean; panelOpen: boolean; onToggle: () => void; onPanel: () => void };
   /** 新手教學中：不能看紀錄與流程圖 */
   locked?: boolean;
+  /** 新手教學中才有：重來本課 */
+  onRestart?: () => void;
   onLeave: () => void;
 }) {
   const run = (fn: () => void) => () => { onClose(); fn(); };
@@ -254,6 +256,7 @@ export function PhoneMenu({ open, onToggle, onClose, speed, onSpeed, onLog, onFl
                 {cheat.on && <button role="menuitem" className={cheat.panelOpen ? 'on' : ''} aria-pressed={cheat.panelOpen} onClick={run(cheat.onPanel)}>作弊面板</button>}
               </>
             )}
+            {onRestart && <button role="menuitem" onClick={run(onRestart)}>重來本課</button>}
             <button role="menuitem" className="danger" onClick={run(onLeave)}>離開</button>
           </div>
         </>

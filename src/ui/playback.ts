@@ -16,6 +16,8 @@ export interface Batch {
   frames: Frame[];
   /** 最後一格播完後不收掉，停在那一格的畫面（連同它的特效），直到下一批影格到來 */
   hold?: boolean;
+  /** 整個場面重新開始：還沒播完的舊影格與舊桌面都作廢 */
+  fresh?: boolean;
 }
 
 /** 一側的傷害震動：第一張牌落進怒氣區的時候才開始，延遲已乘上速度倍率 */
@@ -81,6 +83,10 @@ export class Playback {
     if (!batch || batch.id === this.seen) return null;
     this.seen = batch.id;
     this._version++;
+    if (batch.fresh) {
+      this.skip();
+      this.shown = null;
+    }
     // 新的一批到了，放開停住的那一格
     if (this.held) {
       this.held = false;

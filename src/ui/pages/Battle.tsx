@@ -36,7 +36,15 @@ const ZONE_NAME: Record<ZoneKey, string> = {
   pursuit: '追擊卡疊',
 };
 
-export function Battle({ session, onExit, onPractice }: { session: Session; onExit: () => void; /** 教學結束畫面的「開始單機練習」 */ onPractice: () => void }) {
+export function Battle({ session, onExit, onPractice, onLesson }: {
+  session: Session;
+  /** 離開：一般對局回主畫面，教學回課程清單 */
+  onExit: () => void;
+  /** 教學結束畫面的「開始單機練習」 */
+  onPractice: () => void;
+  /** 教學結束畫面的「下一課」 */
+  onLesson: (no: number) => void;
+}) {
   const st = useSyncExternalStore(session.subscribe, session.getState);
   const wide = useWide();
   const phone = usePhone();
@@ -87,6 +95,12 @@ export function Battle({ session, onExit, onPractice }: { session: Session; onEx
     session.leave();
     onPractice();
   };
+  const ending = tut?.ending;
+  const nextLesson = () => {
+    session.leave();
+    if (ending?.next.kind === 'lesson') onLesson(ending.next.no);
+  };
+  const restart = () => session.restart?.();
 
   if (!v) {
     return (
@@ -218,7 +232,7 @@ export function Battle({ session, onExit, onPractice }: { session: Session; onEx
           {phone ? (
             <PhoneMenu
               open={overlays.menuOpen} onToggle={overlays.toggleMenu} onClose={overlays.closeMenu}
-              speed={speed} onSpeed={setSpeed} onLog={overlays.openLog} onFlow={overlays.openFlow} onLeave={leave} locked={!!tut}
+              speed={speed} onSpeed={setSpeed} onLog={overlays.openLog} onFlow={overlays.openFlow} onLeave={leave} onRestart={tut ? restart : undefined} locked={!!tut}
               cheat={session.cheat && cheatUnlocked ? { on: cheatOn, panelOpen: overlays.cheatOpen, onToggle: () => session.cheat?.setOn(!cheatOn), onPanel: overlays.toggleCheat } : undefined}
             />
           ) : (
@@ -233,6 +247,7 @@ export function Battle({ session, onExit, onPractice }: { session: Session; onEx
               <select value={speed} onChange={(e) => setSpeed(e.target.value as Speed)} title="動畫速度">
                 {(Object.keys(SPEED_LABEL) as Speed[]).map((s) => <option key={s} value={s}>{SPEED_LABEL[s]}</option>)}
               </select>
+              {tut && <button title="從這一課的開頭重新開始" onClick={restart}>重來本課</button>}
               <button className="danger" onClick={leave}>離開</button>
             </>
           )}
@@ -298,14 +313,15 @@ export function Battle({ session, onExit, onPractice }: { session: Session; onEx
         {overlays.flowOpen && <FlowChartModal phase={v.phase} onClose={overlays.closeFlow} />}
         {overlays.zone && <ZoneViewer title={`${overlays.zone.p === me ? '我方' : '對手'}${ZONE_NAME[overlays.zone.z]}`} cards={zoneCards} exp={overlays.zone.z === 'exp'} pursuitFrom={zoneCombat?.pursuitFrom} note={zoneCombat ? COMBAT_LIST_NOTE : undefined} anchor={overlays.zone.anchor as DOMRect} onClose={overlays.closeZone} />}
 
-        {tut?.finished && pres.settled && (
+        {ending && pres.settled && (
           <Modal>
             <div className="result win">
-              <h1>教學完成！</h1>
-              <p className="muted">你已經學會出招、收招、追擊與傷害計算。</p>
+              <h1>{ending.heading}</h1>
+              <p className="muted">{ending.summary}</p>
               <div className="resultbtns">
-                <button className="primary" onClick={practice}>開始單機練習</button>
-                <button onClick={leave}>回主畫面</button>
+                <button className="primary" onClick={ending.next.kind === 'lesson' ? nextLesson : practice}>{ending.next.label}</button>
+                <button onClick={leave}>回課程清單</button>
+                <button onClick={restart}>重來本課</button>
               </div>
             </div>
           </Modal>
