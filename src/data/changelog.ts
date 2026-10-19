@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.14',
+    date: '2026-10-19',
+    items: [
+      { type: 'fix', text: '教學第 9 課結束時，「追擊成功」的放大卡片不再浮在「課程完成」畫面上面' },
+    ],
+  },
+  {
     version: '0.50.13',
     date: '2026-10-19',
     items: [

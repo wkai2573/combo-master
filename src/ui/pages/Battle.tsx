@@ -305,7 +305,8 @@ export function Battle({ session, onExit, onPractice, onLesson }: {
         {phone && !result && !pres.playing && prompt && placement === 'panel' && <PromptSheet>{promptPanel()}</PromptSheet>}
         {dragGhost}
         <PhaseBanner fx={fx} n={fxKey} me={me} />
-        <Spotlight fx={fx} caption={pres.caption} n={fxKey} scale={scale} holding={pres.holding} />
+        {/* 教學停在追擊結果那一格時放大的牌會一直留著，結束畫面出現後要收掉，免得浮在它上面 */}
+        {!(ending && pres.settled) && <Spotlight fx={fx} caption={pres.caption} n={fxKey} scale={scale} holding={pres.holding} />}
         <FlightLayer view={v} fx={fx} playing={pres.playing} n={fxKey} scale={scale} extraPile={phone ? (owner, z) => z === 'exp' || z === 'gear' || z === 'buff' || (owner !== me && z === 'hand') : undefined} />
 
         {st.tutorial && <TutorialLayer progress={st.tutorial} view={v} active={pres.settled && !overlays.menuOpen && !overlays.cardSheet} onNext={() => session.advance?.()} />}
