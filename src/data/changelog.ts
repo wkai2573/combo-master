@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.9',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '教學新增「卡片標籤」段與第 6 課「[發] 打出時發動」：對手先攻，你在反擊步驟打出火球，看蓋 3 之後對手牌組少 2 張，並說明 [發] 在哪個步驟打出都一樣；第 5 課結束後可以接著學下一課' },
+    ],
+  },
+  {
     version: '0.50.8',
     date: '2026-10-19',
     items: [
