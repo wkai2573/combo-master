@@ -469,6 +469,126 @@ describe('第 4 課：蓋 X', () => {
     expect(progress(s).finished).toBe(true);
   });
 });
+describe('第 5 課：怒氣區與受傷', () => {
+  /** 走到熔岩之擊的確認提示 */
+  function toConfirm() {
+    const s = start(5);
+    clickToAction(s);
+    choose(s, '熔岩之擊');
+    return s;
+  }
+
+  it('開局：怒氣區 3 張、手牌有熔岩之擊；怒氣區只有張數，牌面不洩漏', () => {
+    const s = start(5);
+    const v = view(s);
+    expect(v.players[0].rage).toHaveLength(3);
+    expect(v.players[0].rage.every((c) => c.id === null)).toBe(true);
+    expect(names(v.players[0].hand)).toContain('熔岩之擊');
+    expect(progress(s).text).toContain('已經有 3 張卡');
+    expect(progress(s).text).toContain('牌面誰都看不到');
+    expect(progress(s).highlight).toEqual([{ kind: 'rage-zone', owner: 'me' }]);
+  });
+
+  it('要求出招與要求確認時，選別的、不發動、略過都被拒絕，桌面不變', () => {
+    const s = start(5);
+    clickToAction(s);
+    expect(progress(s).awaiting).toEqual({ play: '熔岩之擊' });
+    let before = s.getState();
+    choose(s, '黑桃1');
+    s.submit([]);
+    s.submit(['pass']);
+    expect(s.getState().view).toBe(before.view);
+    expect(s.getState().batch.id).toBe(before.batch.id);
+
+    const c = toConfirm();
+    expect(progress(c).awaiting).toEqual({ choose: 'yes' });
+    expect(view(c).prompt!.title).toBe('是否發動【熔岩之擊】？（怒3）');
+    before = c.getState();
+    c.submit(['no']);
+    c.submit([]);
+    expect(c.getState().message).not.toBe('');
+    expect(c.getState().view).toBe(before.view);
+    expect(view(c).players[0].rage).toHaveLength(3);
+  });
+
+  it('發動怒 3：怒氣區少 3 張、棄牌區多 3 張，停在費用支付那一格', () => {
+    const s = toConfirm();
+    s.submit(['yes']);
+    expect(s.getState().batch.frames.at(-1)!.fx).toEqual({ type: 'cost', player: 0, cover: 0, rage: 3 });
+    const v = view(s);
+    expect(v.players[0].rage).toHaveLength(0);
+    expect(v.players[0].discard).toHaveLength(3);
+    expect(progress(s).text).toContain('上方的 3 張卡被捨棄到棄牌區');
+    expect(progress(s).text).toContain('怒氣區現在有 0 張');
+  });
+
+  it('下一格：對手直接受到 1 點傷害（牌組少 1 張、棄牌區多 1 張）', () => {
+    const s = toConfirm();
+    const deck = view(s).players[1].deckCount;
+    s.submit(['yes']);
+    s.advance();
+    expect(s.getState().batch.frames.at(-1)!.fx.type).toBe('info');
+    expect(view(s).players[1].deckCount).toBe(deck - 1);
+    expect(view(s).players[1].discard).toHaveLength(1);
+    expect(progress(s).highlight).toEqual([{ kind: 'deck-count', owner: 'opp' }]);
+  });
+
+  it('戰鬥到傷害計算：玩家真的受傷，說明帶入實際的傷害；牌組少、怒氣區多，張數等於傷害', () => {
+    const s = toConfirm();
+    s.submit(['yes']);
+    s.advance();
+    s.advance();
+    // 對手回應後自動收招，一路到傷害計算
+    expect(s.getState().batch.frames.at(-1)!.fx.type).toBe('calc');
+    const calc = s.getState().batch.frames.at(-1)!.fx as { atk: [number, number]; def: [number, number]; dmg: [number, number] };
+    const hurt = calc.dmg[0];
+    expect(calc.atk[1]).toBeGreaterThan(calc.def[0]);
+    expect(hurt).toBe(calc.atk[1] - calc.def[0]);
+    expect(progress(s).text).toContain(`你受到 ${hurt} 點傷害`);
+
+    const deckBefore = view(s).players[0].deckCount;
+    s.advance();
+    const fx = s.getState().batch.frames.at(-1)!.fx;
+    expect(fx).toMatchObject({ type: 'damage' });
+    const v = view(s);
+    expect(v.players[0].deckCount).toBe(deckBefore - hurt);
+    expect(v.players[0].rage).toHaveLength(hurt);
+    expect(v.players[0].rage.every((c) => c.id === null)).toBe(true);
+    expect(progress(s).text).toContain(`你受到 ${hurt} 點傷害：牌組上方的 ${hurt} 張卡放進了怒氣區`);
+    expect(progress(s).text).toContain(`你的牌組剩 ${v.players[0].deckCount} 張，怒氣區有 ${hurt} 張`);
+    expect(progress(s).highlight).toEqual([{ kind: 'deck-count', owner: 'me' }, { kind: 'rage-zone', owner: 'me' }]);
+  });
+
+  it('從頭走到尾：結束畫面，寫入第 5 課的完成紀錄，是最後一課所以接單機練習', () => {
+    const s = start(5);
+    const texts = driveToEnd(s);
+    expect(progress(s).ending).toEqual({
+      heading: '第 5 課完成！',
+      summary: getLesson(5).summary,
+      next: { kind: 'practice', label: '開始單機練習' },
+    });
+    expect(isLessonDone(5)).toBe(true);
+    expect(texts.join('\n')).toContain('既是你受傷的紀錄，也是可以花費的資源');
+    s.leave();
+    expect(captured).toEqual([]);
+  });
+
+  it('中途離開、重來都不寫完成紀錄', () => {
+    const s = toConfirm();
+    s.restart();
+    s.leave();
+    expect(isLessonDone(5)).toBe(false);
+  });
+
+  it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
+    const s = start(5);
+    for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
+      if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
+      act(s);
+    }
+    expect(progress(s).finished).toBe(true);
+  });
+});
 describe('第 1 課的結束畫面接第 2 課', () => {
   it('第 1 課後面有第 2 課，按鈕是「下一課」', () => {
     const s = start(1);

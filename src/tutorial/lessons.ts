@@ -1,6 +1,7 @@
 import { BURST_EXP_2 } from './lesson2';
 import { AWAKENING_3 } from './lesson3';
 import { COVER_COST_4 } from './lesson4';
+import { RAGE_DAMAGE_5 } from './lesson5';
 import { CORE_COMBAT_1, type TutorialChapter } from './script';
 
 /** 一堂教學課：課程清單上的一列，加上這一課用的章節 */
@@ -50,6 +51,14 @@ export const LESSONS: TutorialLesson[] = [
     minutes: 3,
     summary: '你已經學會蓋 X：從最前面的表側經驗開始蓋，裏側的經驗效果無效，但仍算在覺醒張數內。',
     chapter: COVER_COST_4,
+  },
+  {
+    no: 5,
+    title: '怒氣區與受傷',
+    blurb: '怒氣區怎麼累積、怎麼花掉',
+    minutes: 3,
+    summary: '你已經學會怒氣區：受傷會讓牌組的牌放進怒氣區，怒氣區的牌也能用來支付怒 X。',
+    chapter: RAGE_DAMAGE_5,
   },
 ];
 

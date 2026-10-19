@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.6',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '教學新增第 5 課「怒氣區與受傷」：怒氣區預設 3 張，打出熔岩之擊支付怒 3，再看受傷時牌組的牌飛入怒氣區；最後一課結束後可以直接開始單機練習' },
+    ],
+  },
+  {
     version: '0.50.5',
     date: '2026-10-19',
     items: [
