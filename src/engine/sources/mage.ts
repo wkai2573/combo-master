@@ -168,4 +168,12 @@ export const 整理魔導書 = defineSource({
   },
 });
 
-export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 整理魔導書, 元素法典, 法師];
+// 閃電新星（法師）：[頂] 我方 +X+0。X＝我方手牌數量 − 對方手牌數量，最低為 0
+// 加成與其他 [頂] 加成同一類：戰鬥結算每次計算時即時讀雙方當下的手牌數，不鎖定；只有位於招式卡疊最上方時才有效
+export const 閃電新星 = defineSource({
+  id: '閃電新星',
+  at: 'moves',
+  ask: { flatAtk: (c) => (topOfZone(c.g, c.p) === c.self ? Math.max(0, Z(c.g, c.p, 'hand').length - Z(c.g, other(c.p), 'hand').length) : 0) },
+});
+
+export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 整理魔導書, 閃電新星, 元素法典, 法師];

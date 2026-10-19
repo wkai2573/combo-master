@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.51.5',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '新卡閃電新星（法師，5／0／4）：位於招式卡疊最上方時，我方總攻擊 +（我方手牌數量 − 對方手牌數量，最低為 0），戰鬥中抽牌或出牌後會即時重新計算。已加進組牌卡池與法師的預設牌組' },
+    ],
+  },
+  {
     version: '0.51.4',
     date: '2026-10-19',
     items: [
