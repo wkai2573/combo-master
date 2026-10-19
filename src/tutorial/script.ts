@@ -1,5 +1,5 @@
 import { getCard } from '../data/cards';
-import type { FrameFx, PlayerId } from '../engine/types';
+import type { FrameFx, PlayerId, StartPhase } from '../engine/types';
 import type { Frame, GameView } from '../engine/view';
 
 /** 我方（學習的玩家）或對手 */
@@ -34,7 +34,9 @@ export type HighlightTarget =
   /** 某一方追擊卡疊中的追擊卡，只指它的攻擊力、防禦力 */
   | { kind: 'pursuit-card'; owner: Side; parts: StatPart[] }
   /** 雙方的總攻擊或總防禦 */
-  | { kind: 'total'; stat: 'atk' | 'def' };
+  | { kind: 'total'; stat: 'atk' | 'def' }
+  /** 某一方的經驗區（電腦版是整個經驗區，手機版是經驗牌堆或經驗區標籤） */
+  | { kind: 'exp-zone'; owner: Side };
 
 export type StatPart = 'combo' | 'atk' | 'def';
 
@@ -57,7 +59,9 @@ export type FrameMatch =
   | { fx: 'flip'; player: Side }
   | { fx: 'flip-result'; player: Side; ok: boolean }
   | { fx: 'calc' }
-  | { fx: 'game-end' };
+  | { fx: 'game-end' }
+  /** 爆發完成：手牌放進經驗區、抽完 2 張之後 */
+  | { fx: 'burst'; player: Side };
 
 const sideOf = (player: PlayerId, me: PlayerId): Side => (player === me ? 'me' : 'opp');
 
@@ -69,6 +73,7 @@ export function matchesFrame(m: FrameMatch, fx: FrameFx, me: PlayerId): boolean 
     case 'flip-result': return fx.type === 'flipResult' && sideOf(fx.player, me) === m.player && fx.ok === m.ok;
     case 'calc': return fx.type === 'calc';
     case 'game-end': return fx.type === 'gameEnd';
+    case 'burst': return fx.type === 'burst' && sideOf(fx.player, me) === m.player;
   }
 }
 
@@ -85,6 +90,21 @@ export type TutorialStep =
   | { kind: 'play'; card: string; text: TutorialText }
   | { kind: 'at-frame'; match: FrameMatch; text: TutorialText; highlight?: HighlightTarget[] };
 
+/** 經驗區預設的一張牌：寫卡名是表側，要裏側就寫成物件 */
+export type PresetCard = string | { id: string; covered: true };
+
+/**
+ * 一位玩家各區域預設的內容（戰鬥區不預設）。清單由上往下就是該區域的順序：
+ * 怒氣區的第一張在最上方，經驗區的第一張在最前方。預設進去的牌不計入牌組。
+ */
+export interface ZonePresets {
+  discard?: string[];
+  rage?: string[];
+  exp?: PresetCard[];
+  gear?: string[];
+  buff?: string[];
+}
+
 /** 一章教學：牌面配置，加上一串依序執行的步驟 */
 export interface TutorialChapter {
   /** 玩家 A 是學習的玩家，玩家 B 是對手 */
@@ -93,6 +113,13 @@ export interface TutorialChapter {
   /** 雙方的起始手牌；牌組不洗牌，同一份清單由上往下就是牌組頂到底 */
   hands: [string[], string[]];
   decks: [string[], string[]];
+  /**
+   * 起始階段。指定後，之後的階段照常進行，不再略過抽牌與爆發；沒指定就從戰鬥階段開始（略過抽牌與爆發）。
+   * 覺醒是邊緣偵測：開局已經達到覺醒經驗不算進入覺醒，所以要示範進入覺醒，預設的經驗區必須少於門檻。
+   */
+  startPhase?: StartPhase;
+  /** 雙方各區域預設的內容 */
+  zones?: [ZonePresets, ZonePresets];
   steps: TutorialStep[];
 }
 
@@ -161,11 +188,13 @@ ${line('對手的', '你的', '你', atk[opp], def[me], dmg[me])}
 點擊畫面進入下一步。`;
 };
 
-const repeat = (id: string, n: number) => Array.from({ length: n }, () => id);
+export const repeat = (id: string, n: number) => Array.from({ length: n }, () => id);
+
+/** 說明文字結尾提示玩家點擊 */
+export const NEXT = '\n點擊畫面進入下一步。';
 
 const YOUR_TURN: TutorialStep = { kind: 'explain', text: '現在輪到你出招了。\n點擊畫面進入下一步。' };
 const TRY_PLAY = '那我們來嘗試打出招式吧。\n點擊或拖曳至戰鬥區。';
-const NEXT = '\n點擊畫面進入下一步。';
 
 /** 教學：核心戰鬥階段 - 1 */
 export const CORE_COMBAT_1: TutorialChapter = {

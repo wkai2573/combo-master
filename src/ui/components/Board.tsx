@@ -290,7 +290,7 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, drag, hit,
           <Pile p={p} zone="rage" label="怒氣" count={pv.rage.length} delta={changes?.rage[p]} k={fxKey} />
           <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={(a) => onZone(p, 'discard', a)} />
         </div>
-        <div className="expzone" ref={expRef} data-dropzone={mine ? 'exp' : undefined}>
+        <div className="expzone" ref={expRef} data-dropzone={mine ? 'exp' : undefined} data-exp-zone={p}>
           <div className="zonelabel">經驗區（左側為最前方）</div>
           <ExpZone cards={pv.exp} optKeys={optKeys} selected={selected} onPick={onPick} />
         </div>

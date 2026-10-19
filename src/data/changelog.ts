@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.50.2',
+    date: '2026-10-19',
+    items: [
+      { type: 'add', text: '教學新增第 2 課「爆發與經驗區」：一開局就在爆發階段，把指定的手牌放進經驗區並抽 2，看經驗區張數增加（目前先教到爆發，歸還之後補上）' },
+      { type: 'change', text: '教學中的爆發階段不再顯示「略過」，只能照說明操作' },
+    ],
+  },
+  {
     version: '0.50.0',
     date: '2026-10-19',
     items: [

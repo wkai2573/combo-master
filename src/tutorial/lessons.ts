@@ -1,3 +1,4 @@
+import { BURST_EXP_2 } from './lesson2';
 import { CORE_COMBAT_1, type TutorialChapter } from './script';
 
 /** 一堂教學課：課程清單上的一列，加上這一課用的章節 */
@@ -23,6 +24,14 @@ export const LESSONS: TutorialLesson[] = [
     minutes: 5,
     summary: '你已經學會出招、收招、追擊與傷害計算。',
     chapter: CORE_COMBAT_1,
+  },
+  {
+    no: 2,
+    title: '爆發與經驗區',
+    blurb: '爆發階段放進經驗區，看經驗區怎麼增長',
+    minutes: 3,
+    summary: '你已經學會爆發：把 1 張手牌放進經驗區，再抽 2 張。',
+    chapter: BURST_EXP_2,
   },
 ];
 

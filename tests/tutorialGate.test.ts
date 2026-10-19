@@ -35,6 +35,22 @@ describe('教學的操作封鎖：玩家看得到的提示', () => {
     expect(gated.title).toBe(prompt.title);
   });
 
+  it('可略過的提示（例如爆發階段）改成必選：要求選牌時不會出現略過', () => {
+    const burst: Request = {
+      player: 0, title: '爆發階段：可選擇 1 張手牌放入經驗區，然後抽 2', min: 0, max: 1, dropZone: 'exp',
+      options: [{ key: 'c1', label: '黑桃1', uid: 1, cardId: '黑桃1' }, { key: 'c2', label: '梅花9', uid: 2, cardId: '梅花9' }],
+    };
+    const gated = gatePrompt(progress({ play: '梅花9' }), burst)!;
+    expect(gated.options.map((o) => o.key)).toEqual(['c2']);
+    expect(gated.min).toBe(1);
+    expect(gated.max).toBe(1);
+    expect(gated.dropZone).toBe('exp');
+  });
+
+  it('原本就必選的提示維持必選', () => {
+    expect(gatePrompt(progress({ play: '黑桃1' }), prompt)!.min).toBe(1);
+  });
+
   it('指定的牌不在選項裡：沒有可選的', () => {
     expect(gatePrompt(progress({ play: '紅心2' }), prompt)).toBeNull();
   });

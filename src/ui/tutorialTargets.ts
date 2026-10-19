@@ -65,6 +65,14 @@ function elementsOf(target: HighlightTarget, view: GameView): Element[] {
       return columnOf(target.owner).flatMap((col) => all('.card.pursuit', col).flatMap((card) => partsOf(card, target.parts)));
     case 'total':
       return all(`.combatarea .sumbox .${target.stat}`).map((el) => el.parentElement ?? el);
+    case 'exp-zone': {
+      // 電腦版是整個經驗區；手機版是經驗牌堆（我方）或對手列上的經驗區標籤
+      const p = playerOf(target.owner, view);
+      const zone = all(`[data-exp-zone="${p}"]`);
+      if (zone.length > 0) return zone;
+      const stack = document.querySelector(`[data-pile="${p}-exp"]`);
+      return stack ? [stack.closest('.pile') ?? stack] : [];
+    }
   }
 }
 

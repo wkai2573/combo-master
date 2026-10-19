@@ -341,14 +341,14 @@ describe('新手教學：結束畫面與完成紀錄', () => {
     expect(progress(s).finished).toBe(true);
   });
 
-  it('結束畫面由課程資料驅動：標題是「第 1 課完成！」、內文是這一課的一句話；沒有下一課，按鈕接單機練習', () => {
+  it('結束畫面由課程資料驅動：標題是「第 1 課完成！」、內文是這一課的一句話；後面還有課，按鈕接下一課', () => {
     const s = toVictory();
     expect(progress(s).ending).toBeNull();
     s.advance();
     expect(progress(s).ending).toEqual({
       heading: '第 1 課完成！',
       summary: LESSONS[0].summary,
-      next: { kind: 'practice', label: '開始單機練習' },
+      next: { kind: 'lesson', no: 2, label: '下一課' },
     });
   });
 });

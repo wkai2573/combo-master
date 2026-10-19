@@ -308,7 +308,7 @@ function* burstPhase(g: Game): Gen {
     toExp(g, card);
     log(g, `${pname(g, p)} 爆發：將【${data(card).name}】放入經驗區`);
     yield* draw(g, p, 2);
-    mark(g, `${pname(g, p)} 爆發：1 張手牌放入經驗區，抽 2`, { type: 'info' });
+    mark(g, `${pname(g, p)} 爆發：1 張手牌放入經驗區，抽 2`, { type: 'burst', player: p });
     // 爆發後的觸發窗口：招財貓、商人的調整順序、商人覺醒的加入手牌，以及這次爆發讓經驗區達到覺醒經驗時的覺醒效果
     yield* fire(g, p, 'afterBurst');
   }
