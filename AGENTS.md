@@ -4,7 +4,7 @@
 
 ### 議題追蹤系統
 
-議題以本地 Markdown 形式存放在 `.scratch/`。請見 `docs/agents/issue-tracker.md`。
+議題與規格存放在 GitHub Issues（`wkai2573/combo-master`），用 `gh` CLI 操作。請見 `docs/agents/issue-tracker.md`。
 
 ### 領域文件
 
