@@ -4,7 +4,7 @@
  * 要在本機連線時，用環境變數 VITE_RECORDS_API 指定網址（環境變數在任何情況都優先，設成空字串就是關閉）。
  * 沒有網址時戰績功能優雅降級：對局不上傳，戰績頁說明雲端目前不可用。
  */
-const PRODUCTION_RECORDS_API = 'https://combo-master-records.combo-master-tcg.workers.dev';
+const PRODUCTION_RECORDS_API = 'https://combo-master-records.ouo1.workers.dev';
 
 const fromEnv = import.meta.env.VITE_RECORDS_API as string | undefined;
 
