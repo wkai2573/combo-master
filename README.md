@@ -4,11 +4,11 @@
 
 ## 線上玩
 
-https://wkai2573.github.io/combo-master/
+https://hub.ouo1.workers.dev/combo-master/
 
 分頁標題、首頁與對戰畫面都會顯示版本（例如 `v0.2.0`；首頁另有 commit 代碼與建置時間，`+` 表示有未提交的變更），用來確認看到的是不是新版。版本號在 `package.json`，每次更新時調整。
 
-推送到 `main` 後，GitHub Actions 會自動跑測試、建置並部署到 GitHub Pages（設定在 `.github/workflows/deploy.yml`）。
+推送到 `main` 後，GitHub Actions 會自動跑測試、建置並發布至 Hub Worker 子路徑（設定在 `.github/workflows/deploy.yml`）。
 
 ## 戰鬥流程圖
 

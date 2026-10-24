@@ -3,6 +3,7 @@ import { validateNewEvent, validateNewRecord, VERSION_PATTERN } from './validate
 
 /** 允許的來源：本站與本機開發網址。這是擋掉一般濫用的第一道門，不是安全邊界（來源標頭可以偽造） */
 export const ALLOWED_ORIGINS: readonly string[] = [
+  'https://hub.ouo1.workers.dev',
   'https://wkai2573.github.io',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
