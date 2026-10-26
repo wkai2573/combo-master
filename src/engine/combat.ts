@@ -5,6 +5,7 @@ import {
 } from './ops';
 import { canPay, pay } from './cost';
 import { fire, fireEach, moveRules, query } from './effects';
+import { NO_MOVE_RULES } from './effectKit';
 import { checkWin } from './win';
 import { other, type CardInst, type PlayerId } from './types';
 
@@ -246,12 +247,15 @@ function vanillaCount(g: GameCtx, p: PlayerId): number {
 /** 完整結算該玩家目前的攻守數據與明細 */
 export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
   const moves = Z(g, p, 'moves');
+  // 狂戰：我方戰鬥區卡片效果全部無效，[頂] 與 [追] 的數值修正都不算，只剩卡面數值
+  const voided = query(g, p, 'combatEffectsVoid');
+  const rulesOf = (c: CardInst) => (voided ? NO_MOVE_RULES : moveRules(c.id));
   let combatZoneAtk = 0;
   let combatZoneDef = 0;
   let shieldLift = 0;
 
   // [頂] 盾擊：位於招式卡疊最上方時，戰鬥區（含追擊卡疊）每張招式卡的攻擊力至少是它的原始防禦力（先補，再套用其他加成與修正）
-  const lift = moves.length > 0 && moveRules(moves[moves.length - 1].id).liftAtkToDef;
+  const lift = moves.length > 0 && rulesOf(moves[moves.length - 1]).liftAtkToDef;
 
   // 盾擊補的攻擊力累計進 shieldLift
   const liftedAtk = (c: CardInst): number => {
@@ -263,7 +267,7 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
 
   moves.forEach((c, i) => {
     const isTop = i === moves.length - 1;
-    const rules = moveRules(c.id);
+    const rules = rulesOf(c);
     const atkMod = isTop ? rules.topAtk : 0;
     const defMod = isTop ? rules.topDef : 0;
     const atk = liftedAtk(c);
@@ -274,7 +278,7 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
   let pursuitAtk = 0;
   let pursuitDef = 0;
   for (const c of Z(g, p, 'pursuit')) {
-    const rules = moveRules(c.id);
+    const rules = rulesOf(c);
     const atk = liftedAtk(c);
     pursuitAtk += atk + rules.pursuitAtk;
     pursuitDef += rules.pursuitDef;

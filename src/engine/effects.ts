@@ -87,6 +87,7 @@ const FOLD: { [K in QueryKey]: Fold<K> } = {
   vanillaBoost: sum,
   continueAfterFoePass: { init: () => false, add: (a, x) => a || x },
   holdExTimer: { init: () => false, add: (a, x) => a || x },
+  combatEffectsVoid: { init: () => false, add: (a, x) => a || x },
   combatBonus: {
     init: () => ({ atk: 0, def: 0, pursuitDef: 0 }),
     add: (a, x) => ({ atk: a.atk + (x.atk ?? 0), def: a.def + (x.def ?? 0), pursuitDef: a.pursuitDef + (x.pursuitDef ?? 0) }),
@@ -97,12 +98,7 @@ type AnyFn = (...a: never[]) => unknown;
 const split = (spec: unknown): { run: AnyFn; lasting: boolean } =>
   typeof spec === 'function' ? { run: spec as AnyFn, lasting: false } : { run: (spec as { run: AnyFn }).run, lasting: true };
 
-/** 這位玩家身上，這個條目此刻有哪些實例；null 表示沒有對應的卡（角色或 lasting） */
-function instances(src: EffectSource, g: GameCtx, p: PlayerId): (CardInst | null)[] {
-  if (src.at === 'lasting') return [null];
-  if (src.at === 'char') return g.state.players[p].charId === src.id ? [null] : [];
-  return Z(g, p, src.at).filter((c) => c.id === src.id && !(src.at === 'exp' && c.covered));
-}
+const isCombatZone = (z: string): boolean => z === 'moves' || z === 'pursuit';
 
 const hereOf = (src: EffectSource, self: CardInst | null) => (): boolean =>
   self === null || (self.zone === src.at && !(src.at === 'exp' && self.covered));
@@ -140,6 +136,17 @@ export function createEffects(sources: readonly EffectSource[]): Effects {
     return list;
   };
 
+  /** 這位玩家的戰鬥區卡片效果是否全部無效（狂戰）。只問經驗區的條目，不會繞回戰鬥區的判斷 */
+  const combatVoid = (g: GameCtx, p: PlayerId): boolean => query(g, p, 'combatEffectsVoid') as boolean;
+
+  /** 這位玩家身上，這個條目此刻有哪些實例；null 表示沒有對應的卡（角色或 lasting）。戰鬥區的卡在效果全部無效時沒有實例 */
+  function instances(src: EffectSource, g: GameCtx, p: PlayerId): (CardInst | null)[] {
+    if (src.at === 'lasting') return [null];
+    if (src.at === 'char') return g.state.players[p].charId === src.id ? [null] : [];
+    if (isCombatZone(src.at) && combatVoid(g, p)) return [];
+    return Z(g, p, src.at).filter((c) => c.id === src.id && !(src.at === 'exp' && c.covered));
+  }
+
   /** awakeSeen 的邊緣偵測：由未覺醒變成覺醒才算進入覺醒。每次呼叫都會更新偵測狀態 */
   function awakeningEdge(g: GameCtx, p: PlayerId): boolean {
     const now = awakened(g, p);
@@ -162,6 +169,7 @@ export function createEffects(sources: readonly EffectSource[]): Effects {
     if (subjectsOf) {
       // 主體型：只問主體那張卡自己的條目，不看它所在的區域
       for (const card of subjectsOf(arg)) {
+        if (isCombatZone(card.zone) && combatVoid(g, card.owner)) continue;
         const spec = registry.byId.get(card.id)?.on?.[key];
         if (spec) call(split(spec).run, card, () => true, { card });
       }

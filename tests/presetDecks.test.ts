@@ -10,7 +10,7 @@ const count = (deck: string[]) => {
 };
 
 // 各職業開放中的效果招式（獨立列出，不從資料推算）
-const SWORD = ['戒備打擊', '復仇之嚎', '凡骨的意志', '熔岩之擊', '洩憤', '威嚇戰吼'];
+const SWORD = ['戒備打擊', '復仇之嚎', '凡骨的意志', '熔岩之擊', '洩憤', '威嚇戰吼', '盛怒漩渦', '狂戰'];
 const MOVES: Record<string, string[]> = {
   勇者: SWORD,
   後人: SWORD,

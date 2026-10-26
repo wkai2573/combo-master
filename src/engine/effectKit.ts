@@ -106,6 +106,8 @@ export interface Queries {
   continueAfterFoePass: boolean;
   /** 增益區裡這個 id 的 Ex 卡是否暫停放置持續時間指示物（任一為真）；聖獸白虎與聖獸玄武用 */
   holdExTimer: boolean;
+  /** 這位玩家的戰鬥區卡片效果是否全部無效（任一為真）；狂戰用。涵蓋招式卡疊與追擊卡疊的卡的 [發]、[先]、[頂]、[追] 與出招時效果，不影響經驗區、裝備與增益 */
+  combatEffectsVoid: boolean;
   /** 角色專屬的戰鬥結算加成（欄位各自加總） */
   combatBonus: { atk: number; def: number; pursuitDef: number };
 }
@@ -122,6 +124,7 @@ export interface QueryArgs {
   vanillaBoost: [];
   continueAfterFoePass: [];
   holdExTimer: [exId: string];
+  combatEffectsVoid: [];
   combatBonus: [arg: { baseAtk: number }];
 }
 

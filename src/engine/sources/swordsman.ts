@@ -1,6 +1,6 @@
-import { faceUpExp, pay } from '../cost';
+import { discardRage, faceUpExp, pay } from '../cost';
 import { defineSource } from '../effectKit';
-import { activate, awakened, combatZone, data, directHit, discard, isFirst, log, move, pname, recover, topOfZone, Z, type GameCtx } from '../ops';
+import { activate, awakened, chooseCards, combatZone, data, directHit, discard, isFirst, log, move, pname, recover, topOfZone, Z, type GameCtx } from '../ops';
 import { isClassCard, isVanilla } from '../../data/enabledCards';
 import { other, type PlayerId } from '../types';
 
@@ -166,4 +166,54 @@ export const 威嚇戰吼 = defineSource({
   },
 });
 
-export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊, 戒備打擊, 盾擊, 嘲諷, 洩憤, 威嚇戰吼, 勇者, 後人];
+// 盛怒漩渦（劍士）：[發] 選擇我方棄牌區 3 張卡放到怒氣區頂。沒有費用；強制效果，棄牌區不足 3 張就有幾張放幾張。
+// 放進怒氣區的牌誰都看不到牌面，紀錄只寫張數
+export const 盛怒漩渦 = defineSource({
+  id: '盛怒漩渦',
+  at: 'moves',
+  on: {
+    onPlay: (c) => c.effect(
+      { label: '【盛怒漩渦】選擇棄牌區 3 張卡放到怒氣區頂', mandatory: true, when: () => Z(c.g, c.p, 'discard').length > 0 },
+      function* () {
+        const { g, p } = c;
+        activate(g, p, c.self!);
+        const picked = yield* chooseCards(g, p, '【盛怒漩渦】選擇棄牌區 3 張卡放到怒氣區頂', Z(g, p, 'discard'), 3, 3);
+        for (const card of picked) move(g, card, 'rage', 'top');
+        log(g, `【盛怒漩渦】${pname(g, p)} 將棄牌區 ${picked.length} 張卡放到怒氣區頂`);
+      },
+    ),
+  },
+});
+
+// 狂戰（劍士）：三個 [經] 效果，都只在表側經驗區有效，被蓋成裏側就全部停止，翻回表側恢復：
+// ① 我方戰鬥區卡片效果全部無效（查詢 combatEffectsVoid，登記表與戰鬥結算都尊重它）
+// ② 我方 +X+0，X＝我方戰鬥區的招式數量（招式卡疊加追擊卡疊）
+// ③ 回合開始時（強制）必須捨棄怒氣區 5 張，有幾張捨幾張；不足 5 張時，捨完全部怒氣之後再把自己捨棄到棄牌區。
+//   捨棄的怒氣進棄牌區後雙方才看得到，紀錄只寫張數
+export const 狂戰 = defineSource({
+  id: '狂戰',
+  at: 'exp',
+  on: {
+    turnStart: (c) => c.effect(
+      { label: '【狂戰】必須捨棄 5 張怒氣，不足 5 張時此卡捨棄', mandatory: true, group: '狂戰' },
+      () => {
+        const { g, p } = c;
+        const card = c.self!;
+        activate(g, p, card);
+        const n = discardRage(g, p, 5);
+        if (n < 5) {
+          discard(g, card);
+          log(g, `【狂戰】${pname(g, p)} 捨棄怒氣 ${n} 張，不足 5 張，【狂戰】捨棄到棄牌區`);
+        } else {
+          log(g, `【狂戰】${pname(g, p)} 捨棄怒氣 5 張`);
+        }
+      },
+    ),
+  },
+  ask: {
+    combatEffectsVoid: () => true,
+    flatAtk: (c) => combatZone(c.g, c.p).length,
+  },
+});
+
+export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊, 戒備打擊, 盾擊, 嘲諷, 洩憤, 威嚇戰吼, 盛怒漩渦, 狂戰, 勇者, 後人];

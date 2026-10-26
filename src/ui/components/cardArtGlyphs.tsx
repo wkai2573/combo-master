@@ -676,6 +676,25 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="M6 54 l-2 -10 M6 54 l10 2" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
     </>
   ),
+  盛怒漩渦: (
+    <>
+      <path d="M50 8 C74 8 90 24 88 42 C86 58 66 62 54 54 C44 47 48 34 58 36 C64 37 64 44 58 45" fill="none" stroke={FIRE} strokeWidth="5" strokeLinecap="round" />
+      <path d="M50 8 C28 8 12 22 14 38 C16 52 32 56 42 50" fill="none" stroke={BLOOD} strokeWidth="5" strokeLinecap="round" />
+      <path d="M22 56 C34 62 48 62 60 58" fill="none" stroke={FIRE2} strokeWidth="3.5" strokeLinecap="round" />
+      {flame(54, 40, 0.5)}
+      <path d="M10 10 l8 6 M90 8 l-8 7" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+    </>
+  ),
+  狂戰: (
+    <>
+      <path d="M16 56 L56 12 M84 56 L44 12" stroke={STEEL} strokeWidth="5" strokeLinecap="round" />
+      <path d="M52 8 L66 10 L60 24 Z M48 8 L34 10 L40 24 Z" fill={STEEL} stroke={W} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M12 52 l8 8 M88 52 l-8 8" stroke={WOOD} strokeWidth="6" strokeLinecap="round" />
+      <circle cx="50" cy="40" r="13" fill={W} stroke={K} strokeWidth="2" />
+      <path d="M43 38 L48 42 M57 38 L52 42" stroke={BLOOD} strokeWidth="4" strokeLinecap="round" />
+      <path d="M44 48 H56 M47 46 V50 M53 46 V50" stroke={K} strokeWidth="2.5" strokeLinecap="round" />
+    </>
+  ),
   聖獸白虎: (
     <>
       <path d="M26 18 L36 8 L44 18 H56 L64 8 L74 18 L80 40 C80 52 66 58 50 58 C34 58 20 52 20 40 Z" fill={W} stroke={K} strokeWidth="2" strokeLinejoin="round" />
