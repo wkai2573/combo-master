@@ -45,7 +45,7 @@ bun run build      # 型別檢查＋打包
 
 ## 效果卡（逐張開放）
 
-為了先把基本對戰調順，效果卡逐張開放：目前是 36 張花色招式＋效果招式 37 張＋裝備 8 張（清單與解讀見 `docs/規則詮釋.md`）。要加新卡，見 `docs/規則詮釋.md` 第三節的流程（核心是 `src/data/enabledCards.ts` 的 `ENABLED_EFFECT_CARDS`）。
+為了先把基本對戰調順，效果卡逐張開放：目前是 36 張花色招式＋效果招式 52 張＋裝備 8 張（清單與解讀見 `docs/規則詮釋.md`）。要加新卡，見 `docs/規則詮釋.md` 第三節的流程（核心是 `src/data/enabledCards.ts` 的 `ENABLED_EFFECT_CARDS`）。
 
 ## 與朋友連線
 
