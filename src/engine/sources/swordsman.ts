@@ -1,8 +1,8 @@
 import { faceUpExp, pay } from '../cost';
 import { defineSource } from '../effectKit';
-import { activate, awakened, data, directHit, discard, isFirst, log, move, pname, recover, Z } from '../ops';
+import { activate, awakened, combatZone, data, directHit, discard, isFirst, log, move, pname, recover, topOfZone, Z, type GameCtx } from '../ops';
 import { isClassCard, isVanilla } from '../../data/enabledCards';
-import { other } from '../types';
+import { other, type PlayerId } from '../types';
 
 // 家族相片（劍士）：[蓋1_怒2] 回合開始時，回復 1，可選
 export const 家族相片 = defineSource({
@@ -144,4 +144,26 @@ export const 洩憤 = defineSource({
   },
 });
 
-export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊, 戒備打擊, 盾擊, 嘲諷, 洩憤, 勇者, 後人];
+// 威嚇戰吼（劍士）：[頂] 當對方出招時，且我方怒氣區卡片數 > 對方牌組卡片數，對方直擊 X。X＝對方戰鬥區的卡片數。
+// 強制；每次對方出招都在那張招式放上戰鬥區之後重新判斷條件與 X，X 含剛打出的那張。只有位於招式卡疊最上方時才觸發
+const 威嚇條件 = (g: GameCtx, p: PlayerId) =>
+  Z(g, p, 'rage').length > Z(g, other(p), 'deck').length;
+export const 威嚇戰吼 = defineSource({
+  id: '威嚇戰吼',
+  at: 'moves',
+  on: {
+    onFoePlay: (c) => c.effect(
+      { label: '【威嚇戰吼】對方直擊 X（X＝對方戰鬥區的卡片數）', mandatory: true, when: () => topOfZone(c.g, c.p) === c.self && 威嚇條件(c.g, c.p) },
+      () => {
+        const { g, p } = c;
+        const foe = other(p);
+        const x = combatZone(g, foe).length;
+        activate(g, p, c.self!);
+        log(g, `【威嚇戰吼】${pname(g, foe)} 出招，${pname(g, p)} 的怒氣區多於對方牌組，對方直擊 ${x}`);
+        directHit(g, foe, x);
+      },
+    ),
+  },
+});
+
+export const SWORDSMAN_SOURCES = [家族相片, 凡骨的意志, 復仇之嚎, 熔岩之擊, 戒備打擊, 盾擊, 嘲諷, 洩憤, 威嚇戰吼, 勇者, 後人];

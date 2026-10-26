@@ -176,4 +176,21 @@ export const 閃電新星 = defineSource({
   ask: { flatAtk: (c) => (topOfZone(c.g, c.p) === c.self ? Math.max(0, Z(c.g, c.p, 'hand').length - Z(c.g, other(c.p), 'hand').length) : 0) },
 });
 
-export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 整理魔導書, 閃電新星, 元素法典, 法師];
+// 冰茅（法師）：[發_蓋4] 雙方各捨棄 2 張最前面的裏側經驗
+// 先付蓋4 再捨棄，所以剛蓋成裏側的牌也可能被捨掉；各自依經驗區的順序取最前面的裏側經驗，不足就有幾張捨幾張
+export const 冰茅 = defineSource({
+  id: '冰茅',
+  at: 'moves',
+  on: {
+    onPlay: (c) => c.effect({ label: '【冰茅】雙方各捨棄 2 張最前面的裏側經驗（蓋4）', cost: { cover: 4 } }, () => {
+      const { g } = c;
+      for (const q of [c.p, other(c.p)]) {
+        const dropped = Z(g, q, 'exp').filter((card) => card.covered).slice(0, 2);
+        for (const card of dropped) discard(g, card);
+        log(g, `【冰茅】${pname(g, q)} 捨棄 ${dropped.length} 張裏側經驗`);
+      }
+    }),
+  },
+});
+
+export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 整理魔導書, 閃電新星, 冰茅, 元素法典, 法師];

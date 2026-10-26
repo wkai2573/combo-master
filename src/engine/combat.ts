@@ -57,6 +57,9 @@ export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: bool
   const passedBefore = [...g.state.passed];
   yield* fire(g, p, opening ? (['onOpen', 'onPlay'] as const) : 'onPlay', { card });
   checkWin(g);
+  // 打出時的效果結算完之後，雙方各開一次出招時的窗口，先攻方先：出招者是「我方打出招式時」，另一方是「對方出招時」
+  for (const q of order(g)) yield* fire(g, q, q === p ? 'onMyPlay' : 'onFoePlay', { card });
+  checkWin(g);
   // 效果讓玩家被迫收招（Explosion!、即時停損）也是收招：窗口結算完，各自開「收招時」的窗口，先攻方先
   for (const q of order(g)) {
     if (g.state.passed[q] && !passedBefore[q]) {

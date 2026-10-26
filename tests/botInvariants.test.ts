@@ -85,6 +85,28 @@ describe('卡表更新批次（箭雨、天譴之箭、穿雲箭）的對局壓�
   });
 });
 
+describe('卡表更新批次（捕熊陷阱、作假帳、煉金印記、冰茅、威嚇戰吼）的對局壓測', () => {
+  it('牌組裡塞了新卡的對局，隨機與啟發式電腦都能跑完，沒有卡死也沒有違反守恆', () => {
+    const NEW = ['捕熊陷阱', '作假帳', '煉金印記', '冰茅', '威嚇戰吼'];
+    for (const mode of ['mode1', 'mode2'] as const) {
+      for (const [a, b] of [['商人', '勇者'], ['勇者', '法師'], ['法師', '商人'], ['商人', '商人']] as const) {
+        for (let seed = 1; seed <= 6; seed++) {
+          const mk = (charId: string) => {
+            const out = [...presetDeck(charId)];
+            // 把牌組最前面的 10 張換成新卡（職業不符的牌組也只是測試用，引擎不驗證牌組）
+            for (let i = 0; i < 10; i++) out[i] = NEW[i % NEW.length];
+            return { charId, cards: out };
+          };
+          const decks = [mk(a), mk(b)] as const;
+          const game = new Game({ decks: [decks[0], decks[1]], seed: seed * 7907 });
+          const r = playOut(game, new Rng(seed), [decks[0].cards.length, decks[1].cards.length], { mode });
+          expect(r.finished, `${mode} ${a} vs ${b} seed=${seed}`).toBe(true);
+        }
+      }
+    }
+  });
+});
+
 describe('機器人決策模式壓測（playOut mode2 與跨模式）', () => {
   it('雙方皆採用 mode2 的對局能跑完，沒有卡死也沒有違反守恆', () => {
     for (const [a, b] of [['勇者', '刺客'], ['刺客', '遊俠']] as const) {

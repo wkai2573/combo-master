@@ -44,6 +44,10 @@ export interface Events {
   onPlay: { card: CardInst };
   onPursuitCard: { card: CardInst };
   onCovered: { card: CardInst };
+  /** 我方打出招式時：每次出招都問出招的玩家。那張招式已放上戰鬥區，也在它自己的打出時效果結算之後；含先手步驟 */
+  onMyPlay: { card: CardInst };
+  /** 對方出招時：每次出招都問出招者的對手。那張招式已放上戰鬥區，也在它自己的打出時效果結算之後；含先手步驟 */
+  onFoePlay: { card: CardInst };
 }
 export type EventKey = keyof Events;
 
@@ -67,6 +71,8 @@ export const EVENT_TITLES: Record<EventKey, string> = {
   onPursuitCard: '成為追擊卡時',
   onPursuitSuccess: '追擊成功時',
   onCovered: '被蓋成裏側',
+  onMyPlay: '我方出招時',
+  onFoePlay: '對方出招時',
 };
 
 /** 主體型時機取主體的方式；沒有列出的時機照位置問 */

@@ -632,6 +632,50 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="M22 12 Q34 4 46 12 Q58 20 70 12" fill="none" stroke={W} strokeWidth="3.5" strokeLinecap="round" opacity=".85" />
     </>
   ),
+  威嚇戰吼: (
+    <>
+      <ellipse cx="50" cy="32" rx="14" ry="18" fill="currentColor" {...OUT} />
+      <ellipse cx="50" cy="38" rx="7" ry="9" fill={K} stroke={W} strokeWidth="2" />
+      <path d="M22 18 Q12 32 22 46 M12 12 Q-2 32 12 52 M78 18 Q88 32 78 46 M88 12 Q102 32 88 52" fill="none" stroke={W} strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M44 22 L48 26 M56 22 L52 26" stroke={W} strokeWidth="3" strokeLinecap="round" />
+    </>
+  ),
+  捕熊陷阱: (
+    <>
+      <path d="M10 44 H90" stroke={W} strokeWidth="4" strokeLinecap="round" />
+      <path d="M14 44 L22 18 L30 44 L38 18 L46 44 L54 18 L62 44 L70 18 L78 44 L86 18" fill="none" stroke={W} strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M14 44 L22 24 L30 44 L38 24 L46 44 L54 24 L62 44 L70 24 L78 44 L86 24" fill="currentColor" stroke={W} strokeWidth="2" strokeLinejoin="round" opacity=".85" />
+      <path d="M8 52 H92" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+      <circle cx="50" cy="52" r="4" fill={W} stroke={K} strokeWidth="1.5" />
+    </>
+  ),
+  作假帳: (
+    <>
+      <rect x="14" y="6" width="46" height="52" rx="4" fill="currentColor" {...OUT} />
+      <path d="M22 18 H52 M22 28 H52 M22 38 H40" stroke={W} strokeWidth="3" strokeLinecap="round" />
+      <path d="M22 48 H34" stroke={BLOOD} strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M64 14 L88 38 L84 46 L74 44 L56 26 Z" fill={WOOD} stroke={W} strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M74 44 L70 52 L82 50" fill={K} stroke={W} strokeWidth="2" strokeLinejoin="round" />
+    </>
+  ),
+  煉金印記: (
+    <>
+      <circle cx="50" cy="32" r="24" fill="none" stroke={W} strokeWidth="4" />
+      <circle cx="50" cy="32" r="16" fill="currentColor" stroke={W} strokeWidth="2.5" />
+      <path d="M50 18 L62 40 H38 Z" fill="none" stroke={GOLD} strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M40 30 H60" stroke={GOLD} strokeWidth="3" strokeLinecap="round" />
+      <path d="M50 4 V10 M50 54 V60 M22 32 H16 M84 32 H78" stroke={W} strokeWidth="3.5" strokeLinecap="round" />
+    </>
+  ),
+  冰茅: (
+    <>
+      <path d="M6 54 L72 14" stroke={W} strokeWidth="5" strokeLinecap="round" />
+      <path d="M96 4 L68 6 L82 28 Z" fill={ICE} stroke={W} strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M40 38 L30 52 L44 48 M56 28 L50 12 L64 20" fill="none" stroke={ICE} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M18 28 L26 34 M26 24 L18 38 M86 50 L92 56 M92 48 L86 58" stroke={ICE} strokeWidth="3" strokeLinecap="round" />
+      <path d="M6 54 l-2 -10 M6 54 l10 2" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+    </>
+  ),
 };
 
 /** 開放的效果卡與 Ex 卡的專屬卡圖，鍵是卡的內部 id */
