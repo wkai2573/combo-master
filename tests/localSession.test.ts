@@ -40,7 +40,10 @@ function start() {
 }
 
 /** 玩家用第一個選項回應目前的提示 */
-const playFirst = (s: LocalSession) => s.submit([s.getState().view!.prompt!.options[0].key]);
+const playFirst = (s: LocalSession) => {
+  const prompt = s.getState().view!.prompt!;
+  s.submit(prompt.options.slice(0, Math.max(1, prompt.min)).map((o) => o.key));
+};
 
 describe('單機練習', () => {
   it('開局就有視角、首批影格，狀態是進行中', () => {

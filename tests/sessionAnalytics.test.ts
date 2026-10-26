@@ -41,7 +41,10 @@ const localSession = () => {
   sessions.push(s);
   return s;
 };
-const playFirst = (s: LocalSession) => s.submit([s.getState().view!.prompt!.options[0].key]);
+const playFirst = (s: LocalSession) => {
+  const prompt = s.getState().view!.prompt!;
+  s.submit(prompt.options.slice(0, Math.max(1, prompt.min)).map((o) => o.key));
+};
 function playToEnd(s: LocalSession) {
   for (let i = 0; i < 5000 && s.getState().status !== 'over'; i++) {
     if (s.getState().view!.prompt) playFirst(s);

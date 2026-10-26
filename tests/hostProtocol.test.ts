@@ -210,14 +210,17 @@ describe('房主：訪客離線', () => {
   });
 });
 
-/** 雙方都選第一個選項，直到對局結束 */
+/** 依提示要求的最少張數，從前面依序選 */
+const firstKeys = (prompt: { options: { key: string }[]; min: number }) => prompt.options.slice(0, Math.max(1, prompt.min)).map((o) => o.key);
+
+/** 雙方都選最前面的選項（選擇張數有下限的提示，選到下限），直到對局結束 */
 function playToEnd(host: HostSession, guest: ReturnType<typeof start>['guest']) {
   for (let i = 0; i < 5000 && host.getState().status !== 'over'; i++) {
     const mine = host.getState().view!.prompt;
-    if (mine) host.submit([mine.options[0].key]);
+    if (mine) host.submit(firstKeys(mine));
     else {
       const theirs = lastView(guest.sent).view.prompt!;
-      guest.say({ t: 'submit', keys: [theirs.options[0].key] });
+      guest.say({ t: 'submit', keys: firstKeys(theirs) });
     }
   }
   expect(host.getState().status).toBe('over');
