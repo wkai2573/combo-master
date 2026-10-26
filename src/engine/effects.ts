@@ -1,4 +1,5 @@
 import { isExCardId, type ExZone } from '../data/exCards';
+import { judgeTop } from './combat';
 import { canPay, optionalPay } from './cost';
 import { awakened, confirm, order, Z, type GameCtx, type Gen } from './ops';
 import {
@@ -24,6 +25,7 @@ import { triggerWindow, type WindowEffect } from './window';
 export function makeCtx(g: GameCtx, p: PlayerId, self: CardInst | null, here: () => boolean): Ctx {
   return {
     g, p, self, here,
+    judgeTop: () => judgeTop(g, p),
     effect(o, body) {
       if (o.cost && !self) throw new Error(`效果「${o.label}」有費用，但沒有對應的卡`);
       return {

@@ -169,6 +169,8 @@ export interface Ctx {
   self: CardInst | null;
   /** 這張卡此刻是否仍在位（經驗區須表側）；角色、lasting 恆為 true */
   here(): boolean;
+  /** 翻開我方牌組頂的 1 張卡做一次標準追擊判定，成敗與連動照追擊階段的規則；回傳是否成功。以回呼提供，條目不必匯入戰鬥模組 */
+  judgeTop(): Gen<boolean>;
   /** 造出窗口效果：available ＝ 在位 ∧ 條件 ∧ 付得起；run 依 confirmed 決定要不要再問 */
   effect(o: EffectOpts, body: () => Gen | void): WindowEffect;
 }

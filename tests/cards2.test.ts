@@ -325,7 +325,7 @@ describe('新卡（第二批）', () => {
       singlePhase: true,
     });
     pick(g, '黑桃9');
-    expect(g.state.flags.pursuitSuccess[0]).toBe(2); // 二連矢（連擊值 3，範圍外）成功，再翻黑桃1 也成功
+    expect(g.state.flags.pursuitSuccess[0]).toBe(2); // 二連矢（連擊值 2，範圍外）成功，再翻黑桃1 也成功
   });
 
   it('二刀連擊：戰鬥區只有此卡時追擊 +1', () => {

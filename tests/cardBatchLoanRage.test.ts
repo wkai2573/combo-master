@@ -7,10 +7,10 @@ import { names, scenario, setZones } from './helpers';
 describe('既有卡的數值調整', () => {
   const stats = (id: string) => { const c = getCard(id); return [c.atk, c.def, c.combo]; };
 
-  it('魅影射擊守 0、盾擊 0／2、二連矢 3／4，連擊值不變；地雷陷阱數值不變', () => {
+  it('魅影射擊守 0、盾擊 0／2、二連矢 3／4／2，連擊值不變（二連矢除外）；地雷陷阱數值不變', () => {
     expect(stats('魅影射擊')).toEqual([5, 0, 5]);
     expect(stats('盾擊')).toEqual([0, 2, 6]);
-    expect(stats('二連矢')).toEqual([3, 4, 3]);
+    expect(stats('二連矢')).toEqual([3, 4, 2]);
     expect(stats('地雷陷阱')).toEqual([3, 4, 3]);
   });
 

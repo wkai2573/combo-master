@@ -88,6 +88,17 @@ describe('卡表同步', () => {
     expect(notes.some((n) => n.includes('缺少編號'))).toBe(true);
   });
 
+  it('內部 id 重複時提醒；暫名改成正式卡名後，同一份資料不再有重複 id', () => {
+    const tmp = (order: number, uid: string, name: string, baseName: string) => doc({ order, uid, custom: true, name, base: { name: baseName } });
+    const clash = build({ cards: [tmp(1, 'A1', '甲', '123'), tmp(2, 'A2', '乙', '123'), tmp(3, 'A3', '丙', '123')] });
+    expect(clash.notes.filter((n) => n.includes('內部 id 重複'))).toHaveLength(1);
+    expect(clash.table.added.map((c) => c.id)).toEqual(['123', '123', '123']);
+    const fixed = build({ cards: [tmp(1, 'A1', '甲', '甲'), tmp(2, 'A2', '乙', '乙'), tmp(3, 'A3', '丙', '丙')] });
+    expect(fixed.notes.filter((n) => n.includes('內部 id 重複'))).toEqual([]);
+    expect(fixed.table.added.map((c) => c.id)).toEqual(['甲', '乙', '丙']);
+    expect(new Set(Object.values(fixed.table.uids)).size).toBe(3);
+  });
+
   it('關鍵字依 order 排序，說明待確認時提醒', () => {
     const { table, notes } = build({
       keywords: [

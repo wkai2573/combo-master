@@ -185,10 +185,25 @@ function* aim(g: GameCtx, p: PlayerId, used: { n: number }): Gen {
   }
 }
 
-function* afterJudge(g: GameCtx, p: PlayerId, card: CardInst): Gen {
+function* afterJudge(g: GameCtx, p: PlayerId, card: CardInst): Gen<boolean> {
   const ok = yield* judge(g, p, card);
-  if (ok) return;
-  yield* fire(g, p, 'afterPursuitFail', { flipExtra: () => judge(g, p, Z(g, p, 'deck')[0]) });
+  if (!ok) yield* fire(g, p, 'afterPursuitFail', { flipExtra: () => judge(g, p, Z(g, p, 'deck')[0]) });
+  return ok;
+}
+
+/**
+ * 效果在非追擊階段呼叫的單次追擊判定：翻開 p 牌組頂的 1 張卡，照標準規則判定成敗並處理連動
+ * （成功成為追擊卡並觸發 [追] 與追擊成功時的效果；失敗加入手牌並開追擊失敗後的窗口）。
+ * 範圍照標準規則算：任一方招式卡疊沒有招式時所有連擊值都在範圍內，所以判定必定失敗。
+ * 追擊階段「任一方沒有招式就不翻牌」的通則只管追擊階段，不管這次判定，也不取代追擊階段的判定。牌組沒有牌就不翻
+ */
+export function* judgeTop(g: GameCtx, p: PlayerId): Gen<boolean> {
+  const top = Z(g, p, 'deck')[0];
+  if (!top) {
+    log(g, `${pname(g, p)} 的牌組沒有牌，無法做追擊判定`);
+    return false;
+  }
+  return yield* afterJudge(g, p, top);
 }
 
 export function* pursuitPhase(g: GameCtx): Gen {

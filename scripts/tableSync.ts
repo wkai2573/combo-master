@@ -111,6 +111,15 @@ export function buildCardTable(docs: TableDocs, base: TableBase): { table: CardT
   for (const d of docs.chars) addUid(d.uid, d.base?.name ?? d.name, `角色【${d.name}】`);
   for (const d of docs.keywords) addUid(d.uid, d.name, `關鍵字【${d.name}】`);
   for (const d of docs.exCards ?? []) addUid(d.uid, d.base?.name ?? d.name, `Ex 卡【${d.name}】`);
+  // 兩張以上的卡共用同一個內部 id 會在遊戲裡互相覆蓋（建卡時的暫名最容易撞號），提醒改成各自的卡名
+  const idOwners = new Map<string, string[]>();
+  for (const d of [...docs.cards, ...(docs.exCards ?? [])]) {
+    const id: string = d.base?.name ?? d.name;
+    idOwners.set(id, [...(idOwners.get(id) ?? []), d.name]);
+  }
+  for (const [id, names] of idOwners) {
+    if (names.length > 1) notes.push(`內部 id 重複：【${id}】被 ${names.map((n) => `【${n}】`).join('、')} 共用，同步後會互相覆蓋`);
+  }
   const uidKey = (u: string) => u.charCodeAt(0) * 100000 + Number(u.slice(1));
   const sortedUids = Object.fromEntries(Object.entries(uids).sort((x, y) => uidKey(x[0]) - uidKey(y[0])));
 

@@ -590,6 +590,48 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="M40 46 Q50 40 60 46" fill="none" stroke={K} strokeWidth="4" strokeLinecap="round" />
     </>
   ),
+  'Ex-白虎': (
+    <>
+      <path d="M20 14 L34 24 H66 L80 14 L84 38 C84 50 68 57 50 57 C32 57 16 50 16 38 Z" fill={W} stroke={K} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M50 24 V34 M40 26 L43 33 M60 26 L57 33 M26 36 L36 38 M74 36 L64 38" stroke={K} strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M36 44 Q50 52 64 44" fill="none" stroke={K} strokeWidth="3" strokeLinecap="round" />
+      <circle cx="38" cy="38" r="3" fill="currentColor" />
+      <circle cx="62" cy="38" r="3" fill="currentColor" />
+    </>
+  ),
+  'Ex-玄武': (
+    <>
+      <path d="M16 46 C16 24 32 14 50 14 C68 14 84 24 84 46 Z" fill="currentColor" stroke={W} strokeWidth="3" strokeLinejoin="round" />
+      <path d="M50 14 V46 M30 20 L36 46 M70 20 L64 46 M20 34 H80" stroke={W} strokeWidth="2.5" opacity=".75" />
+      <path d="M84 50 C92 46 94 34 88 28 C84 24 78 28 82 33" fill="none" stroke={POISON} strokeWidth="4" strokeLinecap="round" />
+      <path d="M22 46 L16 56 M40 46 V56 M60 46 V56 M78 46 L84 56" stroke={W} strokeWidth="4" strokeLinecap="round" />
+    </>
+  ),
+  箭雨: (
+    <>
+      <path d="M20 4 L34 22 M44 2 L58 22 M68 4 L82 22 M30 30 L44 48 M58 28 L72 48" stroke={W} strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M34 22 l-9 0 l4 -8 z M58 22 l-9 0 l4 -8 z M82 22 l-9 0 l4 -8 z M44 48 l-9 0 l4 -8 z M72 48 l-9 0 l4 -8 z" fill="currentColor" stroke={W} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M10 56 Q50 50 90 56" fill="none" stroke={ICE} strokeWidth="3" strokeLinecap="round" opacity=".7" />
+    </>
+  ),
+  天譴之箭: (
+    <>
+      <path d="M12 52 L80 10" stroke={W} strokeWidth="5" strokeLinecap="round" />
+      <path d="M92 4 L74 6 L84 22 Z" fill="currentColor" stroke={W} strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M12 52 l-2 -12 M12 52 l12 2 M18 48 l-2 -10 M18 48 l10 2" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+      <path transform="translate(40 30) scale(1.5)" d="M6 -10 L-5 2 H1 L-3 12 L8 -1 H2 Z" fill={ELEC} stroke={W} strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M62 44 L70 36 L66 50 L76 42" fill="none" stroke={ELEC} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    </>
+  ),
+  穿雲箭: (
+    <>
+      <path d="M6 30 H82" stroke={W} strokeWidth="5" strokeLinecap="round" />
+      <path d="M96 30 L78 20 V40 Z" fill="currentColor" stroke={W} strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M6 30 l-4 -9 M6 30 l-4 9 M16 30 l-4 -9 M16 30 l-4 9" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M14 46 Q30 38 46 46 Q62 54 78 46" fill="none" stroke={W} strokeWidth="3.5" strokeLinecap="round" opacity=".85" />
+      <path d="M22 12 Q34 4 46 12 Q58 20 70 12" fill="none" stroke={W} strokeWidth="3.5" strokeLinecap="round" opacity=".85" />
+    </>
+  ),
 };
 
 /** 開放的效果卡與 Ex 卡的專屬卡圖，鍵是卡的內部 id */
