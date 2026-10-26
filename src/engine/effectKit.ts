@@ -104,6 +104,8 @@ export interface Queries {
   vanillaBoost: number;
   /** 後攻方在反擊步驟第一個動作就收招時，我方（先攻方）是否可以繼續出招（任一為真）；嘲諷用 */
   continueAfterFoePass: boolean;
+  /** 增益區裡這個 id 的 Ex 卡是否暫停放置持續時間指示物（任一為真）；聖獸白虎與聖獸玄武用 */
+  holdExTimer: boolean;
   /** 角色專屬的戰鬥結算加成（欄位各自加總） */
   combatBonus: { atk: number; def: number; pursuitDef: number };
 }
@@ -119,6 +121,7 @@ export interface QueryArgs {
   flatDef: [];
   vanillaBoost: [];
   continueAfterFoePass: [];
+  holdExTimer: [exId: string];
   combatBonus: [arg: { baseAtk: number }];
 }
 

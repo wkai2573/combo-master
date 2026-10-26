@@ -676,6 +676,53 @@ const GLYPHS: Record<string, ReactNode> = {
       <path d="M6 54 l-2 -10 M6 54 l10 2" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
     </>
   ),
+  聖獸白虎: (
+    <>
+      <path d="M26 18 L36 8 L44 18 H56 L64 8 L74 18 L80 40 C80 52 66 58 50 58 C34 58 20 52 20 40 Z" fill={W} stroke={K} strokeWidth="2" strokeLinejoin="round" />
+      <path d="M50 18 V28 M42 20 L45 27 M58 20 L55 27 M28 32 L38 34 M72 32 L62 34" stroke={K} strokeWidth="3.5" strokeLinecap="round" />
+      <circle cx="40" cy="36" r="3.5" fill="currentColor" />
+      <circle cx="60" cy="36" r="3.5" fill="currentColor" />
+      <path d="M44 46 H56 M50 42 V46" stroke={K} strokeWidth="3" strokeLinecap="round" />
+      <path d="M8 6 L18 14 M92 6 L82 14 M6 24 L16 26 M94 24 L84 26" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+    </>
+  ),
+  聖獸玄武: (
+    <>
+      <path d="M14 44 C14 22 30 12 50 12 C70 12 86 22 86 44 Z" fill="currentColor" stroke={W} strokeWidth="3" strokeLinejoin="round" />
+      <path d="M50 12 V44 M28 18 L34 44 M72 18 L66 44 M18 30 H82" stroke={W} strokeWidth="2.5" opacity=".75" />
+      <path d="M86 46 C96 42 96 28 88 22 C84 18 78 22 82 27" fill="none" stroke={POISON} strokeWidth="4" strokeLinecap="round" />
+      <path d="M20 44 L14 56 M38 44 V56 M62 44 V56 M80 44 L86 56" stroke={W} strokeWidth="4" strokeLinecap="round" />
+      <path d="M4 38 Q10 32 14 38 Q18 44 24 38" fill="none" stroke={ICE} strokeWidth="3" strokeLinecap="round" />
+    </>
+  ),
+  煙霧陷阱: (
+    <>
+      <circle cx="30" cy="38" r="16" fill={W} stroke={K} strokeWidth="2" opacity=".9" />
+      <circle cx="52" cy="28" r="20" fill={STEEL} stroke={K} strokeWidth="2" opacity=".95" />
+      <circle cx="74" cy="38" r="15" fill={W} stroke={K} strokeWidth="2" opacity=".9" />
+      <path d="M16 54 H88" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+      <path d="M22 54 L28 46 M40 54 L46 46 M58 54 L64 46 M76 54 L82 46" stroke={W} strokeWidth="3" strokeLinecap="round" />
+      <path d="M44 22 Q52 14 60 22" fill="none" stroke={K} strokeWidth="3" strokeLinecap="round" opacity=".6" />
+    </>
+  ),
+  冰凍陷阱: (
+    <>
+      <path d="M10 50 H90" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+      <path d="M14 50 L24 28 L34 50 L44 28 L54 50 L64 28 L74 50 L84 28" fill="none" stroke={W} strokeWidth="3.5" strokeLinejoin="round" />
+      {snowflake(50, 20, 1.6)}
+      <path d="M20 14 V24 M80 14 V24" stroke={ICE} strokeWidth="3.5" strokeLinecap="round" />
+      <path d="M20 14 l-4 6 M20 14 l4 6 M80 14 l-4 6 M80 14 l4 6" stroke={ICE} strokeWidth="2.5" strokeLinecap="round" />
+    </>
+  ),
+  毒藥: (
+    <>
+      <path d="M40 6 H60 M44 6 V20 L24 48 C20 54 24 58 30 58 H70 C76 58 80 54 76 48 L56 20 V6" fill="none" stroke={W} strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M32 40 H68 L76 48 C80 54 76 58 70 58 H30 C24 58 20 54 24 48 Z" fill={POISON} stroke={W} strokeWidth="2.5" strokeLinejoin="round" />
+      <circle cx="44" cy="49" r="3" fill={K} opacity=".55" />
+      <circle cx="58" cy="46" r="2.2" fill={K} opacity=".55" />
+      <path d="M66 22 l4 -6 M72 28 l7 -3 M60 14 l2 -7" stroke={POISON} strokeWidth="3" strokeLinecap="round" />
+    </>
+  ),
 };
 
 /** 開放的效果卡與 Ex 卡的專屬卡圖，鍵是卡的內部 id */

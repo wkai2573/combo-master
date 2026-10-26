@@ -322,6 +322,7 @@ function* buffPhase(g: Game): Gen {
   // 增益階段開始時：增益的持續時間指示物 +1，到期的增益放入經驗區；Ex 卡到期直接移除遊戲，不進經驗區
   for (const p of order(g)) {
     for (const b of [...Z(g, p, 'buff')]) {
+      if (query(g, p, 'holdExTimer', b.id)) continue; // 聖獸在最上方時，同名 Ex 卡不放置指示物
       b.counters++;
       if (b.counters >= (data(b).duration ?? Infinity)) {
         if (isExCardId(b.id)) {

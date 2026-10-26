@@ -1,7 +1,8 @@
-import { defineSource } from '../effectKit';
+import { defineSource, type EffectSource } from '../effectKit';
 import { faceUpExp } from '../cost';
+import { query } from '../effects';
 import { isVanilla } from '../../data/enabledCards';
-import { activate, chooseCards, combatZone, data, directHit, discard, draw, log, move, pname, recover, topOfZone, Z } from '../ops';
+import { activate, chooseCards, combatZone, data, directHit, discard, draw, log, move, newCard, pname, recover, removeFromGame, topOfZone, Z } from '../ops';
 import { other } from '../types';
 
 // 冰與雷之曲（法師）：[蓋2] 收招時，戰鬥區的卡合計具有「冰」「電」兩個特徵時，抽 1、回復 1；
@@ -193,4 +194,47 @@ export const 冰茅 = defineSource({
   },
 });
 
-export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 整理魔導書, 閃電新星, 冰茅, 元素法典, 法師];
+// 聖獸白虎、聖獸玄武（法師）：[發_蓋2] 將 1 張對應的 Ex 卡放入我方增益區；[頂] 該 Ex 卡不會放置持續時間指示物。
+// 放入新的同名 Ex 卡時舊的指示物不重設（與 Ex-狂怒不同），所以直接新增一張，不經 placeExInBuff。
+// [頂] 暫停的是我方增益區所有同名 Ex 卡，不論指示物來源（增益階段開始、對方出招）；位於招式卡疊最上方才有效
+const holyBeast = (id: string, exId: string): EffectSource => defineSource({
+  id,
+  at: 'moves',
+  on: {
+    onPlay: (c) => c.effect({ label: `【${id}】將 1 張 [${exId}] 放入我方增益區（蓋2）`, cost: { cover: 2 } }, () => {
+      newCard(c.g, exId, c.p, 'buff');
+      log(c.g, `【${id}】${pname(c.g, c.p)} 將 [${exId}] 放入增益區`);
+    }),
+  },
+  ask: { holdExTimer: (c, held) => held === exId && topOfZone(c.g, c.p) === c.self },
+});
+export const 聖獸白虎 = holyBeast('聖獸白虎', 'Ex-白虎');
+export const 聖獸玄武 = holyBeast('聖獸玄武', 'Ex-玄武');
+
+// Ex-白虎、Ex-玄武：持續回合 7，我方總攻擊（總防禦）+3，每張各自生效。
+// 指示物有兩個來源：增益階段開始的通則（引擎）加 1，以及對方每次出招加 1（這裡）；到上限立即移除遊戲，不等下個增益階段。
+// 聖獸在最上方時兩種來源都暫停。好幾張（不論同名與否）各自計數、互不影響，窗口把它們併成一個強制選項，不必排順序
+const exBeast = (id: string, bonus: { atk: number; def: number }): EffectSource => defineSource({
+  id,
+  at: 'buff',
+  on: {
+    onFoePlay: (c) => c.effect(
+      { label: '【Ex 卡】放置 1 個持續時間指示物', mandatory: true, group: 'Ex 卡出招計時', when: () => !query(c.g, c.p, 'holdExTimer', id) },
+      () => {
+        const { g, self } = c;
+        self!.counters++;
+        if (self!.counters >= data(self!).duration!) {
+          log(g, `【${id}】持續時間結束，移除遊戲`);
+          removeFromGame(g, self!);
+        } else {
+          log(g, `【${id}】${pname(g, c.p)} 的指示物 +1（${self!.counters}／${data(self!).duration}）`);
+        }
+      },
+    ),
+  },
+  ask: { flatAtk: () => bonus.atk, flatDef: () => bonus.def },
+});
+export const Ex白虎 = exBeast('Ex-白虎', { atk: 3, def: 0 });
+export const Ex玄武 = exBeast('Ex-玄武', { atk: 0, def: 3 });
+
+export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 整理魔導書, 閃電新星, 冰茅, 聖獸白虎, 聖獸玄武, Ex白虎, Ex玄武, 元素法典, 法師];

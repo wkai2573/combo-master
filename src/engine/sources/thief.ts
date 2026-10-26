@@ -1,7 +1,7 @@
 import { canPay, chooseX, pay } from '../cost';
 import { defineSource, lasting, slot } from '../effectKit';
 import { isExCardId } from '../../data/exCards';
-import { activate, awakened, chooseCards, combatZone, data, discard, draw, isFirst, log, newCard, placeExInBuff, pname, topOfZone, Z, type GameCtx } from '../ops';
+import { activate, awakened, chooseCards, combatZone, data, discard, draw, isFirst, log, move, newCard, placeExInBuff, pname, topOfZone, Z, type GameCtx } from '../ops';
 import { other, type PlayerId } from '../types';
 
 // ───────────────────────── 卡片 ─────────────────────────
@@ -146,6 +146,81 @@ export const 狂怒 = defineSource({
 // 效果由狂怒的 [頂] 讀它的張數；這個條目登記它待在增益區，讓卡表同步與文字檢查知道要寫「離開增益區」
 export const Ex狂怒 = defineSource({ id: 'Ex-狂怒', at: 'buff' });
 
+/** 手中特徵為「毒」或「藥水」任一的卡 */
+const poisonHand = (g: GameCtx, p: PlayerId) => Z(g, p, 'hand').filter((card) => data(card).traits.some((t) => t === '毒' || t === '藥水'));
+
+// 毒藥（盜賊）：[發_蓋X] 捨棄手中 X 張特徵「毒」或「藥水」的卡，將 X 張 [Ex-中毒] 放入對方經驗區。X 最大為 3
+// X 在付費用時決定，蓋 X 與捨棄 X 是同一個值，不超過手中符合特徵的張數與我能蓋的張數；手中沒有符合特徵的卡就不能發動。
+// 先蓋 X（蓋反應可能改動手牌），再從手牌選要捨棄的卡
+export const 毒藥 = defineSource({
+  id: '毒藥',
+  at: 'moves',
+  on: {
+    onPlay: (c) => c.effect(
+      { label: '【毒藥】蓋 X 張經驗，捨棄 X 張毒或藥水手牌，將 X 張 Ex-中毒放入對方經驗區', when: () => canPay(c.g, c.p, { cover: 1 }) && poisonHand(c.g, c.p).length > 0 },
+      function* () {
+        const { g, p } = c;
+        const x = yield* chooseX(g, p, c.self!, Math.min(3, poisonHand(g, p).length), '蓋 X 張經驗，捨棄 X 張毒或藥水的手牌，將 X 張 Ex-中毒放入對方經驗區');
+        if (x === 0) return;
+        activate(g, p, c.self!);
+        yield* pay(g, p, { cover: x });
+        const pool = poisonHand(g, p);
+        const n = Math.min(x, pool.length);
+        const dropped = yield* chooseCards(g, p, `【毒藥】選擇 ${n} 張特徵「毒」或「藥水」的手牌捨棄`, pool, n, n);
+        for (const card of dropped) discard(g, card);
+        const foe = other(p);
+        for (let i = 0; i < dropped.length; i++) newCard(g, 'Ex-中毒', foe, 'exp');
+        log(g, `【毒藥】${pname(g, p)} 捨棄 ${dropped.map((card) => `【${data(card).name}】`).join('')}，[Ex-中毒] ×${dropped.length} 放入${pname(g, foe)}的經驗區`);
+      },
+    ),
+  },
+});
+
+// 煙霧陷阱（盜賊）：[頂] 當對方出招時，將此卡放到我方招式疊最下方。強制；位於最上方才觸發。
+// 只改疊的順序：其餘規則照疊的最新狀態算，新的最上方卡的頂部效果接手，歸還時也依新的疊序進入經驗區。
+// 疊裡只有它一張時它本來就在最下方，不必也沒有東西可動，不發動
+export const 煙霧陷阱 = defineSource({
+  id: '煙霧陷阱',
+  at: 'moves',
+  on: {
+    onFoePlay: (c) => c.effect(
+      { label: '【煙霧陷阱】將此卡放到我方招式疊最下方', mandatory: true, when: () => topOfZone(c.g, c.p) === c.self && Z(c.g, c.p, 'moves').length >= 2 },
+      () => {
+        activate(c.g, c.p, c.self!);
+        move(c.g, c.self!, 'moves', 'bottom');
+        log(c.g, `【煙霧陷阱】${pname(c.g, c.p)} 的煙霧陷阱放到招式卡疊最下方`);
+      },
+    ),
+  },
+});
+
+/** 冰凍陷阱這回合給的總防禦加成 */
+export const 冰凍陷阱狀態 = slot('冰凍陷阱', () => ({ def: 0 }));
+
+// 冰凍陷阱（盜賊）：[經_蓋3] 當對方出招時，且對方所出招式的連擊值＝我方招式疊最上方招式的連擊值，我方 +0+3。
+// 觸發窗口出現時才選擇付不付蓋3，條件在窗口開啟時判斷；加成持續到本回合結束，存在狀態槽
+export const 冰凍陷阱 = defineSource({
+  id: '冰凍陷阱',
+  at: 'exp',
+  on: {
+    onFoePlay: (c) => c.effect(
+      {
+        label: '【冰凍陷阱】此回合 +0+3（蓋3）',
+        cost: { cover: 3 },
+        when: () => {
+          const top = topOfZone(c.g, c.p);
+          return top !== undefined && data(top).combo === data(c.card).combo;
+        },
+      },
+      () => {
+        冰凍陷阱狀態.of(c.g, c.p).def += 3;
+        log(c.g, `【冰凍陷阱】${pname(c.g, c.p)} 此回合 +0+3`);
+      },
+    ),
+  },
+  ask: { flatDef: lasting((c) => 冰凍陷阱狀態.read(c.g, c.p).def) },
+});
+
 // ───────────────────────── 角色 ─────────────────────────
 
 /** 刺客兩段效果這回合各自用過了沒 */
@@ -215,4 +290,4 @@ export const 狩獵印記 = defineSource({
   },
 });
 
-export const THIEF_SOURCES = [伏擊, 順手牽羊, 卸除鎧甲, 塗毒, 幸運兔腳, 二刀連擊, 狂怒, Ex狂怒, 刺客, 先人, 狩獵印記];
+export const THIEF_SOURCES = [伏擊, 順手牽羊, 卸除鎧甲, 塗毒, 毒藥, 煙霧陷阱, 冰凍陷阱, 幸運兔腳, 二刀連擊, 狂怒, Ex狂怒, 刺客, 先人, 狩獵印記];
