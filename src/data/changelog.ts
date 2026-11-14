@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.63.1',
+    date: '2026-11-14',
+    items: [
+      { type: 'change', text: '聖獸系列數值各削弱 1：聖獸白虎攻擊力 3 改為 2，聖獸玄武防禦力 3 改為 2，Ex-白虎的加成改為我方 +2+0，Ex-玄武的加成改為我方 +0+2' },
+    ],
+  },
+  {
     version: '0.62.0',
     date: '2026-10-27',
     items: [

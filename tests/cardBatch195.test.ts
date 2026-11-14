@@ -182,13 +182,13 @@ describe('狂戰 [經]：我方戰鬥區卡片效果全部無效', () => {
     expect(totalAtk(g, 0)).toBe(atkOf('黑桃3') + atkOf('黑桃5') + 2 + 2); // 狂戰 +2、凡骨 +2（白板卡 2 張）
   });
 
-  it('不影響裝備與增益：家族相片照常可發動，Ex-白虎的 +3 照常算', () => {
+  it('不影響裝備與增益：家族相片照常可發動，Ex-白虎的 +2 照常算', () => {
     const g = scenario({ chars: ['勇者', '刺客'], phase: '回合開始', singlePhase: true, first: 0,
       p0: { exp: ['狂戰', '黑桃3', '黑桃4'], gear: ['家族相片'], buff: ['Ex-白虎'], rage: Array(6).fill('黑桃1'), deck: filler, hand: [] }, p1: { hand: [] } });
     // 回合開始：狂戰必須捨棄 5 張怒氣；家族相片需要怒2，在同一個窗口，由玩家排序
     expect(title(g)).toContain('回合開始');
     expect(g.pending!.options.map((o) => o.label).join('\n')).toContain('家族相片');
-    expect(query(g, 0, 'flatAtk')).toBe(3);
+    expect(query(g, 0, 'flatAtk')).toBe(2);
   });
 
   it('只管我方：對方戰鬥區的卡片效果照常', () => {

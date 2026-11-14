@@ -211,7 +211,7 @@ const holyBeast = (id: string, exId: string): EffectSource => defineSource({
 export const 聖獸白虎 = holyBeast('聖獸白虎', 'Ex-白虎');
 export const 聖獸玄武 = holyBeast('聖獸玄武', 'Ex-玄武');
 
-// Ex-白虎、Ex-玄武：持續回合 7，我方總攻擊（總防禦）+3，每張各自生效。
+// Ex-白虎、Ex-玄武：持續回合 7，我方總攻擊（總防禦）+2，每張各自生效。
 // 指示物有兩個來源：增益階段開始的通則（引擎）加 1，以及對方每次出招加 1（這裡）；到上限立即移除遊戲，不等下個增益階段。
 // 聖獸在最上方時兩種來源都暫停。好幾張（不論同名與否）各自計數、互不影響，窗口把它們併成一個強制選項，不必排順序
 const exBeast = (id: string, bonus: { atk: number; def: number }): EffectSource => defineSource({
@@ -234,7 +234,7 @@ const exBeast = (id: string, bonus: { atk: number; def: number }): EffectSource 
   },
   ask: { flatAtk: () => bonus.atk, flatDef: () => bonus.def },
 });
-export const Ex白虎 = exBeast('Ex-白虎', { atk: 3, def: 0 });
-export const Ex玄武 = exBeast('Ex-玄武', { atk: 0, def: 3 });
+export const Ex白虎 = exBeast('Ex-白虎', { atk: 2, def: 0 });
+export const Ex玄武 = exBeast('Ex-玄武', { atk: 0, def: 2 });
 
 export const MAGE_SOURCES = [冰與雷之曲, 火球, Explosion, 冰霜護甲, 電弧, 力量爆破, 整理魔導書, 閃電新星, 冰茅, 聖獸白虎, 聖獸玄武, Ex白虎, Ex玄武, 元素法典, 法師];

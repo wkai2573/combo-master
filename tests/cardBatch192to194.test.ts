@@ -26,8 +26,8 @@ function toNextTurn(g: ReturnType<typeof scenario>) {
 
 describe('卡表資料與登記（聖獸白虎、聖獸玄武、Ex-白虎、Ex-玄武、煙霧陷阱、冰凍陷阱、毒藥）', () => {
   it('卡表數值與開放清單', () => {
-    expect(getCard('聖獸白虎')).toMatchObject({ cls: '法師', atk: 3, def: 0, combo: 2, traits: ['召喚'] });
-    expect(getCard('聖獸玄武')).toMatchObject({ cls: '法師', atk: 0, def: 3, combo: 7, traits: ['召喚'] });
+    expect(getCard('聖獸白虎')).toMatchObject({ cls: '法師', atk: 2, def: 0, combo: 2, traits: ['召喚'] });
+    expect(getCard('聖獸玄武')).toMatchObject({ cls: '法師', atk: 0, def: 2, combo: 7, traits: ['召喚'] });
     expect(getCard('煙霧陷阱')).toMatchObject({ cls: '盜賊', atk: 1, def: 4, combo: 7, traits: ['陷阱'] });
     expect(getCard('冰凍陷阱')).toMatchObject({ cls: '盜賊', atk: 2, def: 3, combo: 8, traits: ['陷阱'] });
     expect(getCard('毒藥')).toMatchObject({ cls: '盜賊', atk: 1, def: 3, combo: 1, traits: ['毒', '藥水'] });
@@ -87,27 +87,27 @@ describe('聖獸白虎、聖獸玄武 [發_蓋2]：將 1 張 Ex 卡放入我方�
     expect(ids(g, 0, 'buff')).toEqual([]);
   });
 
-  it('放入新的同名 Ex 卡時，舊的指示物不重設，兩張各自計數、各自 +3', () => {
+  it('放入新的同名 Ex 卡時，舊的指示物不重設，兩張各自計數、各自 +2', () => {
     const g = play('聖獸白虎', ['黑桃1', '黑桃3', '黑桃4'], ['Ex-白虎@3']);
     pick(g, '發動');
     expect(counters(g, 'Ex-白虎')).toEqual([3, 0]);
-    expect(query(g, 0, 'flatAtk')).toBe(6);
-    expect(totalAtk(g, 0)).toBe(atkOf('聖獸白虎') + 6);
+    expect(query(g, 0, 'flatAtk')).toBe(4);
+    expect(totalAtk(g, 0)).toBe(atkOf('聖獸白虎') + 4);
   });
 });
 
 describe('Ex-白虎、Ex-玄武：持續回合 7，每張各自提供加成', () => {
-  it('Ex-白虎 讓我方總攻擊 +3、Ex-玄武 讓我方總防禦 +3，放幾張加幾次，只加我方', () => {
+  it('Ex-白虎 讓我方總攻擊 +2、Ex-玄武 讓我方總防禦 +2，放幾張加幾次，只加我方', () => {
     const g = scenario({
       chars: ['法師', '勇者'], first: 0,
       p0: { buff: ['Ex-白虎', 'Ex-白虎', 'Ex-玄武'], hand: [] },
       p1: { hand: [] },
       singlePhase: true,
     });
-    expect(query(g, 0, 'flatAtk')).toBe(6);
-    expect(query(g, 0, 'flatDef')).toBe(3);
-    expect(totalAtk(g, 0)).toBe(6);
-    expect(totalDef(g, 0)).toBe(3);
+    expect(query(g, 0, 'flatAtk')).toBe(4);
+    expect(query(g, 0, 'flatDef')).toBe(2);
+    expect(totalAtk(g, 0)).toBe(4);
+    expect(totalDef(g, 0)).toBe(2);
     expect(query(g, 1, 'flatAtk')).toBe(0);
     expect(query(g, 1, 'flatDef')).toBe(0);
   });
