@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { getCard } from '../../data/cards';
+import type { CardData } from '../../data/types';
 import { CARD_ART, hasOwnArt } from './cardArtGlyphs';
 
 /**
@@ -21,9 +22,9 @@ const placeholder = (
   <text x="50" y="46" textAnchor="middle" fontSize="44" fontWeight="800" fill={W} opacity=".7">?</text>
 );
 
-function glyphFor(id: string): ReactNode {
+function glyphFor(id: string, card?: CardData): ReactNode {
   if (hasOwnArt(id)) return CARD_ART[id];
-  const c = getCard(id);
+  const c = card ?? getCard(id);
   const suit = SUITS[id.slice(0, 2)];
   if (c.kind === 'move' && suit && c.traits.length === 0) {
     const n = id.slice(2);
@@ -37,11 +38,11 @@ function glyphFor(id: string): ReactNode {
   return placeholder;
 }
 
-export function CardArt({ id }: { id: string }) {
+export function CardArt({ id, card }: { id: string; card?: CardData }) {
   return (
     <div className="art">
       <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        {glyphFor(id)}
+        {glyphFor(id, card)}
       </svg>
     </div>
   );

@@ -19,6 +19,8 @@ export interface CardData {
   /** 增益持續時間 */
   duration?: number;
   text: string;
+  /** 匯入的效果文字仍待確認用語與實作 */
+  textPending?: boolean;
 }
 
 export interface CharacterData {

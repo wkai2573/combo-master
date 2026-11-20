@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.64.0',
+    date: '2026-11-21',
+    items: [
+      { type: 'add', text: '新增同站卡表，可查看卡片、角色、關鍵字與 Ex 卡，並在瀏覽器保留卡片修改、提案新卡及匯出差異檔。' },
+      { type: 'add', text: '卡表基準更新時會列出作廢的本機修改，並可清除單一欄位或全部草稿。' },
+    ],
+  },
+  {
     version: '0.63.1',
     date: '2026-11-14',
     items: [

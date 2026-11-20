@@ -1,5 +1,6 @@
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
@@ -28,6 +29,11 @@ export default defineConfig({
   ],
   // 相對路徑：同一份建置可放在網域根目錄或 GitHub Pages 的子路徑（/repo-name/）
   base: './',
+  build: {
+    rolldownOptions: {
+      input: ['index.html', 'cardTable/index.html'].map((page) => fileURLToPath(new URL(page, import.meta.url))),
+    },
+  },
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_COMMIT__: JSON.stringify(commit),

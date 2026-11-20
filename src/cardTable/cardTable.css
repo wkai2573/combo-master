@@ -1,0 +1,40 @@
+.ct { max-width: 1320px; margin: 0 auto; padding: 24px clamp(12px, 4vw, 40px); }
+.ct-header, .ct-actions, .ct-tabs, .ct-new, .ct-detail-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+}
+.ct h1 { font-size: clamp(22px, 4vw, 32px); margin: 0; }
+.ct-actions { margin-inline-start: auto; }
+.ct-tabs { margin: 20px 0 12px; }
+.ct-tabs [aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.ct-new { margin-bottom: 14px; }
+.ct input, .ct textarea, .ct select {
+  font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 5px; padding: 6px; min-width: 0;
+}
+.ct-layout { display: grid; gap: 16px; }
+.ct-with-detail { grid-template-columns: minmax(0, 1fr) minmax(270px, 340px); }
+.ct-grid { display: flex; align-content: flex-start; flex-wrap: wrap; gap: 10px; }
+.ct-grid > div { border: 1px solid transparent; border-radius: 8px; padding: 3px; }
+.ct-grid > .ct-changed { border-color: var(--accent); }
+.ct-open { display: block; width: 100%; margin-top: 4px; padding: 3px; }
+.ct-detail, .ct-records article, .ct-notice {
+  border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 12px;
+}
+.ct-detail { position: sticky; top: 12px; align-self: start; max-height: calc(100dvh - 24px); overflow: auto; }
+.ct-detail-actions { justify-content: space-between; margin-bottom: 8px; }
+.ct-field { margin-top: 10px; }
+.ct-field label { display: grid; gap: 4px; }
+.ct-field .ct-edited :is(input, select, textarea) { border-color: var(--accent); }
+.ct-original { color: var(--accent); white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px; }
+.ct-original button { padding: 2px 5px; }
+.ct-notice { margin-top: 14px; border-color: var(--accent); }
+.ct-notice button { margin-inline-start: 10px; }
+.ct-records { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 235px), 1fr)); gap: 10px; }
+.ct-records h2 { font-size: 17px; margin: 0; }
+.ct-records small { color: var(--muted); }
+.ct-records p { white-space: pre-wrap; }
+@media (max-width: 690px) {
+  .ct-actions { margin-inline-start: 0; }
+  .ct-with-detail { grid-template-columns: minmax(0, 1fr); }
+  .ct-detail { grid-row: 1; z-index: 2; max-height: 60dvh; }
+}

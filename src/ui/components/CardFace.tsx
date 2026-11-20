@@ -19,6 +19,8 @@ export const PinContext = createContext<(id: string, expActive?: boolean) => voi
 export interface CardFaceProps {
   /** null 表示看不到內容（顯示牌背） */
   id: string | null;
+  /** 卡表可提供本機草稿的預覽資料 */
+  card?: CardData;
   size?: 'sm' | 'md';
   selected?: boolean;
   glow?: boolean;
@@ -66,7 +68,7 @@ export function expEffectActive(c: Pick<CardView, 'id' | 'covered'>): boolean {
   return c.id !== null && !c.covered && hasExpEffect(c.id);
 }
 
-export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, uid, counterDelta, deltaKey, onClick, inert }: CardFaceProps) {
+export function CardFace({ id, card, size = 'md', selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, uid, counterDelta, deltaKey, onClick, inert }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const pin = useContext(PinContext);
   const cls = ['card', size];
@@ -84,7 +86,7 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
   if (id === null) {
     return <div className={[...cls, 'back'].join(' ')} data-uid={uid} onClick={onClick}>?</div>;
   }
-  const c = getCard(id);
+  const c = card ?? getCard(id);
   const isMove = c.kind === 'move';
   // 放在增益區、依持續回合計時的 Ex 卡沒有攻守連擊，卡頭改寫持續回合
   const timedEx = isExCardId(c.id) && c.duration !== undefined;
@@ -120,7 +122,7 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
           </>
         )}
       </div>
-      <CardArt id={id} />
+      <CardArt id={id} card={card} />
       <div className="ef">
         <span className="tg">{c.cls}・{kindLabel(c)}　</span>
         <CardText text={c.text} />
@@ -134,7 +136,7 @@ export function CardFace({ id, size = 'md', selected, glow, dim, pursuit, fresh,
 }
 
 /** 側欄的卡片完整說明：放大的卡圖、數值、效果，並列出文字裡關鍵字的說明 */
-export function InspectPanel({ id, expActive, pinned, onUnpin }: { id: string | null; expActive?: boolean; pinned?: boolean; onUnpin?: () => void }) {
+export function InspectPanel({ id, card, expActive, pinned, onUnpin }: { id: string | null; card?: CardData; expActive?: boolean; pinned?: boolean; onUnpin?: () => void }) {
   if (!id) {
     return (
       <div className="inspect muted">
@@ -144,7 +146,7 @@ export function InspectPanel({ id, expActive, pinned, onUnpin }: { id: string | 
       </div>
     );
   }
-  const c = getCard(id);
+  const c = card ?? getCard(id);
   const kws = keywordsIn(c.text);
   return (
     <div className="inspect" style={{ ['--cc' as string]: cardColor(c), ['--cb' as string]: cardBorderColor(c) }}>
@@ -155,7 +157,7 @@ export function InspectPanel({ id, expActive, pinned, onUnpin }: { id: string | 
         </div>
       )}
       <div className="bigart">
-        <CardArt id={id} />
+        <CardArt id={id} card={card} />
       </div>
       <div className="nm">{c.name}</div>
       <div className="muted">{c.cls}・{kindLabel(c)}</div>

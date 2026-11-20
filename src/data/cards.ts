@@ -1,31 +1,11 @@
-import cardsJson from './generated/cards.json';
 import charsJson from './generated/characters.json';
 import { characterText } from './characterText';
-import tableJson from './cardTable.json';
+import { cardTable as table, readTableCards } from './cardTableData';
 import { isCardEnabled } from './enabledCards';
 import { TUTORIAL_CHARACTERS } from './tutorialCharacters';
 import type { CardData, CharacterData } from './types';
 
-const table = tableJson as {
-  overrides: Record<string, Partial<CardData>>;
-  chars: Record<string, Partial<CharacterData>>;
-  added: CardData[];
-  exCards: CardData[];
-};
-
-/**
- * 36 張花色招式來自 xlsx，套上卡表網頁同步來的數值（cardTable.json，由 bun run table 產生）；
- * 其餘的卡（各職業的新卡、裝備）全部是卡表新增的。
- */
-const addedIds = new Set(table.added.map((c) => c.id));
-export const ALL_CARDS: CardData[] = [
-  ...(cardsJson as CardData[]).filter((c) => !addedIds.has(c.id)).map((c) => ({
-    ...c,
-    ...table.overrides[c.id],
-  })),
-  ...table.added,
-  ...table.exCards,
-];
+export const ALL_CARDS: CardData[] = readTableCards(table);
 
 /** 目前開放使用的卡（組牌卡池與牌組驗證以此為準；引擎仍能處理全部卡片） */
 export const PLAYABLE_CARDS: CardData[] = ALL_CARDS.filter(isCardEnabled);
