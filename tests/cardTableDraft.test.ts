@@ -94,6 +94,18 @@ describe('卡表草稿', () => {
     expect(() => applyDiff(cardTable, diffOf({ deletions: [{ uid, id: card.id }] }))).toThrow('基準');
   });
 
+  it('新增裝備不帶攻守連擊，保留部位與待確認用語提醒', () => {
+    const equip = { ...newCard, kind: 'equip' as const, slot: '防具' as const, atk: 5, def: 5, combo: 5 };
+    const { table, notes } = applyDiff(cardTable, diffOf({ additions: [{ uid: 'E9', card: equip }] }));
+    expect(table.added.find((entry) => entry.id === newCard.id)).toMatchObject({ kind: 'equip', slot: '防具', atk: 0, def: 0, combo: 0, textPending: true });
+    expect(notes).toContainEqual(expect.stringContaining('待確認用語並實作效果'));
+  });
+
+  it('新增卡的內部 id 與既有卡重複就拒絕', () => {
+    expect(() => applyDiff(cardTable, diffOf({ additions: [{ uid: 'A91', card: { ...newCard, id: card.id, name: '另一個顯示名' } }] })))
+      .toThrow('內部 id 重複');
+  });
+
   it('已匯入的新增與刪除在新版基準上不再重複列為草稿', () => {
     const addition = { uid: 'A91', card: newCard };
     const addDraft = { ...emptyDraft(), additions: [addition] };
