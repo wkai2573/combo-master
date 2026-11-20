@@ -233,6 +233,14 @@ function applyFields(card: CardData, edits: Edit[]): CardData {
 
 export const previewCard = applyFields;
 
+/** 新增招式必須有特徵或效果文字，才能與基準白板卡區分（Ex 卡不受限）。匯入端與卡表頁共用。 */
+export const isBlankMove = (card: CardData): boolean =>
+  card.kind === 'move' && !isExCardId(card.id) && !card.traits.length && !card.text;
+export const blankMoveMessage = (name: string): string =>
+  `新增招式需要特徵或效果文字，才能與 36 張基準白板卡區分：${name}`;
+export const blankMoveAdditions = (additions: Addition[]): { uid: string; card: CardData }[] =>
+  additions.filter((addition): addition is { uid: string; card: CardData } => 'card' in addition && isBlankMove(addition.card));
+
 function checkCard(card: CardData) {
   if (card.kind === 'move' && !inRange(card.combo, 1, 9)) {
     throw new Error(`招式連擊值必須介於 1～9：${card.name}`);
@@ -426,9 +434,7 @@ export function applyDiff(
     }
     const added = applyFields(card, []);
     checkCard(added);
-    if (added.kind === 'move' && !added.traits.length && !added.text) {
-      throw new Error(`新增招式需要特徵或效果文字，才能與 36 張基準白板卡區分：${added.name}`);
-    }
+    if (isBlankMove(added)) throw new Error(blankMoveMessage(added.name));
     if (added.text && !options.hasEffect?.(added.id)) {
       added.textPending = true;
       notes.push(`待確認用語並實作效果：${assigned} ${added.name}`);

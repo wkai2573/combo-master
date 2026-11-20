@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.65.1',
+    date: '2026-11-21',
+    items: [
+      { type: 'fix', text: '卡表新增招式時，若特徵與效果文字都留空，匯出差異檔前會先列出是哪幾張，補上其中之一才能匯出。' },
+    ],
+  },
+  {
     version: '0.65.0',
     date: '2026-11-21',
     items: [

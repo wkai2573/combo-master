@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cardTable, readTableCards, readTableCharacters } from '../src/data/cardTableData';
-import { applyDiff, emptyDraft, makeDiff, nextCardUid, nextUid, orderOf, realignDraft, type Draft, type OrderList } from '../src/data/cardTableDraft';
+import { applyDiff, blankMoveAdditions, blankMoveMessage, emptyDraft, makeDiff, nextCardUid, nextUid, orderOf, realignDraft, type Draft, type OrderList } from '../src/data/cardTableDraft';
 import { EX_LEAVE_RULES } from '../src/data/exCards';
 
 const card = readTableCards(cardTable).find((c) => c.id === '黑桃1')!;
@@ -104,6 +104,33 @@ describe('卡表草稿', () => {
   it('新增卡的內部 id 與既有卡重複就拒絕', () => {
     expect(() => applyDiff(cardTable, diffOf({ additions: [{ uid: 'A91', card: { ...newCard, id: card.id, name: '另一個顯示名' } }] })))
       .toThrow('內部 id 重複');
+  });
+
+  describe('新增招式需要特徵或效果文字', () => {
+    const blank = { ...newCard, id: '空白招式', name: '空白招式', traits: [], text: '' };
+    const exCard = { ...blank, id: 'Ex-空白', name: 'Ex-空白' };
+
+    it('找出特徵與文字皆空的新增招式，補上其中之一就通過', () => {
+      const additions = [
+        { uid: 'A91', card: blank },
+        { uid: 'A92', card: { ...blank, id: '有特徵', name: '有特徵', traits: ['測試'] } },
+        { uid: 'A93', card: { ...blank, id: '有文字', name: '有文字', text: '提案效果。' } },
+      ];
+      expect(blankMoveAdditions(additions)).toEqual([additions[0]]);
+    });
+
+    it('裝備、增益、Ex 卡與關鍵字不受影響', () => {
+      expect(blankMoveAdditions([
+        { uid: 'E91', card: { ...blank, kind: 'equip' as const, slot: '武器' as const } },
+        { uid: 'B91', card: { ...blank, kind: 'buff' as const } },
+        { uid: 'X91', card: exCard },
+        { uid: 'K91', keyword: { name: '新詞', group: '名詞', desc: '' } },
+      ])).toEqual([]);
+    });
+
+    it('匯入端用同一個判斷拒絕，錯誤訊息指出卡名', () => {
+      expect(() => applyDiff(cardTable, diffOf({ additions: [{ uid: 'A91', card: blank }] }))).toThrow(blankMoveMessage(blank.name));
+    });
   });
 
   it('已匯入的新增與刪除在新版基準上不再重複列為草稿', () => {

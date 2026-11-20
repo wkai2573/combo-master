@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { ALL_CARDS, ALL_CHARACTERS } from '../data/cards';
 import { cardTable } from '../data/cardTableData';
 import {
-  canDelete, cardFields, cardValue, characterFields, classes, emptyDraft, equalValue, exFields,
+  blankMoveAdditions, canDelete, cardFields, cardValue, characterFields, classes, emptyDraft, equalValue, exFields,
   fieldLabels, isFieldValue, keywordFields, kinds, makeDiff, nextCardUid, nextUid, orderLists,
   orderOf, parseDiff, previewCard, realignDraft, slots, sortByOrder,
   type Draft, type Edit, type Field, type OrderList,
@@ -91,6 +91,7 @@ export function CardTablePage() {
   const [kind, setKind] = useState<CardKind>('move');
   const [message, setMessage] = useState('');
   const [storageFailed, setStorageFailed] = useState(false);
+  const [exportTried, setExportTried] = useState(false);
   const { draft, invalidated } = local;
 
   useEffect(() => {
@@ -182,8 +183,14 @@ export function CardTablePage() {
     setSelection(undefined);
   }
 
+  const blankMoves = exportTried ? blankMoveAdditions(makeDiff(cardTable, draft, APP_VERSION).additions) : [];
   function exportDraft() {
     const diff = makeDiff(cardTable, draft, APP_VERSION);
+    if (blankMoveAdditions(diff.additions).length) {
+      setExportTried(true);
+      return;
+    }
+    setExportTried(false);
     const url = URL.createObjectURL(new Blob([JSON.stringify(diff, null, 2) + '\n'], { type: 'application/json' }));
     const link = document.createElement('a');
     link.href = url;
@@ -247,6 +254,16 @@ export function CardTablePage() {
         </div>
       </header>
       {storageFailed && <p role="alert">瀏覽器無法儲存草稿。關閉頁面前請匯出差異檔。</p>}
+      {blankMoves.length > 0 && (
+        <section className="ct-notice" role="alert" aria-label="無法匯出">
+          <strong>{blankMoves.length} 張新增招式缺少特徵與效果文字，補上其中之一才能匯出差異檔（否則無法與基準白板卡區分）</strong>
+          <ul>{blankMoves.map(({ uid, card }) => (
+            <li key={uid}>{uid} {card.name}{' '}
+              <button onClick={() => { setTab('卡片'); setName(''); setMessage(''); setSelection('draft:' + uid); }}>前往補上</button>
+            </li>
+          ))}</ul>
+        </section>
+      )}
       {invalidated.length > 0 && (
         <section className="ct-notice" aria-label="草稿作廢">
           <strong>{invalidated.length} 項本地修改已因基準更新而作廢</strong>
