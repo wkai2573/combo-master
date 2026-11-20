@@ -1,6 +1,7 @@
-import { generatedCards, readTableCards, type CardTableData } from './cardTableData';
+import { generatedCards, generatedCharacters, readTableCards, readTableCharacters, type CardTableData, type UidPrefix } from './cardTableData';
 import { ENABLED_EFFECT_CARDS } from './enabledCards';
-import { isExCardId } from './exCards';
+import { checkExLeaveRule, EX_LEAVE_RULES, isExCardId, type ExZone } from './exCards';
+import type { Keyword } from './keywords';
 import type { CardData, CardKind } from './types';
 
 export const classes = ['共用', '劍士', '盜賊', '商人', '弓箭手', '法師'] as const;
@@ -10,20 +11,45 @@ export const fieldLabels = {
   name: '卡名', kind: '類型', cls: '職業', traits: '特徵',
   atk: '攻擊力', def: '防禦力', combo: '連擊值', expReq: '經驗需求',
   slot: '部位', duration: '持續回合', text: '效果文字',
+  hp: '生命值', group: '分類', desc: '說明', order: '清單順序',
 } as const;
 export type Field = keyof typeof fieldLabels;
 type Value = string | number | string[] | null;
 export interface Edit { uid: string; field: Field; base: Value; value: Value }
-export interface Addition { uid: string; card: CardData }
+export type Addition = { uid: string; card: CardData } | { uid: string; keyword: Keyword };
 export interface Deletion { uid: string; id: string }
 export interface Draft { edits: Edit[]; additions: Addition[]; deletions: Deletion[] }
 interface Diff extends Draft { formatVersion: 1; baseVersion: string }
 
 export const emptyDraft = (): Draft => ({ edits: [], additions: [], deletions: [] });
 export const equalValue = (a: Value, b: Value): boolean => JSON.stringify(a) === JSON.stringify(b);
-export const cardValue = (card: CardData, field: Field): Value => card[field] ?? null;
+type RecordData = CardData | ReturnType<typeof readTableCharacters>[number] | Keyword;
+export const cardValue = (card: RecordData, field: Field): Value => (card as Partial<Record<Field, Value>>)[field] ?? null;
 const prefixes = { move: 'A', equip: 'E', buff: 'B' } as const;
 const cardUid = /^[AEB][1-9]\d*$/;
+const uidPattern = /^[ABECKX][1-9]\d*$/;
+export const cardFields = ['name', 'kind', 'cls', 'traits', 'atk', 'def', 'combo', 'expReq', 'slot', 'duration', 'text'] as const;
+export const exFields = ['name', 'traits', 'text'] as const;
+export const keywordFields = ['name', 'group', 'desc'] as const;
+export const characterFields = ['name', 'cls', 'hp', 'expReq'] as const;
+export const orderLists = { added: '新增卡', exCards: 'Ex 卡', keywords: '關鍵字' } as const;
+export type OrderList = keyof typeof orderLists;
+const isOrderList = (uid: string): uid is OrderList => Object.hasOwn(orderLists, uid);
+export const orderOf = (table: CardTableData, list: OrderList): string[] =>
+  table[list].map((entry) => 'id' in entry ? entry.id : entry.name);
+export function sortByOrder<T>(items: T[], order: string[], key: (item: T) => string): T[] {
+  const rank = new Map(order.map((id, index) => [id, index]));
+  return [...items].sort((a, b) => (rank.get(key(a)) ?? order.length) - (rank.get(key(b)) ?? order.length));
+}
+
+function proposedOrder(list: OrderList, base: string[], order: string[], draft: Draft): string[] {
+  const deleted = new Set(draft.deletions.map(({ id }) => id));
+  const added = draft.additions.flatMap((addition) => {
+    if ('keyword' in addition) return list === 'keywords' ? [addition.keyword.name] : [];
+    return list === (isExCardId(addition.card.id) ? 'exCards' : 'added') ? [addition.card.id] : [];
+  });
+  return sortByOrder([...base.filter((id) => list === 'keywords' || !deleted.has(id)), ...added], order, (id) => id);
+}
 const baseIds = new Set(generatedCards.map((card) => card.id));
 const enabledIds = new Set(ENABLED_EFFECT_CARDS);
 
@@ -32,35 +58,59 @@ export function canDelete(card: CardData): boolean {
 }
 
 export function nextCardUid(table: CardTableData, kind: CardKind, previous: string[]): string {
-  const prefix = prefixes[kind];
+  return nextUid(table, prefixes[kind], previous);
+}
+
+export function nextUid(table: CardTableData, prefix: UidPrefix, previous: string[]): string {
   const latest = previous.reduce((max, uid) => uid.startsWith(prefix) ? Math.max(max, Number(uid.slice(1))) : max,
     table.uidSeq[prefix]);
   return prefix + (latest + 1);
 }
 
-function cardsByUid(table: CardTableData): Map<string, CardData> {
-  const byId = new Map(readTableCards(table).map((card) => [card.id, card]));
-  return new Map(Object.entries(table.uids).filter(([uid, id]) => cardUid.test(uid) && byId.has(id))
-    .map(([uid, id]) => [uid, byId.get(id)!]));
+function recordsByUid(table: CardTableData): Map<string, RecordData> {
+  const records = new Map<string, RecordData>(readTableCards(table).map((card) => [(isExCardId(card.id) ? 'X:' : 'card:') + card.id, card]));
+  for (const character of readTableCharacters(table)) records.set('C:' + character.id, character);
+  for (const keyword of table.keywords) records.set('K:' + keyword.name, keyword);
+  const indexed = new Map<string, RecordData>();
+  for (const [uid, id] of Object.entries(table.uids)) {
+    const record = records.get((cardUid.test(uid) ? 'card' : uid[0]) + ':' + id);
+    if (record) indexed.set(uid, record);
+  }
+  return indexed;
 }
 
 export function realignDraft(table: CardTableData, draft: Draft): { draft: Draft; invalidated: Edit[] } {
-  const cards = cardsByUid(table);
+  const records = recordsByUid(table);
   const invalidated: Edit[] = [];
   const edits = draft.edits.filter((edit) => {
-    const card = cards.get(edit.uid);
-    const current = card && cardValue(card, edit.field);
-    if (current !== undefined && equalValue(current, edit.value)) return false;
+    const record = records.get(edit.uid);
+    const current = isOrderList(edit.uid) ? orderOf(table, edit.uid) : record && cardValue(record, edit.field);
+    if (isOrderList(edit.uid) && Array.isArray(edit.base) && Array.isArray(edit.value)) {
+      const proposed = proposedOrder(edit.uid, edit.base, edit.value, draft);
+      const renamed = new Map<string, string>();
+      if (edit.uid === 'keywords') {
+        for (const { uid, field, base, value } of draft.edits) {
+          if (uid.startsWith('K') && field === 'name' && records.get(uid)?.name === value) renamed.set(String(base), String(value));
+        }
+      }
+      if (equalValue(current!, proposed.map((id) => renamed.get(id) ?? id))) return false;
+    } else if (current !== undefined && equalValue(current, edit.value)) {
+      return false;
+    }
     if (current !== undefined && equalValue(current, edit.base)) return true;
     invalidated.push(edit);
     return false;
   });
-  const addedById = new Map(table.added.map((card) => [card.id, card]));
-  const additions = draft.additions.filter(({ card }) => {
+  const addedById = new Map([...table.added, ...table.exCards].map((card) => [card.id, card]));
+  const additions = draft.additions.filter((addition) => {
+    if ('keyword' in addition) return !table.keywords.some((keyword) =>
+      keywordFields.every((field) => keyword[field] === addition.keyword[field]));
+    const { card } = addition;
     const current = addedById.get(card.id);
     if (!current) return true;
-    const proposed = applyFields(card, []);
-    return (Object.keys(fieldLabels) as Field[]).some((field) => !equalValue(cardValue(current, field), cardValue(proposed, field)));
+    const ex = isExCardId(card.id);
+    const proposed = ex ? card : applyFields(card, []);
+    return (ex ? exFields : cardFields).some((field) => !equalValue(cardValue(current, field), cardValue(proposed, field)));
   });
   const deletions = draft.deletions.filter(({ uid }) => Object.hasOwn(table.uids, uid));
   return { draft: { edits, additions, deletions }, invalidated };
@@ -81,8 +131,10 @@ const inRange = (value: unknown, min = 0, max = 99) =>
   typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
 const nameIsValid = (value: unknown): value is string =>
   typeof value === 'string' && value.length <= 100 && value.trim() === value && value.length > 0 && !isExCardId(value);
+const exNameIsValid = (value: unknown): value is string =>
+  typeof value === 'string' && isExCardId(value) && nameIsValid(value.slice(3)) && value.length <= 100 && !value.includes(']');
 const fieldValidators: Record<Field, (value: unknown) => boolean> = {
-  name: nameIsValid,
+  name: (v) => nameIsValid(v) || exNameIsValid(v),
   kind: (v) => typeof v === 'string' && Object.hasOwn(kinds, v),
   cls: (v) => classes.some((cls) => cls === v),
   traits: (v) => Array.isArray(v) && v.length <= 30 && v.every((t) => typeof t === 'string' && t.trim().length > 0 && t.length <= 100),
@@ -90,8 +142,13 @@ const fieldValidators: Record<Field, (value: unknown) => boolean> = {
   slot: (v) => v === null || slots.some((slot) => slot === v),
   duration: (v) => v === null || inRange(v, 0),
   text: (v) => typeof v === 'string' && v.length <= 10000,
+  hp: (v) => inRange(v, 0),
+  group: nameIsValid,
+  desc: (v) => typeof v === 'string' && v.length <= 10000,
+  order: (v) => Array.isArray(v) && new Set(v).size === v.length && v.every((id) => nameIsValid(id) || exNameIsValid(id)),
 };
-export const isFieldValue = (field: Field, value: unknown): value is Value => fieldValidators[field](value);
+export const isFieldValue = (field: Field, value: unknown, prefix = ''): value is Value =>
+  field === 'name' && prefix !== 'K' ? (prefix === 'X' ? exNameIsValid(value) : nameIsValid(value)) : fieldValidators[field](value);
 
 function objectWithKeys(value: unknown, keys: string[]): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -99,8 +156,18 @@ function objectWithKeys(value: unknown, keys: string[]): value is Record<string,
 }
 
 function validUid(value: unknown): value is string {
-  return typeof value === 'string' && cardUid.test(value) && Number.isSafeInteger(Number(value.slice(1)))
+  return typeof value === 'string' && uidPattern.test(value) && Number.isSafeInteger(Number(value.slice(1)))
     && Number(value.slice(1)) < Number.MAX_SAFE_INTEGER;
+}
+
+function editableFields(uid: string): readonly Field[] {
+  if (isOrderList(uid)) return ['order'];
+  switch (uid[0]) {
+    case 'C': return characterFields;
+    case 'K': return keywordFields;
+    case 'X': return exFields;
+    default: return cardFields;
+  }
 }
 
 export function parseDiff(input: unknown): Diff {
@@ -112,10 +179,12 @@ export function parseDiff(input: unknown): Diff {
   const edited = new Set<string>();
   const editedUids = new Set<string>();
   for (const edit of input.edits) {
-    if (!objectWithKeys(edit, ['uid', 'field', 'base', 'value']) || !validUid(edit.uid)
-      || typeof edit.field !== 'string' || !Object.hasOwn(fieldValidators, edit.field)
-      || !isFieldValue(edit.field as Field, edit.base) || !isFieldValue(edit.field as Field, edit.value)) {
-      throw new Error('欄位改動格式不符、欄位不明或數值超出範圍');
+    if (!objectWithKeys(edit, ['uid', 'field', 'base', 'value'])
+      || !(validUid(edit.uid) || typeof edit.uid === 'string' && isOrderList(edit.uid))
+      || !editableFields(edit.uid).includes(edit.field as Field)
+      || !isFieldValue(edit.field as Field, edit.base, edit.uid[0])
+      || !isFieldValue(edit.field as Field, edit.value, edit.uid[0])) {
+      throw new Error('欄位改動格式不符、欄位不明或數值超出範圍（Ex 卡名稱須以 Ex- 開頭）');
     }
     const key = edit.uid + ':' + edit.field;
     if (edited.has(key)) throw new Error(`欄位改動重複：${key}`);
@@ -123,23 +192,29 @@ export function parseDiff(input: unknown): Diff {
     editedUids.add(edit.uid);
   }
   const added = new Set<string>();
-  const fields = Object.keys(fieldValidators) as Field[];
   for (const addition of input.additions) {
-    if (!objectWithKeys(addition, ['uid', 'card']) || !validUid(addition.uid)) {
+    if (!objectWithKeys(addition, ['uid', 'card', 'keyword']) || !validUid(addition.uid) || addition.uid.startsWith('C')) {
       throw new Error('新增卡格式不符');
     }
+    const prefix = addition.uid[0];
     const card = addition.card;
-    if (!objectWithKeys(card, ['id', ...fields]) || !nameIsValid(card.id)
-      || !fields.every((field) => isFieldValue(field, field === 'slot' || field === 'duration'
-        ? card[field] ?? null : card[field]))) {
-      throw new Error('新增卡格式不符、欄位不明或數值超出範圍');
+    const keyword = addition.keyword;
+    if (addition.uid.startsWith('K')) {
+      if (card !== undefined || !objectWithKeys(keyword, [...keywordFields])
+        || !keywordFields.every((field) => isFieldValue(field, keyword[field], prefix))) throw new Error('新增關鍵字格式不符');
+    } else if (keyword !== undefined || !objectWithKeys(card, ['id', ...cardFields]) || !isFieldValue('name', card.id, prefix)
+      || !cardFields.every((field) => isFieldValue(field, field === 'slot' || field === 'duration'
+        ? card[field] ?? null : card[field], prefix))) {
+      throw new Error('新增卡格式不符、欄位不明或數值超出範圍（Ex 卡名稱須以 Ex- 開頭）');
     }
     if (added.has(addition.uid)) throw new Error(`編號重複：${addition.uid}`);
     added.add(addition.uid);
   }
   const deleted = new Set<string>();
   for (const deletion of input.deletions) {
-    if (!objectWithKeys(deletion, ['uid', 'id']) || !validUid(deletion.uid) || !nameIsValid(deletion.id)) {
+    if (!objectWithKeys(deletion, ['uid', 'id']) || !validUid(deletion.uid)
+      || !(cardUid.test(deletion.uid) || deletion.uid.startsWith('X'))
+      || !isFieldValue('name', deletion.id, deletion.uid[0])) {
       throw new Error('刪除標記格式不符');
     }
     if (deleted.has(deletion.uid) || editedUids.has(deletion.uid)) throw new Error(`編號重複：${deletion.uid}`);
@@ -167,35 +242,71 @@ function checkCard(card: CardData) {
   }
 }
 
-function checkReferences(cards: CardData[], exCards: CardData[], characterTexts: string[]) {
-  const exNames = new Set(exCards.map((card) => card.name));
-  for (const text of [...cards.map((card) => card.text), ...characterTexts]) {
+function checkReferences(table: CardTableData, extraTexts: string[]) {
+  const exNames = new Set(table.exCards.map((card) => card.name));
+  const texts = [
+    ...readTableCards(table).map(({ name, text }) => ({ name, text })),
+    ...readTableCharacters(table).map(({ name, text, awakenText }) => ({ name, text: text + '\n' + awakenText })),
+    ...extraTexts.map((text) => ({ name: '角色', text })),
+  ];
+  const missing = new Set<string>();
+  for (const { name: owner, text } of texts) {
     for (const [, name] of text.matchAll(/\[(Ex-[^\]]+)\]/g)) {
-      if (!exNames.has(name)) throw new Error(`引用了不存在的 Ex 卡：[${name}]`);
+      if (!exNames.has(name)) missing.add(`【${owner}】引用了不存在的 Ex 卡：[${name}]`);
     }
   }
+  if (missing.size) throw new Error([...missing].join('\n'));
 }
+
+function prepareEx(card: CardData, notes: string[], options: ImportOptions): CardData {
+  const { id, name, traits, text } = card;
+  const leave = checkExLeaveRule(text, options.exZone?.(id));
+  if (leave) throw new Error(`Ex 卡${leave}：${name}`);
+  if (!options.hasEffect?.(id)) notes.push(`Ex 卡尚未實作效果：${name}`);
+  const result: CardData = { id, name, traits, text, kind: 'move', cls: '共用', atk: 0, def: 0, combo: 0, expReq: 0 };
+  const duration = /持續回合：(\d+)/.exec(text)?.[1];
+  if (duration) {
+    const turns = Number(duration);
+    if (!Number.isSafeInteger(turns) || turns < 1) throw new Error(`Ex 卡持續回合不符：${name}`);
+    result.duration = turns;
+  }
+  else if (text.includes(EX_LEAVE_RULES.buff)) notes.push(`Ex 卡缺少「持續回合：N。」，不會到期：${name}`);
+  return result;
+}
+
+type ImportOptions = {
+  hasEffect?: (id: string) => boolean;
+  exZone?: (id: string) => ExZone | undefined;
+  characterTexts?: string[];
+};
 
 export function applyDiff(
   baseline: CardTableData,
   input: unknown,
-  options: { hasEffect?: (id: string) => boolean; characterTexts?: string[] } = {},
+  options: ImportOptions = {},
 ): { table: CardTableData; notes: string[] } {
   const diff = parseDiff(input);
   const table = structuredClone(baseline);
-  const cards = cardsByUid(baseline);
+  const records = recordsByUid(baseline);
   const notes: string[] = [];
   const editsByUid = new Map<string, Edit[]>();
+  const orders = new Map<OrderList, string[]>();
+  const keywordRenames = new Map<string, string>();
   for (const edit of diff.edits) {
     const { uid, field, base, value } = edit;
-    const card = cards.get(uid);
+    if (isOrderList(uid)) {
+      if (equalValue(orderOf(baseline, uid), base)) orders.set(uid, value as string[]);
+      else if (!equalValue(orderOf(baseline, uid), value)) notes.push(`排序衝突（未套用）：${orderLists[uid]}`);
+      continue;
+    }
+    const card = records.get(uid);
     const label = `${uid} ${card?.name ?? ''} ${fieldLabels[field]}`;
     if (!card || !equalValue(cardValue(card, field), base)) {
       notes.push(`欄位衝突（未套用）：${label}`);
       continue;
     }
     if (equalValue(base, value)) continue;
-    if (field === 'text' && baseIds.has(card.id)) {
+    if (field === 'text' && 'id' in card && baseIds.has(card.id)) {
       notes.push(`文字不同（未套用，待確認用語）：${label} → ${value}`);
       continue;
     }
@@ -205,7 +316,35 @@ export function applyDiff(
   }
 
   for (const [uid, edits] of editsByUid) {
-    const before = cards.get(uid)!;
+    const before = records.get(uid)!;
+    const changed = Object.fromEntries(edits.map(({ field, value }) => [field, value]));
+    if ('hp' in before) {
+      const original = generatedCharacters.find(({ id }) => id === before.id)!;
+      const override = { ...table.chars[before.id] };
+      for (const { field, value } of edits) {
+        if (equalValue(cardValue(original, field), value)) delete override[field as keyof typeof override];
+        else Object.assign(override, { [field]: value });
+      }
+      if (Object.keys(override).length) table.chars[before.id] = override;
+      else delete table.chars[before.id];
+      if (changed.name !== undefined) notes.push(`角色名稱已改：${uid} ${before.name} → ${changed.name}（內部 id 不變）`);
+      if (changed.cls !== undefined) notes.push(`角色職業已改：${uid} ${before.cls} → ${changed.cls}，可用的專用卡會改變`);
+      continue;
+    }
+    if (!('id' in before)) {
+      const keyword = { ...before, ...changed };
+      table.keywords[baseline.keywords.indexOf(before)] = keyword;
+      table.uids[uid] = keyword.name;
+      if (keyword.name !== before.name) keywordRenames.set(before.name, keyword.name);
+      if (changed.desc !== undefined) notes.push(`關鍵字說明待確認用語：${uid} ${keyword.name}`);
+      continue;
+    }
+    if (uid.startsWith('X')) {
+      const after = prepareEx({ ...before, ...changed }, notes, options);
+      table.exCards[table.exCards.findIndex(({ id }) => id === before.id)] = after;
+      if (after.name !== before.name) notes.push(`Ex 卡名已改：${uid} ${before.name} → ${after.name}（內部 id 不變）`);
+      continue;
+    }
     const after = applyFields(before, edits);
     checkCard(after);
     if (before.name !== after.name) notes.push(`卡名已改：${uid}【${before.name}】→【${after.name}】（內部 id 不變）`);
@@ -225,7 +364,7 @@ export function applyDiff(
     } else {
       const override = { ...table.overrides[before.id] };
       const original = generatedCards.find((card) => card.id === before.id)!;
-      for (const field of Object.keys(fieldLabels) as Field[]) {
+      for (const field of cardFields) {
         const value = cardValue(after, field);
         if (equalValue(value, cardValue(before, field))) continue;
         if (equalValue(value, cardValue(original, field))) delete override[field];
@@ -237,13 +376,16 @@ export function applyDiff(
   }
 
   for (const { uid, id } of diff.deletions) {
-    const card = cards.get(uid);
-    if (!card || card.id !== id) {
+    const card = records.get(uid);
+    if (!card || !('kind' in card) || card.id !== id) {
       notes.push(`刪除衝突（未套用）：${uid} ${id}`);
       continue;
     }
-    if (!canDelete(card)) throw new Error(`卡片仍屬於基準資料或已啟用：${uid} ${id}`);
-    table.added = table.added.filter((entry) => entry.id !== id);
+    if (uid.startsWith('X')) table.exCards = table.exCards.filter((entry) => entry.id !== id);
+    else {
+      if (!canDelete(card)) throw new Error(`卡片仍屬於基準資料或已啟用：${uid} ${id}`);
+      table.added = table.added.filter((entry) => entry.id !== id);
+    }
     delete table.uids[uid];
   }
 
@@ -251,7 +393,7 @@ export function applyDiff(
   const reserved = new Set<string>();
   const lastReserved = { ...baseline.uidSeq };
   for (const { uid } of diff.additions) {
-    const prefix = uid[0] as 'A' | 'E' | 'B';
+    const prefix = uid[0] as UidPrefix;
     const number = Number(uid.slice(1));
     if (number > baseline.uidSeq[prefix] && !Object.hasOwn(baseline.uids, uid)) {
       reserved.add(uid);
@@ -259,14 +401,29 @@ export function applyDiff(
     }
   }
   const existingIds = new Set(readTableCards(baseline).map((card) => card.id));
-  for (const { uid, card } of diff.additions) {
-    if (existingIds.has(card.id)) throw new Error(`內部 id 重複：${card.id}`);
-    existingIds.add(card.id);
-    const prefix = uid[0] as 'A' | 'E' | 'B';
+  for (const addition of diff.additions) {
+    const { uid } = addition;
+    const prefix = uid[0] as UidPrefix;
     const assigned = reserved.has(uid) ? uid : prefix + (Math.max(table.uidSeq[prefix], lastReserved[prefix]) + 1);
     if (!validUid(assigned)) throw new Error(`已超過可用編號範圍：${assigned}`);
     table.uidSeq[prefix] = Math.max(table.uidSeq[prefix], Number(assigned.slice(1)));
+    const name = 'keyword' in addition ? addition.keyword.name : addition.card.name;
+    if (assigned !== uid) notes.push(`暫領編號重新分配：${uid} → ${assigned}（${name}）`);
+    if ('keyword' in addition) {
+      table.uids[assigned] = name;
+      table.keywords.push({ ...addition.keyword });
+      if (addition.keyword.desc) notes.push(`關鍵字說明待確認用語：${assigned} ${name}`);
+      continue;
+    }
+    const { card } = addition;
+    if (existingIds.has(card.id)) throw new Error(`內部 id 重複：${card.id}`);
+    existingIds.add(card.id);
     table.uids[assigned] = card.id;
+    if (prefix === 'X') {
+      table.exCards.push(prepareEx(card, notes, options));
+      if (card.id !== name) notes.push(`Ex 卡名已改：${assigned} ${card.id} → ${name}（內部 id 不變）`);
+      continue;
+    }
     const added = applyFields(card, []);
     checkCard(added);
     if (added.kind === 'move' && !added.traits.length && !added.text) {
@@ -277,9 +434,25 @@ export function applyDiff(
       notes.push(`待確認用語並實作效果：${assigned} ${added.name}`);
     }
     table.added.push(added);
-    if (assigned !== uid) notes.push(`暫領編號重新分配：${uid} → ${assigned}（${card.name}）`);
   }
 
-  checkReferences(readTableCards(table), table.exCards, options.characterTexts ?? []);
+  for (const list of ['exCards', 'keywords'] as const) {
+    const names = new Set<string>();
+    for (const { name } of table[list]) {
+      if (names.has(name)) throw new Error(`${orderLists[list]}名稱重複：${name}`);
+      names.add(name);
+    }
+  }
+  const addedOrder = orders.get('added');
+  const exOrder = orders.get('exCards');
+  const keywordOrder = orders.get('keywords');
+  if (addedOrder) table.added = sortByOrder(table.added, addedOrder, ({ id }) => id);
+  if (exOrder) table.exCards = sortByOrder(table.exCards, exOrder, ({ id }) => id);
+  if (keywordOrder) table.keywords = sortByOrder(table.keywords, keywordOrder.map((name) => keywordRenames.get(name) ?? name), ({ name }) => name);
+  if (diff.additions.length || diff.deletions.length) {
+    table.uids = Object.fromEntries(Object.entries(table.uids).sort(([a], [b]) =>
+      a[0].localeCompare(b[0]) || Number(a.slice(1)) - Number(b.slice(1))));
+  }
+  checkReferences(table, options.characterTexts ?? []);
   return { table, notes };
 }

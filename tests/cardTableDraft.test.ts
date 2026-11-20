@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { cardTable, readTableCards } from '../src/data/cardTableData';
-import { applyDiff, emptyDraft, makeDiff, nextCardUid, realignDraft, type Draft } from '../src/data/cardTableDraft';
+import { cardTable, readTableCards, readTableCharacters } from '../src/data/cardTableData';
+import { applyDiff, emptyDraft, makeDiff, nextCardUid, nextUid, orderOf, realignDraft, type Draft, type OrderList } from '../src/data/cardTableDraft';
+import { EX_LEAVE_RULES } from '../src/data/exCards';
 
 const card = readTableCards(cardTable).find((c) => c.id === '黑桃1')!;
 const uid = Object.keys(cardTable.uids).find((key) => cardTable.uids[key] === card.id)!;
@@ -73,6 +74,7 @@ describe('卡表草稿', () => {
     const { table, notes } = applyDiff(cardTable, diff);
     expect(table.uids).toMatchObject({ A92: '另一張新卡', A93: newCard.id });
     expect(table.uidSeq.A).toBe(93);
+    expect(Object.keys(table.uids).filter((key) => key.startsWith('A')).slice(-2)).toEqual(['A92', 'A93']);
     expect(table.added.find((entry) => entry.id === newCard.id)).toEqual({ ...newCard, textPending: true });
     expect(notes).toContainEqual(expect.stringContaining('A91 → A93'));
     expect(() => applyDiff(cardTable, { ...diff, additions: [diff.additions[0], diff.additions[0]] })).toThrow('編號重複');
@@ -100,5 +102,117 @@ describe('卡表草稿', () => {
     const deleteDraft = { ...emptyDraft(), deletions: [{ uid: 'A92', id: newCard.id }] };
     const removed = applyDiff(added, makeDiff(added, deleteDraft, '0.64.0')).table;
     expect(realignDraft(removed, deleteDraft).draft).toEqual(emptyDraft());
+  });
+});
+
+describe('角色、關鍵字與 Ex 卡', () => {
+  const character = readTableCharacters(cardTable)[0];
+  const charUid = Object.keys(cardTable.uids).find((key) => key.startsWith('C') && cardTable.uids[key] === character.id)!;
+  const keyword = { name: '試驗標記', group: '名詞', desc: '效果說明。' };
+  const keywordUid = nextUid(cardTable, 'K', []);
+  const exUid = nextUid(cardTable, 'X', []);
+  const ex = { ...newCard, id: 'Ex-測試', name: 'Ex-測試', traits: ['毒'], text: EX_LEAVE_RULES.exp };
+
+  it('角色改名、生命值與職業只寫入覆蓋值，保留內部 id 並提醒專用卡', () => {
+    const edits: Draft['edits'] = [
+      { uid: charUid, field: 'name', base: character.name, value: '新角色名' },
+      { uid: charUid, field: 'hp', base: character.hp, value: character.hp + 1 },
+      { uid: charUid, field: 'cls', base: character.cls, value: '法師' },
+    ];
+    const draft = { ...emptyDraft(), edits };
+    const { table, notes } = applyDiff(cardTable, diffOf(draft));
+    expect(table.chars[character.id]).toEqual({ ...cardTable.chars[character.id], name: '新角色名', hp: character.hp + 1, cls: '法師' });
+    expect(table.uids[charUid]).toBe(character.id);
+    expect(readTableCharacters(table)[0]).toMatchObject({ id: character.id, hp: character.hp + 1, name: '新角色名' });
+    expect(notes).toContainEqual(expect.stringContaining('專用卡'));
+    expect(realignDraft(table, draft).draft).toEqual(emptyDraft());
+    expect(realignDraft({ ...cardTable, chars: { ...cardTable.chars, [character.id]: { hp: character.hp - 1 } } }, draft).invalidated).toEqual([edits[1]]);
+  });
+
+  it('關鍵字新增與編輯會保留 K 編號，並報告待確認說明及作廢欄位', () => {
+    const existing = cardTable.keywords[0];
+    const uid = Object.keys(cardTable.uids).find((key) => key.startsWith('K') && cardTable.uids[key] === existing.name)!;
+    const edit = { uid, field: 'desc' as const, base: existing.desc, value: '更新說明。' };
+    const draft = { ...emptyDraft(), additions: [{ uid: keywordUid, keyword }], edits: [edit] };
+    const { table, notes } = applyDiff(cardTable, diffOf(draft));
+    expect(table.keywords[0]).toEqual({ ...existing, desc: edit.value });
+    expect(table.keywords.at(-1)).toEqual(keyword);
+    expect(table.uids[keywordUid]).toBe(keyword.name);
+    expect(notes).toEqual([expect.stringContaining(uid), expect.stringContaining(keywordUid)]);
+    expect(realignDraft(table, draft)).toEqual({ draft: emptyDraft(), invalidated: [] });
+    expect(realignDraft({ ...cardTable, keywords: [{ ...existing, desc: '別人的修改' }, ...cardTable.keywords.slice(1)] }, draft).invalidated).toEqual([edit]);
+    expect(() => applyDiff(cardTable, diffOf({ additions: [{ uid: keywordUid, keyword }, { uid: keywordUid, keyword }] }))).toThrow('編號重複');
+  });
+
+  it('Ex 卡新增、改名及刪除保留內部 id 與發號進度', () => {
+    const draft = { ...emptyDraft(), additions: [{ uid: exUid, card: ex }] };
+    const { table, notes } = applyDiff(cardTable, diffOf(draft));
+    expect(table.exCards.at(-1)).toMatchObject({ id: ex.id, kind: 'move', cls: '共用', atk: 0, def: 0, combo: 0 });
+    expect(notes).toContainEqual(expect.stringContaining('尚未實作效果'));
+    expect(realignDraft(table, draft).draft).toEqual(emptyDraft());
+    const rename = makeDiff(table, { ...emptyDraft(), edits: [{ uid: exUid, field: 'name', base: ex.name, value: 'Ex-新名稱' }] }, '0.65.0');
+    const renamed = applyDiff(table, rename, { hasEffect: () => true });
+    expect(renamed.table.exCards.at(-1)).toMatchObject({ id: ex.id, name: 'Ex-新名稱' });
+    expect(renamed.table.uids[exUid]).toBe(ex.id);
+    expect(renamed.notes).toContainEqual(expect.stringContaining('內部 id 不變'));
+    const removed = applyDiff(renamed.table, makeDiff(renamed.table, { ...emptyDraft(), deletions: [{ uid: exUid, id: ex.id }] }, '0.65.0')).table;
+    expect(removed.exCards).toEqual(cardTable.exCards);
+    expect(removed.uids[exUid]).toBeUndefined();
+    expect(nextUid(removed, 'X', [])).not.toBe(exUid);
+    expect(() => applyDiff(table, { ...diffOf({}), additions: [{ uid: nextUid(table, 'X', []), card: ex }] })).toThrow('內部 id 重複');
+  });
+
+  it('驗證 Ex 卡名稱、離場區域與增益回合', () => {
+    const add = (name: string, text: string) => diffOf({ additions: [{ uid: exUid, card: { ...ex, name, text } }] });
+    expect(() => applyDiff(cardTable, add('無前綴', ex.text))).toThrow('Ex-');
+    expect(() => applyDiff(cardTable, add(ex.name, '無離場規則。'))).toThrow('缺少');
+    expect(() => applyDiff(cardTable, add(ex.name, ex.text), { exZone: () => 'buff' })).toThrow(EX_LEAVE_RULES.buff);
+    expect(applyDiff(cardTable, add(ex.name, `持續回合：3。\n${EX_LEAVE_RULES.buff}`)).table.exCards.at(-1)?.duration).toBe(3);
+    expect(applyDiff(cardTable, add(ex.name, EX_LEAVE_RULES.buff)).notes).toContainEqual(expect.stringContaining('不會到期'));
+  });
+
+  it('檢查卡、角色與 Ex 卡的引用，拒絕刪除並列出引用者', () => {
+    const referenced = cardTable.exCards.find(({ name }) => name === 'Ex-中毒')!;
+    const uid = Object.keys(cardTable.uids).find((key) => cardTable.uids[key] === referenced.id)!;
+    expect(() => applyDiff(cardTable, diffOf({ deletions: [{ uid, id: referenced.id }] }))).toThrow(/【.+】引用了不存在的 Ex 卡：\[Ex-中毒\]/);
+    const referencing = (name: string) => diffOf({ additions: [{ uid: exUid, card: { ...ex, text: `[${name}]\n${ex.text}` } }] });
+    expect(() => applyDiff(cardTable, referencing('Ex-不存在'))).toThrow('【Ex-測試】引用了不存在的 Ex 卡');
+    expect(() => applyDiff(cardTable, diffOf({ additions: [{ uid: 'A91', card: { ...newCard, text: '[Ex-不存在]' } }] })))
+      .toThrow('【測試新卡】引用了不存在的 Ex 卡');
+    expect(() => applyDiff(cardTable, referencing(referenced.name))).not.toThrow();
+    expect(() => applyDiff(cardTable, diffOf({}), { characterTexts: ['[Ex-不存在]'] })).toThrow('引用了不存在的 Ex 卡');
+  });
+
+  it.each(['added', 'exCards', 'keywords'] as const)('匯出、套用與重新對齊 %s 順序', (list: OrderList) => {
+    const base = orderOf(cardTable, list);
+    const value = [...base].reverse();
+    const order = { uid: list, field: 'order' as const, base, value };
+    const draft = { ...emptyDraft(), edits: [order] };
+    const diff = diffOf(draft);
+    expect(diff.edits).toEqual([order]);
+    const { table } = applyDiff(cardTable, diff);
+    expect(orderOf(table, list)).toEqual(value);
+    expect(realignDraft(table, draft)).toEqual({ draft: emptyDraft(), invalidated: [] });
+    const newer = { ...cardTable, [list]: [...cardTable[list].slice(1), cardTable[list][0]] };
+    expect(realignDraft(newer, draft).invalidated).toEqual([order]);
+    expect(applyDiff(newer, diff).notes).toContainEqual(expect.stringContaining('排序衝突'));
+  });
+
+  it('先排序再新增和改名時，匯入順序及重新對齊仍一致', () => {
+    const base = orderOf(cardTable, 'keywords');
+    const oldName = base[0];
+    const uid = Object.keys(cardTable.uids).find((key) => key.startsWith('K') && cardTable.uids[key] === oldName)!;
+    const draft: Draft = {
+      ...emptyDraft(),
+      additions: [{ uid: keywordUid, keyword }],
+      edits: [
+        { uid, field: 'name', base: oldName, value: '另一個名稱' },
+        { uid: 'keywords', field: 'order', base, value: [...base].reverse() },
+      ],
+    };
+    const { table } = applyDiff(cardTable, diffOf(draft));
+    expect(orderOf(table, 'keywords')).toEqual([...base.slice(1).reverse(), '另一個名稱', keyword.name]);
+    expect(table.uids[uid]).toBe('另一個名稱');
+    expect(realignDraft(table, draft)).toEqual({ draft: emptyDraft(), invalidated: [] });
   });
 });

@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.65.0',
+    date: '2026-11-21',
+    items: [
+      { type: 'add', text: '卡表可以編輯角色與關鍵字，也可以新增關鍵字、新增或刪除 Ex 卡。' },
+      { type: 'add', text: '新增卡、Ex 卡與關鍵字可以拖曳排序，排序會和其他草稿一起保留並匯出。' },
+    ],
+  },
+  {
     version: '0.64.0',
     date: '2026-11-21',
     items: [

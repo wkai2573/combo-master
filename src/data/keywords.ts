@@ -1,6 +1,6 @@
 import tableJson from './cardTable.json';
 
-/** 關鍵字：完整說明只寫在卡表網頁（同步成 cardTable.json），卡上與角色文字只引用名稱 */
+/** 關鍵字：完整說明存於卡表資料，卡上與角色文字只引用名稱 */
 export interface Keyword {
   name: string;
   group: string;

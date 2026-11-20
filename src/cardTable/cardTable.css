@@ -14,8 +14,10 @@
 .ct-layout { display: grid; gap: 16px; }
 .ct-with-detail { grid-template-columns: minmax(0, 1fr) minmax(270px, 340px); }
 .ct-grid { display: flex; align-content: flex-start; flex-wrap: wrap; gap: 10px; }
-.ct-grid > div { border: 1px solid transparent; border-radius: 8px; padding: 3px; }
-.ct-grid > .ct-changed { border-color: var(--accent); }
+.ct-grid > div:not(.sortcell), .ct-grid .sortcell > div { border: 1px solid transparent; border-radius: 8px; padding: 3px; }
+.ct-grid > .ct-changed, .ct-grid .sortcell > .ct-changed, .ct-records article.ct-changed { border-color: var(--accent); }
+.ct-grid + .ct-sortable { margin-top: 12px; }
+.ct-records article { height: 100%; }
 .ct-open { display: block; width: 100%; margin-top: 4px; padding: 3px; }
 .ct-detail, .ct-records article, .ct-notice {
   border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 12px;

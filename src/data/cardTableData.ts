@@ -1,4 +1,6 @@
 import cardsJson from './generated/cards.json';
+import charsJson from './generated/characters.json';
+import { characterText } from './characterText';
 import tableJson from './cardTable.json';
 import type { Keyword } from './keywords';
 import type { CardData, CharacterData } from './types';
@@ -17,6 +19,16 @@ export interface CardTableData {
 
 export const cardTable = tableJson as CardTableData;
 export const generatedCards = cardsJson as CardData[];
+export const generatedCharacters = charsJson as CharacterData[];
+
+export function readTableCharacters(table: CardTableData): CharacterData[] {
+  return generatedCharacters.map((character) => ({
+    ...character,
+    ...table.chars[character.id],
+    ...characterText[character.id],
+    id: character.id,
+  }));
+}
 
 export function readTableCards(table: CardTableData): CardData[] {
   const addedIds = new Set(table.added.map((card) => card.id));
