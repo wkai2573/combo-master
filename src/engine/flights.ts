@@ -40,7 +40,7 @@ export function fromSpotlight(prevFx: FrameFx | undefined, curFx: FrameFx | unde
 }
 
 /** 影格裡看得到每張卡的區域（牌組只有張數，沒有卡片） */
-const VISIBLE_ZONES = ['hand', 'discard', 'rage', 'exp', 'moves', 'pursuit', 'gear', 'buff'] as const;
+const VISIBLE_ZONES = ['hand', 'discard', 'rage', 'exp', 'moves', 'stunt', 'pursuit', 'gear', 'buff'] as const;
 type VisibleZone = (typeof VISIBLE_ZONES)[number];
 
 /** spawn：憑空出現（例如 Ex 卡）；gone：離開遊戲 */
@@ -58,7 +58,7 @@ export interface Flight {
   /** 起點、終點時是否正面朝上；兩者不同代表飛行途中翻面 */
   faceUpFrom: boolean;
   faceUpTo: boolean;
-  /** 同一組（同玩家、同起點、同終點；招式與追擊卡視為同一起點）中的第幾張，用來逐張錯開 */
+  /** 同一組（同玩家、同起點、同終點；戰鬥區的三疊視為同一起點）中的第幾張，用來逐張錯開 */
   order: number;
 }
 
@@ -95,8 +95,8 @@ export function diffFlights(prev: GameView, next: GameView): Flight[] {
   const out: Flight[] = [];
   const nth = new Map<string, number>();
   const push = (f: Omit<Flight, 'order'>) => {
-    // 同一組依序出發。招式與追擊卡都算「桌面上的牌」，歸還時先後飛進經驗區
-    const key = `${f.owner}|${f.from === 'pursuit' ? 'moves' : f.from}|${f.to}`;
+    // 同一組依序出發。戰鬥區的三疊都算「桌面上的牌」，歸還時先後飛進經驗區
+    const key = `${f.owner}|${f.from === 'pursuit' || f.from === 'stunt' ? 'moves' : f.from}|${f.to}`;
     const order = nth.get(key) ?? 0;
     nth.set(key, order + 1);
     out.push({ ...f, order });

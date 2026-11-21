@@ -1,7 +1,7 @@
 import type { Opt } from '../engine/types';
 
 /** 放棄類的選項：不發動、不使用、收招、結束。它們排在左邊用一般色，其他選項排在右邊用強調色 */
-const DECLINE_KEYS = new Set(['no', 'skip', 'pass', 'end', '0']);
+const DECLINE_KEYS = new Set(['no', 'skip', 'pass', 'cancel', 'end', '0']);
 
 export interface PromptButton {
   opt: Opt;

@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Rng } from '../src/engine/rng';
+import type { Opt } from '../src/engine/types';
 import { presetDeck } from '../src/data/presetDecks';
 import { FORFEIT_AFTER_S, OFFLINE_AFTER_MS, type HostMsg } from '../src/net/protocol';
 import { HostSession } from '../src/net/session';
@@ -262,5 +264,50 @@ describe('房主：戰績', () => {
     const { host } = start();
     host.leave();
     expect(captured).toEqual([]);
+  });
+});
+
+describe('房主：特技出招', () => {
+  it.each([0, 1] as const)('席位 %s 能取消或確認，主客機收到同一張特技', (seat) => {
+    // 預設牌組前段有足夠的同連擊值招式。固定洗牌與先攻，保留完整的開房及回應流程。
+    const shuffle = vi.spyOn(Rng.prototype, 'shuffle').mockImplementation((cards) => cards);
+    const roll = vi.spyOn(Rng.prototype, 'int').mockReturnValue(seat);
+    const { host, guest } = (() => {
+      try {
+        return start();
+      } finally {
+        shuffle.mockRestore();
+        roll.mockRestore();
+      }
+    })();
+    const hostView = () => host.getState().view!;
+    const guestView = () => lastView(guest.sent).view;
+    const choose = (option: (opt: Opt) => boolean) => {
+      const req = hostView().prompt ?? guestView().prompt!;
+      const selected = req.options.find(option);
+      expect(selected, req.title).toBeDefined();
+      if (req.player === 0) host.submit([selected!.key]);
+      else guest.say({ t: 'submit', keys: [selected!.key] });
+    };
+    const fromDeck = (p: number) => p === 0 ? '戒備打擊' : '伏擊';
+
+    choose((o) => o.cardId === fromDeck(seat));
+    choose((o) => o.cardId === fromDeck(1 - seat));
+    const before = (seat === 0 ? hostView() : guestView()).players[seat].hand.length;
+    choose((o) => o.key === 'stunt');
+    choose((o) => o.cardId === fromDeck(seat));
+    expect((seat === 0 ? guestView() : hostView()).prompt).toBeNull();
+    choose((o) => o.key === 'cancel');
+    expect((seat === 0 ? hostView() : guestView()).players[seat].hand).toHaveLength(before);
+
+    choose((o) => o.key === 'stunt');
+    choose((o) => o.cardId === fromDeck(seat));
+    choose((o) => o.cardId === fromDeck(seat));
+    choose((o) => o.key === 'confirm-stunt');
+    const myPlay = host.getState().batch.frames.find((f) => f.fx.type === 'play');
+    const theirPlay = lastView(guest.sent).frames.find((f) => f.fx.type === 'play');
+    expect(myPlay?.view.players[seat].stunt).toEqual(theirPlay?.view.players[seat].stunt);
+    expect(theirPlay?.view.players[seat].stunt.map((card) => card.id)).toEqual([fromDeck(seat)]);
+    expect(theirPlay?.view.players[seat].discard.map((card) => card.id)).toContain(fromDeck(seat));
   });
 });

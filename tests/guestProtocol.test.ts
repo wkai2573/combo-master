@@ -28,11 +28,11 @@ const dummyView: GameView = {
   forfeited: false,
   players: [
     {
-      charId: '勇者', deckCount: 30, hand: [], discard: [], rage: [], exp: [], moves: [], pursuit: [], gear: [], buff: [],
+      charId: '勇者', deckCount: 30, hand: [], discard: [], rage: [], exp: [], moves: [], stunt: [], pursuit: [], gear: [], buff: [],
       passed: false, atk: 0, def: 0,
     },
     {
-      charId: '刺客', deckCount: 30, hand: [], discard: [], rage: [], exp: [], moves: [], pursuit: [], gear: [], buff: [],
+      charId: '刺客', deckCount: 30, hand: [], discard: [], rage: [], exp: [], moves: [], stunt: [], pursuit: [], gear: [], buff: [],
       passed: false, atk: 0, def: 0,
     },
   ],

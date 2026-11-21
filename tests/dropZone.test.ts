@@ -37,7 +37,7 @@ describe('提示的放置區', () => {
     for (let i = 0; i < 600 && g.pending; i++) {
       const req = g.pending;
       const hasZone = req.dropZone !== undefined;
-      const isHandStep = /爆發階段|增益階段|先手步驟|反擊步驟/.test(req.title);
+      const isHandStep = /爆發階段|增益階段|先手步驟|反擊步驟|選擇要打出的同連擊值招式/.test(req.title);
       expect(hasZone).toBe(isHandStep);
       if (hasZone) seen.add(req.dropZone!);
       g.submit(req.player, req.options.slice(0, Math.max(req.min, 1)).map((o) => o.key));

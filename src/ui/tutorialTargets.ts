@@ -38,7 +38,7 @@ function elementsOf(target: HighlightTarget, view: GameView): Element[] {
       return view.players[view.me].hand.filter((c) => c.id === target.cardId).flatMap((c) => all(`.handrow [data-uid="${c.uid}"]`));
     case 'combat-cards': {
       const pv = view.players[playerOf(target.owner, view)];
-      return [...pv.moves, ...pv.pursuit].filter((c) => c.id === target.cardId).flatMap((c) => all(`.combatarea [data-uid="${c.uid}"]`));
+      return [...pv.moves, ...pv.stunt, ...pv.pursuit].filter((c) => c.id === target.cardId).flatMap((c) => all(`.combatarea [data-uid="${c.uid}"]`));
     }
     case 'pass-text':
       // 收招文字是收招那一格的特效，只在播放與停住時存在

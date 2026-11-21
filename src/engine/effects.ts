@@ -50,7 +50,7 @@ export function makeCtx(g: GameCtx, p: PlayerId, self: CardInst | null, here: ()
 }
 
 // 窗口選單的順序：裝備、經驗、角色，再依登記順序，與遷移前相同
-const PLACE_ORDER: Place[] = ['gear', 'exp', 'char', 'moves', 'pursuit', 'lasting', 'buff', 'hand', 'deck', 'discard', 'rage'];
+const PLACE_ORDER: Place[] = ['gear', 'exp', 'char', 'moves', 'stunt', 'pursuit', 'lasting', 'buff', 'hand', 'deck', 'discard', 'rage'];
 
 export interface Registry {
   /** 依常駐位置、再依登記順序排列 */
@@ -98,10 +98,10 @@ type AnyFn = (...a: never[]) => unknown;
 const split = (spec: unknown): { run: AnyFn; lasting: boolean } =>
   typeof spec === 'function' ? { run: spec as AnyFn, lasting: false } : { run: (spec as { run: AnyFn }).run, lasting: true };
 
-const isCombatZone = (z: string): boolean => z === 'moves' || z === 'pursuit';
+const isCombatZone = (z: string): boolean => z === 'moves' || z === 'stunt' || z === 'pursuit';
 
 const hereOf = (src: EffectSource, self: CardInst | null) => (): boolean =>
-  self === null || (self.zone === src.at && !(src.at === 'exp' && self.covered));
+  self === null || ((self.zone === src.at || (src.at === 'moves' && self.zone === 'stunt')) && !(src.at === 'exp' && self.covered));
 
 export interface Effects {
   /** 這個時機、這位玩家此刻可發動的效果（不結算）。要與其他窗口合併，或測試時使用 */
@@ -144,7 +144,8 @@ export function createEffects(sources: readonly EffectSource[]): Effects {
     if (src.at === 'lasting') return [null];
     if (src.at === 'char') return g.state.players[p].charId === src.id ? [null] : [];
     if (isCombatZone(src.at) && combatVoid(g, p)) return [];
-    return Z(g, p, src.at).filter((c) => c.id === src.id && !(src.at === 'exp' && c.covered));
+    const cards = src.at === 'moves' ? [...Z(g, p, 'moves'), ...Z(g, p, 'stunt')] : Z(g, p, src.at);
+    return cards.filter((c) => c.id === src.id && !(src.at === 'exp' && c.covered));
   }
 
   /** awakeSeen 的邊緣偵測：由未覺醒變成覺醒才算進入覺醒。每次呼叫都會更新偵測狀態 */

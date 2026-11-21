@@ -121,7 +121,7 @@ export function useOverlays({
   }, [combatEmpty]);
 
   useEffect(() => {
-    if (isCombatEmpty && state.active?.type === 'zone' && (state.active.z === 'combat' || state.active.z === 'moves' || state.active.z === 'pursuit')) {
+    if (isCombatEmpty && state.active?.type === 'zone' && (state.active.z === 'combat' || state.active.z === 'moves' || state.active.z === 'stunt' || state.active.z === 'pursuit')) {
       if (isCombatEmpty(state.active.p, state.active.z)) {
         setState((s) => syncCombatEmptyState(s, true));
       }

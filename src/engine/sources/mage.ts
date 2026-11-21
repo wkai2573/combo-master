@@ -2,7 +2,7 @@ import { defineSource, type EffectSource } from '../effectKit';
 import { faceUpExp } from '../cost';
 import { query } from '../effects';
 import { isVanilla } from '../../data/enabledCards';
-import { activate, chooseCards, combatZone, data, directHit, discard, draw, log, move, newCard, pname, recover, removeFromGame, topOfZone, Z } from '../ops';
+import { activate, chooseCards, combatZone, data, directHit, discard, draw, log, move, newCard, pname, recover, removeFromGame, isMoveStackTop, Z } from '../ops';
 import { other } from '../types';
 
 // 冰與雷之曲（法師）：[蓋2] 收招時，戰鬥區的卡合計具有「冰」「電」兩個特徵時，抽 1、回復 1；
@@ -64,7 +64,7 @@ export const 冰霜護甲 = defineSource({
       {
         label: '【冰霜護甲】捨棄 X 張裏側經驗，減少受到的 X 點傷害（蓋2）',
         cost: { cover: 2 },
-        when: () => topOfZone(c.g, c.p) === c.self && c.g.state.flags.damagePending[c.p] >= 1,
+        when: () => isMoveStackTop(c.g, c.self) && c.g.state.flags.damagePending[c.p] >= 1,
       },
       function* () {
         const { g, p } = c;
@@ -158,7 +158,7 @@ export const 整理魔導書 = defineSource({
   at: 'moves',
   on: {
     beforeReturn: (c) => c.effect(
-      { label: '【整理魔導書】抽 X（X＝戰鬥區白板卡的張數）', mandatory: true, when: () => topOfZone(c.g, c.p) === c.self && whiteCount(c.g, c.p) > 0 },
+      { label: '【整理魔導書】抽 X（X＝戰鬥區白板卡的張數）', mandatory: true, when: () => isMoveStackTop(c.g, c.self) && whiteCount(c.g, c.p) > 0 },
       function* () {
         const x = whiteCount(c.g, c.p);
         activate(c.g, c.p, c.self!);
@@ -174,7 +174,7 @@ export const 整理魔導書 = defineSource({
 export const 閃電新星 = defineSource({
   id: '閃電新星',
   at: 'moves',
-  ask: { flatAtk: (c) => (topOfZone(c.g, c.p) === c.self ? Math.max(0, Z(c.g, c.p, 'hand').length - Z(c.g, other(c.p), 'hand').length) : 0) },
+  ask: { flatAtk: (c) => (isMoveStackTop(c.g, c.self) ? Math.max(0, Z(c.g, c.p, 'hand').length - Z(c.g, other(c.p), 'hand').length) : 0) },
 });
 
 // 冰茅（法師）：[發_蓋4] 雙方各捨棄 2 張最前面的裏側經驗
@@ -206,7 +206,7 @@ const holyBeast = (id: string, exId: string): EffectSource => defineSource({
       log(c.g, `【${id}】${pname(c.g, c.p)} 將 [${exId}] 放入增益區`);
     }),
   },
-  ask: { holdExTimer: (c, held) => held === exId && topOfZone(c.g, c.p) === c.self },
+  ask: { holdExTimer: (c, held) => held === exId && isMoveStackTop(c.g, c.self) },
 });
 export const 聖獸白虎 = holyBeast('聖獸白虎', 'Ex-白虎');
 export const 聖獸玄武 = holyBeast('聖獸玄武', 'Ex-玄武');

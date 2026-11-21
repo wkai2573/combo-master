@@ -28,7 +28,7 @@ export interface WindowEffect {
 export const WINDOW_END_KEY = 'end';
 
 const ZONE_LABEL: Record<ZoneName, string> = {
-  deck: '牌組', hand: '手牌', discard: '棄牌區', rage: '怒氣區', exp: '經驗區', moves: '招式卡疊', pursuit: '追擊卡疊', gear: '裝備區', buff: '增益區',
+  deck: '牌組', hand: '手牌', discard: '棄牌區', rage: '怒氣區', exp: '經驗區', moves: '招式卡疊', stunt: '特技卡疊', pursuit: '追擊卡疊', gear: '裝備區', buff: '增益區',
 };
 
 /**

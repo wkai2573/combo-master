@@ -18,6 +18,7 @@ export function faceVisibleTo(card: CardInst, viewer: PlayerId): boolean {
       return mine || !card.covered;
     case 'discard':
     case 'moves':
+    case 'stunt':
     case 'pursuit':
     case 'gear':
     case 'buff':

@@ -11,7 +11,7 @@ export const other = (p: PlayerId): PlayerId => (p === 0 ? 1 : 0);
  */
 export type ZoneName =
   | 'deck' | 'hand' | 'discard' | 'rage' | 'exp'
-  | 'moves' | 'pursuit' | 'gear' | 'buff';
+  | 'moves' | 'stunt' | 'pursuit' | 'gear' | 'buff';
 
 export interface CardInst {
   uid: number;
@@ -86,8 +86,8 @@ export interface Opt {
   hidden?: boolean;
 }
 
-/** 提示指定的放置區：戰鬥區、裝備增益區、經驗區 */
-export type DropZone = 'moves' | 'gear' | 'exp';
+/** 提示指定的放置區：戰鬥區、特技區、裝備增益區、經驗區 */
+export type DropZone = 'moves' | 'stunt' | 'gear' | 'exp';
 
 export interface Request {
   player: PlayerId;

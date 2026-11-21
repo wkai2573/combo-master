@@ -6,8 +6,8 @@ export const BURST_EXP_2: TutorialChapter = {
   characters: ['修行者', '教官'],
   first: 0,
   startPhase: '爆發',
-  hands: [MY_HAND, FOE_HAND],
-  decks: [repeat('方塊4', 10), repeat('梅花7', 10)],
+  hands: [MY_HAND.map((id) => id === '方塊4' ? '黑桃3' : id), FOE_HAND],
+  decks: [['方塊4', '黑桃7', ...repeat('方塊4', 8)], repeat('梅花7', 10)],
   zones: [{ exp: ['紅心3', '黑桃5'] }, {}],
   steps: [
     { kind: 'explain', text: `每回合抽牌之後是爆發階段：可以把 1 張手牌放進經驗區，然後抽 2 張。${NEXT}` },

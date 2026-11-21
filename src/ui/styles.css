@@ -689,6 +689,10 @@ button.chip { font: inherit; font-size: 11px; }
 
 /* 戰鬥區：對方疊牌｜範圍與算式｜我方疊牌，疊牌高度由版面決定 */
 .battle.phone .combatarea { --mdw: clamp(72px, 21vw, 96px); --mdh: calc(var(--mdw) * 1.4); flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 3px 4px; overflow: hidden; }
+.battle.phone .combatarea.with-stunt { --mdw: clamp(44px, 15vw, 76px); }
+.battle.phone .combatpiles { gap: 3px; min-height: 0; }
+.battle.phone .combatpiles .pilewrap { gap: 2px; min-height: 0; }
+.battle.phone .combatpiles .vstack { flex: 1; }
 .battle.phone .combatarea .caption { min-height: 20px; margin-bottom: 0; font-size: 13px; }
 .battle.phone .combatarea .cols { flex: 1; min-height: 0; flex-wrap: nowrap; align-items: stretch; gap: 4px; }
 .battle.phone .combatarea .colwrap { display: flex; flex-direction: column; flex: none; }
@@ -795,6 +799,7 @@ button.chip { font: inherit; font-size: 11px; }
 .dragghost { position: fixed; z-index: 80; pointer-events: none; transform: translate(-50%, -65%) rotate(-4deg); filter: drop-shadow(0 8px 12px #000b); }
 body[data-drag] { cursor: grabbing; }
 body[data-drag="moves"] [data-dropzone="moves"],
+body[data-drag="stunt"] [data-dropzone="stunt"],
 body[data-drag="exp"] [data-dropzone="exp"],
 body[data-drag="gear"] [data-dropzone="gear"] { outline: 2px dashed var(--accent); outline-offset: 2px; border-radius: 10px; }
 body[data-drag] [data-dropzone][data-dragover] { outline-style: solid; background: color-mix(in srgb, var(--accent) 22%, transparent); }

@@ -13,8 +13,8 @@ export const AWAKENING_3: TutorialChapter = {
   characters: ['修行者', '教官'],
   first: 0,
   startPhase: '爆發',
-  hands: [MY_HAND, FOE_HAND],
-  decks: [repeat('方塊4', 10), repeat('梅花7', 10)],
+  hands: [MY_HAND.map((id) => id === '方塊4' ? '黑桃3' : id), FOE_HAND],
+  decks: [['方塊4', '黑桃7', ...repeat('方塊4', 8)], repeat('梅花7', 10)],
   zones: [{ exp: ['黑桃2', '黑桃3', '黑桃4', '紅心3', '紅心4', '方塊2', '方塊3'] }, {}],
   steps: [
     {

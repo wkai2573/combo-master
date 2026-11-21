@@ -1,7 +1,7 @@
 import { canPay, chooseX, pay } from '../cost';
 import { defineSource, lasting, slot } from '../effectKit';
 import { isExCardId } from '../../data/exCards';
-import { activate, awakened, chooseCards, combatZone, data, discard, draw, isFirst, log, move, newCard, placeExInBuff, pname, topOfZone, Z, type GameCtx } from '../ops';
+import { activate, awakened, chooseCards, combatZone, data, discard, draw, isFirst, log, move, newCard, placeExInBuff, pname, isMoveStackTop, topOfZone, Z, type GameCtx } from '../ops';
 import { other, type PlayerId } from '../types';
 
 // ───────────────────────── 卡片 ─────────────────────────
@@ -121,7 +121,7 @@ export const 幸運兔腳 = defineSource({
 export const 二刀連擊 = defineSource({
   id: '二刀連擊',
   at: 'moves',
-  ask: { pursuitBonus: (c) => (topOfZone(c.g, c.p) === c.self ? 1 : 0) },
+  ask: { pursuitBonus: (c) => (isMoveStackTop(c.g, c.self) ? 1 : 0) },
 });
 
 /** 我方增益區目前的 Ex-狂怒 張數 */
@@ -139,7 +139,7 @@ export const 狂怒 = defineSource({
       log(c.g, `【狂怒】${pname(c.g, c.p)} 將 [Ex-狂怒] 放入增益區，Ex-狂怒的持續時間重新計算`);
     }),
   },
-  ask: { flatAtk: (c) => (topOfZone(c.g, c.p) === c.self ? 2 * exRageCount(c.g, c.p) : 0) },
+  ask: { flatAtk: (c) => (isMoveStackTop(c.g, c.self) ? 2 * exRageCount(c.g, c.p) : 0) },
 });
 
 // Ex-狂怒：持續回合 2，放在增益區。計時（增益階段開始 +1、到期移除遊戲）與放置時重設指示物都是引擎對增益區 Ex 卡的通則，
@@ -184,7 +184,7 @@ export const 煙霧陷阱 = defineSource({
   at: 'moves',
   on: {
     onFoePlay: (c) => c.effect(
-      { label: '【煙霧陷阱】將此卡放到我方招式疊最下方', mandatory: true, when: () => topOfZone(c.g, c.p) === c.self && Z(c.g, c.p, 'moves').length >= 2 },
+      { label: '【煙霧陷阱】將此卡放到我方招式疊最下方', mandatory: true, when: () => isMoveStackTop(c.g, c.self) && (c.self?.zone === 'stunt' || Z(c.g, c.p, 'moves').length >= 2) },
       () => {
         activate(c.g, c.p, c.self!);
         move(c.g, c.self!, 'moves', 'bottom');

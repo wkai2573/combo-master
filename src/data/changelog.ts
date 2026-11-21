@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.66.0',
+    date: '2026-11-21',
+    items: [
+      { type: 'add', text: '反擊時，若我方招式卡疊已有招式，可以捨棄 1 張手牌，把原始連擊值相同的另一張招式打入特技區。特技照常計入攻防，並與招式卡疊各自判定 [頂]。' },
+    ],
+  },
+  {
     version: '0.65.1',
     date: '2026-11-21',
     items: [

@@ -1,6 +1,6 @@
 import { parseCardText } from '../../data/cardText';
 import { defineSource, lasting, slot } from '../effectKit';
-import { activate, awakened, chooseCards, data, discard, draw, log, move, pname, recover, topOfZone, Z, type GameCtx } from '../ops';
+import { activate, awakened, chooseCards, data, discard, draw, log, move, pname, recover, isMoveStackTop, Z, type GameCtx } from '../ops';
 import type { CardInst, PlayerId } from '../types';
 
 // 遊俠：當我方覺醒時，可以抽 2；瞄準上限 1，覺醒時 2
@@ -88,7 +88,7 @@ export const 生命偷取 = defineSource({
   at: 'moves',
   on: {
     onPursuitSuccess: (c) => c.effect(
-      { label: '【生命偷取】回復 2', mandatory: true, when: () => topOfZone(c.g, c.p) === c.self },
+      { label: '【生命偷取】回復 2', mandatory: true, when: () => isMoveStackTop(c.g, c.self) },
       () => {
         activate(c.g, c.p, c.self!);
         recover(c.g, c.p, 2);
@@ -135,7 +135,7 @@ export const 箭雨 = defineSource({
       {
         label: '【箭雨】捨棄手中 2 張持有 [追] 效果的卡，追擊+1',
         confirm: '【箭雨】要捨棄手中 2 張持有 [追] 效果的卡，使追擊+1 嗎？',
-        when: () => topOfZone(c.g, c.p) === c.self && handPursuitCards(c.g, c.p).length >= 2,
+        when: () => isMoveStackTop(c.g, c.self) && handPursuitCards(c.g, c.p).length >= 2,
       },
       function* () {
         const { g, p } = c;

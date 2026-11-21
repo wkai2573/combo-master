@@ -13,6 +13,7 @@ function makePlayerView(overrides: Partial<PlayerView> = {}): PlayerView {
     rage: [],
     exp: [],
     moves: [],
+    stunt: [],
     pursuit: [],
     gear: [],
     buff: [],

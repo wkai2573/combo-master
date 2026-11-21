@@ -17,7 +17,7 @@ export interface SheetTarget { p: PlayerId; tab: SheetTab }
 const TAB_NAME: Record<SheetTab, string> = { char: '角色', exp: '經驗區', gear: '裝備增益區', discard: '棄牌區', combat: '戰鬥區' };
 
 const tabCount = (pv: PlayerView, tab: SheetTab): number | null =>
-  tab === 'exp' ? pv.exp.length : tab === 'gear' ? pv.gear.length + pv.buff.length : tab === 'discard' ? pv.discard.length : tab === 'combat' ? pv.moves.length + pv.pursuit.length : null;
+  tab === 'exp' ? pv.exp.length : tab === 'gear' ? pv.gear.length + pv.buff.length : tab === 'discard' ? pv.discard.length : tab === 'combat' ? combatCards(pv).cards.length : null;
 
 /** 經驗牌堆下方的數字：表側幾張、總共幾張 */
 const expCountText = (pv: PlayerView) => {

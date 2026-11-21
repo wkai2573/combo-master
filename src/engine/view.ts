@@ -19,6 +19,7 @@ export interface PlayerView {
   rage: CardView[];
   exp: CardView[];
   moves: CardView[];
+  stunt: CardView[];
   pursuit: CardView[];
   gear: CardView[];
   buff: CardView[];
@@ -40,9 +41,9 @@ export function expCounts(pv: PlayerView): { faceUp: number; total: number } {
   return { faceUp: pv.exp.filter((c) => !c.covered).length, total: pv.exp.length };
 }
 
-/** 一方的戰鬥區：招式卡疊在前、追擊卡疊接在後，由先到後；pursuitFrom 是第一張追擊卡的位置（沒有追擊卡就等於張數） */
+/** 一方的戰鬥區：依序列出招式卡疊、特技卡疊與追擊卡疊，各疊由底到頂；pursuitFrom 是第一張追擊卡的位置（沒有追擊卡就等於張數） */
 export function combatCards(pv: PlayerView): { cards: CardView[]; pursuitFrom: number } {
-  return { cards: [...pv.moves, ...pv.pursuit], pursuitFrom: pv.moves.length };
+  return { cards: [...pv.moves, ...pv.stunt, ...pv.pursuit], pursuitFrom: pv.moves.length + pv.stunt.length };
 }
 
 export interface GameView {
@@ -105,6 +106,7 @@ function playerView(game: Game, p: PlayerId, viewer: PlayerId): PlayerView {
     rage: list('rage'),
     exp: list('exp'),
     moves: list('moves'),
+    stunt: list('stunt'),
     pursuit: list('pursuit'),
     gear: list('gear'),
     buff: list('buff'),

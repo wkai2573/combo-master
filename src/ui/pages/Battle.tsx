@@ -33,6 +33,7 @@ const ZONE_NAME: Record<ZoneKey, string> = {
   exp: '經驗區',
   combat: '戰鬥區',
   moves: '招式卡疊',
+  stunt: '特技卡疊',
   pursuit: '追擊卡疊',
 };
 
@@ -78,9 +79,8 @@ export function Battle({ session, onExit, onPractice, onLesson }: {
     isPhone: phone,
     isCombatEmpty: (p, z) => {
       if (!v) return true;
-      if (z === 'moves') return v.players[p].moves.length === 0;
-      if (z === 'pursuit') return v.players[p].pursuit.length === 0;
-      return v.players[p].moves.length + v.players[p].pursuit.length === 0;
+      if (z !== 'combat') return v.players[p][z].length === 0;
+      return combatCards(v.players[p]).cards.length === 0;
     },
     promptSig,
     cheatOn: cheatOnState,
@@ -159,11 +159,7 @@ export function Battle({ session, onExit, onPractice, onLesson }: {
     ? []
     : zoneCombat
       ? zoneCombat.cards
-      : overlays.zone.z === 'moves'
-        ? v.players[overlays.zone.p].moves
-        : overlays.zone.z === 'pursuit'
-          ? v.players[overlays.zone.p].pursuit
-          : v.players[overlays.zone.p][overlays.zone.z as 'exp' | 'discard'];
+      : v.players[overlays.zone.p][overlays.zone.z as Exclude<ZoneKey, 'combat'>];
   // 結束演出播完（或跳過）才顯示結果視窗；演出期間先讓勝負在桌面上呈現
   // 教學不顯示對局的結果視窗，走完腳本改顯示教學結束畫面
   const result = pres.playing || v.winner === null || tut ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';

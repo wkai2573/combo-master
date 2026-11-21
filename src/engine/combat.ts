@@ -1,6 +1,6 @@
 import { isVanilla } from '../data/enabledCards';
 import {
-  ask, cardOpt, chooseCards, combatZone, data, draw, log, mark, markIfLogged, move,
+  ask, cardOpt, chooseCards, combatZone, data, discard, draw, log, mark, markIfLogged, move,
   order, pname, takeDamage, Z, type GameCtx, type Gen,
 } from './ops';
 import { canPay, pay } from './cost';
@@ -39,12 +39,13 @@ export function playables(g: GameCtx, p: PlayerId, opening = false): CardInst[] 
 
 // ───────────────────────── 出招 ─────────────────────────
 
-export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: boolean): Gen {
-  move(g, card, 'moves', 'top');
+export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: boolean, zone: 'moves' | 'stunt' = 'moves'): Gen {
+  move(g, card, zone, 'top');
   g.state.flags.played[p]++;
-  log(g, `${pname(g, p)} ${opening ? '先手出招' : '出招'}【${data(card).name}】`);
+  const action = zone === 'stunt' ? '特技出招' : opening ? '先手出招' : '出招';
+  log(g, `${pname(g, p)} ${action}【${data(card).name}】`);
   const cd = data(card);
-  mark(g, `${pname(g, p)} ${opening ? '先手出招' : '出招'}【${cd.name}】　攻${cd.atk}　連擊${cd.combo}　守${cd.def}`,
+  mark(g, `${pname(g, p)} ${action}【${cd.name}】　攻${cd.atk}　連擊${cd.combo}　守${cd.def}`,
     { type: 'play', player: p, uid: card.uid });
 
   // 出招時必須支付的費用（嘲諷的蓋2）：先付，再處理出招時的效果
@@ -246,7 +247,7 @@ function vanillaCount(g: GameCtx, p: PlayerId): number {
 
 /** 完整結算該玩家目前的攻守數據與明細 */
 export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
-  const moves = Z(g, p, 'moves');
+  const stacks = [Z(g, p, 'moves'), Z(g, p, 'stunt')];
   // 狂戰：我方戰鬥區卡片效果全部無效，[頂] 與 [追] 的數值修正都不算，只剩卡面數值
   const voided = query(g, p, 'combatEffectsVoid');
   const rulesOf = (c: CardInst) => (voided ? NO_MOVE_RULES : moveRules(c.id));
@@ -255,7 +256,10 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
   let shieldLift = 0;
 
   // [頂] 盾擊：位於招式卡疊最上方時，戰鬥區（含追擊卡疊）每張招式卡的攻擊力至少是它的原始防禦力（先補，再套用其他加成與修正）
-  const lift = moves.length > 0 && rulesOf(moves[moves.length - 1]).liftAtkToDef;
+  const lift = stacks.some((stack) => {
+    const top = stack.at(-1);
+    return top && rulesOf(top).liftAtkToDef;
+  });
 
   // 盾擊補的攻擊力累計進 shieldLift
   const liftedAtk = (c: CardInst): number => {
@@ -265,15 +269,16 @@ export function resolveCombatStats(g: GameCtx, p: PlayerId): CombatStats {
     return atk;
   };
 
-  moves.forEach((c, i) => {
-    const isTop = i === moves.length - 1;
-    const rules = rulesOf(c);
-    const atkMod = isTop ? rules.topAtk : 0;
-    const defMod = isTop ? rules.topDef : 0;
-    const atk = liftedAtk(c);
-    combatZoneAtk += Math.max(0, atk + atkMod);
-    combatZoneDef += Math.max(0, data(c).def + defMod);
-  });
+  for (const stack of stacks) {
+    const top = stack.at(-1);
+    for (const card of stack) {
+      const rules = rulesOf(card);
+      const atkMod = card === top ? rules.topAtk : 0;
+      const defMod = card === top ? rules.topDef : 0;
+      combatZoneAtk += Math.max(0, liftedAtk(card) + atkMod);
+      combatZoneDef += Math.max(0, data(card).def + defMod);
+    }
+  }
 
   let pursuitAtk = 0;
   let pursuitDef = 0;
@@ -370,7 +375,7 @@ export function* returnStep(g: GameCtx): Gen {
   checkWin(g);
   const count: [number, number] = [0, 0];
   for (const p of order(g)) {
-    // 招式卡疊由最底到最頂，最後是追擊卡疊
+    // 依戰鬥區的牌疊順序歸還，各疊由底到頂
     for (const c of combatZone(g, p)) {
       move(g, c, 'exp');
       count[p]++;
@@ -378,10 +383,79 @@ export function* returnStep(g: GameCtx): Gen {
   }
   // 塗毒：歸還時，把 [Ex-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
   yield* fireEach(g, 'afterReturn');
-  mark(g, '招式與追擊卡依序放入經驗區', { type: 'return', count });
+  mark(g, '戰鬥區的卡依序放入經驗區', { type: 'return', count });
 }
 
 // ───────────────────────── 戰鬥階段 ─────────────────────────
+
+function stuntMoves(g: GameCtx, p: PlayerId, cost: CardInst): CardInst[] {
+  if (g.state.phase !== '反擊' || Z(g, p, 'moves').length === 0) return [];
+  const hand = Z(g, p, 'hand');
+  const printed = data(cost);
+  // 裝備與增益資料以 0 填補未印在卡面上的連擊值。
+  if (!hand.includes(cost) || (printed.kind !== 'move' && printed.combo === 0)) return [];
+  return hand.filter((card) => {
+    if (card === cost || data(card).kind !== 'move' || data(card).combo !== printed.combo) return false;
+    const rules = moveRules(card.id);
+    return !rules.openingOnly && canPay(g, p, { cover: rules.playCover });
+  });
+}
+
+function* chooseStunt(g: GameCtx, p: PlayerId, costs: CardInst[]): Gen<[CardInst, CardInst] | undefined> {
+  const cancel = { key: 'cancel', label: '取消' };
+  const [costKey] = yield* ask(g, {
+    player: p, title: '特技出招：選擇要捨棄的手牌', min: 1, max: 1,
+    options: [...costs.map((c) => cardOpt(c, p)), cancel],
+  });
+  const cost = costs.find((c) => `c${c.uid}` === costKey);
+  if (!cost) return;
+  const candidates = stuntMoves(g, p, cost);
+  if (candidates.length === 0) return;
+  const [cardKey] = yield* ask(g, {
+    player: p, title: '特技出招：選擇要打出的同連擊值招式', min: 1, max: 1, dropZone: 'stunt',
+    options: [...candidates.map((c) => cardOpt(c, p)), cancel],
+  });
+  const card = candidates.find((c) => `c${c.uid}` === cardKey);
+  if (!card) return;
+  const [confirmed] = yield* ask(g, {
+    player: p, title: `捨棄「${data(cost).name}」，打出特技「${data(card).name}」？`, min: 1, max: 1,
+    options: [{ key: 'confirm-stunt', label: '確認特技出招' }, cancel],
+  });
+  if (confirmed === 'confirm-stunt' && stuntMoves(g, p, cost).includes(card)) return [cost, card];
+}
+
+function* counter(g: GameCtx, p: PlayerId, previous: CardInst | undefined): Gen<CardInst | undefined> {
+  while (true) {
+    const normal = playables(g, p);
+    const costs = Z(g, p, 'hand').filter((card) => stuntMoves(g, p, card).length > 0);
+    if (normal.length === 0 && costs.length === 0) return;
+    const target = previous?.zone === 'stunt' ? `（上一招「${data(previous).name}」）` : '';
+    const [key] = yield* ask(g, {
+      player: p,
+      title: `反擊步驟${target}：選擇 1 張招式出招、或收招`,
+      min: 1, max: 1, dropZone: 'moves',
+      options: [
+        ...normal.map((c) => cardOpt(c, p)),
+        ...(costs.length > 0 ? [{ key: 'stunt', label: '特技出招' }] : []),
+        { key: 'pass', label: '收招' },
+      ],
+    });
+    if (key === 'pass') return;
+    if (key === 'stunt' && costs.length > 0) {
+      const pair = yield* chooseStunt(g, p, costs);
+      if (!pair) continue;
+      const [cost, card] = pair;
+      discard(g, cost);
+      log(g, `${pname(g, p)} 捨棄「${data(cost).name}」支付特技出招代價`);
+      yield* playMove(g, p, card, false, 'stunt');
+      return card;
+    }
+    const card = normal.find((c) => `c${c.uid}` === key);
+    if (!card) continue;
+    yield* playMove(g, p, card, false);
+    return card;
+  }
+}
 
 export function* combatPhase(g: GameCtx): Gen {
   const s = g.state;
@@ -402,6 +476,7 @@ export function* combatPhase(g: GameCtx): Gen {
   s.phase = '反擊';
   let cur: PlayerId = second;
   let firstAction = true;
+  let previous: CardInst | undefined;
   // 先手步驟時雙方就被迫收招（即時停損）：沒有進入反擊步驟，不做追擊判定，直接傷害計算
   let straightToDamage = s.passed[0] && s.passed[1];
   for (let guard = 0; guard < 200 && !(s.passed[0] && s.passed[1]); guard++) {
@@ -409,19 +484,9 @@ export function* combatPhase(g: GameCtx): Gen {
       cur = other(cur);
       continue;
     }
-    const options = playables(g, cur);
-    let playedCard: CardInst | undefined;
-    if (options.length > 0) {
-      const keys = yield* ask(g, {
-        player: cur,
-        title: '反擊步驟：選擇 1 張招式出招，或收招',
-        min: 1, max: 1, dropZone: 'moves',
-        options: [...options.map((c) => cardOpt(c, cur)), { key: 'pass', label: '收招' }],
-      });
-      playedCard = options.find((c) => `c${c.uid}` === keys[0]);
-    }
+    const playedCard = yield* counter(g, cur, previous?.owner === other(cur) ? previous : undefined);
     if (playedCard) {
-      yield* playMove(g, cur, playedCard, false);
+      previous = playedCard;
     } else {
       s.passed[cur] = true;
       log(g, `${pname(g, cur)} 收招`);

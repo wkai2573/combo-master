@@ -7,17 +7,16 @@ import { useCoarsePointer } from '../layoutMode';
 import type { DragApi } from '../useCardDrag';
 import { tapCard } from '../touchTap';
 import { getCard, getCharacter } from '../../data/cards';
-import { combatCards, expCounts, type CardView, type GameView, type PlayerView } from '../../engine/view';
+import { expCounts, type CardView, type GameView, type PlayerView } from '../../engine/view';
 import type { StatChanges } from '../../engine/stats';
 import type { DropZone, FrameFx, PlayerId, Request } from '../../engine/types';
 import type { StepHint } from '../../data/turnSteps';
 import { buffCounter, CardFace, expEffectActive } from './CardFace';
 import { Delta } from './Delta';
 
-export type ZoneKey = 'discard' | 'exp' | 'combat' | 'moves' | 'pursuit';
+export type ZoneKey = 'discard' | 'exp' | 'combat' | 'moves' | 'stunt' | 'pursuit';
 
-/** 戰鬥區列表底下的備註：招式在前、追擊卡在後，[頂] 指的是最後一張招式（追擊卡不算） */
-export const COMBAT_LIST_NOTE = '招式在前、追擊卡在後（白色內線）；最後一張招式是 [頂] 所指的招式';
+export const COMBAT_LIST_NOTE = '依序列出招式、特技和追擊卡（白色內線）。招式與特技各自以最後一張判定 [頂]。'
 
 interface BoardProps {
   v: GameView;
@@ -319,16 +318,17 @@ const sumOf = (cards: CardView[], key: 'atk' | 'def') =>
 /** 一方的戰鬥區：卡片往下疊（最新的在最下面且完整顯示），上面幾張只露出「攻／連擊／守」 */
 /** 卡面合計與實際總攻防不同時的說明 */
 function statNote(pv: PlayerView): string | null {
-  const rawAtk = sumOf(pv.moves, 'atk') + sumOf(pv.pursuit, 'atk');
-  const rawDef = sumOf(pv.moves, 'def');
+  const rawAtk = sumOf(pv.moves, 'atk') + sumOf(pv.stunt, 'atk') + sumOf(pv.pursuit, 'atk');
+  const rawDef = sumOf(pv.moves, 'def') + sumOf(pv.stunt, 'def');
   if (pv.atk === rawAtk && pv.def === rawDef) return null;
   const diff = (shown: number, raw: number) => (shown === raw ? '' : `（含效果 ${shown > raw ? '+' : ''}${shown - raw}）`);
   return `卡面合計 ${rawAtk} ／ ${rawDef}${diff(pv.atk, rawAtk)}`;
 }
 
-function StackColumn({ pv, label, mine, fx, delta, k, phone, onOpen }: {
+function StackColumn({ pv, label, mine, fx, delta, k, phone, showStunt, onOpen }: {
   pv: PlayerView; label: string; mine: boolean; fx?: FrameFx; delta?: { atk: number; def: number }; k: number;
   phone?: boolean;
+  showStunt?: boolean;
   /** 點疊牌開這一方戰鬥區的列表（疊牌只露出上面一條，下方的牌靠列表檢查） */
   onOpen: (anchor: DOMRect, zone: ZoneKey) => void;
 }) {
@@ -342,80 +342,34 @@ function StackColumn({ pv, label, mine, fx, delta, k, phone, onOpen }: {
     </div>
   );
 
-  if (phone) {
-    const { cards } = combatCards(pv);
-    return (
-      <div className={`col ${mine ? 'mine' : 'opp'}`}>
-        <h4>{label}</h4>
-        <div
-          className={`vstack${cards.length > 0 ? ' click' : ''}`} style={{ ['--n1' as string]: Math.max(cards.length - 1, 1) }}
-          onClick={cards.length > 0 ? (e) => onOpen(e.currentTarget.getBoundingClientRect(), 'combat') : undefined}
-        >
-          {cards.map((c, i) => (
-            <CardFace
-              key={c.uid} uid={c.uid} id={c.id} size="md" pursuit={i >= pv.moves.length}
-              fresh={fx?.type === 'play' && fx.uid === c.uid} inert
-            />
-          ))}
-          {cards.length === 0 && <span className="empty">（尚未出招）</span>}
-        </div>
-        {sumBox}
-      </div>
-    );
-  }
-
-  const movesStack = (
+  const pile = (zone: 'moves' | 'stunt' | 'pursuit', title: string, cards: CardView[], pursuitFrom = Infinity) => (
     <div className="pilewrap">
-      <div className="pilesub">招式</div>
+      {(!phone || showStunt) && <div className="pilesub">{title}</div>}
       <div
-        className={`vstack moves${pv.moves.length > 0 ? ' click' : ''}`}
-        style={{ ['--n1' as string]: Math.max(pv.moves.length - 1, 1) }}
-        onClick={pv.moves.length > 0 ? (e) => onOpen(e.currentTarget.getBoundingClientRect(), 'moves') : undefined}
+        className={`vstack ${zone}${cards.length > 0 ? ' click' : zone === 'moves' ? '' : ' empty-slot'}`}
+        style={{ ['--n1' as string]: Math.max(cards.length - 1, 1) }}
+        data-dropzone={mine && zone === 'stunt' ? 'stunt' : undefined}
+        onClick={cards.length > 0 ? (e) => onOpen(e.currentTarget.getBoundingClientRect(), phone ? 'combat' : zone) : undefined}
       >
-        {pv.moves.map((c) => (
+        {cards.map((c, i) => (
           <CardFace
-            key={c.uid} uid={c.uid} id={c.id} size="md"
+            key={c.uid} uid={c.uid} id={c.id} size="md" pursuit={i >= pursuitFrom}
             fresh={fx?.type === 'play' && fx.uid === c.uid} inert
           />
         ))}
-        {pv.moves.length === 0 && <span className="empty">（尚未出招）</span>}
+        {cards.length === 0 && <span className="empty">{zone === 'moves' ? '（尚未出招）' : '（無）'}</span>}
       </div>
     </div>
   );
-
-  const pursuitStack = (
-    <div className="pilewrap">
-      <div className="pilesub">追擊</div>
-      <div
-        className={`vstack pursuit${pv.pursuit.length > 0 ? ' click' : ' empty-slot'}`}
-        style={{ ['--n1' as string]: Math.max(pv.pursuit.length - 1, 1) }}
-        onClick={pv.pursuit.length > 0 ? (e) => onOpen(e.currentTarget.getBoundingClientRect(), 'pursuit') : undefined}
-      >
-        {pv.pursuit.map((c) => (
-          <CardFace
-            key={c.uid} uid={c.uid} id={c.id} size="md" pursuit inert
-          />
-        ))}
-        {pv.pursuit.length === 0 && <span className="empty">（無）</span>}
-      </div>
-    </div>
-  );
-
+  const movesStack = pile('moves', phone ? '招式／追擊' : '招式',
+    phone ? [...pv.moves, ...pv.pursuit] : pv.moves, phone ? pv.moves.length : Infinity);
+  const stuntStack = (!phone || showStunt) && pile('stunt', '特技', pv.stunt);
+  const pursuitStack = !phone && pile('pursuit', '追擊', pv.pursuit, 0);
   return (
     <div className={`col ${mine ? 'mine' : 'opp'}`}>
       <h4>{label}</h4>
       <div className="combatpiles">
-        {mine ? (
-          <>
-            {movesStack}
-            {pursuitStack}
-          </>
-        ) : (
-          <>
-            {pursuitStack}
-            {movesStack}
-          </>
-        )}
+        {mine ? <>{movesStack}{stuntStack}{pursuitStack}</> : <>{pursuitStack}{stuntStack}{movesStack}</>}
       </div>
       {sumBox}
     </div>
@@ -451,14 +405,15 @@ export function CombatArea({ v, fx, caption, fxKey, changes, hint, phone, onOpen
   phone?: boolean;
 }) {
   const opp: PlayerId = v.me === 0 ? 1 : 0;
+  const showStunt = phone && (v.prompt?.dropZone === 'stunt' || v.players.some((p) => p.stunt.length > 0));
   const calc = fx?.type === 'calc' ? fx : null;
   const notes = [['對方', statNote(v.players[opp])], ['我方', statNote(v.players[v.me])]].filter((n): n is [string, string] => n[1] !== null);
   return (
-    <div className="combatarea" data-dropzone="moves">
+    <div className={`combatarea${showStunt ? ' with-stunt' : ''}`} data-dropzone="moves">
       <div className="caption" key={`c${fxKey}`}>{caption ?? ' '}</div>
       <div className="cols">
         <div className="colwrap">
-          <StackColumn pv={v.players[opp]} label="對方" mine={false} fx={fx} delta={changes && { atk: changes.atk[opp], def: changes.def[opp] }} k={fxKey} phone={phone} onOpen={(a, z) => onOpen(opp, z, a)} />
+          <StackColumn pv={v.players[opp]} label="對方" mine={false} fx={fx} delta={changes && { atk: changes.atk[opp], def: changes.def[opp] }} k={fxKey} phone={phone} showStunt={showStunt} onOpen={(a, z) => onOpen(opp, z, a)} />
           <ColumnFx fx={fx} fxKey={fxKey} player={opp} />
         </div>
         <div className="mid">
@@ -484,7 +439,7 @@ export function CombatArea({ v, fx, caption, fxKey, changes, hint, phone, onOpen
           )}
         </div>
         <div className="colwrap">
-          <StackColumn pv={v.players[v.me]} label="我方" mine fx={fx} delta={changes && { atk: changes.atk[v.me], def: changes.def[v.me] }} k={fxKey} phone={phone} onOpen={(a, z) => onOpen(v.me, z, a)} />
+          <StackColumn pv={v.players[v.me]} label="我方" mine fx={fx} delta={changes && { atk: changes.atk[v.me], def: changes.def[v.me] }} k={fxKey} phone={phone} showStunt={showStunt} onOpen={(a, z) => onOpen(v.me, z, a)} />
           <ColumnFx fx={fx} fxKey={fxKey} player={v.me} />
         </div>
       </div>

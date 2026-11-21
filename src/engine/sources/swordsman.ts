@@ -1,6 +1,6 @@
 import { discardRage, faceUpExp, pay } from '../cost';
 import { defineSource } from '../effectKit';
-import { activate, awakened, chooseCards, combatZone, data, directHit, discard, isFirst, log, move, pname, recover, topOfZone, Z, type GameCtx } from '../ops';
+import { activate, awakened, chooseCards, combatZone, data, directHit, discard, isFirst, log, move, pname, recover, isMoveStackTop, Z, type GameCtx } from '../ops';
 import { isClassCard, isVanilla } from '../../data/enabledCards';
 import { other, type PlayerId } from '../types';
 
@@ -153,7 +153,7 @@ export const 威嚇戰吼 = defineSource({
   at: 'moves',
   on: {
     onFoePlay: (c) => c.effect(
-      { label: '【威嚇戰吼】對方直擊 X（X＝對方戰鬥區的卡片數）', mandatory: true, when: () => topOfZone(c.g, c.p) === c.self && 威嚇條件(c.g, c.p) },
+      { label: '【威嚇戰吼】對方直擊 X（X＝對方戰鬥區的卡片數）', mandatory: true, when: () => isMoveStackTop(c.g, c.self) && 威嚇條件(c.g, c.p) },
       () => {
         const { g, p } = c;
         const foe = other(p);

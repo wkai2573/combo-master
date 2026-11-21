@@ -16,7 +16,7 @@ const FOE_REPLY = '紅心8';
 export const OPENING_7: TutorialChapter = {
   characters: ['見習生', '教官'],
   first: 0,
-  hands: [[AMBUSH, AMBUSH, '黑桃1', '紅心2', '方塊4'], [FOE_REPLY, '黑桃1', '紅心2', '梅花1']],
+  hands: [[AMBUSH, AMBUSH, '黑桃1', '紅心2', '方塊4'], [FOE_REPLY, '黑桃1', '紅心2', '梅花3']],
   decks: [repeat('方塊4', 20), repeat('梅花7', 20)],
   steps: [
     {
