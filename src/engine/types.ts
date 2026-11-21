@@ -37,6 +37,8 @@ export interface PlayerState {
 export interface TurnFlags {
   /** 本回合出招張數 */
   played: [number, number];
+  /** 本回合剩餘的破格次數 */
+  breaksRemaining: [number, number];
   opened: boolean;
   pursuitSuccess: [number, number];
   /** 實際承受的傷害（放進怒氣區的張數就是這個數字，被減免後的數字） */

@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import { addBreaks } from '../src/engine/combat';
 import { diffFlights } from '../src/engine/flights';
 import { viewFor } from '../src/engine/view';
 import { atkOf, defOf, matchScenario, pick, scenario } from './helpers';
@@ -22,6 +23,7 @@ it('特技出招確認前可取消，確認後可將範圍外的招式打入特�
   pick(g, '黑桃9');
   pick(g, '梅花9');
   pick(g, '確認特技出招');
+  expect(g.state.flags.breaksRemaining).toEqual([0, 1]);
   expect(g.state.players[0].zones.discard.map((c) => c.id)).toEqual(['黑桃9']);
   expect(g.state.players[0].zones.stunt.map((c) => c.id)).toEqual(['梅花9']);
   expect(g.pending?.player).toBe(1);
@@ -42,6 +44,7 @@ it('特技與普通招式各自判定頂牌，新特技只取代特技疊的頂�
   pick(g, '梅花5');
   pick(g, '戒備打擊');
   pick(g, '確認特技出招');
+  addBreaks(g, 0, 2);
   pick(g, '梅花6');
   pick(g, '戒備打擊');
 
@@ -57,6 +60,7 @@ it('特技與普通招式各自判定頂牌，新特技只取代特技疊的頂�
     atk: expectedAtk + atkOf('梅花9') + 1,
     def: expectedDef + defOf('梅花9') + 2,
   });
+  expect(g.state.flags.breaksRemaining[0]).toBe(0);
 });
 
 it.each([0, 1] as const)('席位 %s 的選牌保持私密，確認後兩邊收到相同公開牌與移動', (first) => {

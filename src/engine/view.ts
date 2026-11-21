@@ -12,6 +12,7 @@ export interface CardView {
 }
 
 export interface PlayerView {
+  breaksRemaining?: number;
   charId: string;
   deckCount: number;
   hand: CardView[];
@@ -100,6 +101,7 @@ function playerView(game: Game, p: PlayerId, viewer: PlayerId): PlayerView {
   const stats = resolveCombatStats(game, p);
   return {
     charId: s.players[p].charId,
+    breaksRemaining: s.flags.breaksRemaining[p],
     deckCount: z.deck.length,
     hand: list('hand'),
     discard: list('discard'),

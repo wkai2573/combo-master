@@ -271,7 +271,7 @@ export const CORE_COMBAT_1: TutorialChapter = {
     { kind: 'at-frame', match: { fx: 'pass', player: 'opp' }, text: `看來對手沒牌能出招了，所以只能選擇收招。${NEXT}` },
     { kind: 'play', card: '梅花7', text: '輪到你出招了。\n點擊或拖曳至戰鬥區。' },
 
-    // 重複連擊值只能一次：我也沒牌可出，自動收招
+    // 破格已用完：我也沒牌可出，自動收招
     {
       kind: 'at-frame', match: { fx: 'pass', player: 'me' }, text: `怎麼自動收招了呢？${NEXT}`,
       highlight: [{ kind: 'pass-text', owner: 'me' }],
@@ -280,7 +280,7 @@ export const CORE_COMBAT_1: TutorialChapter = {
       kind: 'explain',
       text: (ctx) => {
         const [lo, hi] = comboRange(ctx.view)!;
-        return `那是因為每回合自己的招式卡疊只能重複一次連擊值。你已經出了兩張 7，手中的 7 不能再出；6 和 9 又不在範圍 ${lo}~${hi} 內，只好收招。${NEXT}`;
+        return `打出與自己招式卡疊頂牌同連擊值的招式會消耗 1 次破格。你打出第二張 7 時已用完本回合的破格，手中的 7 不能再出。6 和 9 又不在範圍 ${lo}~${hi} 內，只好收招。${NEXT}`;
       },
       highlight: [{ kind: 'combat-cards', owner: 'me', cardId: '梅花7' }],
     },

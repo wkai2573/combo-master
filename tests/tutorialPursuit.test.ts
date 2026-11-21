@@ -120,8 +120,8 @@ describe('新手教學：停在影格', () => {
     playCard(s, '梅花7');
     const before = s.getState();
     s.advance();
-    expect(progress(s).text).toContain('每回合自己的招式卡疊只能重複一次連擊值');
-    expect(progress(s).text).toContain('你已經出了兩張 7，手中的 7 不能再出；6 和 9 又不在範圍 7~7 內，只好收招。');
+    expect(progress(s).text).toContain('與自己招式卡疊頂牌同連擊值的招式會消耗 1 次破格');
+    expect(progress(s).text).toContain('你打出第二張 7 時已用完本回合的破格，手中的 7 不能再出。6 和 9 又不在範圍 7~7 內，只好收招。');
     expect(progress(s).highlight).toEqual([{ kind: 'combat-cards', owner: 'me', cardId: '梅花7' }]);
     expect(s.getState().batch.id).toBe(before.batch.id);
     expect(s.getState().view).toBe(before.view);

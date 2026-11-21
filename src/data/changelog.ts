@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.67.0',
+    date: '2026-11-21',
+    items: [
+      { type: 'change', text: '每位玩家每回合可破格 1 次。打出與我方招式卡疊頂牌同連擊值的招式，或執行特技出招，都會消耗 1 次破格。' },
+      { type: 'add', text: '卡表新增破格、破格+X、重複連擊值出招與特技出招的說明。' },
+    ],
+  },
+  {
     version: '0.66.0',
     date: '2026-11-21',
     items: [

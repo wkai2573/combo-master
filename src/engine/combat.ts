@@ -25,21 +25,28 @@ export function inRange(g: GameCtx, p: PlayerId, c: CardInst): boolean {
 /** p 目前可以打出的招式（手牌）；opening 為先手步驟，只能在先手步驟出招的卡只有這時才算 */
 export function playables(g: GameCtx, p: PlayerId, opening = false): CardInst[] {
   const cands = Z(g, p, 'hand').filter((c) => data(c).kind === 'move');
-  // 招式卡疊只能出現一次「重複連擊值」：已經有同值 2 張之後，招式卡疊裡有的連擊值都不能再打出
-  const copies = new Map<number, number>();
-  for (const c of Z(g, p, 'moves')) copies.set(data(c).combo, (copies.get(data(c).combo) ?? 0) + 1);
-  const hasDuplicate = [...copies.values()].some((n) => n >= 2);
   return cands.filter((c) => {
     const rules = moveRules(c.id);
     if (rules.openingOnly && !opening) return false;
     if (rules.playCover > 0 && !canPay(g, p, { cover: rules.playCover })) return false;
-    return inRange(g, p, c) && !(hasDuplicate && copies.has(data(c).combo));
+    return inRange(g, p, c) && (g.state.flags.breaksRemaining[p] > 0 || !repeatsTopCombo(g, p, c));
   });
+}
+
+function repeatsTopCombo(g: GameCtx, p: PlayerId, card: CardInst): boolean {
+  const top = Z(g, p, 'moves').at(-1);
+  return top !== undefined && data(top).combo === data(card).combo;
+}
+
+/** 破格+X：增加我方本回合可用的破格次數 */
+export function addBreaks(g: GameCtx, p: PlayerId, count: number): void {
+  g.state.flags.breaksRemaining[p] += count;
 }
 
 // ───────────────────────── 出招 ─────────────────────────
 
 export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: boolean, zone: 'moves' | 'stunt' = 'moves'): Gen {
+  if (zone === 'stunt' || repeatsTopCombo(g, p, card)) g.state.flags.breaksRemaining[p]--;
   move(g, card, zone, 'top');
   g.state.flags.played[p]++;
   const action = zone === 'stunt' ? '特技出招' : opening ? '先手出招' : '出招';
@@ -390,6 +397,7 @@ export function* returnStep(g: GameCtx): Gen {
 
 function stuntMoves(g: GameCtx, p: PlayerId, cost: CardInst): CardInst[] {
   if (g.state.phase !== '反擊' || Z(g, p, 'moves').length === 0) return [];
+  if (g.state.flags.breaksRemaining[p] <= 0) return [];
   const hand = Z(g, p, 'hand');
   const printed = data(cost);
   // 裝備與增益資料以 0 填補未印在卡面上的連擊值。

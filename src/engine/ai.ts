@@ -241,16 +241,6 @@ export function chooseTriggerEffect(req: Request, myView: PlayerView, oppView: P
   return req.options.slice(0, Math.max(1, req.min)).map((o) => o.key);
 }
 
-/** 檢查連擊值在範圍內且不違反重複連擊值限制 */
-function canChainMove(combo: number, playedCombos: number[], minRange: number, maxRange: number): boolean {
-  if (combo < minRange || combo > maxRange) return false;
-  const copies = new Map<number, number>();
-  for (const c of playedCombos) copies.set(c, (copies.get(c) ?? 0) + 1);
-  const hasDuplicate = [...copies.values()].some((n) => n >= 2);
-  if (hasDuplicate && copies.has(combo)) return false;
-  return true;
-}
-
 /**
  * 反擊步驟出招或收招決策：
  * 1. 划算攻擊評估：以戰鬥區＋手牌易連擊的約 3～4 張招式預估總攻擊；淨破防（總攻 − 對方總防）≥ 3 認定為划算進攻。
@@ -266,10 +256,8 @@ export function chooseCounterMove(req: Request, myView: PlayerView, oppView: Pla
   const moveOptions = req.options.filter((o) => o.key !== 'pass' && o.cardId);
   if (moveOptions.length === 0) return ['pass'];
 
-  // 取得目前雙方招式卡疊的最後一張連擊值與我方已出過的連擊值
-  const myPlayedCombos = myView.moves
-    .map((m) => (m.id ? getCard(m.id).combo : null))
-    .filter((c): c is number => c !== null);
+  const myTop = myView.moves.at(-1)?.id;
+  const myLastCombo = myTop ? getCard(myTop).combo : null;
   const oppLastCombo =
     oppView.moves.length > 0 && oppView.moves[oppView.moves.length - 1].id
       ? getCard(oppView.moves[oppView.moves.length - 1].id!).combo
@@ -289,7 +277,7 @@ export function chooseCounterMove(req: Request, myView: PlayerView, oppView: Pla
 
   for (const opt of moveOptions) {
     const candCard = getCard(opt.cardId!);
-    const newPlayed = [...myPlayedCombos, candCard.combo];
+    const breaksAfterMove = (myView.breaksRemaining ?? 1) - Number(candCard.combo === myLastCombo);
     const minRange = oppLastCombo !== null ? Math.min(candCard.combo, oppLastCombo) : 1;
     const maxRange = oppLastCombo !== null ? Math.max(candCard.combo, oppLastCombo) : 9;
 
@@ -297,7 +285,7 @@ export function chooseCounterMove(req: Request, myView: PlayerView, oppView: Pla
     const chainable = remainingHandMoves.filter((h) => {
       if (h.uid === opt.uid || !h.id) return false;
       const c = getCard(h.id);
-      return canChainMove(c.combo, newPlayed, minRange, maxRange);
+      return c.combo >= minRange && c.combo <= maxRange && (c.combo !== candCard.combo || breaksAfterMove > 0);
     });
 
     // 估算連擊攻擊力（取攻擊力最高的前 3 張）
