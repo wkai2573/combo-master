@@ -242,6 +242,24 @@ export function HandRow({ cards, mine, optKeys, selected, single, minStep, drag,
   );
 }
 
+export function OpponentBoard(props: BoardProps) {
+  const { v, p, changes, fxKey } = props;
+  const pv = v.players[p];
+  const { faceUp, total } = expCounts(pv);
+  return (
+    <div className="opponent-board">
+      <div className={`opponent-summary${v.first === p ? ' turn' : ''}`} tabIndex={0}>
+        <b>{getCharacter(pv.charId).cls}</b>
+        <span className="pill">手牌 {pv.hand.length}</span>
+        <span className="pill hp">生命 {pv.deckCount}<Delta d={changes?.life[p]} k={fxKey} /></span>
+        <span className="pill">怒氣 {pv.rage.length}<Delta d={changes?.rage[p]} k={fxKey} tone="neutral" /></span>
+        <span className="pill">經驗區 表 {faceUp}／共 {total}<Delta d={changes?.exp[p]} k={fxKey} tone="neutral" /></span>
+      </div>
+      <div className="opponent-detail"><PlayerBoard {...props} /></div>
+    </div>
+  );
+}
+
 export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, drag, hit, changes, fxKey, outcome, shuffling }: BoardProps) {
   const pv = v.players[p];
   const mine = p === v.me;

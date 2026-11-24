@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { SPEED_LABEL, useSpeed, usePlayback, type Speed } from '../usePlayback';
 import { VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { InspectContext, InspectPanel, PinContext } from '../components/CardFace';
-import { COMBAT_LIST_NOTE, CombatArea, LogPanel, PlayerBoard, type ZoneKey } from '../components/Board';
+import { COMBAT_LIST_NOTE, CombatArea, LogPanel, OpponentBoard, PlayerBoard, type ZoneKey } from '../components/Board';
 import { FlightLayer } from '../components/FlightLayer';
 import { PhaseBanner } from '../components/PhaseBanner';
 import { Spotlight } from '../components/Spotlight';
@@ -166,7 +166,8 @@ export function Battle({ session, onExit, onPractice, onLesson }: {
   const outcomeOf = (p: PlayerId) => (v.winner === null ? undefined : v.winner === 'draw' ? 'draw' : v.winner === p ? 'win' : 'lose');
   const shown = overlays.pinned ?? inspect;
   const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={overlays.pinned !== null} onUnpin={overlays.unpin} />;
-  const oppBoard = <PlayerBoard v={v} p={opp} prompt={null} selected={[]} onPick={() => {}} onZone={openZone} hit={pres.hits[opp]} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
+  const OpponentPanel = tut ? PlayerBoard : OpponentBoard;
+  const oppBoard = <OpponentPanel v={v} p={opp} prompt={null} selected={[]} onPick={noop} onZone={openZone} hit={pres.hits[opp]} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
   const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} drag={drag} onZone={openZone} hit={pres.hits[me]} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
   const combat = (
     <CombatArea
@@ -265,8 +266,10 @@ export function Battle({ session, onExit, onPractice, onLesson }: {
                 {combat}
                 <div className="sidecol"><LogPanel lines={v.log} /></div>
               </div>
-              {promptBarOf(handUids)}
-              {myBoard}
+              <div className="lower-board">
+                {promptBarOf(handUids)}
+                {myBoard}
+              </div>
             </div>
           ) : (
             <>

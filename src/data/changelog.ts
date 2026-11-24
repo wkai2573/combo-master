@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.68.6',
+    date: '2026-11-24',
+    items: [{ type: 'change', text: '桌面對戰的對手資訊預設收合，滑過即可展開。戰鬥區與下方操作區平分高度，讓手牌顯示更大。' }],
+  },
+  {
     version: '0.68.5',
     date: '2026-11-24',
     items: [{ type: 'change', text: '對戰中已有成品卡圖的卡牌會顯示完整卡面，卡牌說明也可縮放查看。' }],

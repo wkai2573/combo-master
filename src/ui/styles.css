@@ -516,7 +516,27 @@ h1, h2, h3 { margin: 0 0 8px; }
 .battle.wide > .topbar, .battle.wide > .steps, .battle.wide > .banner { flex: none; }
 .battle.wide .main { display: block; flex: 1; min-height: 0; }
 .battle.wide .board {
-  display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 6px; height: 100%; padding: 6px 10px; overflow: hidden auto;
+  display: grid; grid-template-rows: auto repeat(2, minmax(0, 1fr)); gap: 6px; height: 100%; padding: 6px 10px; overflow: hidden auto;
+}
+.battle.wide .opponent-board { position: relative; z-index: 7; }
+.battle.wide .opponent-summary {
+  display: flex; align-items: center; gap: 8px; padding: 5px 10px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+}
+.battle.wide .opponent-summary.turn { border-color: var(--accent); }
+.battle.wide .opponent-detail {
+  position: absolute; inset: 0 0 auto; visibility: hidden;
+  border-radius: 10px; box-shadow: 0 8px 24px #000b;
+}
+.battle.wide .opponent-board:hover .opponent-detail,
+.battle.wide .opponent-board:has(:focus-visible) .opponent-detail { visibility: visible; }
+.battle.wide .lower-board {
+  display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 6px; container-type: size;
+}
+.battle.wide .lower-board > .pboard { overflow: auto; }
+.battle.wide .lower-board > .pboard .handzone {
+  --mdh: clamp(92px, calc(100cqh - 170px), 210px);
+  --mdw: calc(var(--mdh) * 5 / 7);
 }
 .battle.wide .card.md { width: var(--mdw); height: var(--mdh); }
 .battle.wide .midrow { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(660px, auto) minmax(220px, 1fr); gap: 8px; min-height: 0; }
