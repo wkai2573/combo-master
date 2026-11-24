@@ -259,7 +259,7 @@ export function CardTablePage() {
         <span className="muted">基準 v{APP_VERSION}</span>
         <div className="ct-actions">
           <button disabled={!hasDraft} onClick={exportDraft}>匯出差異檔</button>
-          <button disabled={!hasDraft && !invalidated.length} onClick={() => setLocal({ ...local, draft: emptyDraft(), invalidated: [] })}>清除全部草稿</button>
+          {hasDraft && <button onClick={() => setLocal({ ...local, draft: emptyDraft(), invalidated: [] })}>清除全部草稿</button>}
         </div>
       </header>
       {storageFailed && <p role="alert">瀏覽器無法儲存草稿。關閉頁面前請匯出差異檔。</p>}

@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.69.1',
+    date: '2026-11-25',
+    items: [{ type: 'fix', text: '卡表只用黃框標示尚未套用的草稿，並在沒有待處理草稿時隱藏清除草稿按鈕。' }],
+  },
+  {
     version: '0.69.0',
     date: '2026-11-25',
     items: [{ type: 'add', text: '卡表可依類型、連擊值與專用或共用篩選卡片，並搜尋卡名、效果與特徵。' }],
