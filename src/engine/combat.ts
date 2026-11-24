@@ -395,48 +395,49 @@ export function* returnStep(g: GameCtx): Gen {
 
 // ───────────────────────── 戰鬥階段 ─────────────────────────
 
-function stuntMoves(g: GameCtx, p: PlayerId, cost: CardInst): CardInst[] {
+function stuntCosts(g: GameCtx, p: PlayerId, card: CardInst): CardInst[] {
   if (g.state.phase !== '反擊' || Z(g, p, 'moves').length === 0) return [];
   if (g.state.flags.breaksRemaining[p] <= 0) return [];
   const hand = Z(g, p, 'hand');
-  const printed = data(cost);
+  const printed = data(card);
+  if (!hand.includes(card) || printed.kind !== 'move') return [];
+  const rules = moveRules(card.id);
+  if (rules.openingOnly || !canPay(g, p, { cover: rules.playCover })) return [];
   // 裝備與增益資料以 0 填補未印在卡面上的連擊值。
-  if (!hand.includes(cost) || (printed.kind !== 'move' && printed.combo === 0)) return [];
-  return hand.filter((card) => {
-    if (card === cost || data(card).kind !== 'move' || data(card).combo !== printed.combo) return false;
-    const rules = moveRules(card.id);
-    return !rules.openingOnly && canPay(g, p, { cover: rules.playCover });
+  return hand.filter((cost) => {
+    const payment = data(cost);
+    return cost !== card && payment.combo === printed.combo && (payment.kind === 'move' || payment.combo !== 0);
   });
 }
 
-function* chooseStunt(g: GameCtx, p: PlayerId, costs: CardInst[]): Gen<[CardInst, CardInst] | undefined> {
+function* chooseStunt(g: GameCtx, p: PlayerId, candidates: CardInst[]): Gen<[CardInst, CardInst] | undefined> {
   const cancel = { key: 'cancel', label: '取消' };
-  const [costKey] = yield* ask(g, {
-    player: p, title: '特技出招：選擇要捨棄的手牌', min: 1, max: 1,
-    options: [...costs.map((c) => cardOpt(c, p)), cancel],
-  });
-  const cost = costs.find((c) => `c${c.uid}` === costKey);
-  if (!cost) return;
-  const candidates = stuntMoves(g, p, cost);
-  if (candidates.length === 0) return;
   const [cardKey] = yield* ask(g, {
-    player: p, title: '特技出招：選擇要打出的同連擊值招式', min: 1, max: 1, dropZone: 'stunt',
+    player: p, title: '特技出招：選擇要打出的招式', min: 1, max: 1, dropZone: 'stunt',
     options: [...candidates.map((c) => cardOpt(c, p)), cancel],
   });
   const card = candidates.find((c) => `c${c.uid}` === cardKey);
   if (!card) return;
+  const costs = stuntCosts(g, p, card);
+  if (costs.length === 0) return;
+  const [costKey] = yield* ask(g, {
+    player: p, title: `特技出招：選擇要為「${data(card).name}」捨棄的同連擊值手牌`, min: 1, max: 1,
+    options: [...costs.map((c) => cardOpt(c, p)), cancel],
+  });
+  const cost = costs.find((c) => `c${c.uid}` === costKey);
+  if (!cost) return;
   const [confirmed] = yield* ask(g, {
     player: p, title: `捨棄「${data(cost).name}」，打出特技「${data(card).name}」？`, min: 1, max: 1,
     options: [{ key: 'confirm-stunt', label: '確認特技出招' }, cancel],
   });
-  if (confirmed === 'confirm-stunt' && stuntMoves(g, p, cost).includes(card)) return [cost, card];
+  if (confirmed === 'confirm-stunt' && stuntCosts(g, p, card).includes(cost)) return [cost, card];
 }
 
 function* counter(g: GameCtx, p: PlayerId, previous: CardInst | undefined): Gen<CardInst | undefined> {
   while (true) {
     const normal = playables(g, p);
-    const costs = Z(g, p, 'hand').filter((card) => stuntMoves(g, p, card).length > 0);
-    if (normal.length === 0 && costs.length === 0) return;
+    const stunts = Z(g, p, 'hand').filter((card) => stuntCosts(g, p, card).length > 0);
+    if (normal.length === 0 && stunts.length === 0) return;
     const target = previous?.zone === 'stunt' ? `（上一招「${data(previous).name}」）` : '';
     const [key] = yield* ask(g, {
       player: p,
@@ -444,13 +445,13 @@ function* counter(g: GameCtx, p: PlayerId, previous: CardInst | undefined): Gen<
       min: 1, max: 1, dropZone: 'moves',
       options: [
         ...normal.map((c) => cardOpt(c, p)),
-        ...(costs.length > 0 ? [{ key: 'stunt', label: '特技出招' }] : []),
+        ...(stunts.length > 0 ? [{ key: 'stunt', label: '特技出招' }] : []),
         { key: 'pass', label: '收招' },
       ],
     });
     if (key === 'pass') return;
-    if (key === 'stunt' && costs.length > 0) {
-      const pair = yield* chooseStunt(g, p, costs);
+    if (key === 'stunt' && stunts.length > 0) {
+      const pair = yield* chooseStunt(g, p, stunts);
       if (!pair) continue;
       const [cost, card] = pair;
       discard(g, cost);

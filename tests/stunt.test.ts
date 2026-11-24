@@ -7,7 +7,7 @@ import { atkOf, defOf, matchScenario, pick, scenario } from './helpers';
 it('特技出招確認前可取消，確認後可將範圍外的招式打入特技區', () => {
   const g = scenario({
     singlePhase: true,
-    p0: { hand: ['黑桃5', '黑桃9', '梅花9'] },
+    p0: { hand: ['黑桃5', '黑桃9', '梅花9', '紅心2'] },
     p1: { hand: ['黑桃6', '梅花6'] },
   });
 
@@ -16,12 +16,15 @@ it('特技出招確認前可取消，確認後可將範圍外的招式打入特�
   pick(g, '黑桃6');
   expect(g.pending?.options.map((o) => o.key)).toContain('stunt');
   pick(g, '特技出招');
-  pick(g, '黑桃9');
-  pick(g, '取消');
-  expect(g.state.players[0].zones.hand.map((c) => c.id)).toEqual(['黑桃9', '梅花9']);
-  pick(g, '特技出招');
-  pick(g, '黑桃9');
+  expect(g.pending?.dropZone).toBe('stunt');
+  expect(g.pending?.options.map((o) => o.label)).toEqual(['黑桃9', '梅花9', '取消']);
   pick(g, '梅花9');
+  expect(g.pending?.options.map((o) => o.label)).toEqual(['黑桃9', '取消']);
+  pick(g, '取消');
+  expect(g.state.players[0].zones.hand.map((c) => c.id)).toEqual(['黑桃9', '梅花9', '紅心2']);
+  pick(g, '特技出招');
+  pick(g, '梅花9');
+  pick(g, '黑桃9');
   pick(g, '確認特技出招');
   expect(g.state.flags.breaksRemaining).toEqual([0, 1]);
   expect(g.state.players[0].zones.discard.map((c) => c.id)).toEqual(['黑桃9']);
@@ -41,8 +44,8 @@ it('特技與普通招式各自判定頂牌，新特技只取代特技疊的頂�
   pick(g, '黑桃5');
   pick(g, '黑桃6');
   pick(g, '特技出招');
-  pick(g, '梅花5');
   pick(g, '戒備打擊');
+  pick(g, '梅花5');
   pick(g, '確認特技出招');
   addBreaks(g, 0, 2);
   pick(g, '梅花6');
@@ -53,8 +56,8 @@ it('特技與普通招式各自判定頂牌，新特技只取代特技疊的頂�
   expect(viewFor(g, 0).players[0]).toMatchObject({ atk: expectedAtk + 2, def: expectedDef + 4 });
 
   pick(g, '特技出招');
-  pick(g, '黑桃9');
   pick(g, '梅花9');
+  pick(g, '黑桃9');
   pick(g, '確認特技出招');
   expect(viewFor(g, 0).players[0]).toMatchObject({
     atk: expectedAtk + atkOf('梅花9') + 1,
@@ -81,9 +84,10 @@ it.each([0, 1] as const)('席位 %s 的選牌保持私密，確認後兩邊收�
 
   submit('黑桃5');
   submit('黑桃6');
-  submit('特技出招');
-  const selecting = submit('黑桃9');
-  expect(selecting[first].view.prompt?.dropZone).toBe('stunt');
+  const choosingMove = submit('特技出招');
+  expect(choosingMove[first].view.prompt?.dropZone).toBe('stunt');
+  const selecting = submit('梅花9');
+  expect(selecting[first].view.prompt?.dropZone).toBeUndefined();
   expect(selecting[foe].view.prompt).toBeNull();
   expect(selecting[foe].view.players[first].hand.map((c) => c.id)).toEqual([null, null]);
   expect(match.submit(foe, [match.pending!.options[0].key]).error).not.toBeNull();
@@ -92,8 +96,8 @@ it.each([0, 1] as const)('席位 %s 的選牌保持私密，確認後兩邊收�
   expect(cancelled[first].view.players[first].hand.map((c) => c.id)).toEqual(['黑桃9', '梅花9']);
 
   submit('特技出招');
-  submit('黑桃9');
   submit('梅花9');
+  submit('黑桃9');
   const played = submit('確認特技出招');
   for (const seat of played) {
     expect(seat.view.players[first].stunt.map((c) => c.id)).toEqual(['梅花9']);
@@ -125,8 +129,8 @@ it('特技區頂牌的卡面效果在對方反擊時發動，並依卡文移到�
   pick(g, '黑桃5');
   pick(g, '黑桃6');
   pick(g, '特技出招');
-  pick(g, '黑桃7');
   pick(g, '煙霧陷阱');
+  pick(g, '黑桃7');
   pick(g, '確認特技出招');
   expect(viewFor(g, 0).players[0].stunt.map((c) => c.id)).toEqual(['煙霧陷阱']);
   pick(g, '梅花6');

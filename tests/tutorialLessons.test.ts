@@ -117,9 +117,9 @@ describe('第 2 課：特技出招', () => {
     expect(view(s).phase).toBe('反擊');
     expect(progress(s).awaiting).toEqual({ choose: 'stunt' });
     s.submit(['stunt']);
-    choose(s, '黑桃9');
     expect(view(s).prompt?.dropZone).toBe('stunt');
     choose(s, '梅花9');
+    choose(s, '黑桃9');
     expect(view(s).players[0].discard).toHaveLength(0);
     s.submit(['confirm-stunt']);
     const [player, opponent] = view(s).players;

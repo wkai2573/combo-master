@@ -21,8 +21,8 @@ export const STUNT: TutorialChapter = {
       text: `對手打出黑桃6。你的兩張手牌都是連擊值 ${combo}，超出雙方頂牌的範圍。現在可以按「特技出招」。`,
       highlight: [{ kind: 'top-combos' }],
     },
-    { kind: 'play', card: cost, text: `先點擊黑桃9。這張原始連擊值 ${combo} 的手牌會在確認後捨棄，作為出招代價。` },
-    { kind: 'play', card: stunt, text: `再選原始連擊值同為 ${combo} 的梅花9。點擊它，或拖曳到特技區。` },
+    { kind: 'play', card: stunt, text: '先選要打出的梅花9。點擊它，或拖曳到特技區。' },
+    { kind: 'play', card: cost, text: `再點擊原始連擊值同為 ${combo} 的黑桃9。這張手牌會在確認後捨棄，作為出招代價。` },
     { kind: 'choose', key: 'confirm-stunt', text: '按「確認特技出招」，捨棄黑桃9並打出梅花9。' },
     {
       kind: 'at-frame', match: { fx: 'stunt', player: 'me' },

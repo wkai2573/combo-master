@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.68.1',
+    date: '2026-11-24',
+    items: [
+      { type: 'change', text: '特技出招改為先選要打出的招式，再選要捨棄的同連擊值手牌。教學同步調整。' },
+    ],
+  },
+  {
     version: '0.68.0',
     date: '2026-11-24',
     items: [
