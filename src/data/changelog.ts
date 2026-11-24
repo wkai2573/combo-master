@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.67.2',
+    date: '2026-11-24',
+    items: [
+      { type: 'fix', text: '組牌的牌池和卡片預覽會完整顯示已完成的卡圖。' },
+    ],
+  },
+  {
     version: '0.67.1',
     date: '2026-11-24',
     items: [
