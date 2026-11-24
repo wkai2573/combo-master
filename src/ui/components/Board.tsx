@@ -250,6 +250,7 @@ export function OpponentBoard(props: BoardProps) {
     <div className="opponent-board">
       <div className={`opponent-summary${v.first === p ? ' turn' : ''}`} tabIndex={0}>
         <b>{getCharacter(pv.charId).cls}</b>
+        {v.first === p && <span className="pill awake">先攻</span>}
         <span className="pill">手牌 {pv.hand.length}</span>
         <span className="pill hp">生命 {pv.deckCount}<Delta d={changes?.life[p]} k={fxKey} /></span>
         <span className="pill">怒氣 {pv.rage.length}<Delta d={changes?.rage[p]} k={fxKey} tone="neutral" /></span>
