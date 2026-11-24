@@ -9,6 +9,7 @@ import { CardArt } from './CardArt';
 import { Delta } from './Delta';
 import { CardText } from './CardText';
 import { cardBorderColor, cardColor } from '../cardColor';
+import { moveCardFaces } from '../moveCardFaces';
 
 /** 滑鼠移到卡片上時，把卡片 id 交給側欄的說明區 */
 export const InspectContext = createContext<(id: string | null, expActive?: boolean) => void>(() => {});
@@ -87,6 +88,8 @@ export function CardFace({ id, card, size = 'md', selected, glow, dim, pursuit, 
     return <div className={[...cls, 'back'].join(' ')} data-uid={uid} onClick={onClick}>?</div>;
   }
   const c = card ?? getCard(id);
+  const face = moveCardFaces.get(id);
+  if (face) cls.push('finished-face');
   const isMove = c.kind === 'move';
   // 放在增益區、依持續回合計時的 Ex 卡沒有攻守連擊，卡頭改寫持續回合
   const timedEx = isExCardId(c.id) && c.duration !== undefined;
@@ -102,6 +105,7 @@ export function CardFace({ id, card, size = 'md', selected, glow, dim, pursuit, 
       }}
       onMouseEnter={() => inspect(id, expEffect)}
     >
+      {face && <img className="face-image" src={face} alt="" draggable={false} />}
       <div className="hd">
         {isMove && !timedEx ? (
           <>
@@ -122,12 +126,14 @@ export function CardFace({ id, card, size = 'md', selected, glow, dim, pursuit, 
           </>
         )}
       </div>
-      <CardArt id={id} card={card} />
-      <div className="ef">
-        <span className="tg">{c.cls}・{kindLabel(c)}　</span>
-        <CardText text={c.text} />
+      {!face && <CardArt id={id} card={card} />}
+      <div className="face-footer">
+        <div className="ef">
+          <span className="tg">{c.cls}・{kindLabel(c)}　</span>
+          <CardText text={c.text} />
+        </div>
+        <div className="nm">{c.name}</div>
       </div>
-      <div className="nm">{c.name}</div>
       {covered ? <span className="fdtag">裏側</span> : null}
       {counters ? <span className="ctr" title="剩餘持續回合">⏳{counters}<Delta d={counterDelta} k={deltaKey ?? 0} /></span> : null}
       {badge !== undefined ? <span className="badge">{badge}</span> : null}

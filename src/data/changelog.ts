@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.67.1',
+    date: '2026-11-24',
+    items: [
+      { type: 'change', text: '五個職業的 50 張招式卡換上新卡圖。' },
+    ],
+  },
+  {
     version: '0.67.0',
     date: '2026-11-21',
     items: [

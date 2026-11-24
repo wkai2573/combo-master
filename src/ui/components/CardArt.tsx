@@ -2,10 +2,11 @@ import type { ReactNode } from 'react';
 import { getCard } from '../../data/cards';
 import type { CardData } from '../../data/types';
 import { CARD_ART, hasOwnArt } from './cardArtGlyphs';
+import { moveCardFaces } from '../moveCardFaces';
 
 /**
- * 卡面插圖：所有圖形都畫在 100×60 的座標內，顏色取自卡種色（currentColor）。
- * 白板卡＝花色加數字；效果卡與 Ex 卡各有專屬的圖（cardArtGlyphs.tsx），測試保證每張都有而且互不相同。
+ * 沒有成品卡圖時，使用 100×60 的 SVG 插圖。
+ * 白板卡顯示花色與數字，效果卡與 Ex 卡使用各自的圖示。
  */
 
 const W = '#e8ecf5';
@@ -39,11 +40,16 @@ function glyphFor(id: string, card?: CardData): ReactNode {
 }
 
 export function CardArt({ id, card }: { id: string; card?: CardData }) {
+  const face = moveCardFaces.get(id);
   return (
     <div className="art">
-      <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        {glyphFor(id, card)}
-      </svg>
+      {face ? (
+        <img className="face-preview" src={face} alt="" draggable={false} />
+      ) : (
+        <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          {glyphFor(id, card)}
+        </svg>
+      )}
     </div>
   );
 }
