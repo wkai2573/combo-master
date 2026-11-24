@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.68.4',
+    date: '2026-11-24',
+    items: [{ type: 'fix', text: '修正從 game.tempura.page 開啟遊戲時無法讀取與上傳雲端戰績的問題。' }],
+  },
+  {
     version: '0.68.3',
     date: '2026-11-24',
     items: [{ type: 'change', text: '首頁只從已有成品卡圖的職業卡隨機抽選，並展示完整卡面。' }],
