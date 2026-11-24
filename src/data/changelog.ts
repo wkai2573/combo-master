@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.69.4',
+    date: '2026-11-25',
+    items: [{ type: 'fix', text: '招式卡的特徵改為卡名框右下方的獨立標籤，避免遮住效果文字。' }],
+  },
+  {
     version: '0.69.3',
     date: '2026-11-25',
     items: [{ type: 'change', text: '88 張招式卡換上定稿插畫與對應卡框，包含白板招式和五個職業的招式。' }],
