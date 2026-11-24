@@ -135,7 +135,7 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
   return (
     <InspectContext.Provider value={setInspect}>
       <PinContext.Provider value={(id) => setPinned((p) => (p === id ? null : id))}>
-      <div className="page">
+      <div className="page deckbuilder-page">
         <div className="row" style={{ marginBottom: 10 }}>
           <button onClick={onBack}>← 返回</button>
           <h2 style={{ margin: 0 }}>組牌</h2>

@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.68.19',
+    date: '2026-11-25',
+    items: [{ type: 'change', text: '組牌頁在雙欄版面中可分別捲動左側卡池和右側卡片說明與牌組。' }],
+  },
+  {
     version: '0.68.18',
     date: '2026-11-24',
     items: [{ type: 'change', text: '依卡框內側尺寸重新繪製 50 張招式卡插畫，讓主角避開連擊值欄與卡名區。' }],

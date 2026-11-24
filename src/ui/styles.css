@@ -364,7 +364,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .poolitem .ctl button { padding: 0 8px; }
 .poolitem .card.dim { opacity: 1; }
 .poolitem .card.dim :is(.hd, .art, .ef, .face-image) { opacity: 0.35; }
-.deckcol { position: sticky; top: 8px; display: grid; gap: 8px; }
+.deckcol { display: grid; gap: 8px; }
 .decklist { max-height: 46vh; overflow-y: auto; display: grid; gap: 2px; }
 .deckline { display: flex; gap: 6px; align-items: center; padding: 2px 6px; border-radius: 5px; background: var(--panel2); }
 .deckline .cb { color: var(--combo); width: 22px; text-align: center; font-weight: 700; }
@@ -378,6 +378,14 @@ h1, h2, h3 { margin: 0 0 8px; }
 .curve .bar span { position: absolute; top: -15px; width: 100%; text-align: center; font-size: 11px; }
 .curve .lbl { text-align: center; font-size: 11px; color: var(--muted); }
 .curvecol { display: flex; flex-direction: column; flex: 1; justify-content: flex-end; height: 100%; }
+
+@media (width > 900px) {
+  .deckbuilder-page { height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+  .builder { grid-template-columns: minmax(0, 1fr) 380px; align-items: stretch; }
+  .builder > * { overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; }
+  .deckcol { align-content: start; }
+  .decklist { max-height: none; overflow: visible; }
+}
 
 @media (max-width: 900px) {
   .builder { grid-template-columns: 1fr; }
