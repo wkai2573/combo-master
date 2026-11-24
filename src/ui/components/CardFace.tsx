@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { getCard } from '../../data/cards';
 import type { CardData } from '../../data/types';
 import { isExCardId } from '../../data/exCards';
@@ -92,6 +92,7 @@ export function CardFace({ id, card, size = 'md', fullFace, selected, glow, dim,
   const c = card ?? getCard(id);
   const face = moveCardFaces.get(id);
   const showFullFace = fullFace && face !== undefined;
+  const hasBadge = badge !== undefined;
   if (face) cls.push(showFullFace ? 'full-face' : 'finished-face');
   const isMove = c.kind === 'move';
   // 放在增益區、依持續回合計時的 Ex 卡沒有攻守連擊，卡頭改寫持續回合
@@ -108,7 +109,7 @@ export function CardFace({ id, card, size = 'md', fullFace, selected, glow, dim,
       }}
       onMouseEnter={() => inspect(id, expEffect)}
     >
-      {face && <img className="face-image" src={face} alt={showFullFace ? c.name : ''} draggable={false} />}
+      {face && <img className="face-image" src={face} alt="" draggable={false} />}
       {!showFullFace && (
         <>
           <div className="hd">
@@ -132,24 +133,34 @@ export function CardFace({ id, card, size = 'md', fullFace, selected, glow, dim,
             )}
           </div>
           {!face && <CardArt id={id} card={card} />}
-          <div className="face-footer">
-            <div className="ef">
-              <span className="tg">{c.cls}・{kindLabel(c)}　</span>
-              <CardText text={c.text} />
-            </div>
-            <div className="nm">{c.name}</div>
-          </div>
         </>
       )}
+      <div className="face-footer">
+        {!showFullFace && (
+          <div className="ef">
+            <span className="tg">{c.cls}・{kindLabel(c)}　</span>
+            <CardText text={c.text} />
+          </div>
+        )}
+        <div className={hasBadge ? 'nm with-badge' : 'nm'}>
+          <span className="card-name" title={hasBadge ? c.name : undefined}>{c.name}</span>
+          {hasBadge && <span className={badge === 0 ? 'badge empty' : 'badge'}>{badge}</span>}
+        </div>
+      </div>
       {covered ? <span className="fdtag">裏側</span> : null}
       {counters ? <span className="ctr" title="剩餘持續回合">⏳{counters}<Delta d={counterDelta} k={deltaKey ?? 0} /></span> : null}
-      {badge !== undefined ? <span className="badge">{badge}</span> : null}
     </div>
   );
 }
 
+const MIN_FACE_SCALE = 0.5;
+const MAX_FACE_SCALE = 1.75;
+const FACE_SCALE_STEP = 0.25;
+const FACE_PREVIEW_WIDTH = 184;
+
 /** 側欄的卡片完整說明：放大的卡圖、數值、效果，並列出文字裡關鍵字的說明 */
 export function InspectPanel({ id, card, fullFace, expActive, pinned, onUnpin }: { id: string | null; card?: CardData; fullFace?: boolean; expActive?: boolean; pinned?: boolean; onUnpin?: () => void }) {
+  const [faceScale, setFaceScale] = useState(1);
   if (!id) {
     return (
       <div className="inspect muted">
@@ -171,7 +182,17 @@ export function InspectPanel({ id, card, fullFace, expActive, pinned, onUnpin }:
         </div>
       )}
       {face ? (
-        <img className="full-face-preview" src={face} alt="" width={504} height={704} draggable={false} />
+        <>
+          <div className="row face-zoom" role="group" aria-label="卡圖縮放">
+            <button type="button" disabled={faceScale === MIN_FACE_SCALE}
+              onClick={() => setFaceScale((scale) => Math.max(MIN_FACE_SCALE, scale - FACE_SCALE_STEP))}>縮小</button>
+            <output className="muted">{faceScale * 100}%</output>
+            <button type="button" disabled={faceScale === MAX_FACE_SCALE}
+              onClick={() => setFaceScale((scale) => Math.min(MAX_FACE_SCALE, scale + FACE_SCALE_STEP))}>放大</button>
+          </div>
+          <img className="full-face-preview" src={face} alt="" width={504} height={704} draggable={false}
+            style={{ width: `min(${FACE_PREVIEW_WIDTH * faceScale}px, ${100 * faceScale / MAX_FACE_SCALE}%)` }} />
+        </>
       ) : (
         <div className="bigart">
           <CardArt id={id} card={card} />

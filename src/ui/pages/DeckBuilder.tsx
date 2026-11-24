@@ -7,7 +7,6 @@ import { deleteDeck, exportDeck, importDeck, listDecks, saveDeck, type DeckEntry
 import { MAX_COPIES, validateDeck } from '../../deck/validate';
 import { CardFace, InspectContext, InspectPanel, PinContext } from '../components/CardFace';
 import { Modal } from '../components/Modal';
-import { moveCardFaces } from '../moveCardFaces';
 
 const KIND_ORDER: Record<CardKind, number> = { move: 0, equip: 1, buff: 2 };
 const byOrder = (a: CardData, b: CardData) =>
@@ -179,10 +178,9 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
             <div className="pool">
               {pool.map((c) => {
                 const n = counts.get(c.id) ?? 0;
-                const fullFace = moveCardFaces.has(c.id);
                 return (
                   <div className="poolitem" key={c.id}>
-                    <CardFace id={c.id} size="md" fullFace={fullFace} badge={fullFace ? undefined : n || undefined} dim={n >= MAX_COPIES} onClick={() => add(c.id)} />
+                    <CardFace id={c.id} size="md" fullFace badge={n} dim={n >= MAX_COPIES} onClick={() => add(c.id)} />
                     <div className="ctl">
                       <button disabled={n === 0} onClick={() => remove(c.id)}>−</button>
                       <span>{n}/{MAX_COPIES}</span>

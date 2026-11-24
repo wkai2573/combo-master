@@ -171,12 +171,15 @@ h1, h2, h3 { margin: 0 0 8px; }
   flex: none; padding: 2px 4px; text-align: center; font-weight: 800; font-size: 1.12em; line-height: 1.3;
   background: color-mix(in srgb, var(--cc, #666) 24%, #10131c); border-top: 1px solid #0007; white-space: nowrap; overflow: hidden;
 }
+.card .nm.with-badge { display: flex; align-items: center; gap: 4px; }
+.card .with-badge .card-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .card .face-footer { display: contents; }
 .card .face-image {
   position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
 }
 .card.full-face { border: 0; border-radius: 0; background: none; }
-.card.full-face .face-image { object-fit: contain; }
+.card.full-face .face-image { position: static; flex: 1; min-height: 0; height: auto; object-fit: contain; }
+.card.full-face .nm { border-radius: 0 0 8px 8px; }
 .card.finished-face .hd { position: relative; }
 /* 用即時卡片資料蓋住成品圖下方的效果文字與卡名。 */
 .card.finished-face .face-footer {
@@ -204,9 +207,10 @@ h1, h2, h3 { margin: 0 0 8px; }
 .card.clickable:hover:not(.selected) { transform: translateY(-6px); }
 .card.dim { opacity: 0.35; }
 .card .badge {
-  position: absolute; right: 3px; bottom: 3px; background: var(--accent); color: #000; font-weight: 800;
+  flex: none; background: var(--accent); color: #000; font-weight: 800;
   border-radius: 10px; padding: 0 6px; font-size: 11px;
 }
+.card .badge.empty { background: var(--bg); color: var(--muted); }
 .card .ctr { position: absolute; left: 3px; bottom: 3px; background: #0009; border-radius: 8px; padding: 0 5px; font-size: 10px; }
 .cardrow { display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; }
 .cardrow.scroll { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
@@ -358,6 +362,8 @@ h1, h2, h3 { margin: 0 0 8px; }
 .poolitem { display: grid; gap: 3px; justify-items: center; }
 .poolitem .ctl { display: flex; gap: 4px; align-items: center; }
 .poolitem .ctl button { padding: 0 8px; }
+.poolitem .card.dim { opacity: 1; }
+.poolitem .card.dim :is(.hd, .art, .ef, .face-image) { opacity: 0.35; }
 .deckcol { position: sticky; top: 8px; display: grid; gap: 8px; }
 .decklist { max-height: 46vh; overflow-y: auto; display: grid; gap: 2px; }
 .deckline { display: flex; gap: 6px; align-items: center; padding: 2px 6px; border-radius: 5px; background: var(--panel2); }
@@ -428,7 +434,9 @@ h1, h2, h3 { margin: 0 0 8px; }
 .inspect .bigart .art { height: 100%; background: none; border: 0; }
 .inspect .bigart svg { display: block; width: 100%; height: 100%; }
 .inspect .face-preview { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
-.inspect .full-face-preview { display: block; width: min(184px, 100%); height: auto; margin: 0 auto 8px; }
+.inspect .face-zoom { justify-content: center; margin-bottom: 6px; }
+.inspect .face-zoom output { min-width: 5ch; text-align: center; font-variant-numeric: tabular-nums; }
+.inspect .full-face-preview { display: block; height: auto; margin: 0 auto 8px; }
 .inspect .pinbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; padding: 3px 8px; font-size: 12px; color: #1b1405; background: var(--accent); border-radius: 6px; font-weight: 700; }
 .inspect .pinbar button { padding: 0 8px; font-size: 12px; background: #fff3; border-color: #1b140555; color: #1b1405; }
 .inspect .kwlist { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 12px; line-height: 1.55; color: var(--muted); display: grid; gap: 4px; }

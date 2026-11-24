@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.67.3',
+    date: '2026-11-24',
+    items: [
+      { type: 'change', text: '組牌的每張卡片下方都顯示卡名與目前的牌組張數。' },
+      { type: 'add', text: '組牌的成品卡圖預覽新增放大與縮小按鈕。' },
+    ],
+  },
+  {
     version: '0.67.2',
     date: '2026-11-24',
     items: [
