@@ -183,6 +183,19 @@ describe('角色、關鍵字與 Ex 卡', () => {
     expect(() => applyDiff(cardTable, diffOf({ additions: [{ uid: keywordUid, keyword }, { uid: keywordUid, keyword }] }))).toThrow('編號重複');
   });
 
+  it('已收錄的同名關鍵字即使說明經過修訂，也會清除新增草稿', () => {
+    const applied = ['K36', 'K37', 'K38', 'K39'].map((uid) => ({
+      uid,
+      keyword: { ...cardTable.keywords.find(({ name }) => name === cardTable.uids[uid])!, desc: '匯入前的舊說明。' },
+    }));
+    const pending = { uid: keywordUid, keyword };
+    const draft = { ...emptyDraft(), additions: [...applied, pending] };
+    expect(realignDraft(cardTable, draft)).toEqual({
+      draft: { ...emptyDraft(), additions: [pending] },
+      invalidated: [],
+    });
+  });
+
   it('Ex 卡新增、改名及刪除保留內部 id 與發號進度', () => {
     const draft = { ...emptyDraft(), additions: [{ uid: exUid, card: ex }] };
     const { table, notes } = applyDiff(cardTable, diffOf(draft));

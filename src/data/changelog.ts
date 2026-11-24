@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.69.2',
+    date: '2026-11-25',
+    items: [{ type: 'fix', text: '已收錄的同名關鍵字即使說明經過修訂，卡表也會自動清除原先的新增草稿。' }],
+  },
+  {
     version: '0.69.1',
     date: '2026-11-25',
     items: [{ type: 'fix', text: '卡表只用黃框標示尚未套用的草稿，並在沒有待處理草稿時隱藏清除草稿按鈕。' }],

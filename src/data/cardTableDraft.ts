@@ -102,9 +102,9 @@ export function realignDraft(table: CardTableData, draft: Draft): { draft: Draft
     return false;
   });
   const addedById = new Map([...table.added, ...table.exCards].map((card) => [card.id, card]));
+  const keywordNames = new Set(table.keywords.map(({ name }) => name));
   const additions = draft.additions.filter((addition) => {
-    if ('keyword' in addition) return !table.keywords.some((keyword) =>
-      keywordFields.every((field) => keyword[field] === addition.keyword[field]));
+    if ('keyword' in addition) return !keywordNames.has(addition.keyword.name);
     const { card } = addition;
     const current = addedById.get(card.id);
     if (!current) return true;
