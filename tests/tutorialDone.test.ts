@@ -28,6 +28,13 @@ describe('教學課程的完成紀錄', () => {
     expect(doneLessons([1, 2, 3], s)).toEqual(new Set([2]));
   });
 
+  it('原有課程後移後仍保有完成紀錄，新第 2 課須另行完成', () => {
+    const s = memory({ 'lianji.tutorial.done.1': '1', 'lianji.tutorial.done.2': '1', 'lianji.tutorial.done.10': '1' });
+    expect(doneLessons([1, 2, 3, 10, 11], s)).toEqual(new Set([1, 3, 11]));
+    setLessonDone(2, s);
+    expect(doneLessons([1, 2, 3, 10, 11], s)).toEqual(new Set([1, 2, 3, 11]));
+  });
+
   it('舊版的單一完成旗標作廢：不影響新紀錄', () => {
     const s = memory({ 'lianji.tutorial.done': '1' });
     expect(isLessonDone(1, s)).toBe(false);

@@ -4,7 +4,8 @@
  * 舊版只有一個「新手教學完成」旗標（lianji.tutorial.done），已作廢也不遷移，所以這裡用另一組名稱。
  */
 
-const keyOf = (no: number) => `lianji.tutorial.done.${no}`;
+/** 插入第 2 課後，舊課程沿用原本的儲存鍵。 */
+const keyOf = (no: number) => `lianji.tutorial.done.${no === 2 ? 'stunt' : no > 2 ? no - 1 : no}`;
 
 type Store = Pick<Storage, 'getItem' | 'setItem'>;
 

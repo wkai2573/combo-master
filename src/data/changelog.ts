@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.68.0',
+    date: '2026-11-24',
+    items: [
+      { type: 'add', text: '新增第 2 課「特技出招」，練習捨棄同連擊值的手牌並消耗破格打出特技，原有後續課程依序後移。' },
+    ],
+  },
+  {
     version: '0.67.3',
     date: '2026-11-24',
     items: [

@@ -4,6 +4,7 @@ import { COVER_COST_4 } from './lesson4';
 import { RAGE_DAMAGE_5 } from './lesson5';
 import { ON_PLAY_6 } from './lesson6';
 import { OPENING_7 } from './lesson7';
+import { STUNT } from './stunt';
 import { TOP_8 } from './lesson8';
 import { PURSUIT_9 } from './lesson9';
 import { FACE_UP_EXP_10 } from './lesson10';
@@ -42,6 +43,15 @@ export const LESSONS: TutorialLesson[] = [
   {
     no: 2,
     group: '基礎',
+    title: '特技出招',
+    blurb: '捨棄同連擊值的手牌，消耗破格打出特技',
+    minutes: 2,
+    summary: '你已經學會在反擊步驟捨棄一張手牌，消耗 1 次破格，把同原始連擊值的招式打入特技區。',
+    chapter: STUNT,
+  },
+  {
+    no: 3,
+    group: '基礎',
     title: '爆發與經驗區',
     blurb: '爆發與歸還，看經驗區怎麼增長',
     minutes: 3,
@@ -49,7 +59,7 @@ export const LESSONS: TutorialLesson[] = [
     chapter: BURST_EXP_2,
   },
   {
-    no: 3,
+    no: 4,
     group: '基礎',
     title: '覺醒',
     blurb: '經驗達標進入覺醒，看總攻擊的加成',
@@ -58,7 +68,7 @@ export const LESSONS: TutorialLesson[] = [
     chapter: AWAKENING_3,
   },
   {
-    no: 4,
+    no: 5,
     group: '基礎',
     title: '蓋 X',
     blurb: '用經驗區支付費用，看表側變裏側',
@@ -67,7 +77,7 @@ export const LESSONS: TutorialLesson[] = [
     chapter: COVER_COST_4,
   },
   {
-    no: 5,
+    no: 6,
     group: '基礎',
     title: '怒氣區與受傷',
     blurb: '怒氣區怎麼累積、怎麼花掉',
@@ -76,7 +86,7 @@ export const LESSONS: TutorialLesson[] = [
     chapter: RAGE_DAMAGE_5,
   },
   {
-    no: 6,
+    no: 7,
     group: '卡片標籤',
     title: '[發] 打出時發動',
     blurb: '招式打出就發動，不論在哪個步驟',
@@ -85,7 +95,7 @@ export const LESSONS: TutorialLesson[] = [
     chapter: ON_PLAY_6,
   },
   {
-    no: 7,
+    no: 8,
     group: '卡片標籤',
     title: '[先] 先手步驟',
     blurb: '只有先攻方在先手步驟打出才發動',
@@ -94,7 +104,7 @@ export const LESSONS: TutorialLesson[] = [
     chapter: OPENING_7,
   },
   {
-    no: 8,
+    no: 9,
     group: '卡片標籤',
     title: '[頂] 疊在最上方',
     blurb: '在招式卡疊最上方才有效，被蓋住就失效',
@@ -103,7 +113,7 @@ export const LESSONS: TutorialLesson[] = [
     chapter: TOP_8,
   },
   {
-    no: 9,
+    no: 10,
     group: '卡片標籤',
     title: '[追] 追擊成功',
     blurb: '追擊判定成功時翻出的那張牌才發動',
@@ -112,7 +122,7 @@ export const LESSONS: TutorialLesson[] = [
     chapter: PURSUIT_9,
   },
   {
-    no: 10,
+    no: 11,
     group: '卡片標籤',
     title: '[經] 表側經驗',
     blurb: '在經驗區表側才有效，被蓋成裏側就失效',

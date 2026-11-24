@@ -61,6 +61,7 @@ export const resolveText = (text: TutorialText, ctx: TextContext): string => (ty
 /** 要停在哪一格影格：從還沒送出的影格裡，找第一個符合的 */
 export type FrameMatch =
   | { fx: 'pass'; player: Side }
+  | { fx: 'stunt'; player: Side }
   | { fx: 'banner'; name: string }
   | { fx: 'flip'; player: Side }
   | { fx: 'flip-result'; player: Side; ok: boolean }
@@ -85,6 +86,8 @@ export function matchesFrame(m: FrameMatch, frame: Frame, me: PlayerId): boolean
   const fx = frame.fx;
   switch (m.fx) {
     case 'pass': return fx.type === 'pass' && sideOf(fx.player, me) === m.player;
+    case 'stunt': return fx.type === 'play' && sideOf(fx.player, me) === m.player
+      && frame.view.players[fx.player].stunt.some((card) => card.uid === fx.uid);
     case 'banner': return fx.type === 'banner' && fx.kind === 'phase' && fx.name === m.name;
     case 'flip': return fx.type === 'flip' && sideOf(fx.player, me) === m.player;
     case 'flip-result': return fx.type === 'flipResult' && sideOf(fx.player, me) === m.player && fx.ok === m.ok;

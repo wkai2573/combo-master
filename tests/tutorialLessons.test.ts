@@ -70,9 +70,9 @@ describe('課程清單', () => {
     }
   });
 
-  it('每課都有分組；第 1 到第 5 課是「基礎」', () => {
+  it('每課都有分組；第 1 到第 6 課是「基礎」', () => {
     for (const l of LESSONS) expect(LESSON_GROUPS).toContain(l.group);
-    expect(LESSONS.filter((l) => l.no <= 5).every((l) => l.group === '基礎')).toBe(true);
+    expect(LESSONS.filter((l) => l.no <= 6).every((l) => l.group === '基礎')).toBe(true);
   });
 
   it('清單依分組切段：段落照分組順序，每段保持編號順序，只列有課程的分組，全部課程不多不少', () => {
@@ -109,9 +109,33 @@ describe('課程清單', () => {
   });
 });
 
-describe('第 2 課：爆發與經驗區', () => {
+describe('第 2 課：特技出招', () => {
+  it('捨棄同連擊值手牌、打入特技區，完成後接第 3 課', () => {
+    const s = start(2);
+    clickToAction(s);
+    choose(s, '黑桃5');
+    expect(view(s).phase).toBe('反擊');
+    expect(progress(s).awaiting).toEqual({ choose: 'stunt' });
+    s.submit(['stunt']);
+    choose(s, '黑桃9');
+    expect(view(s).prompt?.dropZone).toBe('stunt');
+    choose(s, '梅花9');
+    expect(view(s).players[0].discard).toHaveLength(0);
+    s.submit(['confirm-stunt']);
+    const [player, opponent] = view(s).players;
+    expect(player.discard.map((card) => card.id)).toEqual(['黑桃9']);
+    expect(player.stunt.map((card) => card.id)).toEqual(['梅花9']);
+    expect(player.moves.map((card) => card.id)).toEqual(['黑桃5']);
+    expect(opponent.moves.map((card) => card.id)).toEqual(['黑桃6']);
+    expect(driveToEnd(s).join('\n')).toContain('消耗了 1 次破格');
+    expect(isLessonDone(2)).toBe(true);
+    expect(progress(s).ending?.next).toEqual({ kind: 'lesson', no: 3, label: '下一課' });
+  });
+});
+
+describe('第 3 課：爆發與經驗區', () => {
   it('一開局就在爆發階段，輪到我；角色是修行者與教官', () => {
-    const v = view(start(2));
+    const v = view(start(3));
     expect(v.phase).toBe('爆發');
     expect(v.waitingFor).toBe(0);
     expect(v.players[0].charId).toBe('修行者');
@@ -119,7 +143,7 @@ describe('第 2 課：爆發與經驗區', () => {
   });
 
   it('預設的經驗區有 2 張表側，其他區域是空的；預設的牌不計入牌組，牌組夠抽', () => {
-    const v = view(start(2));
+    const v = view(start(3));
     expect(v.players[0].exp).toHaveLength(2);
     expect(v.players[0].exp.every((c) => !c.covered)).toBe(true);
     expect(v.players[1].exp).toHaveLength(0);
@@ -131,7 +155,7 @@ describe('第 2 課：爆發與經驗區', () => {
   });
 
   it('手牌裡有可以爆發的指定牌；提示是爆發階段，玩家可以選它', () => {
-    const s = start(2);
+    const s = start(3);
     clickToAction(s);
     const a = progress(s).awaiting;
     expect(a).toEqual({ play: '梅花9' });
@@ -141,7 +165,7 @@ describe('第 2 課：爆發與經驗區', () => {
   });
 
   it('說明依序出現，經驗張數是實際的數字，用「經驗區」高亮', () => {
-    const s = start(2);
+    const s = start(3);
     expect(progress(s).text).toContain('爆發階段');
     expect(progress(s).highlight).toEqual([]);
     s.advance();
@@ -150,7 +174,7 @@ describe('第 2 課：爆發與經驗區', () => {
   });
 
   it('選別張、略過、其他操作都被拒絕，桌面、影格與進度都不變', () => {
-    const s = start(2);
+    const s = start(3);
     clickToAction(s);
     const before = s.getState();
     choose(s, '黑桃1');
@@ -166,7 +190,7 @@ describe('第 2 課：爆發與經驗區', () => {
   });
 
   it('放進指定的牌：經驗區加 1、手牌抽 2，停在爆發完成那一格，說明帶入實際張數', () => {
-    const s = start(2);
+    const s = start(3);
     clickToAction(s);
     const hand = view(s).players[0].hand.length;
     choose(s, '梅花9');
@@ -182,7 +206,7 @@ describe('第 2 課：爆發與經驗區', () => {
   });
 
   it('爆發後的說明：表側、可以支付費用、經驗區的增長來源是爆發與歸還', () => {
-    const s = start(2);
+    const s = start(3);
     clickToAction(s);
     choose(s, '梅花9');
     const all = [progress(s).text, ...clickToAction(s)].join('\n');
@@ -193,7 +217,7 @@ describe('第 2 課：爆發與經驗區', () => {
 
   /** 爆發完、說明講完，走到對手不爆發、輪到玩家先攻出招 */
   function toOpening() {
-    const s = start(2);
+    const s = start(3);
     clickToAction(s);
     choose(s, '梅花9');
     clickToAction(s);
@@ -225,7 +249,7 @@ describe('第 2 課：爆發與經驗區', () => {
   });
 
   it('整段腳本都不會出現沒被處理的提示：停在說明或要求操作時，引擎等的人是我', () => {
-    const s = start(2);
+    const s = start(3);
     for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
       const a = progress(s).awaiting;
       // 要求操作時，畫面上一定有我可以回應的提示；其餘時候不需要
@@ -253,18 +277,18 @@ describe('第 2 課：爆發與經驗區', () => {
     expect(progress(s).highlight).toEqual([{ kind: 'exp-zone', owner: 'me' }]);
   });
 
-  it('從頭走到尾：到結束畫面，寫入第 2 課的完成紀錄（第 1 課不受影響），不送戰績', () => {
-    const s = start(2);
-    expect(isLessonDone(2)).toBe(false);
+  it('從頭走到尾：到結束畫面，寫入第 3 課的完成紀錄（第 1 課不受影響），不送戰績', () => {
+    const s = start(3);
+    expect(isLessonDone(3)).toBe(false);
     driveToEnd(s);
     expect(progress(s).finished).toBe(true);
     expect(progress(s).awaiting).toBeNull();
     expect(progress(s).ending).toEqual({
-      heading: '第 2 課完成！',
-      summary: getLesson(2).summary,
-      next: { kind: 'lesson', no: 3, label: '下一課' },
+      heading: '第 3 課完成！',
+      summary: getLesson(3).summary,
+      next: { kind: 'lesson', no: 4, label: '下一課' },
     });
-    expect(isLessonDone(2)).toBe(true);
+    expect(isLessonDone(3)).toBe(true);
     expect(isLessonDone(1)).toBe(false);
     // 結束畫面蓋在停住的那一格上，不放出後面的回合
     expect(view(s).players[0].exp).toHaveLength(5);
@@ -277,24 +301,24 @@ describe('第 2 課：爆發與經驗區', () => {
     choose(s, '紅心5');
     s.leave();
     s.advance();
-    expect(isLessonDone(2)).toBe(false);
+    expect(isLessonDone(3)).toBe(false);
     const r = toOpening();
     r.restart();
-    expect(isLessonDone(2)).toBe(false);
+    expect(isLessonDone(3)).toBe(false);
   });
   it('重來本課：回到爆發階段的初始狀態，不寫完成紀錄', () => {
-    const initial = start(2).getState();
-    const s = start(2);
+    const initial = start(3).getState();
+    const s = start(3);
     clickToAction(s);
     choose(s, '梅花9');
     s.restart();
     expect(s.getState().view).toEqual(initial.view);
     expect(progress(s)).toEqual(initial.tutorial);
-    expect(isLessonDone(2)).toBe(false);
+    expect(isLessonDone(3)).toBe(false);
   });
 });
 
-describe('第 3 課：覺醒', () => {
+describe('第 4 課：覺醒', () => {
   const awake = (s: TutorialSession) => {
     const pv = view(s).players[0];
     return pv.exp.length >= 8;
@@ -302,13 +326,13 @@ describe('第 3 課：覺醒', () => {
 
   /** 爆發之前的說明點完，要求放進第 8 張 */
   function toBurst() {
-    const s = start(3);
+    const s = start(4);
     clickToAction(s);
     return s;
   }
 
   it('開局：經驗區 7 張、尚未覺醒；說明帶入張數與門檻，高亮經驗區', () => {
-    const s = start(3);
+    const s = start(4);
     expect(view(s).phase).toBe('爆發');
     expect(view(s).players[0].exp).toHaveLength(7);
     expect(awake(s)).toBe(false);
@@ -366,20 +390,20 @@ describe('第 3 課：覺醒', () => {
     expect(progress(s).highlight).toEqual([{ kind: 'total', stat: 'atk' }, { kind: 'awaken-mark', owner: 'me' }]);
   });
 
-  it('從頭走到尾：結束畫面，寫入第 3 課的完成紀錄，不送戰績', () => {
-    const s = start(3);
-    expect(isLessonDone(3)).toBe(false);
+  it('從頭走到尾：結束畫面，寫入第 4 課的完成紀錄，不送戰績', () => {
+    const s = start(4);
+    expect(isLessonDone(4)).toBe(false);
     driveToEnd(s);
-    expect(progress(s).ending).toMatchObject({ heading: '第 3 課完成！' });
-    expect(isLessonDone(3)).toBe(true);
-    expect(isLessonDone(2)).toBe(false);
+    expect(progress(s).ending).toMatchObject({ heading: '第 4 課完成！' });
+    expect(isLessonDone(4)).toBe(true);
+    expect(isLessonDone(3)).toBe(false);
     expect(awake(s)).toBe(true);
     s.leave();
     expect(captured).toEqual([]);
   });
 
   it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
-    const s = start(3);
+    const s = start(4);
     for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
       if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
       act(s);
@@ -387,13 +411,13 @@ describe('第 3 課：覺醒', () => {
     expect(progress(s).finished).toBe(true);
   });
 });
-describe('第 4 課：蓋 X', () => {
+describe('第 5 課：蓋 X', () => {
   const awake = (s: TutorialSession) => view(s).players[0].exp.length >= 8;
   const faceUp = (s: TutorialSession) => view(s).players[0].exp.filter((c) => !c.covered).length;
 
   /** 走到布甲的確認提示：要求按「發動」 */
   function toConfirm() {
-    const s = start(4);
+    const s = start(5);
     clickToAction(s);
     choose(s, '紅心5');
     clickToAction(s);
@@ -401,7 +425,7 @@ describe('第 4 課：蓋 X', () => {
   }
 
   it('開局：經驗區 8 張表側、已經覺醒，裝備增益區有布甲', () => {
-    const v = view(start(4));
+    const v = view(start(5));
     expect(v.players[0].exp).toHaveLength(8);
     expect(v.players[0].exp.every((c) => !c.covered)).toBe(true);
     expect(v.players[0].exp.length >= 8).toBe(true);
@@ -418,7 +442,7 @@ describe('第 4 課：蓋 X', () => {
   });
 
   it('要求出招與要求確認時，選別的、不發動、略過都被拒絕，桌面不變', () => {
-    const s = start(4);
+    const s = start(5);
     clickToAction(s);
     expect(progress(s).awaiting).toEqual({ play: '紅心5' });
     let before = s.getState();
@@ -467,11 +491,11 @@ describe('第 4 課：蓋 X', () => {
     expect(progress(s).highlight).toEqual([{ kind: 'total', stat: 'def' }]);
   });
 
-  it('從頭走到尾：結束畫面，仍然覺醒，寫入第 4 課的完成紀錄', () => {
-    const s = start(4);
+  it('從頭走到尾：結束畫面，仍然覺醒，寫入第 5 課的完成紀錄', () => {
+    const s = start(5);
     driveToEnd(s);
-    expect(progress(s).ending).toMatchObject({ heading: '第 4 課完成！' });
-    expect(isLessonDone(4)).toBe(true);
+    expect(progress(s).ending).toMatchObject({ heading: '第 5 課完成！' });
+    expect(isLessonDone(5)).toBe(true);
     expect(awake(s)).toBe(true);
     expect(faceUp(s)).toBe(7);
     expect(progress(s).text).toBe('');
@@ -483,11 +507,11 @@ describe('第 4 課：蓋 X', () => {
     const s = toConfirm();
     s.restart();
     s.leave();
-    expect(isLessonDone(4)).toBe(false);
+    expect(isLessonDone(5)).toBe(false);
   });
 
   it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
-    const s = start(4);
+    const s = start(5);
     for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
       if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
       act(s);
@@ -495,17 +519,17 @@ describe('第 4 課：蓋 X', () => {
     expect(progress(s).finished).toBe(true);
   });
 });
-describe('第 5 課：怒氣區與受傷', () => {
+describe('第 6 課：怒氣區與受傷', () => {
   /** 走到熔岩之擊的確認提示 */
   function toConfirm() {
-    const s = start(5);
+    const s = start(6);
     clickToAction(s);
     choose(s, '熔岩之擊');
     return s;
   }
 
   it('開局：怒氣區 3 張、手牌有熔岩之擊；怒氣區只有張數，牌面不洩漏', () => {
-    const s = start(5);
+    const s = start(6);
     const v = view(s);
     expect(v.players[0].rage).toHaveLength(3);
     expect(v.players[0].rage.every((c) => c.id === null)).toBe(true);
@@ -516,7 +540,7 @@ describe('第 5 課：怒氣區與受傷', () => {
   });
 
   it('要求出招與要求確認時，選別的、不發動、略過都被拒絕，桌面不變', () => {
-    const s = start(5);
+    const s = start(6);
     clickToAction(s);
     expect(progress(s).awaiting).toEqual({ play: '熔岩之擊' });
     let before = s.getState();
@@ -585,15 +609,15 @@ describe('第 5 課：怒氣區與受傷', () => {
     expect(progress(s).highlight).toEqual([{ kind: 'deck-count', owner: 'me' }, { kind: 'rage-zone', owner: 'me' }]);
   });
 
-  it('從頭走到尾：結束畫面，寫入第 5 課的完成紀錄，下一步接第 6 課', () => {
-    const s = start(5);
+  it('從頭走到尾：結束畫面，寫入第 6 課的完成紀錄，下一步接第 7 課', () => {
+    const s = start(6);
     const texts = driveToEnd(s);
     expect(progress(s).ending).toEqual({
-      heading: '第 5 課完成！',
-      summary: getLesson(5).summary,
-      next: { kind: 'lesson', no: 6, label: '下一課' },
+      heading: '第 6 課完成！',
+      summary: getLesson(6).summary,
+      next: { kind: 'lesson', no: 7, label: '下一課' },
     });
-    expect(isLessonDone(5)).toBe(true);
+    expect(isLessonDone(6)).toBe(true);
     expect(texts.join('\n')).toContain('既是你受傷的紀錄，也是可以花費的資源');
     s.leave();
     expect(captured).toEqual([]);
@@ -603,11 +627,11 @@ describe('第 5 課：怒氣區與受傷', () => {
     const s = toConfirm();
     s.restart();
     s.leave();
-    expect(isLessonDone(5)).toBe(false);
+    expect(isLessonDone(6)).toBe(false);
   });
 
   it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
-    const s = start(5);
+    const s = start(6);
     for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
       if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
       act(s);
@@ -615,23 +639,23 @@ describe('第 5 課：怒氣區與受傷', () => {
     expect(progress(s).finished).toBe(true);
   });
 });
-describe('第 6 課：[發] 打出時發動', () => {
+describe('第 7 課：[發] 打出時發動', () => {
   /** 走到火球的確認提示：對手先攻、玩家在反擊步驟打出火球 */
   function toConfirm() {
-    const s = start(6);
+    const s = start(7);
     clickToAction(s);
     choose(s, '火球');
     return s;
   }
   const faceUp = (s: TutorialSession) => view(s).players[0].exp.filter((c) => !c.covered).length;
 
-  it('第 6 課在「卡片標籤」段', () => {
-    expect(getLesson(6).group).toBe('卡片標籤');
-    expect(getLesson(6).title).toContain('[發]');
+  it('第 7 課在「卡片標籤」段', () => {
+    expect(getLesson(7).group).toBe('卡片標籤');
+    expect(getLesson(7).title).toContain('[發]');
   });
 
   it('開局：對手已先攻、玩家手牌有火球，經驗區至少 3 張表側；角色是見習生與教官', () => {
-    const s = start(6);
+    const s = start(7);
     const v = view(s);
     expect(v.players[0].charId).toBe('見習生');
     expect(v.players[1].charId).toBe('教官');
@@ -642,7 +666,7 @@ describe('第 6 課：[發] 打出時發動', () => {
   });
 
   it('要求出牌與要求確認時，選別的、不發動、略過都被拒絕，桌面不變', () => {
-    const s = start(6);
+    const s = start(7);
     clickToAction(s);
     // 對手先攻，玩家是在反擊步驟
     expect(view(s).prompt!.title).toContain('反擊步驟');
@@ -696,7 +720,7 @@ describe('第 6 課：[發] 打出時發動', () => {
   });
 
   it('說明指出卡面最前面的 [發] 框，並說明在哪個步驟打出都一樣', () => {
-    const s = start(6);
+    const s = start(7);
     const all = driveToEnd(s).join('\n');
     expect(all).toContain('最前面的框寫著 [發]');
     expect(all).toContain('打出時發動');
@@ -704,29 +728,29 @@ describe('第 6 課：[發] 打出時發動', () => {
     expect(all).toContain('先手步驟或反擊步驟打出，都會發動');
   });
 
-  it('從頭走到尾：結束畫面，寫入第 6 課的完成紀錄，不送戰績', () => {
-    const s = start(6);
-    expect(isLessonDone(6)).toBe(false);
+  it('從頭走到尾：結束畫面，寫入第 7 課的完成紀錄，不送戰績', () => {
+    const s = start(7);
+    expect(isLessonDone(7)).toBe(false);
     driveToEnd(s);
-    expect(progress(s).ending).toMatchObject({ heading: '第 6 課完成！', summary: getLesson(6).summary });
-    expect(isLessonDone(6)).toBe(true);
-    expect(isLessonDone(5)).toBe(false);
+    expect(progress(s).ending).toMatchObject({ heading: '第 7 課完成！', summary: getLesson(7).summary });
+    expect(isLessonDone(7)).toBe(true);
+    expect(isLessonDone(6)).toBe(false);
     s.leave();
     expect(captured).toEqual([]);
   });
 
   it('中途離開、重來都不寫完成紀錄；重來回到初始狀態', () => {
-    const initial = start(6).getState();
+    const initial = start(7).getState();
     const s = toConfirm();
     s.restart();
     expect(s.getState().view).toEqual(initial.view);
     expect(progress(s)).toEqual(initial.tutorial);
     s.leave();
-    expect(isLessonDone(6)).toBe(false);
+    expect(isLessonDone(7)).toBe(false);
   });
 
   it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
-    const s = start(6);
+    const s = start(7);
     for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
       if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
       act(s);
@@ -735,10 +759,10 @@ describe('第 6 課：[發] 打出時發動', () => {
   });
 });
 
-describe('第 7 課：[先] 先手步驟', () => {
+describe('第 8 課：[先] 先手步驟', () => {
   /** 走到第一張伏擊打出、[先] 發動的那一格 */
   function afterFirst() {
-    const s = start(7);
+    const s = start(8);
     clickToAction(s);
     choose(s, '伏擊');
     return s;
@@ -751,9 +775,9 @@ describe('第 7 課：[先] 先手步驟', () => {
     return s;
   }
 
-  it('第 7 課在「卡片標籤」段；玩家先攻，手牌有兩張伏擊', () => {
-    expect(getLesson(7).group).toBe('卡片標籤');
-    const s = start(7);
+  it('第 8 課在「卡片標籤」段；玩家先攻，手牌有兩張伏擊', () => {
+    expect(getLesson(8).group).toBe('卡片標籤');
+    const s = start(8);
     const v = view(s);
     expect(v.players[0].charId).toBe('見習生');
     expect(names(v.players[0].hand).filter((n) => n === '伏擊')).toHaveLength(2);
@@ -763,7 +787,7 @@ describe('第 7 課：[先] 先手步驟', () => {
   });
 
   it('要求出牌時，選別的、略過、收招都被拒絕，桌面不變', () => {
-    const s = start(7);
+    const s = start(8);
     clickToAction(s);
     expect(progress(s).awaiting).toEqual({ play: '伏擊' });
     for (const a of [() => choose(s, '黑桃1'), () => s.submit([]), () => s.submit(['pass'])]) {
@@ -812,7 +836,7 @@ describe('第 7 課：[先] 先手步驟', () => {
   });
 
   it('說明：[先] 只在先手步驟、後攻方沒有先手步驟所以不會觸發、與 [發] 對比；稱呼先手而不是起手', () => {
-    const s = start(7);
+    const s = start(8);
     const all = driveToEnd(s).join('\n');
     expect(all).toContain('最前面的框都寫著 [先]');
     expect(all).toContain('先手步驟打出時發動');
@@ -821,29 +845,29 @@ describe('第 7 課：[先] 先手步驟', () => {
     expect(all).not.toContain('起手');
   });
 
-  it('從頭走到尾：結束畫面，寫入第 7 課的完成紀錄，不送戰績', () => {
-    const s = start(7);
-    expect(isLessonDone(7)).toBe(false);
+  it('從頭走到尾：結束畫面，寫入第 8 課的完成紀錄，不送戰績', () => {
+    const s = start(8);
+    expect(isLessonDone(8)).toBe(false);
     driveToEnd(s);
-    expect(progress(s).ending).toMatchObject({ heading: '第 7 課完成！', summary: getLesson(7).summary });
-    expect(isLessonDone(7)).toBe(true);
-    expect(isLessonDone(6)).toBe(false);
+    expect(progress(s).ending).toMatchObject({ heading: '第 8 課完成！', summary: getLesson(8).summary });
+    expect(isLessonDone(8)).toBe(true);
+    expect(isLessonDone(7)).toBe(false);
     s.leave();
     expect(captured).toEqual([]);
   });
 
   it('中途離開、重來都不寫完成紀錄；重來回到初始狀態', () => {
-    const initial = start(7).getState();
+    const initial = start(8).getState();
     const s = afterSecond();
     s.restart();
     expect(s.getState().view).toEqual(initial.view);
     expect(progress(s)).toEqual(initial.tutorial);
     s.leave();
-    expect(isLessonDone(7)).toBe(false);
+    expect(isLessonDone(8)).toBe(false);
   });
 
   it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
-    const s = start(7);
+    const s = start(8);
     for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
       if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
       act(s);
@@ -852,10 +876,10 @@ describe('第 7 課：[先] 先手步驟', () => {
   });
 });
 
-describe('第 8 課：[頂] 疊在最上方', () => {
+describe('第 9 課：[頂] 疊在最上方', () => {
   /** 打出戒備打擊、停在加成出現的說明 */
   function afterGuard() {
-    const s = start(8);
+    const s = start(9);
     clickToAction(s);
     choose(s, '戒備打擊');
     return s;
@@ -868,14 +892,14 @@ describe('第 8 課：[頂] 疊在最上方', () => {
     return s;
   }
 
-  it('第 8 課在「卡片標籤」段；玩家先攻，手牌有戒備打擊和一張可以蓋住它的招式', () => {
-    expect(getLesson(8).group).toBe('卡片標籤');
-    const v = view(start(8));
+  it('第 9 課在「卡片標籤」段；玩家先攻，手牌有戒備打擊和一張可以蓋住它的招式', () => {
+    expect(getLesson(9).group).toBe('卡片標籤');
+    const v = view(start(9));
     expect(names(v.players[0].hand)).toEqual(expect.arrayContaining(['戒備打擊', '黑桃4']));
   });
 
   it('要求出牌時，選別的、略過、收招都被拒絕，桌面不變', () => {
-    const first = start(8);
+    const first = start(9);
     clickToAction(first);
     const second = afterGuard();
     clickToAction(second);
@@ -915,35 +939,35 @@ describe('第 8 課：[頂] 疊在最上方', () => {
   });
 
   it('說明指出卡面最前面的 [頂] 框，提到只看自己的招式卡疊', () => {
-    const all = driveToEnd(start(8)).join('\n');
+    const all = driveToEnd(start(9)).join('\n');
     expect(all).toContain('最前面的框寫著 [頂]');
     expect(all).toContain('招式卡疊最上方');
     expect(all).toContain('[頂] 只看你自己的招式卡疊');
   });
 
-  it('從頭走到尾：結束畫面，寫入第 8 課的完成紀錄，不送戰績', () => {
-    const s = start(8);
-    expect(isLessonDone(8)).toBe(false);
+  it('從頭走到尾：結束畫面，寫入第 9 課的完成紀錄，不送戰績', () => {
+    const s = start(9);
+    expect(isLessonDone(9)).toBe(false);
     driveToEnd(s);
-    expect(progress(s).ending).toMatchObject({ heading: '第 8 課完成！', summary: getLesson(8).summary });
-    expect(isLessonDone(8)).toBe(true);
-    expect(isLessonDone(7)).toBe(false);
+    expect(progress(s).ending).toMatchObject({ heading: '第 9 課完成！', summary: getLesson(9).summary });
+    expect(isLessonDone(9)).toBe(true);
+    expect(isLessonDone(8)).toBe(false);
     s.leave();
     expect(captured).toEqual([]);
   });
 
   it('中途離開、重來都不寫完成紀錄；重來回到初始狀態', () => {
-    const initial = start(8).getState();
+    const initial = start(9).getState();
     const s = afterCover();
     s.restart();
     expect(s.getState().view).toEqual(initial.view);
     expect(progress(s)).toEqual(initial.tutorial);
     s.leave();
-    expect(isLessonDone(8)).toBe(false);
+    expect(isLessonDone(9)).toBe(false);
   });
 
   it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
-    const s = start(8);
+    const s = start(9);
     for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
       if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
       act(s);
@@ -952,10 +976,10 @@ describe('第 8 課：[頂] 疊在最上方', () => {
   });
 });
 
-describe('第 9 課：[追] 追擊成功', () => {
+describe('第 10 課：[追] 追擊成功', () => {
   /** 出招、對手回應，停在玩家追擊判定成功的那一格 */
   function toSuccess() {
-    const s = start(9);
+    const s = start(10);
     clickToAction(s);
     choose(s, '紅心5');
     // 追擊階段 → 翻牌 → 判定結果
@@ -964,12 +988,12 @@ describe('第 9 課：[追] 追擊成功', () => {
     return s;
   }
 
-  it('第 9 課在「卡片標籤」段；玩家先攻，牌組頂是地雷陷阱，連擊值在雙方招式的範圍之外', () => {
-    expect(getLesson(9).group).toBe('卡片標籤');
-    const s = start(9);
+  it('第 10 課在「卡片標籤」段；玩家先攻，牌組頂是地雷陷阱，連擊值在雙方招式的範圍之外', () => {
+    expect(getLesson(10).group).toBe('卡片標籤');
+    const s = start(10);
     clickToAction(s);
     expect(view(s).phase).toBe('先手');
-    const deck = getLesson(9).chapter.decks[0];
+    const deck = getLesson(10).chapter.decks[0];
     expect(deck[0]).toBe('地雷陷阱');
     choose(s, '紅心5');
     const [lo, hi] = [view(s).players[0].moves, view(s).players[1].moves].map((m) => getCard(m.at(-1)!.id!).combo).sort((a, b) => a - b);
@@ -978,7 +1002,7 @@ describe('第 9 課：[追] 追擊成功', () => {
   });
 
   it('要求出牌時，選別的、略過、收招都被拒絕，桌面不變', () => {
-    const s = start(9);
+    const s = start(10);
     clickToAction(s);
     expect(progress(s).awaiting).toEqual({ play: '紅心5' });
     for (const a of [() => choose(s, '黑桃1'), () => s.submit([]), () => s.submit(['pass'])]) {
@@ -1015,34 +1039,34 @@ describe('第 9 課：[追] 追擊成功', () => {
   });
 
   it('說明指出卡面最前面的 [追] 框，說明不是從手牌打出時發動', () => {
-    const all = driveToEnd(start(9)).join('\n');
+    const all = driveToEnd(start(10)).join('\n');
     expect(all).toContain('最前面的框寫著 [追]');
     expect(all).toContain('不是從手牌打出時發動');
   });
 
-  it('從頭走到尾：結束畫面，寫入第 9 課的完成紀錄，不送戰績', () => {
-    const s = start(9);
-    expect(isLessonDone(9)).toBe(false);
+  it('從頭走到尾：結束畫面，寫入第 10 課的完成紀錄，不送戰績', () => {
+    const s = start(10);
+    expect(isLessonDone(10)).toBe(false);
     driveToEnd(s);
-    expect(progress(s).ending).toMatchObject({ heading: '第 9 課完成！', summary: getLesson(9).summary });
-    expect(isLessonDone(9)).toBe(true);
-    expect(isLessonDone(8)).toBe(false);
+    expect(progress(s).ending).toMatchObject({ heading: '第 10 課完成！', summary: getLesson(10).summary });
+    expect(isLessonDone(10)).toBe(true);
+    expect(isLessonDone(9)).toBe(false);
     s.leave();
     expect(captured).toEqual([]);
   });
 
   it('中途離開、重來都不寫完成紀錄；重來回到初始狀態', () => {
-    const initial = start(9).getState();
+    const initial = start(10).getState();
     const s = toSuccess();
     s.restart();
     expect(s.getState().view).toEqual(initial.view);
     expect(progress(s)).toEqual(initial.tutorial);
     s.leave();
-    expect(isLessonDone(9)).toBe(false);
+    expect(isLessonDone(10)).toBe(false);
   });
 
   it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
-    const s = start(9);
+    const s = start(10);
     for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
       if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
       act(s);
@@ -1051,21 +1075,21 @@ describe('第 9 課：[追] 追擊成功', () => {
   });
 });
 
-describe('第 10 課：[經] 表側經驗', () => {
+describe('第 11 課：[經] 表側經驗', () => {
   const exp = (s: TutorialSession) => view(s).players[0].exp;
   /** 走到布甲的確認提示：要求按「發動」 */
   function toConfirm() {
-    const s = start(10);
+    const s = start(11);
     clickToAction(s);
     choose(s, '紅心5');
     clickToAction(s);
     return s;
   }
 
-  it('第 10 課在「卡片標籤」段，是最後一課；開局經驗區前兩張是表側高價賣出與裏側低價買進，裝備增益區有布甲，不會覺醒', () => {
-    expect(getLesson(10).group).toBe('卡片標籤');
-    expect(lessonAfter(10)).toBeUndefined();
-    const s = start(10);
+  it('第 11 課在「卡片標籤」段，是最後一課；開局經驗區前兩張是表側高價賣出與裏側低價買進，裝備增益區有布甲，不會覺醒', () => {
+    expect(getLesson(11).group).toBe('卡片標籤');
+    expect(lessonAfter(11)).toBeUndefined();
+    const s = start(11);
     const e = exp(s);
     expect(names(e.slice(0, 2))).toEqual(['高價賣出', '低價買進']);
     expect(e[0].covered).toBe(false);
@@ -1077,7 +1101,7 @@ describe('第 10 課：[經] 表側經驗', () => {
   });
 
   it('要求出招與要求確認發動時，選別的、不發動、略過都被拒絕，桌面不變', () => {
-    const s = start(10);
+    const s = start(11);
     clickToAction(s);
     expect(progress(s).awaiting).toEqual({ play: '紅心5' });
     let before = s.getState();
@@ -1129,7 +1153,7 @@ describe('第 10 課：[經] 表側經驗', () => {
   });
 
   it('說明：[經] 是在經驗區表側時才有效、同樣是 [經] 表側會發動裏側不會、高價賣出之後不再有效', () => {
-    const all = driveToEnd(start(10)).join('\n');
+    const all = driveToEnd(start(11)).join('\n');
     expect(all).toContain('卡面最前面的框都寫著 [經]');
     expect(all).toContain('在經驗區表側時才有效');
     expect(all).toContain('低價買進一開始就是裏側，所以沒有反應');
@@ -1137,29 +1161,29 @@ describe('第 10 課：[經] 表側經驗', () => {
     expect(all).toContain('高價賣出現在也變成裏側了，之後不再有效');
   });
 
-  it('從頭走到尾：結束畫面，寫入第 10 課的完成紀錄，不送戰績', () => {
-    const s = start(10);
-    expect(isLessonDone(10)).toBe(false);
+  it('從頭走到尾：結束畫面，寫入第 11 課的完成紀錄，不送戰績', () => {
+    const s = start(11);
+    expect(isLessonDone(11)).toBe(false);
     driveToEnd(s);
-    expect(progress(s).ending).toMatchObject({ heading: '第 10 課完成！', summary: getLesson(10).summary });
-    expect(isLessonDone(10)).toBe(true);
-    expect(isLessonDone(9)).toBe(false);
+    expect(progress(s).ending).toMatchObject({ heading: '第 11 課完成！', summary: getLesson(11).summary });
+    expect(isLessonDone(11)).toBe(true);
+    expect(isLessonDone(10)).toBe(false);
     s.leave();
     expect(captured).toEqual([]);
   });
 
   it('中途離開、重來都不寫完成紀錄；重來回到初始狀態', () => {
-    const initial = start(10).getState();
+    const initial = start(11).getState();
     const s = toConfirm();
     s.restart();
     expect(s.getState().view).toEqual(initial.view);
     expect(progress(s)).toEqual(initial.tutorial);
     s.leave();
-    expect(isLessonDone(10)).toBe(false);
+    expect(isLessonDone(11)).toBe(false);
   });
 
   it('整段腳本每個要求操作的步驟畫面上都有提示', () => {
-    const s = start(10);
+    const s = start(11);
     for (let i = 0; i < 100 && progress(s).awaiting !== null; i++) {
       if (progress(s).awaiting !== 'click') expect(view(s).prompt).not.toBeNull();
       act(s);
