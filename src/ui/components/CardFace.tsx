@@ -71,7 +71,7 @@ export function expEffectActive(c: Pick<CardView, 'id' | 'covered'>): boolean {
   return c.id !== null && !c.covered && hasExpEffect(c.id);
 }
 
-export function CardFace({ id, card, size = 'md', fullFace, selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, uid, counterDelta, deltaKey, onClick, inert }: CardFaceProps) {
+export function CardFace({ id, card, size = 'md', fullFace = true, selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, uid, counterDelta, deltaKey, onClick, inert }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const pin = useContext(PinContext);
   const cls = ['card', size];
@@ -109,7 +109,7 @@ export function CardFace({ id, card, size = 'md', fullFace, selected, glow, dim,
       }}
       onMouseEnter={() => inspect(id, expEffect)}
     >
-      {face && <img className="face-image" src={face} alt="" draggable={false} />}
+      {face && <img className="face-image" src={face} alt={showFullFace && !hasBadge ? c.name : ''} draggable={false} />}
       {!showFullFace && (
         <>
           <div className="hd">
@@ -142,10 +142,10 @@ export function CardFace({ id, card, size = 'md', fullFace, selected, glow, dim,
             <CardText text={c.text} />
           </div>
         )}
-        <div className={hasBadge ? 'nm with-badge' : 'nm'}>
+        {(!showFullFace || hasBadge) && <div className={hasBadge ? 'nm with-badge' : 'nm'}>
           <span className="card-name" title={hasBadge ? c.name : undefined}>{c.name}</span>
           {hasBadge && <span className={badge === 0 ? 'badge empty' : 'badge'}>{badge}</span>}
-        </div>
+        </div>}
       </div>
       {covered ? <span className="fdtag">裏側</span> : null}
       {counters ? <span className="ctr" title="剩餘持續回合">⏳{counters}<Delta d={counterDelta} k={deltaKey ?? 0} /></span> : null}
@@ -159,7 +159,7 @@ const FACE_SCALE_STEP = 0.25;
 const FACE_PREVIEW_WIDTH = 184;
 
 /** 側欄的卡片完整說明：放大的卡圖、數值、效果，並列出文字裡關鍵字的說明 */
-export function InspectPanel({ id, card, fullFace, expActive, pinned, onUnpin }: { id: string | null; card?: CardData; fullFace?: boolean; expActive?: boolean; pinned?: boolean; onUnpin?: () => void }) {
+export function InspectPanel({ id, card, fullFace = true, expActive, pinned, onUnpin }: { id: string | null; card?: CardData; fullFace?: boolean; expActive?: boolean; pinned?: boolean; onUnpin?: () => void }) {
   const [faceScale, setFaceScale] = useState(1);
   if (!id) {
     return (
