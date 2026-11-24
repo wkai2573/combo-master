@@ -180,10 +180,10 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
                 const n = counts.get(c.id) ?? 0;
                 return (
                   <div className="poolitem" key={c.id}>
-                    <CardFace id={c.id} size="md" fullFace badge={n} dim={n >= MAX_COPIES} onClick={() => add(c.id)} />
+                    <CardFace id={c.id} size="md" fullFace hideName dim={n >= MAX_COPIES} onClick={() => add(c.id)} />
                     <div className="ctl">
                       <button disabled={n === 0} onClick={() => remove(c.id)}>−</button>
-                      <span>{n}/{MAX_COPIES}</span>
+                      <span><strong className="copy-count">{n}</strong>/{MAX_COPIES}</span>
                       <button disabled={n >= MAX_COPIES} onClick={() => add(c.id)}>＋</button>
                     </div>
                   </div>

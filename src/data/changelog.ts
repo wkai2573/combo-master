@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.68.21',
+    date: '2026-11-25',
+    items: [{ type: 'change', text: '組牌卡池移除卡片下方的名稱與數量徽章，並以黃底黑字標示目前張數。' }],
+  },
+  {
     version: '0.68.20',
     date: '2026-11-25',
     items: [{ type: 'fix', text: '修正組牌頁右欄的卡圖預覽被下方牌組設定蓋住的問題。' }],
