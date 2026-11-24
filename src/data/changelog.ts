@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.68.18',
+    date: '2026-11-24',
+    items: [{ type: 'change', text: '依卡框內側尺寸重新繪製 50 張招式卡插畫，讓主角避開連擊值欄與卡名區。' }],
+  },
+  {
     version: '0.68.17',
     date: '2026-11-24',
     items: [{ type: 'fix', text: '恢復 50 張招式卡插畫的原始比例，調整主角位置與數值置中。' }],
