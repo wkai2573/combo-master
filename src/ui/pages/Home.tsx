@@ -2,6 +2,9 @@ import { useRef, useState, type CSSProperties } from 'react';
 import { doneLessons, showRecommendTag } from '../../tutorial/completion';
 import { FIRST_LESSON } from '../../tutorial/lessons';
 import { createTapCounter, isCheatUnlocked, setCheatUnlocked } from '../../cheatUnlock';
+import { ALL_CARDS } from '../../data/cards';
+import { isClassCard } from '../../data/enabledCards';
+import { Rng } from '../../engine/rng';
 import { FEEDBACK_URL } from '../../stats/config';
 import { APP_BUILT_AT, VERSION_LABEL, VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { ChangelogModal } from '../components/ChangelogModal';
@@ -11,12 +14,12 @@ import { Modal } from '../components/Modal';
 import { useHomeScale } from '../useHomeScale';
 import type { LobbyMode } from './Lobby';
 
-/** 標題上方扇形排開的 5 張真實卡面：劍、盾、藥水、弓、小刀（只是外觀，不影響遊戲） */
-const FAN = ['戒備打擊', '盾擊', '生命藥水', '狙擊蓄力', '二刀連擊'];
+const CLASS_CARD_IDS = ALL_CARDS.filter(isClassCard).map((card) => card.id);
 
 export type Route = 'home' | 'decks' | 'records' | 'tutorial' | LobbyMode;
 
 export function Home({ go }: { go: (r: Route) => void }) {
+  const [fan] = useState(() => new Rng(Math.floor(Math.random() * 2 ** 32)).shuffle([...CLASS_CARD_IDS]).slice(0, 5));
   const [rules, setRules] = useState(false);
   const [changelog, setChangelog] = useState(false);
   const [flow, setFlow] = useState(false);
@@ -40,8 +43,8 @@ export function Home({ go }: { go: (r: Route) => void }) {
     <div className="page home" style={{ '--s': scale } as CSSProperties}>
       <header className="hero">
         <div className="hero-fan" aria-hidden="true">
-          {FAN.map((id, i) => (
-            <span key={id} className="fan-card" style={{ '--i': i - (FAN.length - 1) / 2 } as CSSProperties}>
+          {fan.map((id, i) => (
+            <span key={id} className="fan-card" style={{ '--i': i - (fan.length - 1) / 2 } as CSSProperties}>
               <span className="fan-scale"><CardFace id={id} size="md" /></span>
             </span>
           ))}
