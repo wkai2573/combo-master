@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.68.14',
+    date: '2026-11-24',
+    items: [{ type: 'change', text: '戒備打擊套用新版劍士卡框，數值與卡名改用黑底大白字。' }],
+  },
+  {
     version: '0.68.13',
     date: '2026-11-24',
     items: [{ type: 'change', text: '重繪六款招式卡框，統一圓角與連擊值欄的輪廓。' }],
