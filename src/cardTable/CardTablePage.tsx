@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { ALL_CARDS, ALL_CHARACTERS } from '../data/cards';
+import { matchesCard, type CardScope } from '../data/cardSearch';
 import { cardTable } from '../data/cardTableData';
 import {
   blankMoveAdditions, canDelete, cardFields, cardValue, characterFields, classes, emptyDraft, equalValue, exFields,
@@ -89,6 +90,10 @@ export function CardTablePage() {
   const [selection, setSelection] = useState<string>();
   const [name, setName] = useState('');
   const [kind, setKind] = useState<CardKind>('move');
+  const [filterKind, setFilterKind] = useState<'all' | CardKind>('all');
+  const [combo, setCombo] = useState(0);
+  const [scope, setScope] = useState<CardScope>('all');
+  const [query, setQuery] = useState('');
   const [message, setMessage] = useState('');
   const [storageFailed, setStorageFailed] = useState(false);
   const [exportTried, setExportTried] = useState(false);
@@ -202,6 +207,10 @@ export function CardTablePage() {
   const visibleCards = cards.filter((entry) => entry.added || !deleted.has(entry.uid));
   const fixedCards = visibleCards.filter((entry) => !entry.added && !sortableIds.has(entry.base.id));
   const sortableCards = sortByOrder(visibleCards.filter((entry) => entry.added || sortableIds.has(entry.base.id)), draftOrder(cardList) ?? [], (entry) => entry.base.id);
+  const search = query.trim();
+  const filtering = Boolean(search) || (!isEx && (filterKind !== 'all' || combo !== 0 || scope !== 'all'));
+  const matchingCards = filtering ? [...fixedCards, ...sortableCards].filter(({ card }) =>
+    matchesCard(card, isEx ? 'all' : filterKind, isEx ? 0 : combo, isEx ? 'all' : scope, search)) : [];
   const renderCard = (entry: (typeof cards)[number]) => (
     <div key={entryKey(entry)} className={entry.edits.length || entry.added ? 'ct-changed' : undefined}>
       <CardFace id={entry.card.id} card={entry.card} selected={selection === entryKey(entry)} onClick={() => setSelection(entryKey(entry))} />
@@ -291,13 +300,37 @@ export function CardTablePage() {
       )}
       {(tab === '卡片' || tab === 'Ex 卡') && (
         <>
+        <div className="ct-filters" role="group" aria-label="卡片篩選">
+          {!isEx && <>
+            <select aria-label="卡片類型" value={filterKind} onChange={(e) => setFilterKind(e.target.value as 'all' | CardKind)}>
+              <option value="all">全部類型</option>
+              {Object.entries(kinds).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <select aria-label="連擊值" value={combo} onChange={(e) => setCombo(Number(e.target.value))}>
+              <option value={0}>全部連擊值</option>
+              {Array.from({ length: 9 }, (_, i) => <option key={i + 1} value={i + 1}>連擊值 {i + 1}</option>)}
+            </select>
+            <select aria-label="專用或共用" value={scope} onChange={(e) => setScope(e.target.value as CardScope)}>
+              <option value="all">專用＋共用</option>
+              <option value="class">只看專用</option>
+              <option value="common">只看共用</option>
+            </select>
+          </>}
+          <input type="search" aria-label="搜尋名稱、效果或特徵" placeholder="搜尋名稱／效果／特徵"
+            value={query} onChange={(e) => setQuery(e.target.value)} />
+          <span role="status">{filtering ? matchingCards.length : visibleCards.length} 張</span>
+        </div>
         {orderControls(cardList)}
         <div className={selected ? 'ct-layout ct-with-detail' : 'ct-layout'}>
-          <div>
+          {filtering ? (
+            <div>
+              {matchingCards.length > 0 ? <div className="ct-grid">{matchingCards.map(renderCard)}</div> : <p>找不到符合條件的卡片。</p>}
+            </div>
+          ) : <div>
             {fixedCards.length > 0 && <div className="ct-grid">{fixedCards.map(renderCard)}</div>}
             <SortableList className="ct-grid ct-sortable" items={sortableCards} getKey={(entry) => entry.base.id} renderItem={renderCard}
               onReorder={(order) => changeField(cardList, 'order', orderOf(cardTable, cardList), order)} />
-          </div>
+          </div>}
           {selected && (
             <section className="ct-detail" aria-label={`${selected.uid} 詳細資料`} key={entryKey(selected)}>
               <div className="ct-detail-actions">

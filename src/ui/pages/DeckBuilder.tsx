@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { matchesCard, type CardScope } from '../../data/cardSearch';
 import { ALL_CHARACTERS, getCard, getCharacter, PLAYABLE_CARDS } from '../../data/cards';
 import { isCardEnabled } from '../../data/enabledCards';
 import { presetDeck } from '../../data/presetDecks';
@@ -24,7 +25,7 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
   const [pinned, setPinned] = useState<string | null>(null);
   const [kind, setKind] = useState<'all' | CardKind>('all');
   const [combo, setCombo] = useState(0);
-  const [scope, setScope] = useState<'all' | 'class' | 'common'>('all');
+  const [scope, setScope] = useState<CardScope>('all');
   const [query, setQuery] = useState('');
   const [io, setIo] = useState<null | 'export' | 'import'>(null);
   const [ioText, setIoText] = useState('');
@@ -43,10 +44,7 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
   const pool = useMemo(() => {
     const q = query.trim();
     return PLAYABLE_CARDS.filter((c) => c.cls === '共用' || c.cls === char.cls)
-      .filter((c) => kind === 'all' || c.kind === kind)
-      .filter((c) => combo === 0 || (c.kind === 'move' && c.combo === combo))
-      .filter((c) => scope === 'all' || (scope === 'common' ? c.cls === '共用' : c.cls !== '共用'))
-      .filter((c) => !q || c.name.includes(q) || c.text.includes(q) || c.traits.some((t) => t.includes(q)))
+      .filter((c) => matchesCard(c, kind, combo, scope, q))
       .sort(byOrder);
   }, [char.cls, kind, combo, scope, query]);
 
@@ -166,7 +164,7 @@ export function DeckBuilder({ onBack }: { onBack: () => void }) {
                 {Array.from({ length: 9 }, (_, i) => <option key={i + 1} value={i + 1}>連擊值 {i + 1}</option>)}
               </select>
               {hasClassCards && (
-                <select value={scope} onChange={(e) => setScope(e.target.value as 'all' | 'class' | 'common')}>
+                <select value={scope} onChange={(e) => setScope(e.target.value as CardScope)}>
                   <option value="all">專用＋共用</option>
                   <option value="class">只看{char.cls}專用</option>
                   <option value="common">只看共用</option>
