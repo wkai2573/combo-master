@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.68.13',
+    date: '2026-11-24',
+    items: [{ type: 'change', text: '重繪六款招式卡框，統一圓角與連擊值欄的輪廓。' }],
+  },
+  {
     version: '0.68.12',
     date: '2026-11-24',
     items: [{ type: 'change', text: '將招式卡框連擊值欄下緣的外弧收扁。' }],
