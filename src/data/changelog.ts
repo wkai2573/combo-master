@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.69.3',
+    date: '2026-11-25',
+    items: [{ type: 'change', text: '88 張招式卡換上定稿插畫與對應卡框，包含白板招式和五個職業的招式。' }],
+  },
+  {
     version: '0.69.2',
     date: '2026-11-25',
     items: [{ type: 'fix', text: '已收錄的同名關鍵字即使說明經過修訂，卡表也會自動清除原先的新增草稿。' }],
