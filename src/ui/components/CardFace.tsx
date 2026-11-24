@@ -93,6 +93,7 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
   const face = moveCardFaces.get(id);
   const showFullFace = fullFace && face !== undefined;
   const hasBadge = badge !== undefined;
+  const showStats = !showFullFace || !hasBadge;
   if (face) cls.push(showFullFace ? 'full-face' : 'finished-face');
   const isMove = c.kind === 'move';
   // 放在增益區、依持續回合計時的 Ex 卡沒有攻守連擊，卡頭改寫持續回合
@@ -109,32 +110,31 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
       }}
       onMouseEnter={() => inspect(id, expEffect)}
     >
-      {face && <img className="face-image" src={face} alt={showFullFace && !hasBadge ? c.name : ''} draggable={false} />}
-      {!showFullFace && (
-        <>
-          <div className="hd">
-            {isMove && !timedEx ? (
-              <>
-                <span className="a" title="攻擊力">{c.atk}</span>
-                <span className="c" title="連擊值">{c.combo}</span>
-                <span className="d" title="防禦力">{c.def}</span>
-              </>
-            ) : timedEx ? (
-              <>
-                <span className="g">Ex</span>
-                <span className="g">持續{c.duration}</span>
-              </>
-            ) : (
-              <>
-                <span className="g">{c.kind === 'buff' ? '增益' : c.slot}</span>
-                <span className="c" title="經驗需求">需{c.expReq}</span>
-                <span className="g">{c.kind === 'buff' ? `持續${c.duration ?? '-'}` : '裝備'}</span>
-              </>
-            )}
-          </div>
-          {!face && <CardArt id={id} card={card} />}
-        </>
+      {!showFullFace && face && <img className="face-image" src={face} alt="" draggable={false} />}
+      {showStats && (
+        <div className="hd">
+          {isMove && !timedEx ? (
+            <>
+              <span className="a" title="攻擊力">{c.atk}</span>
+              <span className="c" title="連擊值">{c.combo}</span>
+              <span className="d" title="防禦力">{c.def}</span>
+            </>
+          ) : timedEx ? (
+            <>
+              <span className="g">Ex</span>
+              <span className="g">持續{c.duration}</span>
+            </>
+          ) : (
+            <>
+              <span className="g">{c.kind === 'buff' ? '增益' : c.slot}</span>
+              <span className="c" title="經驗需求">需{c.expReq}</span>
+              <span className="g">{c.kind === 'buff' ? `持續${c.duration ?? '-'}` : '裝備'}</span>
+            </>
+          )}
+        </div>
       )}
+      {showFullFace && <img className="face-image" src={face} alt="" draggable={false} />}
+      {!face && <CardArt id={id} card={card} />}
       <div className="face-footer">
         {!showFullFace && (
           <div className="ef">
@@ -142,10 +142,10 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
             <CardText text={c.text} />
           </div>
         )}
-        {(!showFullFace || hasBadge) && <div className={hasBadge ? 'nm with-badge' : 'nm'}>
+        <div className={hasBadge ? 'nm with-badge' : 'nm'}>
           <span className="card-name" title={hasBadge ? c.name : undefined}>{c.name}</span>
           {hasBadge && <span className={badge === 0 ? 'badge empty' : 'badge'}>{badge}</span>}
-        </div>}
+        </div>
       </div>
       {covered ? <span className="fdtag">裏側</span> : null}
       {counters ? <span className="ctr" title="剩餘持續回合">⏳{counters}<Delta d={counterDelta} k={deltaKey ?? 0} /></span> : null}

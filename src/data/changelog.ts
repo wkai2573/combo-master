@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.68.6',
+    date: '2026-11-24',
+    items: [{ type: 'change', text: '對戰中的成品卡面加上醒目的攻擊力、連擊值、防禦力和卡名。' }],
+  },
+  {
     version: '0.68.5',
     date: '2026-11-24',
     items: [{ type: 'change', text: '對戰中已有成品卡圖的卡牌會顯示完整卡面，卡牌說明也可縮放查看。' }],
