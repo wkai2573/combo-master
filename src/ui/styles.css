@@ -105,7 +105,7 @@ h1, h2, h3 { margin: 0 0 8px; }
   margin-left: calc(var(--card-w) * var(--fan-k) * var(--s) / -2); filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .5));
   transform-origin: 50% 190%; transform: rotate(calc(var(--i) * 14deg)) translateY(calc(var(--i) * var(--i) * 3px * var(--s)));
 }
-.fan-card .fan-scale { display: block; width: var(--card-w); height: var(--card-h); transform: scale(calc(var(--fan-k) * var(--s))); transform-origin: 0 0; }
+.fan-card img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
 /* 主選單：主要行動最大，其次是成對的兩層，資訊收成最下面一排 */
 .home .menu { display: grid; gap: calc(10px * var(--s)); width: calc(360px * var(--s)); max-width: 100%; margin: calc(16px * var(--s)) auto 0; text-align: left; }

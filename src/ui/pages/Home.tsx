@@ -8,18 +8,21 @@ import { Rng } from '../../engine/rng';
 import { FEEDBACK_URL } from '../../stats/config';
 import { APP_BUILT_AT, VERSION_LABEL, VERSION_SHORT, VERSION_TITLE } from '../../version';
 import { ChangelogModal } from '../components/ChangelogModal';
-import { CardFace } from '../components/CardFace';
 import { FlowChartModal } from '../components/FlowChartModal';
 import { Modal } from '../components/Modal';
+import { moveCardFaces } from '../moveCardFaces';
 import { useHomeScale } from '../useHomeScale';
 import type { LobbyMode } from './Lobby';
 
-const CLASS_CARD_IDS = ALL_CARDS.filter(isClassCard).map((card) => card.id);
+const CLASS_CARD_FACES = ALL_CARDS.filter(isClassCard).flatMap(({ id }) => {
+  const image = moveCardFaces.get(id);
+  return image ? [{ id, image }] : [];
+});
 
 export type Route = 'home' | 'decks' | 'records' | 'tutorial' | LobbyMode;
 
 export function Home({ go }: { go: (r: Route) => void }) {
-  const [fan] = useState(() => new Rng(Math.floor(Math.random() * 2 ** 32)).shuffle([...CLASS_CARD_IDS]).slice(0, 5));
+  const [fan] = useState(() => new Rng(Math.floor(Math.random() * 2 ** 32)).shuffle([...CLASS_CARD_FACES]).slice(0, 5));
   const [rules, setRules] = useState(false);
   const [changelog, setChangelog] = useState(false);
   const [flow, setFlow] = useState(false);
@@ -43,9 +46,9 @@ export function Home({ go }: { go: (r: Route) => void }) {
     <div className="page home" style={{ '--s': scale } as CSSProperties}>
       <header className="hero">
         <div className="hero-fan" aria-hidden="true">
-          {fan.map((id, i) => (
+          {fan.map(({ id, image }, i) => (
             <span key={id} className="fan-card" style={{ '--i': i - (fan.length - 1) / 2 } as CSSProperties}>
-              <span className="fan-scale"><CardFace id={id} size="md" /></span>
+              <img src={image} alt="" draggable={false} />
             </span>
           ))}
         </div>
