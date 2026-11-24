@@ -40,7 +40,6 @@ export interface CardFaceProps {
   short?: boolean;
   counters?: number;
   badge?: string | number;
-  hideName?: boolean;
   /** 卡片實體編號：讓飛行圖層找得到這張卡在畫面上的位置 */
   uid?: number;
   /** 持續時間指示物的變動量（deltaKey 變動時重播） */
@@ -72,7 +71,7 @@ export function expEffectActive(c: Pick<CardView, 'id' | 'covered'>): boolean {
   return c.id !== null && !c.covered && hasExpEffect(c.id);
 }
 
-export function CardFace({ id, card, size = 'md', fullFace = true, selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, hideName, uid, counterDelta, deltaKey, onClick, inert }: CardFaceProps) {
+export function CardFace({ id, card, size = 'md', fullFace = true, selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, uid, counterDelta, deltaKey, onClick, inert }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const pin = useContext(PinContext);
   const cls = ['card', size];
@@ -102,7 +101,6 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
     <div
       className={cls.join(' ')}
       data-uid={uid}
-      aria-label={hideName ? c.name : undefined}
       style={{ ['--cc' as string]: cardColor(c), ['--cb' as string]: cardBorderColor(c) }}
       onClick={inert ? undefined : (onClick ?? (() => pin(id, expEffect)))}
       onContextMenu={(e) => {
@@ -144,7 +142,7 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
             <CardText text={c.text} />
           </div>
         )}
-        {!hideName && (!showFullFace || hasBadge) && <div className={hasBadge ? 'nm with-badge' : 'nm'}>
+        {(!showFullFace || hasBadge) && <div className={hasBadge ? 'nm with-badge' : 'nm'}>
           <span className="card-name" title={hasBadge ? c.name : undefined}>{c.name}</span>
           {hasBadge && <span className={badge === 0 ? 'badge empty' : 'badge'}>{badge}</span>}
         </div>}
