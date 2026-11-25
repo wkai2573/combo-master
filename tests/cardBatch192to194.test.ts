@@ -26,8 +26,8 @@ function toNextTurn(g: ReturnType<typeof scenario>) {
 
 describe('卡表資料與登記（聖獸白虎、聖獸玄武、Ex-白虎、Ex-玄武、煙霧陷阱、冰凍陷阱、毒藥）', () => {
   it('卡表數值與開放清單', () => {
-    expect(getCard('聖獸白虎')).toMatchObject({ cls: '法師', atk: 2, def: 0, combo: 2, traits: ['召喚'] });
-    expect(getCard('聖獸玄武')).toMatchObject({ cls: '法師', atk: 0, def: 2, combo: 7, traits: ['召喚'] });
+    expect(getCard('聖獸白虎')).toMatchObject({ cls: '法師', atk: 1, def: 0, combo: 2, traits: ['召喚'] });
+    expect(getCard('聖獸玄武')).toMatchObject({ cls: '法師', atk: 0, def: 1, combo: 7, traits: ['召喚'] });
     expect(getCard('煙霧陷阱')).toMatchObject({ cls: '盜賊', atk: 1, def: 4, combo: 7, traits: ['陷阱'] });
     expect(getCard('冰凍陷阱')).toMatchObject({ cls: '盜賊', atk: 2, def: 3, combo: 8, traits: ['陷阱'] });
     expect(getCard('毒藥')).toMatchObject({ cls: '盜賊', atk: 1, def: 3, combo: 1, traits: ['毒', '藥水'] });
@@ -87,12 +87,12 @@ describe('聖獸白虎、聖獸玄武 [發_蓋2]：將 1 張 Ex 卡放入我方�
     expect(ids(g, 0, 'buff')).toEqual([]);
   });
 
-  it('放入新的同名 Ex 卡時，舊的指示物不重設，兩張各自計數、各自 +2', () => {
+  it('放入新的同名 Ex 卡時，移除舊卡，只計新卡的 +2', () => {
     const g = play('聖獸白虎', ['黑桃1', '黑桃3', '黑桃4'], ['Ex-白虎@3']);
     pick(g, '發動');
-    expect(counters(g, 'Ex-白虎')).toEqual([3, 0]);
-    expect(query(g, 0, 'flatAtk')).toBe(4);
-    expect(totalAtk(g, 0)).toBe(atkOf('聖獸白虎') + 4);
+    expect(counters(g, 'Ex-白虎')).toEqual([0]);
+    expect(query(g, 0, 'flatAtk')).toBe(2);
+    expect(totalAtk(g, 0)).toBe(atkOf('聖獸白虎') + 2);
   });
 });
 
@@ -324,7 +324,7 @@ describe('煙霧陷阱：[頂] 對方出招時，將此卡放到我方招式疊�
   });
 });
 
-describe('冰凍陷阱：[經_蓋3] 對方出招的連擊值＝我方招式疊最上方招式的連擊值，可付蓋 3，我方 +0+3', () => {
+describe('冰凍陷阱：[經_蓋2] 對方出招的連擊值＝我方招式疊最上方招式的連擊值，可付蓋 2，我方 +0+3', () => {
   /** 玩家 0（刺客）的招式卡疊最上方是黑桃7（連擊值 7）；玩家 1 在反擊步驟出招 */
   const trap = (exp: string[], p1hand: string[] = ['黑桃7', '黑桃7', '黑桃9'], moves: string[] = ['黑桃7'], first: 0 | 1 = 0) =>
     scenario({
@@ -335,7 +335,7 @@ describe('冰凍陷阱：[經_蓋3] 對方出招的連擊值＝我方招式疊�
     });
   const EXP = ['冰凍陷阱', '黑桃3', '黑桃4', '黑桃5'];
 
-  it('連擊值相等時出現選項，付蓋 3 後總防禦 +3，蓋的是最前面的 3 張', () => {
+  it('連擊值相等時出現選項，付蓋 2 後總防禦 +3，蓋的是最前面的 2 張', () => {
     const g = trap(EXP);
     pick(g, '黑桃7');
     expect(title(g)).toContain('冰凍陷阱');
@@ -344,7 +344,7 @@ describe('冰凍陷阱：[經_蓋3] 對方出招的連擊值＝我方招式疊�
     expect(query(g, 0, 'flatDef')).toBe(3);
     expect(totalDef(g, 0)).toBe(def0 + 3);
     expect(query(g, 0, 'flatAtk')).toBe(0);
-    expect(ids(g, 0, 'exp')).toEqual(['~冰凍陷阱', '~黑桃3', '~黑桃4', '黑桃5']);
+    expect(ids(g, 0, 'exp')).toEqual(['~冰凍陷阱', '~黑桃3', '黑桃4', '黑桃5']);
   });
 
   it('可以選擇不付費：不蓋經驗，沒有加成', () => {
@@ -376,8 +376,8 @@ describe('冰凍陷阱：[經_蓋3] 對方出招的連擊值＝我方招式疊�
     expect(query(g, 0, 'flatDef')).toBe(0);
   });
 
-  it('表側經驗不足 3 張時不能發動；被蓋成裏側的冰凍陷阱沒有效果', () => {
-    const few = trap(['冰凍陷阱', '黑桃3', '~黑桃4']);
+  it('表側經驗不足 2 張時不能發動；被蓋成裏側的冰凍陷阱沒有效果', () => {
+    const few = trap(['冰凍陷阱', '~黑桃3', '~黑桃4']);
     pick(few, '黑桃7');
     expect(few.pending?.title ?? '').not.toContain('冰凍陷阱');
     const covered = trap(['~冰凍陷阱', '黑桃3', '黑桃4', '黑桃5']);

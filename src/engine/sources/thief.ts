@@ -1,6 +1,5 @@
 import { canPay, chooseX, pay } from '../cost';
 import { defineSource, lasting, slot } from '../effectKit';
-import { isExCardId } from '../../data/exCards';
 import { activate, awakened, chooseCards, combatZone, data, discard, draw, isFirst, log, move, newCard, placeExInBuff, pname, isMoveStackTop, topOfZone, Z, type GameCtx } from '../ops';
 import { other, type PlayerId } from '../types';
 
@@ -47,18 +46,17 @@ export const 順手牽羊 = defineSource({
   ask: { flatDef: lasting((c) => 順手牽羊狀態.read(c.g, c.p).def) },
 });
 
-// 卸除鎧甲（盜賊）：[發_蓋2] 選擇對方 1 張裝備或增益卡，送入棄牌區
+// 卸除鎧甲（盜賊）：[發_蓋2] 選擇對方 1 張裝備，送入棄牌區
 export const 卸除鎧甲 = defineSource({
   id: '卸除鎧甲',
   at: 'moves',
   on: {
     onPlay: (c) => {
-      // 增益區裡的 Ex 卡（Ex-狂怒）是效果放進去的，不是增益卡，不能選
-      const targets = () => [...Z(c.g, other(c.p), 'gear'), ...Z(c.g, other(c.p), 'buff').filter((x) => !isExCardId(x.id))];
+      const targets = () => Z(c.g, other(c.p), 'gear');
       return c.effect(
-        { label: '【卸除鎧甲】對方 1 張裝備或增益卡送入棄牌區（蓋2）', cost: { cover: 2 }, when: () => targets().length > 0 },
+        { label: '【卸除鎧甲】對方 1 張裝備送入棄牌區（蓋2）', cost: { cover: 2 }, when: () => targets().length > 0 },
         function* () {
-          const [t] = yield* chooseCards(c.g, c.p, '【卸除鎧甲】選擇對方 1 張裝備或增益卡送入棄牌區', targets(), 1, 1);
+          const [t] = yield* chooseCards(c.g, c.p, '【卸除鎧甲】選擇對方 1 張裝備送入棄牌區', targets(), 1, 1);
           if (t) {
             discard(c.g, t);
             log(c.g, `【卸除鎧甲】對方的【${data(t).name}】送入棄牌區`);
@@ -69,48 +67,37 @@ export const 卸除鎧甲 = defineSource({
   },
 });
 
-/** 塗毒在這回合被發動的次數；歸還時依此放出中毒 */
-export const 塗毒狀態 = slot('塗毒', () => ({ armed: 0 }));
-
-// 塗毒（盜賊）：[發_蓋2] 當歸還時，將 [Ex-中毒] 移入對方的經驗區
+// 塗毒（盜賊）：[發_蓋2] 將 [Ex-中毒] 加入對方經驗
 export const 塗毒 = defineSource({
   id: '塗毒',
   at: 'moves',
   on: {
-    onPlay: (c) => c.effect({ label: '【塗毒】歸還時，Ex-中毒移入對方的經驗區（蓋2）', cost: { cover: 2 } }, () => {
-      塗毒狀態.of(c.g, c.p).armed++;
-      log(c.g, '【塗毒】歸還時，[Ex-中毒]將移入對方的經驗區');
+    onPlay: (c) => c.effect({ label: '【塗毒】Ex-中毒移入對方的經驗區（蓋2）', cost: { cover: 2 } }, () => {
+      const target = other(c.p);
+      newCard(c.g, 'Ex-中毒', target, 'exp');
+      log(c.g, `【塗毒】[Ex-中毒]移入${pname(c.g, target)}的經驗區`);
     }),
-    // 歸還時卡已經離開戰鬥區，所以要明寫 lasting；是否發動看塗毒留下的記號
-    afterReturn: lasting((c) => Array.from({ length: 塗毒狀態.read(c.g, c.p).armed }, () =>
-      // 歸還的影格已經涵蓋這張卡的出現，所以不另外補錄
-      c.effect({ label: '【塗毒】Ex-中毒移入對方的經驗區', mandatory: true, mark: false }, () => {
-        塗毒狀態.of(c.g, c.p).armed--;
-        const target = other(c.p);
-        newCard(c.g, 'Ex-中毒', target, 'exp');
-        log(c.g, `【塗毒】[Ex-中毒]移入${pname(c.g, target)}的經驗區`);
-      }))),
   },
 });
 
 /** 幸運兔腳這回合是否已經發動過 */
 export const 幸運兔腳狀態 = slot('幸運兔腳', () => ({ used: false }));
 
-// 幸運兔腳（盜賊）：[蓋2] 追擊判定失敗時，額外翻 1 張卡做追擊判定，每回合 1 次
+// 幸運兔腳（盜賊）：[蓋2] 追擊判定失敗時，追擊+1，每回合 1 次
 export const 幸運兔腳 = defineSource({
   id: '幸運兔腳',
   at: 'gear',
   on: {
     afterPursuitFail: (c) => c.effect(
       {
-        label: '【幸運兔腳】額外翻 1 張卡做追擊判定（蓋2）',
+        label: '【幸運兔腳】追擊+1（蓋2）',
         cost: { cover: 2 },
-        mark: false, // 額外判定自己會錄影格
+        mark: false, // 額外判定本身會錄影格
         when: () => !幸運兔腳狀態.read(c.g, c.p).used && Z(c.g, c.p, 'deck').length > 0,
       },
       function* () {
         幸運兔腳狀態.of(c.g, c.p).used = true;
-        log(c.g, `【${data(c.self!).name}】額外翻 1 張卡做追擊判定`);
+        log(c.g, `【${data(c.self!).name}】追擊+1`);
         yield* c.flipExtra();
       },
     ),
@@ -197,16 +184,16 @@ export const 煙霧陷阱 = defineSource({
 /** 冰凍陷阱這回合給的總防禦加成 */
 export const 冰凍陷阱狀態 = slot('冰凍陷阱', () => ({ def: 0 }));
 
-// 冰凍陷阱（盜賊）：[經_蓋3] 當對方出招時，且對方所出招式的連擊值＝我方招式疊最上方招式的連擊值，我方 +0+3。
-// 觸發窗口出現時才選擇付不付蓋3，條件在窗口開啟時判斷；加成持續到本回合結束，存在狀態槽
+// 冰凍陷阱（盜賊）：[經_蓋2] 當對方出招時，且對方所出招式的連擊值＝我方招式疊最上方招式的連擊值，我方 +0+3。
+// 觸發窗口出現時才選擇付不付蓋2，條件在窗口開啟時判斷；加成持續到本回合結束，存在狀態槽
 export const 冰凍陷阱 = defineSource({
   id: '冰凍陷阱',
   at: 'exp',
   on: {
     onFoePlay: (c) => c.effect(
       {
-        label: '【冰凍陷阱】此回合 +0+3（蓋3）',
-        cost: { cover: 3 },
+        label: '【冰凍陷阱】此回合 +0+3（蓋2）',
+        cost: { cover: 2 },
         when: () => {
           const top = topOfZone(c.g, c.p);
           return top !== undefined && data(top).combo === data(c.card).combo;

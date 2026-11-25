@@ -1,4 +1,4 @@
-import { discardRage, faceUpExp, pay } from '../cost';
+import { faceUpExp, pay } from '../cost';
 import { defineSource } from '../effectKit';
 import { activate, awakened, chooseCards, combatZone, data, directHit, discard, isFirst, log, move, pname, recover, isMoveStackTop, Z, type GameCtx } from '../ops';
 import { isClassCard, isVanilla } from '../../data/enabledCards';
@@ -46,20 +46,18 @@ export const 凡骨的意志 = defineSource({
   ask: { vanillaBoost: () => 1 },
 });
 
-// 復仇之嚎（劍士）：[經_怒3] 傷害計算時，若對方給予的傷害 > 我方給予的傷害，將怒氣區上方 1 張卡加入手牌
-// 傷害計算時還沒把這回合的傷害放進怒氣區，所以取的是原本就在怒氣區的卡；要有至少 4 張才能發動（怒3 之後還要有卡可取）。
-// 「給予的傷害」讀窗口當下的數字：先發動的減免會讓後面的比較跟著變
+// 復仇之嚎在傷害入怒後比較雙方實際傷害；付怒3 後須至少剩 1 張可取。
 export const 復仇之嚎 = defineSource({
   id: '復仇之嚎',
   at: 'exp',
   on: {
-    onDamage: (c) => {
-      const pending = () => c.g.state.flags.damagePending;
+    afterDamage: (c) => {
+      const damage = () => c.g.state.flags.damageTaken;
       return c.effect(
         {
           label: '【復仇之嚎】將怒氣區上方 1 張卡加入手牌（怒3）',
           cost: { rage: 3 },
-          when: () => pending()[c.p] > pending()[other(c.p)] && Z(c.g, c.p, 'rage').length >= 4,
+          when: () => damage()[c.p] > damage()[other(c.p)] && Z(c.g, c.p, 'rage').length >= 4,
         },
         () => {
           const top = Z(c.g, c.p, 'rage')[0];
@@ -144,23 +142,22 @@ export const 洩憤 = defineSource({
   },
 });
 
-// 威嚇戰吼（劍士）：[頂] 當對方出招時，且我方怒氣區卡片數 > 對方牌組卡片數，對方直擊 X。X＝對方戰鬥區的卡片數。
-// 強制；每次對方出招都在那張招式放上戰鬥區之後重新判斷條件與 X，X 含剛打出的那張。只有位於招式卡疊最上方時才觸發
+// 威嚇戰吼（劍士）：[頂] 當對方出招時，且我方怒氣區卡片數 > 對方手牌數，對方直擊 1。
+// 強制；每次對方出招都在那張招式放上戰鬥區之後重新判斷條件。只有位於招式卡疊最上方時才觸發
 const 威嚇條件 = (g: GameCtx, p: PlayerId) =>
-  Z(g, p, 'rage').length > Z(g, other(p), 'deck').length;
+  Z(g, p, 'rage').length > Z(g, other(p), 'hand').length;
 export const 威嚇戰吼 = defineSource({
   id: '威嚇戰吼',
   at: 'moves',
   on: {
     onFoePlay: (c) => c.effect(
-      { label: '【威嚇戰吼】對方直擊 X（X＝對方戰鬥區的卡片數）', mandatory: true, when: () => isMoveStackTop(c.g, c.self) && 威嚇條件(c.g, c.p) },
+      { label: '【威嚇戰吼】對方直擊 1', mandatory: true, when: () => isMoveStackTop(c.g, c.self) && 威嚇條件(c.g, c.p) },
       () => {
         const { g, p } = c;
         const foe = other(p);
-        const x = combatZone(g, foe).length;
         activate(g, p, c.self!);
-        log(g, `【威嚇戰吼】${pname(g, foe)} 出招，${pname(g, p)} 的怒氣區多於對方牌組，對方直擊 ${x}`);
-        directHit(g, foe, x);
+        log(g, `【威嚇戰吼】${pname(g, foe)} 出招，${pname(g, p)} 的怒氣區多於對方手牌，對方直擊 1`);
+        directHit(g, foe, 1);
       },
     ),
   },
@@ -188,25 +185,22 @@ export const 盛怒漩渦 = defineSource({
 // 狂戰（劍士）：三個 [經] 效果，都只在表側經驗區有效，被蓋成裏側就全部停止，翻回表側恢復：
 // ① 我方戰鬥區卡片效果全部無效（查詢 combatEffectsVoid，登記表與戰鬥結算都尊重它）
 // ② 我方 +X+0，X＝我方戰鬥區的招式數量（招式卡疊加追擊卡疊）
-// ③ 回合開始時（強制）必須捨棄怒氣區 5 張，有幾張捨幾張；不足 5 張時，捨完全部怒氣之後再把自己捨棄到棄牌區。
-//   捨棄的怒氣進棄牌區後雙方才看得到，紀錄只寫張數
+// ③ 傷害計算後，若對方沒有造成傷害，將此卡蓋為裏側。
 export const 狂戰 = defineSource({
   id: '狂戰',
   at: 'exp',
   on: {
-    turnStart: (c) => c.effect(
-      { label: '【狂戰】必須捨棄 5 張怒氣，不足 5 張時此卡捨棄', mandatory: true, group: '狂戰' },
+    afterDamage: (c) => c.effect(
+      {
+        label: '【狂戰】對方未造成傷害，將此卡蓋為裏側',
+        mandatory: true,
+        group: '狂戰',
+        when: () => c.g.state.flags.damageTaken[c.p] === 0,
+      },
       () => {
-        const { g, p } = c;
-        const card = c.self!;
-        activate(g, p, card);
-        const n = discardRage(g, p, 5);
-        if (n < 5) {
-          discard(g, card);
-          log(g, `【狂戰】${pname(g, p)} 捨棄怒氣 ${n} 張，不足 5 張，【狂戰】捨棄到棄牌區`);
-        } else {
-          log(g, `【狂戰】${pname(g, p)} 捨棄怒氣 5 張`);
-        }
+        c.self!.covered = true;
+        c.g.touched++;
+        log(c.g, `【狂戰】${pname(c.g, c.p)} 將此卡蓋為裏側`);
       },
     ),
   },

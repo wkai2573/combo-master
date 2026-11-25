@@ -98,8 +98,8 @@ export const 電弧 = defineSource({
   },
 });
 
-// 力量爆破（法師）：[頂] 我方 −3+0；[追] 此卡追擊判定失敗
-export const 力量爆破 = defineSource({ id: '力量爆破', at: 'moves', asMove: { topAtk: -3, pursuitFails: true } });
+// 力量爆破（法師）：[頂] 我方 −3+0；此卡追擊判定必定成功
+export const 力量爆破 = defineSource({ id: '力量爆破', at: 'moves', asMove: { topAtk: -3, pursuitSucceeds: true } });
 
 // 法師：開局多抽 2；覺醒（追加）當我方覺醒時，可以抽 1
 export const 法師 = defineSource({
@@ -195,13 +195,16 @@ export const 冰茅 = defineSource({
 });
 
 // 聖獸白虎、聖獸玄武（法師）：[發_蓋2] 將 1 張對應的 Ex 卡放入我方增益區；[頂] 該 Ex 卡不會放置持續時間指示物。
-// 放入新的同名 Ex 卡時舊的指示物不重設（與 Ex-狂怒不同），所以直接新增一張，不經 placeExInBuff。
+// 放入新的同名 Ex 卡時，將舊卡移除遊戲。
 // [頂] 暫停的是我方增益區所有同名 Ex 卡，不論指示物來源（增益階段開始、對方出招）；位於招式卡疊最上方才有效
 const holyBeast = (id: string, exId: string): EffectSource => defineSource({
   id,
   at: 'moves',
   on: {
     onPlay: (c) => c.effect({ label: `【${id}】將 1 張 [${exId}] 放入我方增益區（蓋2）`, cost: { cover: 2 } }, () => {
+      for (const card of Z(c.g, c.p, 'buff').filter((card) => card.id === exId)) {
+        removeFromGame(c.g, card);
+      }
       newCard(c.g, exId, c.p, 'buff');
       log(c.g, `【${id}】${pname(c.g, c.p)} 將 [${exId}] 放入增益區`);
     }),
@@ -213,7 +216,7 @@ export const 聖獸玄武 = holyBeast('聖獸玄武', 'Ex-玄武');
 
 // Ex-白虎、Ex-玄武：持續回合 7，我方總攻擊（總防禦）+2，每張各自生效。
 // 指示物有兩個來源：增益階段開始的通則（引擎）加 1，以及對方每次出招加 1（這裡）；到上限立即移除遊戲，不等下個增益階段。
-// 聖獸在最上方時兩種來源都暫停。好幾張（不論同名與否）各自計數、互不影響，窗口把它們併成一個強制選項，不必排順序
+// 聖獸在最上方時兩種來源都暫停。不同名的聖獸各自計數，窗口把它們併成一個強制選項，不必排順序
 const exBeast = (id: string, bonus: { atk: number; def: number }): EffectSource => defineSource({
   id,
   at: 'buff',

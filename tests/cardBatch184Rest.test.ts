@@ -21,7 +21,7 @@ function toNextTurn(g: ReturnType<typeof scenario>) {
 
 describe('我方出招時、對方出招時：新增的觸發窗口時機', () => {
   it('先攻方的窗口先處理：先攻方是出招者時，他的「我方出招時」先於對方的「對方出招時」', () => {
-    // 玩家 1 先攻、先手打出煉金印記；玩家 0 的威嚇戰吼已在最上方，怒氣區多於玩家 1 的牌組
+    // 玩家 1 先攻、先手打出煉金印記；玩家 0 的威嚇戰吼已在最上方，怒氣區多於玩家 1 的手牌
     const g = scenario({
       chars: ['勇者', '商人'], first: 1,
       p0: { moves: ['威嚇戰吼'], rage: Array(9).fill('黑桃1'), hand: [] },
@@ -30,9 +30,9 @@ describe('我方出招時、對方出招時：新增的觸發窗口時機', () =
     });
     // 煉金印記是玩家 1 自己的「我方出招時」：先問他；對方的威嚇戰吼還沒處理
     expect(title(g)).toContain('煉金印記');
-    expect(count(g, '怒氣區多於對方牌組')).toBe(0);
+    expect(count(g, '怒氣區多於對方手牌')).toBe(0);
     pick(g, '不發動');
-    expect(count(g, '怒氣區多於對方牌組')).toBe(1);
+    expect(count(g, '怒氣區多於對方手牌')).toBe(1);
     expect(names(g, 1, 'discard')).toEqual(['黑桃2']);
   });
 
@@ -45,13 +45,13 @@ describe('我方出招時、對方出招時：新增的觸發窗口時機', () =
     });
     // 玩家 0 沒有手牌，先手步驟沒有招式可出；玩家 1 在反擊步驟打出煉金印記
     pick(g, '煉金印記');
-    expect(count(g, '怒氣區多於對方牌組')).toBe(1);
+    expect(count(g, '怒氣區多於對方手牌')).toBe(1);
     expect(names(g, 1, 'discard')).toEqual(['黑桃2']);
     expect(煉金印記狀態.read(g, 1).armed).toBe(false);
   });
 });
 
-describe('威嚇戰吼：對方出招時，我方怒氣區卡片數 > 對方牌組卡片數，對方直擊 X', () => {
+describe('威嚇戰吼：對方出招時，我方怒氣區卡片數 > 對方手牌數，對方直擊 1', () => {
   /** 玩家 0（勇者）先手打出威嚇戰吼；玩家 1 的手牌由 hand 指定，牌組 deckSize 張 */
   const roar = (o: { rage: number; deckSize: number; hand: string[] }) =>
     scenario({
@@ -61,35 +61,34 @@ describe('威嚇戰吼：對方出招時，我方怒氣區卡片數 > 對方牌�
       singlePhase: true,
     });
 
-  it('對方第一次出招時 X 為 1，含剛打出的那張', () => {
+  it('對方第一次出招時直擊 1', () => {
     const g = roar({ rage: 9, deckSize: 8, hand: ['黑桃5', '黑桃4'] });
     pick(g, '黑桃5');
     expect(names(g, 1, 'discard')).toEqual(['黑桃2']);
     expect(log(g)).toContain('對方直擊 1');
   });
 
-  it('疊越高 X 越大：對方第二次出招時 X 為 2', () => {
+  it('對方兩次出招各直擊 1', () => {
     const g = roar({ rage: 9, deckSize: 8, hand: ['黑桃5', '黑桃4'] });
     pick(g, '黑桃5'); // 直擊 1
-    pick(g, '黑桃4'); // 玩家 0 沒有手牌，自動收招；玩家 1 繼續出招，戰鬥區 2 張，直擊 2
-    expect(names(g, 1, 'discard')).toHaveLength(3);
-    expect(log(g)).toContain('對方直擊 2');
+    pick(g, '黑桃4'); // 玩家 0 沒有手牌，自動收招；玩家 1 繼續出招，再直擊 1
+    expect(names(g, 1, 'discard')).toHaveLength(2);
+    expect(count(g, '對方直擊 1')).toBe(2);
   });
 
-  it('怒氣區卡片數不大於對方牌組卡片數時不發動，也不問', () => {
-    const g = roar({ rage: 8, deckSize: 8, hand: ['黑桃5', '黑桃4'] });
+  it('怒氣區卡片數不大於對方手牌數時不發動，也不問', () => {
+    const g = roar({ rage: 1, deckSize: 8, hand: ['黑桃5', '黑桃4'] });
     pick(g, '黑桃5');
     expect(names(g, 1, 'discard')).toEqual([]);
-    expect(count(g, '怒氣區多於對方牌組')).toBe(0);
+    expect(count(g, '怒氣區多於對方手牌')).toBe(0);
   });
 
-  it('每次出招都重新判斷條件：第一次不成立，牌組變少之後第二次成立', () => {
-    const g = roar({ rage: 8, deckSize: 9, hand: ['黑桃5', '黑桃4'] });
+  it('每次出招都重新判斷條件：第一次不成立，手牌變少之後第二次成立', () => {
+    const g = roar({ rage: 1, deckSize: 9, hand: ['黑桃5', '黑桃4'] });
     pick(g, '黑桃5');
     expect(names(g, 1, 'discard')).toEqual([]);
-    Z(g, 1, 'deck').splice(0, 3); // 對方牌組剩 6 張，我方怒氣區 8 張
     pick(g, '黑桃4');
-    expect(names(g, 1, 'discard')).toHaveLength(2); // 戰鬥區 2 張，直擊 2
+    expect(names(g, 1, 'discard')).toHaveLength(1);
   });
 
   it('不在招式卡疊最上方時不觸發', () => {
@@ -104,7 +103,7 @@ describe('威嚇戰吼：對方出招時，我方怒氣區卡片數 > 對方牌�
     pick(g, '黑桃4'); // 玩家 0 在威嚇戰吼上面再出黑桃4，威嚇戰吼被壓住
     pick(g, '黑桃4');
     expect(names(g, 1, 'discard')).toEqual(['黑桃2']);
-    expect(count(g, '怒氣區多於對方牌組')).toBe(1);
+    expect(count(g, '怒氣區多於對方手牌')).toBe(1);
   });
 
   it('對方的出招才算：我方自己出招不會觸發我方的威嚇戰吼', () => {
@@ -115,7 +114,7 @@ describe('威嚇戰吼：對方出招時，我方怒氣區卡片數 > 對方牌�
       singlePhase: true,
     });
     expect(names(g, 0, 'discard')).toEqual([]);
-    expect(count(g, '怒氣區多於對方牌組')).toBe(0);
+    expect(count(g, '怒氣區多於對方手牌')).toBe(0);
   });
 
   it('怒氣區牌面不公開：紀錄與直擊都沒有洩漏怒氣區的牌名', () => {

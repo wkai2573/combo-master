@@ -7,7 +7,7 @@ import { names, pick, scenario } from './helpers';
 const filler = Array(20).fill('黑桃1') as string[];
 
 // 財富管理：
-//   [發_蓋1] 必須將牌組上方 3 張卡以裏側放入經驗區
+//   [發]將牌組上方 3 張卡以裏側放入經驗區
 //   [經] 當此卡被蓋為裏側時，必須捨棄此卡，然後選擇 2 張經驗放回牌組底
 describe('財富管理', () => {
   it('卡表資料：商人招式，市場特徵，已開放', () => {
@@ -24,27 +24,22 @@ describe('財富管理', () => {
       p1: { hand: [] },
     });
 
-  it('[發_蓋1]：付蓋1，牌組上方 3 張以裏側放進經驗區最後方；紀錄不洩漏卡名', () => {
+  it('[發]：牌組上方 3 張以裏側放進經驗區最後方；紀錄不洩漏卡名', () => {
     const g = play(['黑桃6', '黑桃7', '黑桃8', ...filler]);
-    const deck = Z(g, 0, 'deck').length;
-    pick(g, '發動');
     // 流程跑完會歸還：財富管理自己最後回到經驗區（表側）
     expect(names(g, 0, 'exp')).toEqual(['黑桃5', '黑桃6', '黑桃7', '黑桃8', '財富管理']);
-    expect(Z(g, 0, 'exp').map((c) => c.covered)).toEqual([true, true, true, true, false]);
-    expect(Z(g, 0, 'deck').length).toBeLessThanOrEqual(deck - 3);
+    expect(Z(g, 0, 'exp').map((c) => c.covered)).toEqual([false, true, true, true, false]);
+    expect(Z(g, 0, 'deck')).toHaveLength(filler.length);
     const log = g.state.log.join('\n');
     expect(log).toContain('將牌組上方 3 張卡以裏側放入經驗區');
     for (const n of ['黑桃6', '黑桃7', '黑桃8']) expect(log).not.toContain(n);
   });
 
-  it('不發動就沒有任何變化；牌組不足 3 張不能發動', () => {
-    const no = play(['黑桃6', '黑桃7', '黑桃8', ...filler]);
-    pick(no, '不發動');
-    expect(Z(no, 0, 'exp').filter((c) => c.covered)).toHaveLength(0);
-
-    const few = play(['黑桃6', '黑桃7']);
-    expect(few.pending?.title ?? '').not.toContain('財富管理');
-    expect(Z(few, 0, 'exp').filter((c) => c.covered)).toHaveLength(0);
+  it('牌組不足 3 張時將剩餘的牌放入經驗區', () => {
+    const g = play(['黑桃6', '黑桃7'], []);
+    expect(names(g, 0, 'exp')).toEqual(['黑桃6', '黑桃7']);
+    expect(Z(g, 0, 'exp').every((c) => c.covered)).toBe(true);
+    expect(Z(g, 0, 'deck')).toHaveLength(0);
   });
 
   /** 回合開始時用家族相片的蓋1 蓋住最前面的表側經驗，觸發它的蓋反應 */

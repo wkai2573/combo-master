@@ -185,9 +185,7 @@ describe('狂戰 [經]：我方戰鬥區卡片效果全部無效', () => {
   it('不影響裝備與增益：家族相片照常可發動，Ex-白虎的 +2 照常算', () => {
     const g = scenario({ chars: ['勇者', '刺客'], phase: '回合開始', singlePhase: true, first: 0,
       p0: { exp: ['狂戰', '黑桃3', '黑桃4'], gear: ['家族相片'], buff: ['Ex-白虎'], rage: Array(6).fill('黑桃1'), deck: filler, hand: [] }, p1: { hand: [] } });
-    // 回合開始：狂戰必須捨棄 5 張怒氣；家族相片需要怒2，在同一個窗口，由玩家排序
-    expect(title(g)).toContain('回合開始');
-    expect(g.pending!.options.map((o) => o.label).join('\n')).toContain('家族相片');
+    expect(title(g)).toContain('家族相片');
     expect(query(g, 0, 'flatAtk')).toBe(2);
   });
 
@@ -214,60 +212,18 @@ describe('狂戰 [經]：我方戰鬥區卡片效果全部無效', () => {
   });
 });
 
-describe('狂戰 [經]：當回合開始時，必須捨棄 5 張怒氣，若不足 5 張，此卡捨棄', () => {
-  const start = (rage: string[], exp: string[] = ['狂戰']) =>
-    scenario({ chars: ['勇者', '刺客'], phase: '回合開始', singlePhase: true, first: 0, p0: { exp, rage, deck: filler, hand: [] }, p1: { hand: [] } });
-
-  it('怒氣區多於 5 張：從上方捨棄 5 張，狂戰留在經驗區', () => {
-    const g = start(['黑桃1', '黑桃2', '黑桃3', '黑桃4', '黑桃5', '黑桃6', '黑桃7']);
-    expect(Z(g, 0, 'rage').map((c) => c.id)).toEqual(['黑桃6', '黑桃7']);
-    expect(names(g, 0, 'discard')).toEqual(['黑桃1', '黑桃2', '黑桃3', '黑桃4', '黑桃5']);
-    expect(ids(g, 0, 'exp')).toEqual(['狂戰']);
-  });
-
-  it('怒氣區剛好 5 張：全捨棄，狂戰留在經驗區', () => {
-    const g = start(Array(5).fill('黑桃1'));
-    expect(Z(g, 0, 'rage')).toHaveLength(0);
-    expect(ids(g, 0, 'exp')).toEqual(['狂戰']);
-    expect(ids(g, 0, 'discard')).toHaveLength(5);
-  });
-
-  it('怒氣區不足 5 張：先捨全部怒氣，再把狂戰捨棄到棄牌區', () => {
-    const g = start(['黑桃1', '黑桃2', '黑桃3']);
-    expect(Z(g, 0, 'rage')).toHaveLength(0);
-    expect(ids(g, 0, 'exp')).toEqual([]);
-    expect(ids(g, 0, 'discard')).toEqual(['黑桃1', '黑桃2', '黑桃3', '狂戰']);
-    expect(log(g)).toContain('捨棄到棄牌區');
-  });
-
-  it('怒氣區是空的：狂戰直接捨棄到棄牌區', () => {
-    const g = start([]);
-    expect(ids(g, 0, 'exp')).toEqual([]);
-    expect(ids(g, 0, 'discard')).toEqual(['狂戰']);
-  });
-
-  it('被蓋成裏側的狂戰回合開始時不發動：怒氣區不動，也不捨棄自己', () => {
-    const g = start(['黑桃1', '黑桃2'], ['~狂戰']);
-    expect(Z(g, 0, 'rage')).toHaveLength(2);
-    expect(ids(g, 0, 'exp')).toEqual(['~狂戰']);
-  });
-
-  it('怒氣區牌面不公開：紀錄只寫張數，不寫怒氣區的牌名', () => {
-    const g = start(['伏擊', '塗毒', '毒藥', '二刀連擊', '順手牽羊', '卸除鎧甲']);
-    for (const secret of ['伏擊', '塗毒', '毒藥', '二刀連擊', '順手牽羊', '卸除鎧甲']) expect(log(g)).not.toContain(secret);
-    expect(log(g)).toContain('捨棄怒氣 5 張');
-  });
-
-  it('只管我方：對方的怒氣區不動', () => {
-    const g = scenario({ chars: ['勇者', '刺客'], phase: '回合開始', singlePhase: true, first: 0,
-      p0: { exp: ['狂戰'], rage: Array(6).fill('黑桃1'), deck: filler, hand: [] }, p1: { rage: Array(6).fill('黑桃2'), deck: filler, hand: [] } });
-    expect(Z(g, 1, 'rage')).toHaveLength(6);
-  });
-
-  it('兩張狂戰各捨 5 張：怒氣 7 張時第一張捨 5，第二張捨 2 並捨棄自己', () => {
-    const g = start(Array(7).fill('黑桃1'), ['狂戰', '狂戰']);
-    expect(Z(g, 0, 'rage')).toHaveLength(0);
-    expect(ids(g, 0, 'exp')).toEqual(['狂戰']);
-    expect(ids(g, 0, 'discard').filter((id) => id === '狂戰')).toHaveLength(1);
+describe('狂戰 [經]：傷害計算後，未受傷時將此卡蓋為裏側', () => {
+  it.each([false, true])('依對方是否造成傷害決定要不要蓋為裏側（有傷害：%s）', (attacks) => {
+    const g = scenario({
+      chars: ['勇者', '法師'], first: 0, singlePhase: true,
+      p0: { exp: ['狂戰', '狂戰'], rage: ['黑桃1'], deck: filler, hand: [] },
+      p1: { hand: attacks ? ['力量爆破'] : [] },
+    });
+    if (attacks) pick(g, '力量爆破');
+    const damage = g.state.flags.damageTaken[0];
+    expect(damage > 0).toBe(attacks);
+    expect(ids(g, 0, 'exp')).toEqual(damage > 0 ? ['狂戰', '狂戰'] : ['~狂戰', '~狂戰']);
+    expect(query(g, 0, 'combatEffectsVoid')).toBe(damage > 0);
+    expect(Z(g, 0, 'rage')).toHaveLength(1 + damage);
   });
 });

@@ -5,7 +5,7 @@ import { cover, optionalPay, pay } from '../src/engine/cost';
 import { getCard } from '../src/data/cards';
 import { armorScenario, atkOf, defOf, drive, liftedAtkOf, names, pick, scenario, setZones } from './helpers';
 
-import { 伏擊狀態, 塗毒狀態, 順手牽羊狀態 } from '../src/engine/sources/thief';
+import { 伏擊狀態, 順手牽羊狀態 } from '../src/engine/sources/thief';
 import { 二連矢狀態 } from '../src/engine/sources/archer';
 import { 狙擊印記狀態 } from '../src/engine/sources/archer';
 
@@ -170,7 +170,7 @@ describe('新卡（第二批）', () => {
     expect(Z(g, 0, 'hand')).toHaveLength(before + 1);
   });
 
-  it('復仇之嚎：[經_怒3] 傷害計算時，若受到的傷害大於造成的，可以付怒氣 3 再把怒氣區上方 1 張加入手牌', () => {
+  it('復仇之嚎：[經_怒3] 傷害計算後，若受到的傷害大於造成的，可以付怒氣 3 再把怒氣區上方 1 張加入手牌', () => {
     const g = scenario({ p0: { hand: ['黑桃1'], exp: ['復仇之嚎'], rage: Array(8).fill('黑桃1') }, p1: { hand: ['黑桃9'] }, singlePhase: true });
     伏擊狀態.of(g, 1).atk = 3; // 對方多 3 點總攻擊：受到的傷害大於造成的
     pick(g, '黑桃9');
@@ -178,8 +178,8 @@ describe('新卡（第二批）', () => {
     const rage = Z(g, 0, 'rage').length;
     const hand = Z(g, 0, 'hand').length;
     pick(g, '發動');
-    // 窗口時傷害還沒放進怒氣區：付 3 取 1，之後這回合的傷害才放進去
-    expect(Z(g, 0, 'rage')).toHaveLength(rage - 3 - 1 + g.state.flags.damageTaken[0]);
+    // 窗口開啟時傷害已放進怒氣區：付 3 取 1
+    expect(Z(g, 0, 'rage')).toHaveLength(rage - 3 - 1);
     expect(Z(g, 0, 'hand')).toHaveLength(hand + 1); // 怒氣區上方 1 張
   });
 
@@ -539,23 +539,19 @@ describe('新卡（第二批）', () => {
     expect(names(g, 1, 'exp')).not.toContain('Ex-中毒');
   });
 
-  it('塗毒：歸還時 [Ex-中毒] 一律移入對方的經驗區，不看雙方出招張數；離開經驗區就移除遊戲', () => {
-    for (const played of [[1, 2], [2, 2], [2, 1]] as Array<[number, number]>) {
-      const g = scenario();
-      塗毒狀態.of(g, 0).armed = 1;
-      g.state.flags.played = played;
-      drive(returnStep(g));
-      expect(names(g, 1, 'exp'), played.join()).toContain('Ex-中毒');
-      expect(names(g, 0, 'exp'), played.join()).not.toContain('Ex-中毒');
-    }
-
-    const t = scenario();
-    塗毒狀態.of(t, 0).armed = 1;
-    drive(returnStep(t));
-    const poison = Z(t, 1, 'exp').find((c) => c.id === 'Ex-中毒')!;
-    discard(t, poison);
-    expect(Z(t, 1, 'discard').some((c) => c.id === 'Ex-中毒')).toBe(false);
-    expect(Z(t, 1, 'exp').some((c) => c.id === 'Ex-中毒')).toBe(false);
+  it('塗毒：出招時將 Ex-中毒 加入對方經驗，離開經驗區時移除遊戲', () => {
+    const g = scenario({
+      p0: { hand: ['塗毒'], exp: ['黑桃2', '黑桃3'] },
+      p1: { hand: ['黑桃4'] },
+    });
+    expect(names(g, 1, 'exp')).not.toContain('Ex-中毒');
+    pick(g, '發動');
+    expect(g.state.phase).toBe('反擊');
+    const poison = Z(g, 1, 'exp').find((c) => c.id === 'Ex-中毒')!;
+    expect(poison).toBeDefined();
+    discard(g, poison);
+    expect(names(g, 1, 'discard')).not.toContain('Ex-中毒');
+    expect(names(g, 1, 'exp')).not.toContain('Ex-中毒');
   });
 
   it('家族相片：回合開始時 [蓋1_怒2] 回復 1', () => {

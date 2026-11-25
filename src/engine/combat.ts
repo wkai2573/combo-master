@@ -355,7 +355,7 @@ export function* damageStep(g: GameCtx): Gen {
   const def: [number, number] = [s0.def, s1.def];
   mark(g, '攻守拼招：對方總攻擊 − 我方總防禦 ＝ 傷害', { type: 'calc', atk, def, dmg });
   // 傷害計算時：傷害算出來了、還沒放進怒氣區。進觸發窗口，先攻方先處理完自己的窗口再換後攻方；
-  // 窗口裡的效果直接改 damagePending，先發動的效果會影響後面的條件，例如減免了傷害，復仇之嚎的比較也跟著變
+  // 窗口裡的效果直接改 damagePending，先發動的效果會影響後面的條件
   g.state.flags.damagePending = [dmg[0], dmg[1]];
   yield* markIfLogged(g, function* (): Gen {
     yield* fireEach(g, 'onDamage');
@@ -372,6 +372,7 @@ export function* damageStep(g: GameCtx): Gen {
       : [0, 1].filter((p) => final[p] > 0).map((p) => `${pname(g, p as PlayerId)} 受到 ${final[p]} 傷害（牌組放入怒氣區）`).join('　'),
     { type: 'damage', dmg: [final[0], final[1]] },
   );
+  yield* markIfLogged(g, () => fireEach(g, 'afterDamage'));
   checkWin(g);
 }
 
@@ -388,7 +389,6 @@ export function* returnStep(g: GameCtx): Gen {
       count[p]++;
     }
   }
-  // 塗毒：歸還時，把 [Ex-中毒] 移入出招卡較少那方的經驗區，相同時落入對方
   yield* fireEach(g, 'afterReturn');
   mark(g, '戰鬥區的卡依序放入經驗區', { type: 'return', count });
 }

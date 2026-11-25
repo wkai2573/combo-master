@@ -36,15 +36,15 @@ describe('傷害計算時：窗口與傷害承受的順序', () => {
     expect(g.pending!.player).toBe(1 - first);
   });
 
-  it('同一個窗口裡先發動的減免，會讓後面的比較跟著變：減到不再大於造成的傷害，復仇之嚎就從窗口消失', () => {
+  it('復仇之嚎在減傷與入怒後比較，雙方傷害相同時不發動', () => {
     const g = armorScenario({
       exp: ['~黑桃3', '~黑桃4', '~黑桃5', '~黑桃6', '黑桃7', '黑桃8', '復仇之嚎'],
       rage: Array(6).fill('黑桃1'),
     });
     pick(g, '黑桃9');
     g.state.flags.damagePending = [6, 4]; // 玩家 0 將受到 6、造成 4：受到的大於造成的
-    expect(g.pending!.options.map((o) => o.label)).toEqual(expect.arrayContaining([expect.stringContaining('復仇之嚎'), expect.stringContaining('冰霜護甲')]));
-    pick(g, g.pending!.options.find((o) => o.label.includes('冰霜護甲'))!.label);
+    expect(g.pending!.title).toContain('冰霜護甲');
+    pick(g, '發動');
     // 蓋2 之後有 6 張裏側經驗；捨棄 2 張：受到 4、造成 4，不再大於
     expect(g.pending!.options).toHaveLength(6);
     pick(g, '黑桃3', '黑桃4');
@@ -79,14 +79,18 @@ describe('傷害計算時：窗口與傷害承受的順序', () => {
     expect(without.pending?.title ?? '').not.toContain('復仇之嚎');
   });
 
-  it('復仇之嚎：怒氣區少於 4 張不能發動（付怒3 之後要有卡可取）', () => {
-    const run = (rage: number) => {
-      const g = scenario({ p0: { hand: ['黑桃1'], exp: ['復仇之嚎'], rage: Array(rage).fill('黑桃1') }, p1: { hand: ['黑桃9'] } });
-      伏擊狀態.of(g, 1).atk = 3;
-      pick(g, '黑桃9');
-      return g;
-    };
-    expect(run(4).pending!.title).toContain('復仇之嚎');
-    expect(run(3).pending?.title ?? '').not.toContain('復仇之嚎');
+  it('復仇之嚎可用本次放入怒氣區的牌支付及回收', () => {
+    const g = scenario({
+      singlePhase: true,
+      p0: { hand: ['黑桃1'], exp: ['復仇之嚎'], rage: [], deck: ['黑桃2', '黑桃3', '黑桃4', '黑桃5', '黑桃6', '黑桃7'] },
+      p1: { hand: ['黑桃9'] },
+    });
+    伏擊狀態.of(g, 1).atk = 4;
+    pick(g, '黑桃9');
+    expect(g.pending!.title).toContain('復仇之嚎');
+    expect(g.state.flags.damageTaken[0]).toBeGreaterThanOrEqual(4);
+    const fourth = Z(g, 0, 'rage')[3];
+    pick(g, '發動');
+    expect(Z(g, 0, 'hand')).toContain(fourth);
   });
 });

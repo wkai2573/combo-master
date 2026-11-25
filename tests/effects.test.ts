@@ -17,15 +17,15 @@ function skipToTurn(g: Game, turn: number) {
 }
 
 describe('追擊相關', () => {
-  it('力量爆破作為追擊卡時判定失敗', () => {
+  it('力量爆破作為追擊卡時必定成功', () => {
     const g = scenario({
       p0: { hand: ['黑桃2'], deck: ['力量爆破', ...filler] },
-      p1: { hand: ['黑桃4'] },
+      singlePhase: true,
+      p1: { hand: ['黑桃9'] },
     });
-    pick(g, '黑桃4');
-    // 力量爆破連擊值 9 本來在 2~4 範圍外會成功，但 [追] 效果使其失敗
-    expect(g.state.flags.pursuitSuccess[0]).toBe(0);
-    expect(names(g, 0, 'hand')).toContain('力量爆破');
+    pick(g, '黑桃9');
+    expect(g.state.log.join('\n')).toContain('追擊成功：【力量爆破】');
+    expect(names(g, 0, 'hand')).not.toContain('力量爆破');
   });
 });
 

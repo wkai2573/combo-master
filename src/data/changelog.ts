@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.73.0',
+    date: '2026-11-26',
+    items: [
+      { type: 'change', text: '調整復仇之嚎、力量爆破、卸除鎧甲、塗毒、財富管理、威嚇戰吼、狂戰與冰凍陷阱等卡牌效果。' },
+      { type: 'change', text: '聖獸白虎與聖獸玄武下修卡面數值，再次召喚同名 Ex 卡時會移除舊卡。' },
+    ],
+  },
+  {
     version: '0.72.1',
     date: '2026-11-26',
     items: [{ type: 'change', text: '卡表改用墨綠表頭、炭灰綠交錯列與青綠編輯焦點框。' }],
