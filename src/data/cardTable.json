@@ -453,7 +453,9 @@
       "name": "家族相片",
       "kind": "equip",
       "cls": "劍士",
-      "traits": [],
+      "traits": [
+        "回復"
+      ],
       "atk": 0,
       "def": 0,
       "combo": 0,
@@ -507,7 +509,10 @@
       "name": "冰與雷之曲",
       "kind": "equip",
       "cls": "法師",
-      "traits": [],
+      "traits": [
+        "冰",
+        "電"
+      ],
       "atk": 0,
       "def": 0,
       "combo": 0,
@@ -577,7 +582,11 @@
       "name": "元素法典",
       "kind": "equip",
       "cls": "法師",
-      "traits": [],
+      "traits": [
+        "火",
+        "冰",
+        "電"
+      ],
       "atk": 0,
       "def": 0,
       "combo": 0,
