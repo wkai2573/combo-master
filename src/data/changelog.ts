@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.70.6',
+    date: '2026-11-25',
+    items: [{ type: 'fix', text: '統一戒備打擊的效果內文版式，招式卡文排到行尾後再換行。' }],
+  },
+  {
     version: '0.70.5',
     date: '2026-11-25',
     items: [{ type: 'change', text: '有效果的招式卡圖全面放大效果內文，對齊文字並重新安排長卡文的換行。' }],
