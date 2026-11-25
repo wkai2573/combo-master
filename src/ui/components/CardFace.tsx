@@ -10,6 +10,7 @@ import { Delta } from './Delta';
 import { CardText } from './CardText';
 import { cardBorderColor, cardColor } from '../cardColor';
 import { moveCardFaces } from '../moveCardFaces';
+import { equipmentCardFace } from '../equipmentCardFaces';
 
 /** 滑鼠移到卡片上時，把卡片 id 交給側欄的說明區 */
 export const InspectContext = createContext<(id: string | null, expActive?: boolean) => void>(() => {});
@@ -90,7 +91,7 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
     return <div className={[...cls, 'back'].join(' ')} data-uid={uid} onClick={onClick}>?</div>;
   }
   const c = card ?? getCard(id);
-  const face = moveCardFaces.get(id);
+  const face = moveCardFaces.get(id) ?? (fullFace ? equipmentCardFace(c) : undefined);
   const showFullFace = fullFace && face !== undefined;
   const hasBadge = badge !== undefined;
   if (face) cls.push(showFullFace ? 'full-face' : 'finished-face');
@@ -171,7 +172,7 @@ export function InspectPanel({ id, card, fullFace = true, expActive, pinned, onU
     );
   }
   const c = card ?? getCard(id);
-  const face = fullFace ? moveCardFaces.get(id) : undefined;
+  const face = fullFace ? moveCardFaces.get(id) ?? equipmentCardFace(c) : undefined;
   const kws = keywordsIn(c.text);
   return (
     <div className="inspect" style={{ ['--cc' as string]: cardColor(c), ['--cb' as string]: cardBorderColor(c) }}>
