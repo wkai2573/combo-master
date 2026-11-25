@@ -47,14 +47,6 @@ function Box({ box, styled }: { box: CardBox; styled: boolean }) {
   );
 }
 
-function RevengeHowlEffect({ text }: { text: string }) {
-  return text.split(/(怒氣區|手牌|加入)/).map((part, i) =>
-    /^(怒氣區|手牌|加入)$/.test(part) ? (
-      <span key={i} className={`cx-term ${part === '加入' ? 'cx-action' : 'cx-noun'}`}>{part}</span>
-    ) : <KeywordText key={i} text={part} />,
-  );
-}
-
 /**
  * 卡片效果文字，依撰寫規範分段上色：回合X次、開頭關鍵字、費用用特殊框（蓋與怒用圖示），
  * 時機綠底、條件藍底並與時機相連，效果無底色，效果裡的動作關鍵字維持黃字底線與滑入提示。
@@ -79,7 +71,7 @@ export function CardText({ text, cardId }: { text: string; cardId: string }) {
               <KeywordText text={line.condition} />
             </span>
           )}
-          {styled ? <RevengeHowlEffect text={line.effect} /> : <KeywordText text={line.effect} />}
+          <KeywordText text={line.effect} termIcons={styled} />
         </div>
       ))}
     </>

@@ -473,6 +473,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 }
 .cx-revenge-howl .cx-timing { background: linear-gradient(transparent 50%, #a6e1f2 50%); }
 .cx-revenge-howl .cx-cond { background: linear-gradient(transparent 50%, #bce68c 50%); }
+.cx-keyword-icon { display: inline-block; text-decoration: none; }
 .cx-term {
   display: inline-block;
   padding: 0 .52em;
