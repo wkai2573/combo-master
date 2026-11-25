@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.73.1',
+    date: '2026-11-26',
+    items: [{ type: 'change', text: '招式與裝備卡面同步最新卡表文字，統一字型與效果內文字級，並依卡名框放大卡名。' }],
+  },
+  {
     version: '0.73.0',
     date: '2026-11-26',
     items: [
