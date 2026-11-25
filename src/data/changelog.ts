@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.70.12',
+    date: '2026-11-25',
+    items: [{ type: 'fix', text: '重製 E1–E8 裝備卡面，套用蓋與怒的費用圖示、對齊效果文字，並恢復半透明效果區底色。' }],
+  },
+  {
     version: '0.70.11',
     date: '2026-11-25',
     items: [{ type: 'change', text: '遊戲與卡表顯示 E1–E8 八張裝備成品卡面，包含插畫、專屬卡框、經驗需求、效果與特徵。' }],
