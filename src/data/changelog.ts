@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.73.2',
+    date: '2026-11-26',
+    items: [{ type: 'change', text: '統一招式與裝備卡的橘色標示及效果區與卡名框的間距，效果內文調整為 70 px。' }],
+  },
+  {
     version: '0.73.1',
     date: '2026-11-26',
     items: [{ type: 'change', text: '招式與裝備卡面同步最新卡表文字，統一字型與效果內文字級，並依卡名框放大卡名。' }],
