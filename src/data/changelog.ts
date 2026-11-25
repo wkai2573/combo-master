@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.69.9',
+    date: '2026-11-25',
+    items: [{ type: 'fix', text: '復仇之嚎卡圖的效果內文改用粗體，縮小時更容易閱讀。' }],
+  },
+  {
     version: '0.69.8',
     date: '2026-11-25',
     items: [{ type: 'fix', text: '復仇之嚎卡圖的效果文字區恢復原本的半透明底色。' }],
