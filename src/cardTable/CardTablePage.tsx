@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { ALL_CARDS, ALL_CHARACTERS } from '../data/cards';
 import { matchesCard, type CardScope } from '../data/cardSearch';
 import { cardTable } from '../data/cardTableData';
@@ -45,8 +45,31 @@ function loadDraft(): LocalDraft {
 const showValue = (value: Value) => Array.isArray(value) ? value.join('、') || '空白' : value === null || value === '' ? '空白' : String(value);
 const inputValue = (value: Value) => Array.isArray(value) ? value.join('、') : String(value ?? '');
 
-function CardField({ field, value, original, reset, onChange, prefix }: {
+function fieldLabel(field: Field, prefix: string) {
+  if (field === 'name') return prefix === 'C' ? '角色名稱' : prefix === 'K' ? '關鍵字名稱' : '卡片名稱';
+  return prefix === 'C' && field === 'expReq' ? '覺醒經驗' : fieldLabels[field];
+}
+
+function FieldTable({ label, prefix, fields, children }: {
+  label: string; prefix: string; fields: readonly Field[]; children: ReactNode;
+}) {
+  return (
+    <div className="ct-sheet" tabIndex={0} role="region" aria-label={label}>
+      <table aria-label={label}>
+        <thead><tr>
+          <th scope="col">編號</th>
+          {fields.map((field) => <th scope="col" key={field} data-field={field}>{fieldLabel(field, prefix)}</th>)}
+          <th scope="col">操作</th>
+        </tr></thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  );
+}
+
+function CardField({ field, value, original, reset, onChange, prefix, compact = false }: {
   field: Field; value: Value; original?: Value; reset?: () => void; onChange: (value: Value) => void; prefix: string;
+  compact?: boolean;
 }) {
   const [input, setInput] = useState<string>();
   const options = field === 'kind' ? Object.entries(kinds)
@@ -55,13 +78,13 @@ function CardField({ field, value, original, reset, onChange, prefix }: {
   return (
     <div className="ct-field" data-nodrag>
       <label className={original === undefined ? undefined : 'ct-edited'}>
-        {prefix === 'C' && field === 'expReq' ? '覺醒經驗' : prefix === 'C' && field === 'name' ? '角色名稱' : fieldLabels[field]}
+        <span className={compact ? 'ct-cell-label' : undefined}>{fieldLabel(field, prefix)}</span>
         {options ? (
           <select value={String(value ?? '')} onChange={(e) => onChange(e.target.value || null)}>
             {options.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
           </select>
         ) : field === 'text' || field === 'desc' || field === 'awakenText' ? (
-          <textarea maxLength={10000} rows={4} value={String(value)} onChange={(e) => onChange(e.target.value)} />
+          <textarea maxLength={10000} rows={compact ? 1 : 4} value={String(value)} onChange={(e) => onChange(e.target.value)} />
         ) : (
           <input
             type={numberFields.includes(field) ? 'number' : 'text'}
@@ -122,6 +145,18 @@ export function CardTablePage() {
     return order && <p className="ct-original ct-changed">原順序 {showValue(orderOf(cardTable, list))}
       {' '}<button onClick={() => changeField(list, 'order', null, null)}>清除排序</button>
     </p>;
+  }
+  function rowOrderControls(list: OrderList, ids: string[], index: number, uid: string) {
+    if (index < 0 || ids.length < 2) return null;
+    return ([-1, 1] as const).map((step) => {
+      const destination = index + step;
+      return <button key={step} type="button" disabled={destination < 0 || destination >= ids.length}
+        aria-label={`${uid} ${step < 0 ? '上移' : '下移'}`} onClick={() => {
+          const order = [...ids];
+          [order[index], order[destination]] = [order[destination], order[index]];
+          changeField(list, 'order', orderOf(cardTable, list), order);
+        }}>{step < 0 ? '↑' : '↓'}</button>;
+    });
   }
   const deleted = new Set(draft.deletions.map(({ uid }) => uid));
   const isEx = tab === 'Ex 卡';
@@ -235,21 +270,22 @@ export function CardTablePage() {
       <button data-nodrag className="ct-open" onClick={() => setSelection(entryKey(entry))} aria-label={`${entry.uid} ${entry.card.name} 詳細資料`}>{entry.uid}{entry.added ? ' · 新增草稿' : ''}</button>
     </div>
   );
-  const renderTextCard = (entry: (typeof cards)[number]) => (
-    <article key={entryKey(entry)} className={entry.edits.length || entry.added ? 'ct-changed' : undefined}>
-      <button type="button" data-nodrag className="ct-text-open" aria-expanded={selection === entryKey(entry)}
-        onClick={() => setSelection(selection === entryKey(entry) ? undefined : entryKey(entry))}>
-        {entry.uid} {entry.card.name}{entry.added ? ' · 新增草稿' : ''}
-      </button>
-      <small>{[
-        ...(!isEx ? [kinds[entry.card.kind], entry.card.cls, entry.card.kind === 'move' ? `連擊值 ${entry.card.combo}` : entry.card.slot] : []),
-        ...entry.card.traits,
-      ].filter(Boolean).join(' · ')}</small>
-      {entry.card.text && <p>{entry.card.text}</p>}
-    </article>
-  );
-  const renderCardEntry = textView ? renderTextCard : renderCard;
-  const cardListClass = textView ? 'ct-records' : 'ct-grid';
+  const sheetCardFields: readonly Field[] = isEx ? exFields
+    : ['kind', 'name', 'cls', 'traits', 'atk', 'def', 'combo', 'expReq', 'slot', 'duration', 'text'];
+  const sortableCardIds = sortableCards.map(({ base }) => base.id);
+  const cardFieldVisible = (entry: (typeof cards)[number], field: Field) => {
+    if (entry.edits.some((edit) => edit.field === field)) return true;
+    if (['atk', 'def', 'combo'].includes(field)) return entry.card.kind === 'move';
+    if (field === 'slot') return entry.card.kind === 'equip';
+    if (field === 'duration') return entry.card.kind === 'buff';
+    return true;
+  };
+  function renderCardField(entry: (typeof cards)[number], field: Field, compact = false) {
+    const edit = entry.edits.find((item) => item.field === field);
+    return <CardField key={field} prefix={entry.uid[0]} field={field} value={edit ? edit.value : cardValue(entry.card, field)}
+      original={edit?.base} reset={() => editField(entry, field, cardValue(entry.base, field))}
+      onChange={(value) => editField(entry, field, value)} compact={compact} />;
+  }
   const addedCharacterIds = new Set((cardTable.addedCharacters ?? []).map(({ id }) => id));
   const characters = [
     ...draft.additions.flatMap((entry) => 'character' in entry ? [{ ...entry, added: true }] : []).reverse(),
@@ -259,6 +295,7 @@ export function CardTablePage() {
     ...cardTable.keywords.map((keyword) => ({ uid: uidById.get('K:' + keyword.name)!, keyword, added: false })),
     ...draft.additions.flatMap((entry) => 'keyword' in entry ? [{ ...entry, added: true }] : []),
   ], draftOrder('keywords') ?? [], ({ keyword }) => keyword.name);
+  const keywordNames = keywords.map(({ keyword }) => keyword.name);
   const keywordKey = ({ uid, added }: (typeof keywords)[number]) => (added ? 'draft:' : 'base:') + uid;
 
   function editKeyword(uid: string, keyword: Keyword, added: boolean, field: Field, value: Value) {
@@ -278,15 +315,13 @@ export function CardTablePage() {
     updateDraft({ ...draft, additions, edits });
   }
 
-  function renderFields(uid: string, entry: Parameters<typeof cardValue>[0], fields: readonly Field[],
+  function renderRecordField(uid: string, entry: Parameters<typeof cardValue>[0], field: Field,
     onChange?: (field: Field, value: Value) => void, added = false) {
-    return fields.map((field) => {
-      const base = cardValue(entry, field);
-      const edit = added ? undefined : draft.edits.find((item) => item.uid === uid && item.field === field);
-      const update = onChange ?? ((changedField, value) => changeField(uid, changedField, base, value));
-      return <CardField key={field} prefix={uid[0]} field={field} value={edit?.value ?? base}
-        original={edit?.base} reset={() => update(field, base)} onChange={(value) => update(field, value)} />;
-    });
+    const base = cardValue(entry, field);
+    const edit = added ? undefined : draft.edits.find((item) => item.uid === uid && item.field === field);
+    const update = onChange ?? ((changedField, value) => changeField(uid, changedField, base, value));
+    return <CardField prefix={uid[0]} field={field} value={edit ? edit.value : base}
+      original={edit?.base} reset={() => update(field, base)} onChange={(value) => update(field, value)} compact />;
   }
 
   const hasDraft = draft.edits.length + draft.additions.length + draft.deletions.length > 0;
@@ -357,90 +392,100 @@ export function CardTablePage() {
           <span role="status">{filtering ? matchingCards.length : visibleCards.length} 張</span>
           <div className="ct-view" role="group" aria-label="卡片顯示方式">
             <button type="button" aria-pressed={!textView} onClick={() => setTextView(false)}>卡面</button>
-            <button type="button" aria-pressed={textView} onClick={() => setTextView(true)}>純文字</button>
+            <button type="button" aria-pressed={textView} onClick={() => setTextView(true)}>表格</button>
           </div>
         </div>
         {orderControls(cardList)}
-        <div className={selected ? 'ct-layout ct-with-detail' : 'ct-layout'}>
+        {textView ? (
+          <FieldTable label={`${tab}表格`} prefix={isEx ? 'X' : 'A'} fields={sheetCardFields}>
+            {(filtering ? matchingCards : [...fixedCards, ...sortableCards]).map((entry) => (
+              <tr key={entryKey(entry)} className={entry.added || selection === entryKey(entry) ? 'ct-sheet-marked' : undefined}>
+                <th scope="row">{entry.uid}{entry.added && <small>草稿</small>}</th>
+                {sheetCardFields.map((field) => <td key={field}>
+                  {cardFieldVisible(entry, field) ? renderCardField(entry, field, true) : '—'}
+                </td>)}
+                <td className="ct-row-actions">
+                  {!filtering && rowOrderControls(cardList, sortableCardIds, sortableCardIds.indexOf(entry.base.id), entry.uid)}
+                  {(isEx || entry.added || canDelete(entry.card)) && <button type="button"
+                    aria-label={`刪除 ${entry.uid}`} onClick={() => deleteCard(entry)}>刪除</button>}
+                </td>
+              </tr>
+            ))}
+            {filtering && matchingCards.length === 0 && <tr><td colSpan={sheetCardFields.length + 2}>找不到符合條件的卡片。</td></tr>}
+          </FieldTable>
+        ) : <div className={selected ? 'ct-layout ct-with-detail' : 'ct-layout'}>
           {filtering ? (
             <div>
-              {matchingCards.length > 0 ? <div className={cardListClass}>{matchingCards.map(renderCardEntry)}</div> : <p>找不到符合條件的卡片。</p>}
+              {matchingCards.length > 0 ? <div className="ct-grid">{matchingCards.map(renderCard)}</div> : <p>找不到符合條件的卡片。</p>}
             </div>
           ) : <div>
-            {fixedCards.length > 0 && <div className={cardListClass}>{fixedCards.map(renderCardEntry)}</div>}
-            <SortableList className={`${cardListClass} ct-sortable`} items={sortableCards} getKey={(entry) => entry.base.id} renderItem={renderCardEntry}
+            {fixedCards.length > 0 && <div className="ct-grid">{fixedCards.map(renderCard)}</div>}
+            <SortableList className="ct-grid ct-sortable" items={sortableCards} getKey={(entry) => entry.base.id} renderItem={renderCard}
               onReorder={(order) => changeField(cardList, 'order', orderOf(cardTable, cardList), order)} />
           </div>}
           {selected && (
             <section className="ct-detail" aria-label={`${selected.uid} 詳細資料`} key={entryKey(selected)}>
               <div className="ct-detail-actions">
-                <strong>{selected.uid}{textView ? ` ${selected.card.name}` : ''}</strong>
+                <strong>{selected.uid}</strong>
                 {(isEx || selected.added || canDelete(selected.card)) && <button onClick={() => deleteCard(selected)}>刪除卡片</button>}
                 <button onClick={() => setSelection(undefined)}>關閉詳細資料</button>
               </div>
-              {!textView && <InspectPanel id={selected.card.id} card={selected.card} />}
-              {(isEx ? exFields : cardFields).filter((field) => {
-                if (selected.edits.some((edit) => edit.field === field)) return true;
-                if (['atk', 'def', 'combo'].includes(field)) return selected.card.kind === 'move';
-                if (field === 'slot') return selected.card.kind === 'equip';
-                if (field === 'duration') return selected.card.kind === 'buff';
-                return true;
-              }).map((field) => {
-                const edit = selected.edits.find((item) => item.field === field);
-                return <CardField key={field} prefix={selected.uid[0]} field={field} value={edit ? edit.value : cardValue(selected.card, field)}
-                  original={edit?.base} reset={() => editField(selected, field, cardValue(selected.base, field))}
-                  onChange={(value) => editField(selected, field, value)} />;
-              })}
+              <InspectPanel id={selected.card.id} card={selected.card} />
+              {(isEx ? exFields : cardFields).filter((field) => cardFieldVisible(selected, field))
+                .map((field) => renderCardField(selected, field))}
             </section>
           )}
-        </div>
+        </div>}
         </>
       )}
-      {isCharacter && <div className="ct-records">{characters.map(({ uid, character, added }) => {
+      {isCharacter && <FieldTable label="角色表格" prefix="C" fields={addedCharacterFields}>
+        {characters.map(({ uid, character, added }) => {
         const recordKey = (added ? 'draft:' : 'base:') + uid;
         const editableText = added || addedCharacterIds.has(character.id);
-        const title = added ? character.name : draft.edits.find((edit) => edit.uid === uid && edit.field === 'name')?.value ?? character.name;
+        const editCharacter = added ? (field: Field, value: Value) => updateDraft({
+          ...draft, additions: draft.additions.map((entry) => entry.uid === uid ? { uid, character: { ...character, [field]: value } } : entry),
+        }) : undefined;
         return (
-          <article key={recordKey} className={added ? 'ct-changed' : undefined}>
-            <button type="button" className="ct-text-open" aria-expanded={selection === recordKey}
-              onClick={() => setSelection(selection === recordKey ? undefined : recordKey)}>
-              {uid} {title}{added ? ' · 新增草稿' : ''}
-            </button>
-            {selection === recordKey && <>
-              <div className="ct-record-fields">{renderFields(uid, character, editableText ? addedCharacterFields : characterFields,
-                added ? (field, value) => updateDraft({
-                  ...draft, additions: draft.additions.map((entry) => entry.uid === uid ? { uid, character: { ...character, [field]: value } } : entry),
-                }) : undefined, added)}</div>
-              {draft.edits.some((edit) => edit.uid === uid && edit.field === 'cls')
-                && <p role="status">更改職業會改變可使用的專用卡。</p>}
-              {!editableText && character.text && <p><KeywordText text={character.text} /></p>}
-              {!editableText && character.awakenText && <p><KeywordText text={character.awakenText} /></p>}
-              {added && <button type="button" onClick={() => {
+          <tr key={recordKey} className={added ? 'ct-sheet-marked' : undefined}>
+            <th scope="row">{uid}{added && <small>草稿</small>}</th>
+            {characterFields.map((field) => <td key={field}>
+              {renderRecordField(uid, character, field, editCharacter, added)}
+              {field === 'cls' && draft.edits.some((edit) => edit.uid === uid && edit.field === 'cls')
+                && <small role="status">更改職業會改變可使用的專用卡。</small>}
+            </td>)}
+            {(['text', 'awakenText'] as const).map((field) => <td key={field} className="ct-sheet-copy">
+              {editableText ? renderRecordField(uid, character, field, editCharacter, added) : <KeywordText text={character[field]} />}
+            </td>)}
+            <td className="ct-row-actions">
+              {added && <button type="button" aria-label={`清除 ${uid} 草稿`} onClick={() => {
                 updateDraft({ ...draft, additions: draft.additions.filter((entry) => entry.uid !== uid) });
                 setSelection(undefined);
-              }}>清除此角色草稿</button>}
-            </>}
-          </article>
+              }}>清除草稿</button>}
+            </td>
+          </tr>
         );
-      })}</div>}
+      })}</FieldTable>}
       {tab === '關鍵字' && <>
         {orderControls('keywords')}
-        <SortableList className="ct-records ct-sortable" items={keywords} getKey={keywordKey}
-          onReorder={(order) => changeField('keywords', 'order', orderOf(cardTable, 'keywords'),
-            order.map((key) => keywords.find((entry) => keywordKey(entry) === key)!.keyword.name))}
-          renderItem={({ uid, keyword, added }) => (
-            <article className={added ? 'ct-changed' : undefined}>
-              <h2>{(!added && draft.edits.find((edit) => edit.uid === uid && edit.field === 'name')?.value) || keyword.name} <small>{uid}{added ? ' · 新增草稿' : ''}</small></h2>
-              <div className="ct-record-fields">{renderFields(uid, keyword, keywordFields,
-                (field, value) => editKeyword(uid, keyword, added, field, value), added)}</div>
-              {added && <button data-nodrag onClick={() => updateDraft({
+        <FieldTable label="關鍵字表格" prefix="K" fields={keywordFields}>
+          {keywords.map((entry, index) => {
+            const { uid, keyword, added } = entry;
+            return <tr key={keywordKey(entry)} className={added ? 'ct-sheet-marked' : undefined}>
+              <th scope="row">{uid}{added && <small>草稿</small>}</th>
+              {keywordFields.map((field) => <td key={field}>{renderRecordField(uid, keyword, field,
+                (changedField, value) => editKeyword(uid, keyword, added, changedField, value), added)}</td>)}
+              <td className="ct-row-actions">
+                {rowOrderControls('keywords', keywordNames, index, uid)}
+                {added && <button type="button" aria-label={`清除 ${uid} 草稿`} onClick={() => updateDraft({
                 ...draft,
                 additions: draft.additions.filter((entry) => entry.uid !== uid),
                 edits: draft.edits.map((edit) => edit.uid === 'keywords'
                   ? { ...edit, value: (edit.value as string[]).filter((id) => id !== keyword.name) } : edit),
-              })}>清除此關鍵字草稿</button>}
-            </article>
-          )} />
+                })}>清除草稿</button>}
+              </td>
+            </tr>;
+          })}
+        </FieldTable>
       </>}
       <KeywordTooltip />
     </main>
