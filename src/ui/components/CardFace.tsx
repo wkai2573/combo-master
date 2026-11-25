@@ -139,7 +139,7 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
         {!showFullFace && (
           <div className="ef">
             <span className="tg">{c.cls}・{kindLabel(c)}　</span>
-            <CardText text={c.text} />
+            <CardText text={c.text} cardId={c.id} />
           </div>
         )}
         {(!showFullFace || hasBadge) && <div className={hasBadge ? 'nm with-badge' : 'nm'}>
@@ -208,7 +208,7 @@ export function InspectPanel({ id, card, fullFace = true, expActive, pinned, onU
           : `經驗需求 ${c.expReq}${c.kind === 'buff' ? `　持續時間 ${c.duration}` : ''}`}
       </div>
       {expActive && <div className="expnote">經驗效果：生效中</div>}
-      <div className="tx">{c.text ? <CardText text={c.text} /> : '（無效果）'}</div>
+      <div className="tx">{c.text ? <CardText text={c.text} cardId={c.id} /> : '（無效果）'}</div>
       {kws.length > 0 && (
         <div className="kwlist">
           {kws.map((k) => (
