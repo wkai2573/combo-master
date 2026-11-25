@@ -10,6 +10,7 @@ export type UidPrefix = 'A' | 'B' | 'C' | 'E' | 'K' | 'X';
 export interface CardTableData {
   overrides: Record<string, Partial<CardData>>;
   chars: Record<string, Partial<CharacterData>>;
+  addedCharacters?: CharacterData[];
   added: CardData[];
   keywords: Keyword[];
   exCards: CardData[];
@@ -22,7 +23,7 @@ export const generatedCards = cardsJson as CardData[];
 export const generatedCharacters = charsJson as CharacterData[];
 
 export function readTableCharacters(table: CardTableData): CharacterData[] {
-  return generatedCharacters.map((character) => ({
+  return [...generatedCharacters, ...(table.addedCharacters ?? [])].map((character) => ({
     ...character,
     ...table.chars[character.id],
     ...characterText[character.id],

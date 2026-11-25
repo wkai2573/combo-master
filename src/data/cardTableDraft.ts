@@ -2,7 +2,8 @@ import { generatedCards, generatedCharacters, readTableCards, readTableCharacter
 import { ENABLED_EFFECT_CARDS } from './enabledCards';
 import { checkExLeaveRule, EX_LEAVE_RULES, isExCardId, type ExZone } from './exCards';
 import type { Keyword } from './keywords';
-import type { CardData, CardKind } from './types';
+import { TUTORIAL_CHARACTERS } from './tutorialCharacters';
+import type { CardData, CardKind, CharacterData } from './types';
 
 export const classes = ['共用', '劍士', '盜賊', '商人', '弓箭手', '法師'] as const;
 export const kinds = { move: '招式', equip: '裝備', buff: '增益' } as const;
@@ -11,12 +12,13 @@ export const fieldLabels = {
   name: '卡名', kind: '類型', cls: '職業', traits: '特徵',
   atk: '攻擊力', def: '防禦力', combo: '連擊值', expReq: '經驗需求',
   slot: '部位', duration: '持續回合', text: '效果文字',
-  hp: '生命值', group: '分類', desc: '說明', order: '清單順序',
+  hp: '生命值', awakenText: '覺醒效果', group: '分類', desc: '說明', order: '清單順序',
 } as const;
 export type Field = keyof typeof fieldLabels;
 type Value = string | number | string[] | null;
 export interface Edit { uid: string; field: Field; base: Value; value: Value }
-export type Addition = { uid: string; card: CardData } | { uid: string; keyword: Keyword };
+export type Addition = { uid: string; card: CardData } | { uid: string; keyword: Keyword }
+  | { uid: string; character: CharacterData };
 export interface Deletion { uid: string; id: string }
 export interface Draft { edits: Edit[]; additions: Addition[]; deletions: Deletion[] }
 interface Diff extends Draft { formatVersion: 1; baseVersion: string }
@@ -32,6 +34,7 @@ export const cardFields = ['name', 'kind', 'cls', 'traits', 'atk', 'def', 'combo
 export const exFields = ['name', 'traits', 'text'] as const;
 export const keywordFields = ['name', 'group', 'desc'] as const;
 export const characterFields = ['name', 'cls', 'hp', 'expReq'] as const;
+export const addedCharacterFields = [...characterFields, 'text', 'awakenText'] as const;
 export const orderLists = { added: '新增卡', exCards: 'Ex 卡', keywords: '關鍵字' } as const;
 export type OrderList = keyof typeof orderLists;
 const isOrderList = (uid: string): uid is OrderList => Object.hasOwn(orderLists, uid);
@@ -46,6 +49,7 @@ function proposedOrder(list: OrderList, base: string[], order: string[], draft: 
   const deleted = new Set(draft.deletions.map(({ id }) => id));
   const added = draft.additions.flatMap((addition) => {
     if ('keyword' in addition) return list === 'keywords' ? [addition.keyword.name] : [];
+    if ('character' in addition) return [];
     return list === (isExCardId(addition.card.id) ? 'exCards' : 'added') ? [addition.card.id] : [];
   });
   return sortByOrder([...base.filter((id) => list === 'keywords' || !deleted.has(id)), ...added], order, (id) => id);
@@ -103,8 +107,14 @@ export function realignDraft(table: CardTableData, draft: Draft): { draft: Draft
   });
   const addedById = new Map([...table.added, ...table.exCards].map((card) => [card.id, card]));
   const keywordNames = new Set(table.keywords.map(({ name }) => name));
+  const charactersById = new Map((table.addedCharacters ?? []).map((character) => [character.id, character]));
   const additions = draft.additions.filter((addition) => {
     if ('keyword' in addition) return !keywordNames.has(addition.keyword.name);
+    if ('character' in addition) {
+      const current = charactersById.get(addition.character.id);
+      return !current || addedCharacterFields.some((field) =>
+        !equalValue(cardValue(current, field), cardValue(addition.character, field)));
+    }
     const { card } = addition;
     const current = addedById.get(card.id);
     if (!current) return true;
@@ -142,6 +152,7 @@ const fieldValidators: Record<Field, (value: unknown) => boolean> = {
   slot: (v) => v === null || slots.some((slot) => slot === v),
   duration: (v) => v === null || inRange(v, 0),
   text: (v) => typeof v === 'string' && v.length <= 10000,
+  awakenText: (v) => typeof v === 'string' && v.length <= 10000,
   hp: (v) => inRange(v, 0),
   group: nameIsValid,
   desc: (v) => typeof v === 'string' && v.length <= 10000,
@@ -163,7 +174,7 @@ function validUid(value: unknown): value is string {
 function editableFields(uid: string): readonly Field[] {
   if (isOrderList(uid)) return ['order'];
   switch (uid[0]) {
-    case 'C': return characterFields;
+    case 'C': return addedCharacterFields;
     case 'K': return keywordFields;
     case 'X': return exFields;
     default: return cardFields;
@@ -193,13 +204,23 @@ export function parseDiff(input: unknown): Diff {
   }
   const added = new Set<string>();
   for (const addition of input.additions) {
-    if (!objectWithKeys(addition, ['uid', 'card', 'keyword']) || !validUid(addition.uid) || addition.uid.startsWith('C')) {
+    if (!objectWithKeys(addition, ['uid', 'card', 'keyword', 'character']) || !validUid(addition.uid)) {
       throw new Error('新增卡格式不符');
     }
     const prefix = addition.uid[0];
     const card = addition.card;
     const keyword = addition.keyword;
-    if (addition.uid.startsWith('K')) {
+    const character = addition.character;
+    if (prefix === 'C') {
+      if (card !== undefined || keyword !== undefined
+        || !objectWithKeys(character, ['id', 'pending', ...addedCharacterFields])
+        || !isFieldValue('name', character.id, prefix) || character.pending !== true
+        || !addedCharacterFields.every((field) => isFieldValue(field, character[field], prefix))) {
+        throw new Error('新增角色格式不符、欄位不明或數值超出範圍');
+      }
+    } else if (character !== undefined) {
+      throw new Error('新增角色須使用角色編號');
+    } else if (prefix === 'K') {
       if (card !== undefined || !objectWithKeys(keyword, [...keywordFields])
         || !keywordFields.every((field) => isFieldValue(field, keyword[field], prefix))) throw new Error('新增關鍵字格式不符');
     } else if (keyword !== undefined || !objectWithKeys(card, ['id', ...cardFields]) || !isFieldValue('name', card.id, prefix)
@@ -327,9 +348,19 @@ export function applyDiff(
     const before = records.get(uid)!;
     const changed = Object.fromEntries(edits.map(({ field, value }) => [field, value]));
     if ('hp' in before) {
+      const addedIndex = (table.addedCharacters ?? []).findIndex(({ id }) => id === before.id);
+      if (addedIndex >= 0) {
+        table.addedCharacters![addedIndex] = { ...table.addedCharacters![addedIndex], ...changed };
+        if (changed.text !== undefined || changed.awakenText !== undefined) notes.push(`請確認角色效果的程式實作：${uid} ${before.name}`);
+        continue;
+      }
       const original = generatedCharacters.find(({ id }) => id === before.id)!;
       const override = { ...table.chars[before.id] };
       for (const { field, value } of edits) {
+        if (field === 'text' || field === 'awakenText') {
+          notes.push(`基準角色的效果文字由程式維護（未套用）：${uid} ${before.name}`);
+          continue;
+        }
         if (equalValue(cardValue(original, field), value)) delete override[field as keyof typeof override];
         else Object.assign(override, { [field]: value });
       }
@@ -409,18 +440,29 @@ export function applyDiff(
     }
   }
   const existingIds = new Set(readTableCards(baseline).map((card) => card.id));
+  const characterIds = new Set([...readTableCharacters(baseline), ...TUTORIAL_CHARACTERS].map(({ id }) => id));
   for (const addition of diff.additions) {
     const { uid } = addition;
     const prefix = uid[0] as UidPrefix;
     const assigned = reserved.has(uid) ? uid : prefix + (Math.max(table.uidSeq[prefix], lastReserved[prefix]) + 1);
     if (!validUid(assigned)) throw new Error(`已超過可用編號範圍：${assigned}`);
     table.uidSeq[prefix] = Math.max(table.uidSeq[prefix], Number(assigned.slice(1)));
-    const name = 'keyword' in addition ? addition.keyword.name : addition.card.name;
+    const name = 'keyword' in addition ? addition.keyword.name
+      : 'character' in addition ? addition.character.name : addition.card.name;
     if (assigned !== uid) notes.push(`暫領編號重新分配：${uid} → ${assigned}（${name}）`);
     if ('keyword' in addition) {
       table.uids[assigned] = name;
       table.keywords.push({ ...addition.keyword });
       if (addition.keyword.desc) notes.push(`關鍵字說明待確認用語：${assigned} ${name}`);
+      continue;
+    }
+    if ('character' in addition) {
+      const { character } = addition;
+      if (characterIds.has(character.id)) throw new Error(`角色 id 重複：${character.id}`);
+      characterIds.add(character.id);
+      table.uids[assigned] = character.id;
+      (table.addedCharacters ??= []).push({ ...character });
+      notes.push(`新角色暫不可選用，請確認角色效果的程式實作：${assigned} ${name}`);
       continue;
     }
     const { card } = addition;

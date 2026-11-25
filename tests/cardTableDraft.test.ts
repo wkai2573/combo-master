@@ -10,6 +10,25 @@ const diffOf = (partial: Partial<Draft>) => makeDiff(cardTable, { ...emptyDraft(
 const newCard = { ...card, id: '測試新卡', name: '測試新卡', text: '提案效果。' };
 
 describe('卡表草稿', () => {
+  it('新增角色可匯出與匯入，保留角色編號並清除已匯入草稿', () => {
+    const uid = nextUid(cardTable, 'C', []);
+    const character = {
+      id: '測試角色', name: '測試角色', cls: '劍士' as const, hp: 20, expReq: 6,
+      text: '角色效果', awakenText: '覺醒效果', pending: true,
+    };
+    const diff = diffOf({ additions: [{ uid, character }] });
+    const { table } = applyDiff(cardTable, JSON.parse(JSON.stringify(diff)));
+    expect(table.uids[uid]).toBe(character.id);
+    expect(table.uidSeq.C).toBe(Number(uid.slice(1)));
+    expect(readTableCharacters(table)).toContainEqual(character);
+    expect(realignDraft(table, diff).draft.additions).toEqual([]);
+
+    const edit = { uid, field: 'awakenText' as const, base: character.awakenText, value: '新覺醒效果' };
+    const edited = applyDiff(table, makeDiff(table, { ...emptyDraft(), edits: [edit] }, '0.71.0')).table;
+    expect(readTableCharacters(edited)).toContainEqual({ ...character, awakenText: edit.value });
+    expect(() => applyDiff(table, diff)).toThrow('角色 id 重複');
+  });
+
   it('只匯出改動欄位，套用後等於直接修改覆蓋值', () => {
     const diff = makeDiff(cardTable, { ...emptyDraft(), edits: [change, { ...change, field: 'name', base: card.name, value: card.name }] }, '0.63.1');
     expect(diff.edits).toEqual([change]);

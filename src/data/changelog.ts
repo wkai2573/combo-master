@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.71.0',
+    date: '2026-11-26',
+    items: [
+      { type: 'change', text: '卡表的卡片與 Ex 卡可切換卡面或純文字條列，角色和關鍵字改為逐列管理。' },
+      { type: 'add', text: '卡表可新增角色草稿，編輯角色資料與效果文字後匯出差異檔。' },
+    ],
+  },
+  {
     version: '0.70.13',
     date: '2026-11-25',
     items: [{ type: 'fix', text: '八張裝備卡依原始設計重排效果標示，動作與名詞改用橘色六角形，時機與條件改用半高色帶。' }],
