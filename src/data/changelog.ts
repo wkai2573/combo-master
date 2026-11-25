@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.70.8',
+    date: '2026-11-25',
+    items: [{ type: 'add', text: '完成六款配色的裝備卡框，中央以劍、盾牌與墜飾區分武器、防具與飾品。' }],
+  },
+  {
     version: '0.70.7',
     date: '2026-11-25',
     items: [{ type: 'fix', text: '恢復追擊判定與白板卡的名詞底框，讓怒氣費用的火焰輪廓更清楚。' }],
