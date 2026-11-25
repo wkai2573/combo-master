@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.70.7',
+    date: '2026-11-25',
+    items: [{ type: 'fix', text: '恢復追擊判定與白板卡的名詞底框，讓怒氣費用的火焰輪廓更清楚。' }],
+  },
+  {
     version: '0.70.6',
     date: '2026-11-25',
     items: [{ type: 'fix', text: '統一戒備打擊的效果內文版式，招式卡文排到行尾後再換行。' }],
