@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.70.10',
+    date: '2026-11-25',
+    items: [{ type: 'add', text: '完成 E1–E8 八張裝備卡的無框插畫，沿用招式卡明亮、低飽和的奇幻畫風。' }],
+  },
+  {
     version: '0.70.9',
     date: '2026-11-25',
     items: [{ type: 'change', text: '家族相片新增「回復」特徵，冰與雷之曲新增「冰」「電」，元素法典新增「火」「冰」「電」。' }],
