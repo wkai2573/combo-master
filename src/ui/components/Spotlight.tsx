@@ -100,7 +100,7 @@ export function Spotlight({ fx, caption, n, scale, holding }: { fx?: FrameFx; ca
         {fx.type === 'activate' && (
           <div className="spottext">
             <div className="spotcaption">{caption}</div>
-            <CardText text={getCard(fx.cardId).text} cardId={fx.cardId} />
+            <CardText text={getCard(fx.cardId).text} />
           </div>
         )}
       </div>

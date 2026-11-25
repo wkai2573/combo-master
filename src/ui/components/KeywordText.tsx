@@ -2,17 +2,14 @@ import { segmentsOf } from '../../data/keywords';
 import { hideTip, showTip, toggleTip, useTip } from '../tooltip';
 
 /** 把文字裡的關鍵字標成可滑入查看（鍵盤聚焦也會顯示，點擊可切換） */
-export function KeywordText({ text, termIcons = false }: { text: string; termIcons?: boolean }) {
+export function KeywordText({ text }: { text: string }) {
   return (
     <>
-      {segmentsOf(text).map((s, i) => {
-        if (s.kws.length === 0) return s.text;
-        const group = termIcons ? s.kws[0].group : undefined;
-        const termClass = group === '動作' ? 'cx-action' : group === '名詞' ? 'cx-noun' : undefined;
-        return (
+      {segmentsOf(text).map((s, i) =>
+        s.kws.length > 0 ? (
           <span
             key={i}
-            className={termClass ? 'kw cx-keyword-icon' : 'kw'}
+            className="kw"
             tabIndex={0}
             onMouseEnter={(e) => showTip(e.currentTarget, s.kws)}
             onMouseLeave={hideTip}
@@ -23,10 +20,12 @@ export function KeywordText({ text, termIcons = false }: { text: string; termIco
               toggleTip(e.currentTarget, s.kws);
             }}
           >
-            {termClass ? <span className={`cx-term ${termClass}`}>{s.text}</span> : s.text}
+            {s.text}
           </span>
-        );
-      })}
+        ) : (
+          s.text
+        ),
+      )}
     </>
   );
 }

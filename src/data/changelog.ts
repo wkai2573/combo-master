@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.70.1',
+    date: '2026-11-25',
+    items: [{ type: 'fix', text: '復仇之嚎的網頁效果說明恢復為卡片共用樣式。' }],
+  },
+  {
     version: '0.70.0',
     date: '2026-11-25',
     items: [{ type: 'change', text: '所有有效果的成品招式卡圖套用粗體卡文、費用圖示，以及依卡表分類的關鍵字標示。' }],

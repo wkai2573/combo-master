@@ -432,57 +432,6 @@ h1, h2, h3 { margin: 0 0 8px; }
 .cx-timing { background: rgba(79, 201, 139, .32); color: #eafff4; padding: 0 3px; border-radius: 3px; margin-right: 3px; }
 .cx-timing:has(+ .cx-cond) { border-radius: 3px 0 0 3px; margin-right: 0; }
 .cx-cond { background: rgba(59, 130, 246, .32); color: #e4eeff; padding: 0 3px; border-radius: 0 3px 3px 0; margin-right: 3px; }
-.cx-revenge-howl {
-  padding: .3em .4em;
-  border-radius: 4px;
-  background: #fffaf2;
-  color: #171717;
-  line-height: 1.65;
-}
-.cx-revenge-howl .cx-tag { background: #24377c; border-color: #24377c; color: #fff; }
-.cx-revenge-howl .cx-cost { padding: 0; border: 0; background: none; color: #111; }
-.cx-cost-symbol {
-  display: inline-grid;
-  place-items: center;
-  min-width: 1.85em;
-  min-height: 1.85em;
-}
-.cover .cx-cost-symbol { background: #111; }
-.rage .cx-cost-symbol {
-  background: #ec1927;
-  clip-path: polygon(50% 0, 78% 34%, 79% 20%, 96% 58%, 93% 80%, 75% 96%, 50% 100%, 24% 96%, 7% 81%, 4% 60%, 20% 32%, 26% 48%);
-}
-.cx-cost-symbol b {
-  display: grid;
-  place-items: center;
-  min-width: 1.1em;
-  padding: 0 .12em;
-  margin-top: .24em;
-  line-height: 1.1;
-  border-radius: 999px;
-  background: #fff;
-}
-.cover .cx-cost-symbol b { margin-top: 0; }
-.cx-revenge-howl .cx-timing,
-.cx-revenge-howl .cx-cond {
-  color: #171717;
-  padding: 0 .12em;
-  border-radius: 0;
-  margin-right: 0;
-  box-decoration-break: clone;
-}
-.cx-revenge-howl .cx-timing { background: linear-gradient(transparent 50%, #a6e1f2 50%); }
-.cx-revenge-howl .cx-cond { background: linear-gradient(transparent 50%, #bce68c 50%); }
-.cx-keyword-icon { display: inline-block; text-decoration: none; }
-.cx-term {
-  display: inline-block;
-  padding: 0 .52em;
-  clip-path: polygon(.44em 0, calc(100% - .44em) 0, 100% 50%, calc(100% - .44em) 100%, .44em 100%, 0 50%);
-  line-height: 1.4;
-  white-space: nowrap;
-}
-.cx-action { background: #ff882f; color: #111; }
-.cx-noun { background: #b84c00; color: #fff; }
 .kwtip { white-space: pre-line; }
 .kwtip b { color: var(--accent); margin-right: 6px; }
 .kwtip .g { color: var(--muted); font-size: 11px; }

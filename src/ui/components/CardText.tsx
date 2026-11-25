@@ -20,22 +20,19 @@ function CostIcon({ icon }: { icon: '蓋' | '怒' }) {
 }
 
 /** 一行開頭的特殊框；滑入或聚焦時顯示對應關鍵字的說明 */
-function Box({ box, styled }: { box: CardBox; styled: boolean }) {
+function Box({ box }: { box: CardBox }) {
   const kws = keywordsIn(box.source);
   const cls = ['cx-box', `cx-${box.kind}`, box.icon === '蓋' ? 'cover' : box.icon === '怒' ? 'rage' : ''].filter(Boolean).join(' ');
   return (
     <span
       className={cls}
-      aria-label={styled && box.icon ? box.source : undefined}
       tabIndex={kws.length ? 0 : undefined}
       onMouseEnter={(e) => kws.length && showTip(e.currentTarget, kws)}
       onMouseLeave={hideTip}
       onFocus={(e) => kws.length && showTip(e.currentTarget, kws)}
       onBlur={hideTip}
     >
-      {box.icon && styled ? (
-        <span className="cx-cost-symbol" aria-hidden="true"><b>{box.value}</b></span>
-      ) : box.icon ? (
+      {box.icon ? (
         <>
           <CostIcon icon={box.icon} />
           <b>{box.value}</b>
@@ -52,14 +49,13 @@ function Box({ box, styled }: { box: CardBox; styled: boolean }) {
  * 時機綠底、條件藍底並與時機相連，效果無底色，效果裡的動作關鍵字維持黃字底線與滑入提示。
  * 多行卡文每行各自上色。引用 Ex 卡寫 [Ex-卡名]，用關鍵字的黃字底線標示，滑入時顯示那張 Ex 卡的特徵與效果。
  */
-export function CardText({ text, cardId }: { text: string; cardId: string }) {
-  const styled = cardId === '復仇之嚎';
+export function CardText({ text }: { text: string }) {
   return (
     <>
       {parseCardText(text).map((line, i) => (
-        <div key={i} className={styled ? 'cx-line cx-revenge-howl' : 'cx-line'}>
+        <div key={i} className="cx-line">
           {lineBoxes(line).map((b, j) => (
-            <Box key={j} box={b} styled={styled} />
+            <Box key={j} box={b} />
           ))}
           {line.timing && (
             <span className="cx-timing">
@@ -71,7 +67,7 @@ export function CardText({ text, cardId }: { text: string; cardId: string }) {
               <KeywordText text={line.condition} />
             </span>
           )}
-          <KeywordText text={line.effect} termIcons={styled} />
+          <KeywordText text={line.effect} />
         </div>
       ))}
     </>
