@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.75.0',
+    date: '2026-11-26',
+    items: [{ type: 'add', text: '四個卡表分頁可勾選欄位值篩選，並可依編號或數值欄升冪、降冪排序。' }],
+  },
+  {
     version: '0.74.1',
     date: '2026-11-26',
     items: [{ type: 'change', text: '卡表短欄依標題與欄內文字調整寬度，縮短欄位尾端的空白。' }],

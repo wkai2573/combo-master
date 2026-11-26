@@ -22,6 +22,8 @@ const tabs = ['卡片', '角色', '關鍵字', 'Ex 卡'] as const;
 const uidById = new Map(Object.entries(cardTable.uids).map(([uid, id]) => [uid[0] + ':' + id, uid]));
 const cardUids = new Map(Object.entries(cardTable.uids).filter(([uid]) => /^[AEBX]/.test(uid)).map(([uid, id]) => [id, uid]));
 const numberFields: Field[] = ['atk', 'def', 'combo', 'expReq', 'duration', 'hp'];
+const filterFields: Field[] = ['kind', 'cls', 'traits', 'slot', 'group'];
+type SheetField = Field | 'uid';
 type Value = Edit['value'];
 type LocalDraft = { draft: Draft; issued: string[]; invalidated: Edit[] };
 const emptyLocal = (): LocalDraft => ({ draft: emptyDraft(), issued: [], invalidated: [] });
@@ -50,12 +52,46 @@ function fieldLabel(field: Field, prefix: string) {
   return prefix === 'C' && field === 'expReq' ? '覺醒經驗' : fieldLabels[field];
 }
 
-function FieldTable({ label, prefix, fields, children }: {
-  label: string; prefix: string; fields: readonly Field[]; children: ReactNode;
+function FieldTable<Row extends { uid: string }>({ label, prefix, fields, rows, getValue, children }: {
+  label: string; prefix: string; fields: readonly Field[]; rows: Row[];
+  getValue: (row: Row, field: Field) => Value;
+  children: (row: Row, index: number, visibleRows: Row[], sorted: boolean) => ReactNode;
 }) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const [canScroll, setCanScroll] = useState(false);
+  const [filters, setFilters] = useState<Partial<Record<SheetField, string[]>>>({});
+  const [sortField, setSortField] = useState<SheetField | ''>('');
+  const [descending, setDescending] = useState(false);
+  const availableFilters: SheetField[] = ['uid', ...fields.filter((field) => filterFields.includes(field))];
+  const availableSorts: SheetField[] = ['uid', ...fields.filter((field) => numberFields.includes(field))];
+  const columnLabel = (field: SheetField) => field === 'uid' ? '編號' : fieldLabel(field, prefix);
+  const valueOf = (row: Row, field: SheetField) => field === 'uid' ? row.uid : getValue(row, field);
+  const filterValues = (row: Row, field: SheetField): string[] => {
+    const value = valueOf(row, field);
+    if (Array.isArray(value)) return value.length ? value : [''];
+    return [value === null ? '' : String(value)];
+  };
+  const compareLabels = (a: string, b: string) => a.localeCompare(b, 'zh-Hant', { numeric: true });
+  const optionsFor = (field: SheetField) =>
+    [...new Set([...rows.flatMap((row) => filterValues(row, field)), ...(filters[field] ?? [])])].sort(compareLabels);
+  const optionLabel = (field: SheetField, value: string) => {
+    if (value === '') return '空白';
+    return field === 'kind' ? (kinds[value as CardKind] ?? value) : value;
+  };
+  const activeFilters = availableFilters.filter((field) => filters[field]?.length);
+  const visibleRows = rows.filter((row) => activeFilters.every((field) =>
+    filterValues(row, field).some((value) => filters[field]?.includes(value))));
+  if (sortField) {
+    visibleRows.sort((a, b) => {
+      const left = valueOf(a, sortField);
+      const right = valueOf(b, sortField);
+      if (left === null || right === null) return Number(left === null) - Number(right === null);
+      const difference = typeof left === 'number' && typeof right === 'number'
+        ? left - right : compareLabels(String(left), String(right));
+      return descending ? -difference : difference;
+    });
+  }
 
   useEffect(() => {
     const sheet = sheetRef.current;
@@ -76,6 +112,37 @@ function FieldTable({ label, prefix, fields, children }: {
 
   return (
     <>
+      <div className="ct-filters ct-sheet-filters" role="group" aria-label={`${label}篩選與排序`}>
+        {availableFilters.map((field) => {
+          const selected = filters[field] ?? [];
+          return <details key={field}>
+            <summary>{columnLabel(field)}{selected.length ? `（${selected.length}）` : ''}</summary>
+            <div className="ct-filter-options" role="group" aria-label={`${columnLabel(field)}篩選`}>
+              {selected.length > 0 && <button type="button"
+                onClick={() => setFilters((current) => ({ ...current, [field]: [] }))}>清除此欄</button>}
+              {optionsFor(field).map((value) => <label key={value}>
+                <input type="checkbox" checked={selected.includes(value)} onChange={(event) => {
+                  const checked = event.target.checked;
+                  setFilters((current) => {
+                    const previous = current[field] ?? [];
+                    return { ...current, [field]: checked ? [...previous, value] : previous.filter((item) => item !== value) };
+                  });
+                }} /> {optionLabel(field, value)}
+              </label>)}
+            </div>
+          </details>;
+        })}
+        <label>排序 <select value={sortField} onChange={(event) => setSortField(event.target.value as SheetField | '')}>
+          <option value="">卡表順序</option>
+          {availableSorts.map((field) => <option key={field} value={field}>{columnLabel(field)}</option>)}
+        </select></label>
+        <select aria-label="排序方向" value={descending ? 'desc' : 'asc'} disabled={!sortField}
+          onChange={(event) => setDescending(event.target.value === 'desc')}>
+          <option value="asc">小到大</option><option value="desc">大到小</option>
+        </select>
+        {activeFilters.length > 0 && <button type="button" onClick={() => setFilters({})}>清除篩選</button>}
+        <span role="status">{visibleRows.length} 筆</span>
+      </div>
       {canScroll && (
         <div className="ct-sheet-scroll" role="group" aria-label={`${label}橫向捲動`}>
           <button type="button" onClick={() => scrollColumns(-1)}>← 向左捲動</button>
@@ -89,7 +156,10 @@ function FieldTable({ label, prefix, fields, children }: {
             {fields.map((field) => <th scope="col" key={field} data-field={field}>{fieldLabel(field, prefix)}</th>)}
             <th scope="col">操作</th>
           </tr></thead>
-          <tbody>{children}</tbody>
+          <tbody>
+            {visibleRows.map((row, index) => children(row, index, visibleRows, Boolean(sortField)))}
+            {visibleRows.length === 0 && <tr><td colSpan={fields.length + 2}>找不到符合條件的資料。</td></tr>}
+          </tbody>
         </table>
       </div>
     </>
@@ -175,14 +245,16 @@ export function CardTablePage() {
       <button onClick={() => changeField(list, 'order', null, null)}>清除排序</button>
     </p>;
   }
-  function rowOrderControls(list: OrderList, ids: string[], index: number, uid: string, fullOrder = ids) {
+  function rowOrderControls<Row>(list: OrderList, rows: Row[], index: number, uid: string,
+    fullOrder: string[], sorted: boolean, getId: (row: Row) => string) {
     return ([-1, 1] as const).map((step) => {
       const destination = index + step;
-      return <button key={step} type="button" disabled={destination < 0 || destination >= ids.length}
+      return <button key={step} type="button" disabled={sorted || destination < 0 || destination >= rows.length}
+        title={sorted ? '切回卡表順序即可上移或下移' : undefined}
         aria-label={`${uid} ${step < 0 ? '上移' : '下移'}`} onClick={() => {
           const order = [...fullOrder];
-          const from = order.indexOf(ids[index]);
-          const to = order.indexOf(ids[destination]);
+          const from = order.indexOf(getId(rows[index]));
+          const to = order.indexOf(getId(rows[destination]));
           [order[from], order[to]] = [order[to], order[from]];
           changeField(list, 'order', orderOf(cardTable, list), order);
         }}>{step < 0 ? '↑' : '↓'}</button>;
@@ -304,7 +376,6 @@ export function CardTablePage() {
   const sheetCardFields: readonly Field[] = isEx ? exFields
     : ['kind', 'name', 'cls', 'traits', 'atk', 'def', 'combo', 'expReq', 'slot', 'duration', 'text'];
   const sortableCardIds = sortableCards.map(({ base }) => base.id);
-  const matchingCardIds = matchingCards.map(({ base }) => base.id);
   const cardFieldVisible = (entry: (typeof cards)[number], field: Field) => {
     if (entry.edits.some((edit) => edit.field === field)) return true;
     if (['atk', 'def', 'combo'].includes(field)) return entry.card.kind === 'move';
@@ -355,6 +426,11 @@ export function CardTablePage() {
     const update = onChange ?? ((changedField, value) => changeField(uid, changedField, base, value));
     return <CardField prefix={uid[0]} field={field} value={edit ? edit.value : base}
       original={edit?.base} reset={() => update(field, base)} onChange={(value) => update(field, value)} compact />;
+  }
+
+  function recordValue(uid: string, entry: Parameters<typeof cardValue>[0], field: Field, added: boolean): Value {
+    const edit = added ? undefined : draft.edits.find((item) => item.uid === uid && item.field === field);
+    return edit ? edit.value : cardValue(entry, field);
   }
 
   const hasDraft = draft.edits.length + draft.additions.length + draft.deletions.length > 0;
@@ -424,7 +500,7 @@ export function CardTablePage() {
           </>}
           <input type="search" aria-label="搜尋名稱、效果或特徵" placeholder="搜尋名稱／效果／特徵"
             value={query} onChange={(e) => setQuery(e.target.value)} />
-          <span role="status">{filtering ? matchingCards.length : visibleCards.length} 張</span>
+          {!textView && <span role="status">{matchingCards.length} 張</span>}
           <div className="ct-view" role="group" aria-label="卡片顯示方式">
             <button type="button" aria-pressed={!textView} onClick={() => setTextView(false)}>卡面</button>
             <button type="button" aria-pressed={textView} onClick={() => setTextView(true)}>表格</button>
@@ -433,21 +509,22 @@ export function CardTablePage() {
         {orderControls(cardList)}
         {!isEx && orderControls('added')}
         {textView ? (
-          <FieldTable label={`${tab}表格`} prefix={isEx ? 'X' : 'A'} fields={sheetCardFields}>
-            {matchingCards.map((entry, index) => (
+          <FieldTable key={tab} label={`${tab}表格`} prefix={isEx ? 'X' : 'A'} fields={sheetCardFields}
+            rows={matchingCards} getValue={(entry, field) => cardFieldVisible(entry, field)
+              ? recordValue(entry.uid, entry.card, field, entry.added) : null}>
+            {(entry, index, rows, sorted) => (
               <tr key={entryKey(entry)} className={entry.added || selection === entryKey(entry) ? 'ct-sheet-marked' : undefined}>
                 <th scope="row">{entry.uid}{entry.added && <small>草稿</small>}</th>
                 {sheetCardFields.map((field) => <td key={field}>
                   {cardFieldVisible(entry, field) ? renderCardField(entry, field, true) : '—'}
                 </td>)}
                 <td className="ct-row-actions">
-                  {rowOrderControls(cardList, matchingCardIds, index, entry.uid, sortableCardIds)}
+                  {rowOrderControls(cardList, rows, index, entry.uid, sortableCardIds, sorted, ({ base }) => base.id)}
                   <button type="button" aria-label={`刪除 ${entry.uid}`}
                     onClick={() => deleteRow(entry.uid, entry.base.id, entry.added, cardList)}>刪除</button>
                 </td>
               </tr>
-            ))}
-            {filtering && matchingCards.length === 0 && <tr><td colSpan={sheetCardFields.length + 2}>找不到符合條件的卡片。</td></tr>}
+            )}
           </FieldTable>
         ) : <div className={selected ? 'ct-layout ct-with-detail' : 'ct-layout'}>
           {filtering ? (
@@ -475,8 +552,9 @@ export function CardTablePage() {
       )}
       {isCharacter && <>
         {orderControls('characters')}
-        <FieldTable label="角色表格" prefix="C" fields={addedCharacterFields}>
-        {characters.map(({ uid, character, added }, index) => {
+        <FieldTable label="角色表格" prefix="C" fields={addedCharacterFields}
+          rows={characters} getValue={({ uid, character, added }, field) => recordValue(uid, character, field, added)}>
+        {({ uid, character, added }, index, rows, sorted) => {
         const recordKey = (added ? 'draft:' : 'base:') + uid;
         const editableText = added || addedCharacterIds.has(character.id);
         const editCharacter = added ? (field: Field, value: Value) => updateDraft({
@@ -494,29 +572,30 @@ export function CardTablePage() {
               {editableText ? renderRecordField(uid, character, field, editCharacter, added) : <KeywordText text={character[field]} />}
             </td>)}
             <td className="ct-row-actions">
-              {rowOrderControls('characters', characterIds, index, uid)}
+              {rowOrderControls('characters', rows, index, uid, characterIds, sorted, (row) => row.character.id)}
               <button type="button" aria-label={`刪除 ${uid}`}
                 onClick={() => deleteRow(uid, character.id, added, 'characters')}>刪除</button>
             </td>
           </tr>
         );
-      })}</FieldTable></>}
+      }}</FieldTable></>}
       {tab === '關鍵字' && <>
         {orderControls('keywords')}
-        <FieldTable label="關鍵字表格" prefix="K" fields={keywordFields}>
-          {keywords.map((entry, index) => {
+        <FieldTable label="關鍵字表格" prefix="K" fields={keywordFields}
+          rows={keywords} getValue={({ uid, keyword, added }, field) => recordValue(uid, keyword, field, added)}>
+          {(entry, index, rows, sorted) => {
             const { uid, keyword, added } = entry;
             return <tr key={keywordKey(entry)} className={added ? 'ct-sheet-marked' : undefined}>
               <th scope="row">{uid}{added && <small>草稿</small>}</th>
               {keywordFields.map((field) => <td key={field}>{renderRecordField(uid, keyword, field,
                 (changedField, value) => editKeyword(uid, keyword, added, changedField, value), added)}</td>)}
               <td className="ct-row-actions">
-                {rowOrderControls('keywords', keywordNames, index, uid)}
+                {rowOrderControls('keywords', rows, index, uid, keywordNames, sorted, (row) => row.keyword.name)}
                 <button type="button" aria-label={`刪除 ${uid}`}
                   onClick={() => deleteRow(uid, keyword.name, added, 'keywords')}>刪除</button>
               </td>
             </tr>;
-          })}
+          }}
         </FieldTable>
       </>}
       <KeywordTooltip />
