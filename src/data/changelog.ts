@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.73.3',
+    date: '2026-11-26',
+    items: [{ type: 'fix', text: '調整卡表的欄寬，讓名稱、下拉選單和效果文字有足夠空間，窄視窗可在表格內左右捲動。' }],
+  },
+  {
     version: '0.73.2',
     date: '2026-11-26',
     items: [{ type: 'change', text: '統一招式與裝備卡的橘色標示及效果區與卡名框的間距，效果內文調整為 70 px。' }],

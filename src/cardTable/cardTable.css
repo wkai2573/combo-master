@@ -38,7 +38,8 @@
   --sheet-text: #d7e0da;
   --sheet-focus: #7baa98;
   --sheet-control: #26312b;
-  overflow: auto; max-height: 72dvh; border: 1px solid var(--sheet-line); border-radius: 5px;
+  overflow: auto; min-width: 0; max-width: 100%; max-height: 72dvh;
+  border: 1px solid var(--sheet-line); border-radius: 5px;
   background: #1d2521; color: var(--sheet-text); color-scheme: dark; font-size: 14px;
 }
 .ct-sheet table { width: 100%; border-spacing: 0; }
@@ -51,12 +52,23 @@
   position: sticky; top: 0; z-index: 1; white-space: nowrap;
   background: #263d33; padding-block: 7px;
 }
+.ct-sheet thead th:first-child { width: 64px; min-width: 64px; }
+.ct-sheet thead th[data-field] { width: 76px; min-width: 76px; }
+.ct-sheet thead th:is([data-field="kind"], [data-field="cls"], [data-field="slot"]) {
+  width: 96px; min-width: 96px;
+}
+.ct-sheet thead th[data-field="name"] { width: 148px; min-width: 148px; }
+.ct-sheet thead th[data-field="traits"] { width: 116px; min-width: 116px; }
+.ct-sheet thead th:is([data-field="text"], [data-field="desc"], [data-field="awakenText"]) {
+  width: auto; min-width: 440px; white-space: normal;
+}
+.ct-sheet thead th:last-child { width: 64px; min-width: 64px; }
 .ct-sheet tbody th { white-space: nowrap; }
 .ct-sheet tbody tr:nth-child(even) { background: #222c27; }
 .ct-sheet tbody tr:focus-within, .ct-sheet tbody tr.ct-sheet-marked { background: #2d3b33; }
 .ct-sheet small { display: block; }
 .ct-sheet .ct-field { margin: 0; }
-.ct-sheet .ct-field label { display: block; }
+.ct-sheet .ct-field label { display: block; position: relative; }
 .ct-cell-label {
   position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden;
   clip-path: inset(50%); white-space: nowrap;
@@ -66,16 +78,15 @@
   padding: 2px 4px; background: transparent; border: 1px solid transparent;
   border-radius: 2px; line-height: 1.4;
 }
-.ct-sheet input { min-width: 105px; }
-.ct-sheet input[type="number"] { min-width: 50px; text-align: end; }
-.ct-sheet textarea { min-width: 240px; resize: vertical; field-sizing: content; overflow-wrap: anywhere; }
+.ct-sheet input[type="number"] { text-align: end; }
+.ct-sheet textarea { resize: vertical; field-sizing: content; overflow-wrap: anywhere; }
 .ct-sheet :is(input, select, textarea):focus {
   outline: 1px solid var(--sheet-focus); outline-offset: -1px; background: var(--sheet-control);
 }
 .ct-sheet select option { background: var(--sheet-control); color: var(--sheet-text); }
 .ct-sheet .ct-edited :is(input, select, textarea) { border-color: var(--sheet-focus); }
 .ct-sheet .ct-original { color: #acc7b9; font-size: 12px; }
-.ct-sheet-copy { min-width: 245px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ct-sheet-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
 .ct-row-actions { white-space: nowrap; }
 .ct-row-actions button { margin-inline-end: 3px; }
 .ct-sheet button { padding: 2px 5px; background: var(--sheet-control); color: var(--sheet-text); border: 1px solid #64776b; }
