@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.73.4',
+    date: '2026-11-26',
+    items: [{ type: 'fix', text: '卡表放不下全部欄位時，在表格上方顯示左右捲動按鈕。' }],
+  },
+  {
     version: '0.73.3',
     date: '2026-11-26',
     items: [{ type: 'fix', text: '調整卡表的欄寬，讓名稱、下拉選單和效果文字有足夠空間，窄視窗可在表格內左右捲動。' }],

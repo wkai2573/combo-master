@@ -33,6 +33,7 @@
 .ct-notice { margin-top: 14px; border-color: var(--accent); }
 .ct-notice button { margin-inline-start: 10px; }
 .ct:has(.ct-sheet) { max-width: 1660px; }
+.ct-sheet-scroll { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .ct-sheet {
   --sheet-line: #3a4941;
   --sheet-text: #d7e0da;

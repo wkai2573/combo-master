@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { ALL_CARDS, ALL_CHARACTERS } from '../data/cards';
 import { matchesCard, type CardScope } from '../data/cardSearch';
 import { cardTable } from '../data/cardTableData';
@@ -53,17 +53,46 @@ function fieldLabel(field: Field, prefix: string) {
 function FieldTable({ label, prefix, fields, children }: {
   label: string; prefix: string; fields: readonly Field[]; children: ReactNode;
 }) {
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const [canScroll, setCanScroll] = useState(false);
+
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    const table = tableRef.current;
+    if (!sheet || !table) return;
+    const update = () => setCanScroll(sheet.scrollWidth > sheet.clientWidth);
+    const observer = new ResizeObserver(update);
+    observer.observe(sheet);
+    observer.observe(table);
+    update();
+    return () => observer.disconnect();
+  }, []);
+
+  function scrollColumns(direction: number) {
+    const sheet = sheetRef.current;
+    if (sheet) sheet.scrollBy({ left: direction * sheet.clientWidth * 0.7 });
+  }
+
   return (
-    <div className="ct-sheet" tabIndex={0} role="region" aria-label={label}>
-      <table aria-label={label}>
-        <thead><tr>
-          <th scope="col">編號</th>
-          {fields.map((field) => <th scope="col" key={field} data-field={field}>{fieldLabel(field, prefix)}</th>)}
-          <th scope="col">操作</th>
-        </tr></thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
+    <>
+      {canScroll && (
+        <div className="ct-sheet-scroll" role="group" aria-label={`${label}橫向捲動`}>
+          <button type="button" onClick={() => scrollColumns(-1)}>← 向左捲動</button>
+          <button type="button" onClick={() => scrollColumns(1)}>向右捲動 →</button>
+        </div>
+      )}
+      <div ref={sheetRef} className="ct-sheet" tabIndex={0} role="region" aria-label={label}>
+        <table ref={tableRef} aria-label={label}>
+          <thead><tr>
+            <th scope="col">編號</th>
+            {fields.map((field) => <th scope="col" key={field} data-field={field}>{fieldLabel(field, prefix)}</th>)}
+            <th scope="col">操作</th>
+          </tr></thead>
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
