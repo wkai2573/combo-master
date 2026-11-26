@@ -10,9 +10,10 @@ export const PLAYABLE_CARDS: CardData[] = ALL_CARDS.filter(isCardEnabled);
 
 export const ALL_CHARACTERS = readTableCharacters(table);
 
-const cardMap = new Map(ALL_CARDS.map((c) => [c.id, c]));
+// 教學與既有對局仍可能依內部 id 讀取已移出卡池的項目。
+const cardMap = new Map([...(table.removedCards ?? []), ...ALL_CARDS].map((c) => [c.id, c]));
 // 教學角色只供依 id 查詢，不在 ALL_CHARACTERS
-const charMap = new Map([...ALL_CHARACTERS, ...TUTORIAL_CHARACTERS].map((c) => [c.id, c]));
+const charMap = new Map([...(table.removedCharacters ?? []), ...ALL_CHARACTERS, ...TUTORIAL_CHARACTERS].map((c) => [c.id, c]));
 
 export function getCard(id: string): CardData {
   const c = cardMap.get(id);

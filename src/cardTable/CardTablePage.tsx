@@ -3,7 +3,7 @@ import { ALL_CARDS, ALL_CHARACTERS } from '../data/cards';
 import { matchesCard, type CardScope } from '../data/cardSearch';
 import { cardTable } from '../data/cardTableData';
 import {
-  addedCharacterFields, blankMoveAdditions, canDelete, cardFields, cardValue, characterFields, classes, emptyDraft, equalValue, exFields,
+  addedCharacterFields, blankMoveAdditions, cardFields, cardValue, characterFields, classes, emptyDraft, equalValue, exFields,
   fieldLabels, isFieldValue, keywordFields, kinds, makeDiff, nextCardUid, nextUid, orderLists,
   orderOf, parseDiff, previewCard, realignDraft, slots, sortByOrder,
   type Draft, type Edit, type Field, type OrderList,
@@ -171,18 +171,19 @@ export function CardTablePage() {
   }
   function orderControls(list: OrderList) {
     const order = draftOrder(list);
-    return order && <p className="ct-original ct-changed">原順序 {showValue(orderOf(cardTable, list))}
-      {' '}<button onClick={() => changeField(list, 'order', null, null)}>清除排序</button>
+    return order && <p className="ct-original ct-changed">
+      <button onClick={() => changeField(list, 'order', null, null)}>清除排序</button>
     </p>;
   }
-  function rowOrderControls(list: OrderList, ids: string[], index: number, uid: string) {
-    if (index < 0 || ids.length < 2) return null;
+  function rowOrderControls(list: OrderList, ids: string[], index: number, uid: string, fullOrder = ids) {
     return ([-1, 1] as const).map((step) => {
       const destination = index + step;
       return <button key={step} type="button" disabled={destination < 0 || destination >= ids.length}
         aria-label={`${uid} ${step < 0 ? '上移' : '下移'}`} onClick={() => {
-          const order = [...ids];
-          [order[index], order[destination]] = [order[destination], order[index]];
+          const order = [...fullOrder];
+          const from = order.indexOf(ids[index]);
+          const to = order.indexOf(ids[destination]);
+          [order[from], order[to]] = [order[to], order[from]];
           changeField(list, 'order', orderOf(cardTable, list), order);
         }}>{step < 0 ? '↑' : '↓'}</button>;
     });
@@ -190,8 +191,7 @@ export function CardTablePage() {
   const deleted = new Set(draft.deletions.map(({ uid }) => uid));
   const isEx = tab === 'Ex 卡';
   const isCharacter = tab === '角色';
-  const cardList = isEx ? 'exCards' : 'added';
-  const sortableIds = new Set(orderOf(cardTable, cardList));
+  const cardList = isEx ? 'exCards' : 'cards';
   const cards = ALL_CARDS.filter((card) => isExCardId(card.id) === (tab === 'Ex 卡')).map((card) => {
     const uid = cardUids.get(card.id)!;
     const edits = draft.edits.filter((edit) => edit.uid === uid);
@@ -212,7 +212,7 @@ export function CardTablePage() {
     const id = name.trim();
     if (isCharacter) {
       if (!isFieldValue('name', id, 'C')
-        || [...ALL_CHARACTERS, ...TUTORIAL_CHARACTERS].some((character) => character.id === id || character.name === id)
+        || [...ALL_CHARACTERS, ...TUTORIAL_CHARACTERS, ...(cardTable.removedCharacters ?? [])].some((character) => character.id === id || character.name === id)
         || draft.additions.some((entry) => 'character' in entry && (entry.character.id === id || entry.character.name === id))) {
         setMessage('請輸入有效且未使用的角色名稱。');
         return;
@@ -229,7 +229,8 @@ export function CardTablePage() {
     const prefix = isEx ? 'X' : isKeyword ? 'K' : '';
     if (!isFieldValue('name', id, prefix) || (isKeyword
       ? cardTable.keywords.some((keyword) => keyword.name === id) || draft.additions.some((entry) => 'keyword' in entry && entry.keyword.name === id)
-      : ALL_CARDS.some((card) => card.id === id) || draft.additions.some((entry) => 'card' in entry && entry.card.id === id))) {
+      : ALL_CARDS.some((card) => card.id === id) || cardTable.removedCards?.some((card) => card.id === id)
+        || draft.additions.some((entry) => 'card' in entry && entry.card.id === id))) {
       setMessage(isKeyword ? '請輸入有效且未使用的關鍵字名稱。' : isEx ? '請輸入未使用且以 Ex- 開頭的卡名。' : '請輸入有效且未使用的卡名。');
       return;
     }
@@ -255,17 +256,16 @@ export function CardTablePage() {
     changeField(entry.uid, field, cardValue(entry.base, field), value);
   }
 
-  function deleteCard(entry: NonNullable<typeof selected>) {
-    if (entry.added) updateDraft({
+  function deleteRow(uid: string, id: string, added: boolean, list: OrderList) {
+    if (added) updateDraft({
       ...draft,
-      additions: draft.additions.filter(({ uid }) => uid !== entry.uid),
-      edits: draft.edits.map((edit) => edit.uid === cardList
-        ? { ...edit, value: (edit.value as string[]).filter((id) => id !== entry.base.id) } : edit),
+      additions: draft.additions.filter((entry) => entry.uid !== uid),
+      edits: draft.edits.map((edit) => edit.uid === list
+        ? { ...edit, value: (edit.value as string[]).filter((value) => value !== id) } : edit),
     });
     else updateDraft({
       ...draft,
-      edits: draft.edits.filter(({ uid }) => uid !== entry.uid),
-      deletions: [...draft.deletions, { uid: entry.uid, id: entry.card.id }],
+      deletions: [...draft.deletions, { uid, id }],
     });
     setSelection(undefined);
   }
@@ -287,12 +287,14 @@ export function CardTablePage() {
   }
 
   const visibleCards = cards.filter((entry) => entry.added || !deleted.has(entry.uid));
-  const fixedCards = visibleCards.filter((entry) => !entry.added && !sortableIds.has(entry.base.id));
-  const sortableCards = sortByOrder(visibleCards.filter((entry) => entry.added || sortableIds.has(entry.base.id)), draftOrder(cardList) ?? [], (entry) => entry.base.id);
+  const legacyOrder = !isEx && draftOrder('added');
+  const addedIds = new Set(legacyOrder ? orderOf(cardTable, 'added') : []);
+  const sortableCards = sortByOrder(visibleCards, draftOrder(cardList) ?? (legacyOrder
+    ? [...orderOf(cardTable, 'cards').filter((id) => !addedIds.has(id)), ...legacyOrder] : []), (entry) => entry.base.id);
   const search = query.trim();
   const filtering = Boolean(search) || (!isEx && (filterKind !== 'all' || combo !== 0 || scope !== 'all'));
-  const matchingCards = filtering ? [...fixedCards, ...sortableCards].filter(({ card }) =>
-    matchesCard(card, isEx ? 'all' : filterKind, isEx ? 0 : combo, isEx ? 'all' : scope, search)) : [];
+  const matchingCards = filtering ? sortableCards.filter(({ card }) =>
+    matchesCard(card, isEx ? 'all' : filterKind, isEx ? 0 : combo, isEx ? 'all' : scope, search)) : sortableCards;
   const renderCard = (entry: (typeof cards)[number]) => (
     <div key={entryKey(entry)} className={entry.edits.length || entry.added ? 'ct-changed' : undefined}>
       <CardFace id={entry.card.id} card={entry.card} selected={selection === entryKey(entry)} onClick={() => setSelection(entryKey(entry))} />
@@ -302,6 +304,7 @@ export function CardTablePage() {
   const sheetCardFields: readonly Field[] = isEx ? exFields
     : ['kind', 'name', 'cls', 'traits', 'atk', 'def', 'combo', 'expReq', 'slot', 'duration', 'text'];
   const sortableCardIds = sortableCards.map(({ base }) => base.id);
+  const matchingCardIds = matchingCards.map(({ base }) => base.id);
   const cardFieldVisible = (entry: (typeof cards)[number], field: Field) => {
     if (entry.edits.some((edit) => edit.field === field)) return true;
     if (['atk', 'def', 'combo'].includes(field)) return entry.card.kind === 'move';
@@ -316,14 +319,15 @@ export function CardTablePage() {
       onChange={(value) => editField(entry, field, value)} compact={compact} />;
   }
   const addedCharacterIds = new Set((cardTable.addedCharacters ?? []).map(({ id }) => id));
-  const characters = [
-    ...draft.additions.flatMap((entry) => 'character' in entry ? [{ ...entry, added: true }] : []).reverse(),
+  const characters = sortByOrder([
     ...ALL_CHARACTERS.map((character) => ({ uid: uidById.get('C:' + character.id)!, character, added: false })),
-  ];
+    ...draft.additions.flatMap((entry) => 'character' in entry ? [{ ...entry, added: true }] : []),
+  ].filter((entry) => entry.added || !deleted.has(entry.uid)), draftOrder('characters') ?? [], ({ character }) => character.id);
+  const characterIds = characters.map(({ character }) => character.id);
   const keywords = sortByOrder([
     ...cardTable.keywords.map((keyword) => ({ uid: uidById.get('K:' + keyword.name)!, keyword, added: false })),
     ...draft.additions.flatMap((entry) => 'keyword' in entry ? [{ ...entry, added: true }] : []),
-  ], draftOrder('keywords') ?? [], ({ keyword }) => keyword.name);
+  ].filter((entry) => entry.added || !deleted.has(entry.uid)), draftOrder('keywords') ?? [], ({ keyword }) => keyword.name);
   const keywordNames = keywords.map(({ keyword }) => keyword.name);
   const keywordKey = ({ uid, added }: (typeof keywords)[number]) => (added ? 'draft:' : 'base:') + uid;
 
@@ -354,6 +358,8 @@ export function CardTablePage() {
   }
 
   const hasDraft = draft.edits.length + draft.additions.length + draft.deletions.length > 0;
+  const tabPrefixes = { 卡片: 'AEB', 角色: 'C', 關鍵字: 'K', 'Ex 卡': 'X' };
+  const pendingDeletions = draft.deletions.filter(({ uid }) => tabPrefixes[tab].includes(uid[0]));
   return (
     <main className="ct">
       <header className="ct-header">
@@ -393,8 +399,8 @@ export function CardTablePage() {
         <button>新增{tab}</button>
         {message && <span role="alert">{message}</span>}
       </form>
-      {(tab === '卡片' || isEx) && draft.deletions.some(({ uid }) => uid.startsWith('X') === isEx) && (
-        <ul className="ct-deletions">{draft.deletions.filter(({ uid }) => uid.startsWith('X') === isEx).map(({ uid, id }) => (
+      {pendingDeletions.length > 0 && (
+        <ul className="ct-deletions">{pendingDeletions.map(({ uid, id }) => (
           <li key={uid}>待刪除 {uid} {id} <button onClick={() => updateDraft({ ...draft, deletions: draft.deletions.filter((d) => d.uid !== uid) })}>撤銷刪除</button></li>
         ))}</ul>
       )}
@@ -425,18 +431,19 @@ export function CardTablePage() {
           </div>
         </div>
         {orderControls(cardList)}
+        {!isEx && orderControls('added')}
         {textView ? (
           <FieldTable label={`${tab}表格`} prefix={isEx ? 'X' : 'A'} fields={sheetCardFields}>
-            {(filtering ? matchingCards : [...fixedCards, ...sortableCards]).map((entry) => (
+            {matchingCards.map((entry, index) => (
               <tr key={entryKey(entry)} className={entry.added || selection === entryKey(entry) ? 'ct-sheet-marked' : undefined}>
                 <th scope="row">{entry.uid}{entry.added && <small>草稿</small>}</th>
                 {sheetCardFields.map((field) => <td key={field}>
                   {cardFieldVisible(entry, field) ? renderCardField(entry, field, true) : '—'}
                 </td>)}
                 <td className="ct-row-actions">
-                  {!filtering && rowOrderControls(cardList, sortableCardIds, sortableCardIds.indexOf(entry.base.id), entry.uid)}
-                  {(isEx || entry.added || canDelete(entry.card)) && <button type="button"
-                    aria-label={`刪除 ${entry.uid}`} onClick={() => deleteCard(entry)}>刪除</button>}
+                  {rowOrderControls(cardList, matchingCardIds, index, entry.uid, sortableCardIds)}
+                  <button type="button" aria-label={`刪除 ${entry.uid}`}
+                    onClick={() => deleteRow(entry.uid, entry.base.id, entry.added, cardList)}>刪除</button>
                 </td>
               </tr>
             ))}
@@ -448,7 +455,6 @@ export function CardTablePage() {
               {matchingCards.length > 0 ? <div className="ct-grid">{matchingCards.map(renderCard)}</div> : <p>找不到符合條件的卡片。</p>}
             </div>
           ) : <div>
-            {fixedCards.length > 0 && <div className="ct-grid">{fixedCards.map(renderCard)}</div>}
             <SortableList className="ct-grid ct-sortable" items={sortableCards} getKey={(entry) => entry.base.id} renderItem={renderCard}
               onReorder={(order) => changeField(cardList, 'order', orderOf(cardTable, cardList), order)} />
           </div>}
@@ -456,7 +462,7 @@ export function CardTablePage() {
             <section className="ct-detail" aria-label={`${selected.uid} 詳細資料`} key={entryKey(selected)}>
               <div className="ct-detail-actions">
                 <strong>{selected.uid}</strong>
-                {(isEx || selected.added || canDelete(selected.card)) && <button onClick={() => deleteCard(selected)}>刪除卡片</button>}
+                <button onClick={() => deleteRow(selected.uid, selected.base.id, selected.added, cardList)}>刪除卡片</button>
                 <button onClick={() => setSelection(undefined)}>關閉詳細資料</button>
               </div>
               <InspectPanel id={selected.card.id} card={selected.card} />
@@ -467,8 +473,10 @@ export function CardTablePage() {
         </div>}
         </>
       )}
-      {isCharacter && <FieldTable label="角色表格" prefix="C" fields={addedCharacterFields}>
-        {characters.map(({ uid, character, added }) => {
+      {isCharacter && <>
+        {orderControls('characters')}
+        <FieldTable label="角色表格" prefix="C" fields={addedCharacterFields}>
+        {characters.map(({ uid, character, added }, index) => {
         const recordKey = (added ? 'draft:' : 'base:') + uid;
         const editableText = added || addedCharacterIds.has(character.id);
         const editCharacter = added ? (field: Field, value: Value) => updateDraft({
@@ -486,14 +494,13 @@ export function CardTablePage() {
               {editableText ? renderRecordField(uid, character, field, editCharacter, added) : <KeywordText text={character[field]} />}
             </td>)}
             <td className="ct-row-actions">
-              {added && <button type="button" aria-label={`清除 ${uid} 草稿`} onClick={() => {
-                updateDraft({ ...draft, additions: draft.additions.filter((entry) => entry.uid !== uid) });
-                setSelection(undefined);
-              }}>清除草稿</button>}
+              {rowOrderControls('characters', characterIds, index, uid)}
+              <button type="button" aria-label={`刪除 ${uid}`}
+                onClick={() => deleteRow(uid, character.id, added, 'characters')}>刪除</button>
             </td>
           </tr>
         );
-      })}</FieldTable>}
+      })}</FieldTable></>}
       {tab === '關鍵字' && <>
         {orderControls('keywords')}
         <FieldTable label="關鍵字表格" prefix="K" fields={keywordFields}>
@@ -505,12 +512,8 @@ export function CardTablePage() {
                 (changedField, value) => editKeyword(uid, keyword, added, changedField, value), added)}</td>)}
               <td className="ct-row-actions">
                 {rowOrderControls('keywords', keywordNames, index, uid)}
-                {added && <button type="button" aria-label={`清除 ${uid} 草稿`} onClick={() => updateDraft({
-                ...draft,
-                additions: draft.additions.filter((entry) => entry.uid !== uid),
-                edits: draft.edits.map((edit) => edit.uid === 'keywords'
-                  ? { ...edit, value: (edit.value as string[]).filter((id) => id !== keyword.name) } : edit),
-                })}>清除草稿</button>}
+                <button type="button" aria-label={`刪除 ${uid}`}
+                  onClick={() => deleteRow(uid, keyword.name, added, 'keywords')}>刪除</button>
               </td>
             </tr>;
           })}

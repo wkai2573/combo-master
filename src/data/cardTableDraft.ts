@@ -1,5 +1,5 @@
-import { generatedCards, generatedCharacters, readTableCards, readTableCharacters, type CardTableData, type UidPrefix } from './cardTableData';
-import { ENABLED_EFFECT_CARDS } from './enabledCards';
+import { generatedCards, generatedCharacters, readTableCards, readTableCharacters, sortByOrder, type CardTableData, type UidPrefix } from './cardTableData';
+import { isCardEnabled } from './enabledCards';
 import { checkExLeaveRule, EX_LEAVE_RULES, isExCardId, type ExZone } from './exCards';
 import type { Keyword } from './keywords';
 import { TUTORIAL_CHARACTERS } from './tutorialCharacters';
@@ -35,31 +35,28 @@ export const exFields = ['name', 'traits', 'text'] as const;
 export const keywordFields = ['name', 'group', 'desc'] as const;
 export const characterFields = ['name', 'cls', 'hp', 'expReq'] as const;
 export const addedCharacterFields = [...characterFields, 'text', 'awakenText'] as const;
-export const orderLists = { added: '新增卡', exCards: 'Ex 卡', keywords: '關鍵字' } as const;
+export const orderLists = { cards: '卡片', added: '新增卡', characters: '角色', exCards: 'Ex 卡', keywords: '關鍵字' } as const;
 export type OrderList = keyof typeof orderLists;
 const isOrderList = (uid: string): uid is OrderList => Object.hasOwn(orderLists, uid);
-export const orderOf = (table: CardTableData, list: OrderList): string[] =>
-  table[list].map((entry) => 'id' in entry ? entry.id : entry.name);
-export function sortByOrder<T>(items: T[], order: string[], key: (item: T) => string): T[] {
-  const rank = new Map(order.map((id, index) => [id, index]));
-  return [...items].sort((a, b) => (rank.get(key(a)) ?? order.length) - (rank.get(key(b)) ?? order.length));
+export function orderOf(table: CardTableData, list: OrderList): string[] {
+  if (list === 'cards') return readTableCards(table).filter(({ id }) => !isExCardId(id)).map(({ id }) => id);
+  if (list === 'characters') return readTableCharacters(table).map(({ id }) => id);
+  return table[list].map((entry) => 'id' in entry ? entry.id : entry.name);
 }
+export { sortByOrder };
 
 function proposedOrder(list: OrderList, base: string[], order: string[], draft: Draft): string[] {
-  const deleted = new Set(draft.deletions.map(({ id }) => id));
+  const prefixes = { cards: 'AEB', added: 'AEB', characters: 'C', keywords: 'K', exCards: 'X' };
+  const deleted = new Set(draft.deletions.filter(({ uid }) => prefixes[list].includes(uid[0])).map(({ id }) => id));
   const added = draft.additions.flatMap((addition) => {
     if ('keyword' in addition) return list === 'keywords' ? [addition.keyword.name] : [];
-    if ('character' in addition) return [];
-    return list === (isExCardId(addition.card.id) ? 'exCards' : 'added') ? [addition.card.id] : [];
+    if ('character' in addition) return list === 'characters' ? [addition.character.id] : [];
+    const included = isExCardId(addition.card.id) ? list === 'exCards' : list === 'cards' || list === 'added';
+    return included ? [addition.card.id] : [];
   });
-  return sortByOrder([...base.filter((id) => list === 'keywords' || !deleted.has(id)), ...added], order, (id) => id);
+  return sortByOrder([...base.filter((id) => !deleted.has(id)), ...added], order, (id) => id);
 }
 const baseIds = new Set(generatedCards.map((card) => card.id));
-const enabledIds = new Set(ENABLED_EFFECT_CARDS);
-
-export function canDelete(card: CardData): boolean {
-  return !baseIds.has(card.id) && !enabledIds.has(card.id) && !isExCardId(card.id);
-}
 
 export function nextCardUid(table: CardTableData, kind: CardKind, previous: string[]): string {
   return nextUid(table, prefixes[kind], previous);
@@ -234,7 +231,6 @@ export function parseDiff(input: unknown): Diff {
   const deleted = new Set<string>();
   for (const deletion of input.deletions) {
     if (!objectWithKeys(deletion, ['uid', 'id']) || !validUid(deletion.uid)
-      || !(cardUid.test(deletion.uid) || deletion.uid.startsWith('X'))
       || !isFieldValue('name', deletion.id, deletion.uid[0])) {
       throw new Error('刪除標記格式不符');
     }
@@ -415,15 +411,21 @@ export function applyDiff(
   }
 
   for (const { uid, id } of diff.deletions) {
-    const card = records.get(uid);
-    if (!card || !('kind' in card) || card.id !== id) {
+    const record = records.get(uid);
+    if (!record || ('id' in record ? record.id : record.name) !== id) {
       notes.push(`刪除衝突（未套用）：${uid} ${id}`);
       continue;
     }
-    if (uid.startsWith('X')) table.exCards = table.exCards.filter((entry) => entry.id !== id);
+    if (!('id' in record)) table.keywords = table.keywords.filter(({ name }) => name !== id);
+    else if ('hp' in record) {
+      (table.removedCharacters ??= []).push(record);
+      if (table.addedCharacters) table.addedCharacters = table.addedCharacters.filter((entry) => entry.id !== id);
+      delete table.chars[id];
+    } else if (uid.startsWith('X')) table.exCards = table.exCards.filter((entry) => entry.id !== id);
     else {
-      if (!canDelete(card)) throw new Error(`卡片仍屬於基準資料或已啟用：${uid} ${id}`);
+      if (baseIds.has(id) || isCardEnabled(record)) (table.removedCards ??= []).push(record);
       table.added = table.added.filter((entry) => entry.id !== id);
+      delete table.overrides[id];
     }
     delete table.uids[uid];
   }
@@ -439,8 +441,8 @@ export function applyDiff(
       lastReserved[prefix] = Math.max(lastReserved[prefix], number);
     }
   }
-  const existingIds = new Set(readTableCards(baseline).map((card) => card.id));
-  const characterIds = new Set([...readTableCharacters(baseline), ...TUTORIAL_CHARACTERS].map(({ id }) => id));
+  const existingIds = new Set([...readTableCards(baseline), ...(baseline.removedCards ?? [])].map(({ id }) => id));
+  const characterIds = new Set([...readTableCharacters(baseline), ...(baseline.removedCharacters ?? []), ...TUTORIAL_CHARACTERS].map(({ id }) => id));
   for (const addition of diff.additions) {
     const { uid } = addition;
     const prefix = uid[0] as UidPrefix;
@@ -497,6 +499,10 @@ export function applyDiff(
   if (addedOrder) table.added = sortByOrder(table.added, addedOrder, ({ id }) => id);
   if (exOrder) table.exCards = sortByOrder(table.exCards, exOrder, ({ id }) => id);
   if (keywordOrder) table.keywords = sortByOrder(table.keywords, keywordOrder.map((name) => keywordRenames.get(name) ?? name), ({ name }) => name);
+  for (const list of ['cards', 'characters'] as const) {
+    const order = orders.get(list) ?? table.order?.[list];
+    if (order) (table.order ??= {})[list] = sortByOrder(orderOf(table, list), order, (id) => id);
+  }
   if (diff.additions.length || diff.deletions.length) {
     table.uids = Object.fromEntries(Object.entries(table.uids).sort(([a], [b]) =>
       a[0].localeCompare(b[0]) || Number(a.slice(1)) - Number(b.slice(1))));

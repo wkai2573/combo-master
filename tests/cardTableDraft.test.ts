@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cardTable, readTableCards, readTableCharacters } from '../src/data/cardTableData';
-import { applyDiff, blankMoveAdditions, blankMoveMessage, emptyDraft, makeDiff, nextCardUid, nextUid, orderOf, realignDraft, type Draft, type OrderList } from '../src/data/cardTableDraft';
+import { applyDiff, blankMoveAdditions, blankMoveMessage, emptyDraft, makeDiff, nextCardUid, nextUid, orderOf, realignDraft, type Draft } from '../src/data/cardTableDraft';
 import { EX_LEAVE_RULES } from '../src/data/exCards';
 
 const card = readTableCards(cardTable).find((c) => c.id === '黑桃1')!;
@@ -99,7 +99,7 @@ describe('卡表草稿', () => {
     expect(() => applyDiff(cardTable, { ...diff, additions: [diff.additions[0], diff.additions[0]] })).toThrow('編號重複');
   });
 
-  it('刪除新增卡後永久編號不再被使用，也不接受刪除基準卡', () => {
+  it('刪除新增卡後永久編號不再被使用', () => {
     const addition = { uid: 'B1', card: { ...newCard, kind: 'buff' as const, duration: 3 } };
     const { table } = applyDiff(cardTable, diffOf({ additions: [addition] }));
     expect(table.added.find((entry) => entry.id === newCard.id)).toMatchObject({ atk: 0, def: 0, combo: 0, duration: 3 });
@@ -110,7 +110,23 @@ describe('卡表草稿', () => {
     expect(removed.uidSeq.B).toBe(1);
     expect(nextCardUid(removed, 'buff', [])).toBe('B2');
     expect(applyDiff(removed, diffOf({ additions: [addition] })).table.uids.B2).toBe(newCard.id);
-    expect(() => applyDiff(cardTable, diffOf({ deletions: [{ uid, id: card.id }] }))).toThrow('基準');
+  });
+
+  it.each([
+    ['cards', /^[AEB]/],
+    ['characters', /^C/],
+    ['keywords', /^K/],
+  ] as const)('可同時調整 %s 順序和刪除已收錄項目', (list, prefix) => {
+    const base = orderOf(cardTable, list);
+    const [first, second, removed, ...rest] = base;
+    const removedUid = Object.keys(cardTable.uids).find((key) => prefix.test(key) && cardTable.uids[key] === removed)!;
+    const value = [second, first, ...rest];
+    const diff = diffOf({ edits: [{ uid: list, field: 'order', base, value }], deletions: [{ uid: removedUid, id: removed }] });
+    const { table } = applyDiff(cardTable, JSON.parse(JSON.stringify(diff)));
+    expect(orderOf(table, list)).toEqual(value);
+    expect(table.uids[removedUid]).toBeUndefined();
+    expect(realignDraft(table, diff).draft).toEqual(emptyDraft());
+    expect(table.uidSeq).toEqual(cardTable.uidSeq);
   });
 
   it('新增裝備不帶攻守連擊，保留部位與待確認用語提醒', () => {
@@ -254,7 +270,7 @@ describe('角色、關鍵字與 Ex 卡', () => {
     expect(() => applyDiff(cardTable, diffOf({}), { characterTexts: ['[Ex-不存在]'] })).toThrow('引用了不存在的 Ex 卡');
   });
 
-  it.each(['added', 'exCards', 'keywords'] as const)('匯出、套用與重新對齊 %s 順序', (list: OrderList) => {
+  it.each(['added', 'exCards', 'keywords'] as const)('匯出、套用與重新對齊 %s 順序', (list) => {
     const base = orderOf(cardTable, list);
     const value = [...base].reverse();
     const order = { uid: list, field: 'order' as const, base, value };

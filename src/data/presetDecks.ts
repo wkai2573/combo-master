@@ -1,4 +1,4 @@
-import { ALL_CARDS, getCharacter } from './cards';
+import { ALL_CARDS, ALL_CHARACTERS, getCharacter } from './cards';
 import { isExCardId } from './exCards';
 import { isCardEnabled, isVanilla } from './enabledCards';
 import type { CardData } from './types';
@@ -73,14 +73,19 @@ export function presetDeck(charId: string): string[] {
 
   const need = ch.hp - fixed.length;
   if (need < 0) throw new Error(`${charId} 的固定卡已超過 ${ch.hp} 張`);
+  const pool = ALL_CARDS.filter(isVanilla).sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+  const capacity = Array.from({ length: 10 }, () => 0);
+  for (const card of pool) capacity[card.combo] += profile.copyCap;
   const whiteAt = Array.from({ length: 10 }, () => 0);
   for (let i = 0; i < need; i++) {
-    let best = 1;
-    for (let n = 2; n <= 9; n++) if (perCombo[n] + whiteAt[n] < perCombo[best] + whiteAt[best]) best = n;
+    let best = 0;
+    for (let n = 1; n <= 9; n++) {
+      if (whiteAt[n] < capacity[n] && (!best || perCombo[n] + whiteAt[n] < perCombo[best] + whiteAt[best])) best = n;
+    }
+    if (!best) break;
     whiteAt[best]++;
   }
 
-  const pool = ALL_CARDS.filter(isVanilla).sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
   const whites: string[] = [];
   for (let combo = 1; combo <= 9; combo++) {
     const ranked = pool.filter((c) => c.combo === combo).sort((a, b) => profile.score(b) - profile.score(a)); // 穩定排序：同分維持名稱順序
@@ -90,7 +95,6 @@ export function presetDeck(charId: string): string[] {
       for (let i = 0; i < n; i++) whites.push(c.id);
       left -= n;
     }
-    if (left > 0) throw new Error(`${charId} 的連擊值 ${combo} 白板卡不夠放`);
   }
   return [...fixed, ...whites];
 }
@@ -98,4 +102,4 @@ export function presetDeck(charId: string): string[] {
 /** 各角色預設牌組的風格說明（給介面顯示） */
 export const presetStyle = (charId: string): string => profiles[charId]?.style ?? '';
 
-export const PRESET_CHARACTER_IDS = Object.keys(profiles);
+export const PRESET_CHARACTER_IDS = Object.keys(profiles).filter((id) => ALL_CHARACTERS.some((character) => character.id === id));

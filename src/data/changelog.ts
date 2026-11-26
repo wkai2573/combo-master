@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.74.0',
+    date: '2026-11-26',
+    items: [{ type: 'add', text: '卡表四個分頁統一提供上移、下移和刪除，並可透過差異檔匯入排序與刪除。' }],
+  },
+  {
     version: '0.73.4',
     date: '2026-11-26',
     items: [{ type: 'fix', text: '卡表放不下全部欄位時，在表格上方顯示左右捲動按鈕。' }],

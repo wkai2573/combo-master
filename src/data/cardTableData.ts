@@ -14,6 +14,9 @@ export interface CardTableData {
   added: CardData[];
   keywords: Keyword[];
   exCards: CardData[];
+  order?: Partial<Record<'cards' | 'characters', string[]>>;
+  removedCards?: CardData[];
+  removedCharacters?: CharacterData[];
   uids: Record<string, string>;
   uidSeq: Record<UidPrefix, number>;
 }
@@ -22,23 +25,31 @@ export const cardTable = tableJson as CardTableData;
 export const generatedCards = cardsJson as CardData[];
 export const generatedCharacters = charsJson as CharacterData[];
 
+export function sortByOrder<T>(items: T[], order: string[], key: (item: T) => string): T[] {
+  const rank = new Map(order.map((id, index) => [id, index]));
+  return [...items].sort((a, b) => (rank.get(key(a)) ?? order.length) - (rank.get(key(b)) ?? order.length));
+}
+
 export function readTableCharacters(table: CardTableData): CharacterData[] {
-  return [...generatedCharacters, ...(table.addedCharacters ?? [])].map((character) => ({
+  const removed = new Set(table.removedCharacters?.map(({ id }) => id));
+  const characters = [...generatedCharacters, ...(table.addedCharacters ?? [])].filter(({ id }) => !removed.has(id)).map((character) => ({
     ...character,
     ...table.chars[character.id],
     ...characterText[character.id],
     id: character.id,
   }));
+  return sortByOrder(characters, table.order?.characters ?? [], ({ id }) => id);
 }
 
 export function readTableCards(table: CardTableData): CardData[] {
   const addedIds = new Set(table.added.map((card) => card.id));
-  return [
-    ...generatedCards.filter((card) => !addedIds.has(card.id)).map((card) => ({
+  const removed = new Set(table.removedCards?.map(({ id }) => id));
+  const cards = [
+    ...generatedCards.filter(({ id }) => !addedIds.has(id) && !removed.has(id)).map((card) => ({
       ...card,
       ...table.overrides[card.id],
     })),
     ...table.added,
-    ...table.exCards,
   ];
+  return [...sortByOrder(cards, table.order?.cards ?? [], ({ id }) => id), ...table.exCards];
 }

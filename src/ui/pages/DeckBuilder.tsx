@@ -3,7 +3,7 @@ import { matchesCard, type CardScope } from '../../data/cardSearch';
 import { ALL_CHARACTERS, getCard, getCharacter, PLAYABLE_CARDS } from '../../data/cards';
 import { isCardEnabled } from '../../data/enabledCards';
 import { presetDeck } from '../../data/presetDecks';
-import type { CardData, CardKind } from '../../data/types';
+import type { CardData, CardKind, CharacterData } from '../../data/types';
 import { deleteDeck, exportDeck, importDeck, listDecks, saveDeck, type DeckEntry } from '../../deck/storage';
 import { MAX_COPIES, validateDeck } from '../../deck/validate';
 import { CardFace, InspectContext, InspectPanel, PinContext } from '../components/CardFace';
@@ -14,7 +14,12 @@ const byOrder = (a: CardData, b: CardData) =>
   KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || a.combo - b.combo || a.name.localeCompare(b.name, 'zh-Hant');
 
 export function DeckBuilder({ onBack }: { onBack: () => void }) {
-  const firstChar = ALL_CHARACTERS.find((c) => !c.pending)!;
+  const firstChar = ALL_CHARACTERS.find((c) => !c.pending);
+  if (!firstChar) return <main><p>目前沒有可用角色。</p><button onClick={onBack}>返回</button></main>;
+  return <DeckBuilderEditor firstChar={firstChar} onBack={onBack} />;
+}
+
+function DeckBuilderEditor({ firstChar, onBack }: { firstChar: CharacterData; onBack: () => void }) {
   const [charId, setCharId] = useState(firstChar.id);
   const [cards, setCards] = useState<string[]>(() => presetDeck(firstChar.id));
   const [name, setName] = useState(`${firstChar.id}（預設）`);
