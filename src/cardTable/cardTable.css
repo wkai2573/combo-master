@@ -51,19 +51,12 @@
 .ct-sheet tr > :last-child { border-inline-end: 0; }
 .ct-sheet thead th {
   position: sticky; top: 0; z-index: 1; white-space: nowrap;
+  width: 1px;
   background: #263d33; padding-block: 7px;
 }
-.ct-sheet thead th:first-child { width: 64px; min-width: 64px; }
-.ct-sheet thead th[data-field] { width: 76px; min-width: 76px; }
-.ct-sheet thead th:is([data-field="kind"], [data-field="cls"], [data-field="slot"]) {
-  width: 96px; min-width: 96px;
-}
-.ct-sheet thead th[data-field="name"] { width: 148px; min-width: 148px; }
-.ct-sheet thead th[data-field="traits"] { width: 116px; min-width: 116px; }
 .ct-sheet thead th:is([data-field="text"], [data-field="desc"], [data-field="awakenText"]) {
   width: auto; min-width: 440px; white-space: normal;
 }
-.ct-sheet thead th:last-child { width: 64px; min-width: 64px; }
 .ct-sheet tbody th { white-space: nowrap; }
 .ct-sheet tbody tr:nth-child(even) { background: #222c27; }
 .ct-sheet tbody tr:focus-within, .ct-sheet tbody tr.ct-sheet-marked { background: #2d3b33; }
@@ -79,7 +72,13 @@
   padding: 2px 4px; background: transparent; border: 1px solid transparent;
   border-radius: 2px; line-height: 1.4;
 }
+.ct-sheet select { width: auto; field-sizing: content; }
 .ct-sheet input[type="number"] { text-align: end; }
+@supports (field-sizing: content) {
+  .ct-sheet input:not([type="number"]) {
+    width: auto; min-width: 4ch; max-width: 24rem; field-sizing: content;
+  }
+}
 .ct-sheet textarea { resize: vertical; field-sizing: content; overflow-wrap: anywhere; }
 .ct-sheet :is(input, select, textarea):focus {
   outline: 1px solid var(--sheet-focus); outline-offset: -1px; background: var(--sheet-control);
