@@ -3,6 +3,7 @@ import { getCard } from '../../data/cards';
 import type { CardData } from '../../data/types';
 import { CARD_ART, hasOwnArt } from './cardArtGlyphs';
 import { moveCardFaces } from '../moveCardFaces';
+import { gameFaceFor, imageFor } from '../../cardLayout/gameFaces';
 
 /**
  * 沒有成品卡圖時，使用 100×60 的 SVG 插圖。
@@ -40,10 +41,13 @@ function glyphFor(id: string, card?: CardData): ReactNode {
 }
 
 export function CardArt({ id, card }: { id: string; card?: CardData }) {
-  const face = moveCardFaces.get(id);
+  const layered = gameFaceFor(id);
+  const artLayer = layered?.template.layers.find((layer) => layer.kind === 'image' && layer.source === 'art' && !layer.hidden);
+  const portrait = layered && artLayer?.kind === 'image' && imageFor(artLayer, layered.uid, card ?? getCard(id), layered.content);
+  const face = layered ? undefined : moveCardFaces.get(id);
   return (
     <div className="art">
-      {face ? (
+      {portrait ? <img className="portrait-preview" src={portrait} alt="" draggable={false} /> : face ? (
         <img className="face-preview" src={face} alt="" draggable={false} />
       ) : (
         <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet" aria-hidden="true">

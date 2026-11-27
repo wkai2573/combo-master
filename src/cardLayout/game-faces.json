@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "templates": [],
+  "cards": {
+    "A39": {
+      "template": "move"
+    },
+    "E1": {
+      "template": "equipment"
+    }
+  }
+}

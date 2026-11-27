@@ -1,0 +1,126 @@
+.ct:has(.cc) { max-width: 1530px; }
+.cc { --cc-surface: #1b2230; --cc-edge: #384458; }
+.cc-toolbar, .cc-panel, .cc-preview {
+  border: 1px solid var(--cc-edge);
+  border-radius: 10px;
+  background: var(--cc-surface);
+}
+.cc-toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+}
+.cc-toolbar select { max-width: min(250px, 100%); }
+.cc label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  font-size: 13px;
+}
+.cc label > :is(input, select, textarea) { width: 100%; }
+.cc .cc-check { display: flex; align-items: center; gap: 7px; }
+.cc .cc-check input { width: auto; margin: 0; accent-color: var(--accent); }
+.cc .cc-file input { max-width: 100%; font-size: 12px; }
+.cc .cc-file input::file-selector-button {
+  background: #263346;
+  color: var(--text);
+  border: 1px solid var(--cc-edge);
+  border-radius: 4px;
+  margin-right: 6px;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+.cc-files { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px; margin-inline-start: auto; }
+.cc-files .cc-file { max-width: 192px; }
+.cc-notice { color: var(--accent); margin: 0 0 10px; overflow-wrap: anywhere; }
+.cc-workspace {
+  display: grid;
+  grid-template-columns: minmax(185px, 0.7fr) minmax(280px, 1.55fr) minmax(280px, 1fr);
+  grid-template-areas: "layers preview settings";
+  align-items: start;
+  gap: 14px;
+}
+.cc-panel { display: grid; gap: 10px; padding: 13px; min-width: 0; }
+.cc-layer-panel { grid-area: layers; }
+.cc-properties { grid-area: settings; }
+.cc-panel h2 { font-size: 16px; margin: 0 0 2px; }
+.cc-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+.cc-actions button { padding: 5px 7px; font-size: 12px; }
+.cc-layers { display: grid; gap: 5px; padding: 0; margin: 0; list-style: none; }
+.cc-layers button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  gap: 7px;
+  padding: 7px 8px;
+  overflow-wrap: anywhere;
+}
+.cc-layers button[aria-pressed="true"] { background: #29364b; border-color: var(--accent); }
+.cc-layers button small { color: var(--muted); font-size: 11px; flex-shrink: 0; }
+.cc-preview { grid-area: preview; overflow: hidden; position: sticky; top: 12px; }
+.cc-preview-bar, .cc-preview-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  gap: 8px;
+}
+.cc-preview-info { justify-content: flex-start; font-size: 12px; }
+.cc-warning { color: #ffce7a; }
+.cc-stage {
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  min-height: 290px;
+  padding: clamp(14px, 3vw, 33px);
+  background-color: #111724;
+  background-image: conic-gradient(#1a2332 25%, transparent 25% 50%, #1a2332 50% 75%, transparent 75%);
+  background-size: 20px 20px;
+  border-block: 1px solid var(--cc-edge);
+}
+.cc-board { width: min(100%, 425px, 62dvh); position: relative; filter: drop-shadow(0 8px 16px #0009); }
+.cc-outline {
+  box-sizing: border-box;
+  position: absolute;
+  border: 1px solid #83e6ff;
+  box-shadow: 0 0 0 1px #182935;
+  cursor: move;
+  touch-action: none;
+}
+.cc-outline.cc-locked { border-style: dashed; pointer-events: none; }
+.cc-handle {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: #83e6ff;
+  box-shadow: 0 0 0 1px #182935;
+  cursor: nwse-resize;
+}
+.cc-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cc-properties input[type="color"] { min-height: 32px; padding: 3px 5px; }
+.cc-properties fieldset { display: grid; gap: 7px; min-width: 0; border: 1px solid var(--cc-edge); border-radius: 6px; margin: 0; padding: 8px; }
+.cc-properties legend { padding-inline: 4px; font-size: 13px; color: var(--muted); }
+.cc-properties textarea { resize: vertical; }
+.cc-bound .ct-field { margin: 0; }
+.cc-image-status { margin: 0; font-size: 12px; }
+.cc-keywords { border-top: 1px solid var(--cc-edge); padding-top: 8px; }
+.cc-keywords summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+.cc-keywords > p { font-size: 13px; margin: 8px 0; }
+.cc-keywords > :is(fieldset, button) { margin-top: 8px; }
+@media (max-width: 880px) {
+  .cc-workspace { grid-template-columns: minmax(230px, 1fr) minmax(260px, 1fr); grid-template-areas: "preview layers" "preview settings"; }
+}
+@media (max-width: 610px) {
+  .cc-workspace { grid-template-columns: minmax(0, 1fr); grid-template-areas: "preview" "layers" "settings"; }
+  .cc-preview { position: static; }
+  .cc-files { margin-inline-start: 0; }
+}

@@ -16,6 +16,7 @@ import { CardFace, InspectPanel } from '../ui/components/CardFace';
 import { KeywordText, KeywordTooltip } from '../ui/components/KeywordText';
 import { SortableList } from '../ui/components/SortableList';
 import { APP_VERSION } from '../version';
+import { CardComposer } from './CardComposer';
 
 const key = 'combo-master:card-table-draft';
 const tabs = ['卡片', '角色', '關鍵字', 'Ex 卡'] as const;
@@ -210,6 +211,7 @@ function CardField({ field, value, original, reset, onChange, prefix, compact = 
 export function CardTablePage() {
   const [local, setLocal] = useState(loadDraft);
   const [tab, setTab] = useState<(typeof tabs)[number]>('卡片');
+  const [composing, setComposing] = useState(false);
   const [selection, setSelection] = useState<string>();
   const [textView, setTextView] = useState(false);
   const [name, setName] = useState('');
@@ -264,18 +266,22 @@ export function CardTablePage() {
   const isEx = tab === 'Ex 卡';
   const isCharacter = tab === '角色';
   const cardList = isEx ? 'exCards' : 'cards';
-  const cards = ALL_CARDS.filter((card) => isExCardId(card.id) === (tab === 'Ex 卡')).map((card) => {
-    const uid = cardUids.get(card.id)!;
-    const edits = draft.edits.filter((edit) => edit.uid === uid);
-    const preview = isEx ? { ...card, ...Object.fromEntries(edits.map(({ field, value }) => [field, value])) }
-      : edits.length ? previewCard(card, edits) : card;
-    return { uid, card: preview, base: card, edits, added: false };
-  });
-  for (const addition of draft.additions) {
-    if (!('card' in addition) || isExCardId(addition.card.id) !== isEx) continue;
-    const { uid, card } = addition;
-    cards.push({ uid, card: isEx ? card : previewCard(card, []), base: card, edits: [], added: true });
+  function cardEntries(ex: boolean) {
+    const entries = ALL_CARDS.filter((card) => isExCardId(card.id) === ex).map((card) => {
+      const uid = cardUids.get(card.id)!;
+      const edits = draft.edits.filter((edit) => edit.uid === uid);
+      const preview = ex ? { ...card, ...Object.fromEntries(edits.map(({ field, value }) => [field, value])) }
+        : edits.length ? previewCard(card, edits) : card;
+      return { uid, card: preview, base: card, edits, added: false };
+    });
+    for (const addition of draft.additions) {
+      if (!('card' in addition) || isExCardId(addition.card.id) !== ex) continue;
+      const { uid, card } = addition;
+      entries.push({ uid, card: ex ? card : previewCard(card, []), base: card, edits: [], added: true });
+    }
+    return entries;
   }
+  const cards = cardEntries(isEx);
   const entryKey = (entry: (typeof cards)[number]) => (entry.added ? 'draft:' : 'base:') + entry.uid;
   const selected = cards.find((entry) => entryKey(entry) === selection && (entry.added || !deleted.has(entry.uid)));
 
@@ -436,6 +442,7 @@ export function CardTablePage() {
   const hasDraft = draft.edits.length + draft.additions.length + draft.deletions.length > 0;
   const tabPrefixes = { 卡片: 'AEB', 角色: 'C', 關鍵字: 'K', 'Ex 卡': 'X' };
   const pendingDeletions = draft.deletions.filter(({ uid }) => tabPrefixes[tab].includes(uid[0]));
+  const composerCards = composing ? [...cards, ...cardEntries(!isEx)].filter(({ uid }) => uid && !deleted.has(uid)) : [];
   return (
     <main className="ct">
       <header className="ct-header">
@@ -465,8 +472,14 @@ export function CardTablePage() {
         </section>
       )}
       <nav className="ct-tabs" aria-label="卡表分頁">
-        {tabs.map((item) => <button key={item} aria-pressed={tab === item} onClick={() => { setTab(item); setSelection(undefined); setName(''); setMessage(''); }}>{item}</button>)}
+        {tabs.map((item) => <button key={item} aria-pressed={!composing && tab === item}
+          onClick={() => { setComposing(false); setTab(item); setSelection(undefined); setName(''); setMessage(''); }}>{item}</button>)}
+        <button type="button" aria-pressed={composing} onClick={() => setComposing(true)}>卡面合成</button>
       </nav>
+      {composing ? <CardComposer cards={composerCards} initialUid={selected?.uid} renderField={(uid, field) => {
+        const entry = composerCards.find((entry) => entry.uid === uid);
+        return entry && renderCardField(entry, field);
+      }} /> : <>
       <form className="ct-new" onSubmit={addRecord}>
         <label>{isCharacter ? '新角色名稱' : tab === '關鍵字' ? '新關鍵字名稱' : '新卡名稱'} <input required maxLength={100} placeholder={isEx ? 'Ex-' : undefined} value={name} onChange={(e) => setName(e.target.value)} /></label>
         {tab === '卡片' && <label>類型 <select value={kind} onChange={(e) => setKind(e.target.value as CardKind)}>
@@ -597,6 +610,7 @@ export function CardTablePage() {
             </tr>;
           }}
         </FieldTable>
+      </>}
       </>}
       <KeywordTooltip />
     </main>

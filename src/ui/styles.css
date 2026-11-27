@@ -164,6 +164,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 }
 .card.sm .art { height: 34px; }
 .card .art svg { display: block; width: 100%; height: 100%; }
+.art .portrait-preview { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
 .card .ef { flex: 1; min-height: 0; padding: 3px 5px; overflow: hidden; background: #151926; font-size: 0.86em; line-height: 1.25; color: #cfd6ea; }
 .card .ef .tg { color: var(--cc, #999); font-weight: 700; }
 .card.sm .ef { display: none; }

@@ -1,7 +1,7 @@
 {
   "name": "combo-master-tcg",
   "private": true,
-  "version": "0.75.0",
+  "version": "0.76.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
     "sim": "tsx scripts/simulate.ts",
     "presets": "tsx scripts/preset-report.ts",
     "table": "tsx scripts/import-card-table.ts",
+    "faces": "bun scripts/import-card-faces.ts",
     "stats": "tsx scripts/traffic-stats.ts",
     "db:export": "bun scripts/export-db.ts",
     "server:dev": "bunx wrangler@4 dev --local --config server/wrangler.toml",

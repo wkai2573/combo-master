@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.76.0',
+    date: '2026-11-27',
+    items: [
+      { type: 'add', text: '卡表新增卡面合成工具，可儲存範本、編輯圖層並即時預覽卡文排版。' },
+      { type: 'change', text: 'A39 戒備打擊與 E1 幸運兔腳改用分層卡面，卡表更新時會同步顯示卡名、數值與效果。' },
+    ],
+  },
+  {
     version: '0.75.0',
     date: '2026-11-26',
     items: [{ type: 'add', text: '四個卡表分頁可勾選欄位值篩選，並可依編號或數值欄升冪、降冪排序。' }],

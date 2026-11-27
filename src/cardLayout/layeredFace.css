@@ -1,0 +1,44 @@
+.layered-face {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 1260 / 1760;
+  container-type: inline-size;
+  overflow: hidden;
+  user-select: none;
+  pointer-events: none;
+}
+.layered-face :is(.lf-image, .lf-background, .lf-ink, .lf-run, .lf-mark, .lf-run-text) { position: absolute; }
+.layered-face .lf-ink { overflow: hidden; font-kerning: normal; text-align: left; }
+.layered-face .lf-run { height: 0; }
+.layered-face .lf-run-text { display: block; line-height: 1; white-space: pre; }
+.layered-face .lf-mark { display: grid; place-items: center; }
+.layered-face .lf-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.layered-face .lf-tag { color: #fff; }
+.layered-face .lf-tag .lf-mark { background: #203c79; }
+.layered-face .lf-noun { color: #fff; }
+.layered-face .lf-action { color: #23150c; }
+.layered-face :is(.lf-action, .lf-noun) .lf-mark {
+  background: #ff7d1f;
+  clip-path: polygon(8% 0, 92% 0, 100% 50%, 92% 100%, 8% 100%, 0 50%);
+}
+.layered-face .lf-timing .lf-mark { background: #9cdef4; }
+.layered-face .lf-condition .lf-mark { background: #b7e79c; }
+.layered-face :is(.lf-cover, .lf-rage) { color: #070707; }
+.layered-face .lf-cover .lf-mark { background: #101010; }
+.layered-face .lf-rage .lf-mark {
+  background: #d62b28;
+  clip-path: polygon(4% 100%, 0 48%, 19% 15%, 30% 34%, 52% 0, 63% 37%, 84% 12%, 100% 57%, 95% 100%);
+}
+.layered-face .lf-cost-disc { height: 88%; background: #fff; border-radius: 999px; }
+
+.card.full-face .layered-slot {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  container-type: size;
+}
+.card.full-face .layered-slot .layered-face { width: min(100cqw, calc(100cqh * 1260 / 1760)); }
+.poolitem .card.dim .layered-slot { opacity: 0.35; }
