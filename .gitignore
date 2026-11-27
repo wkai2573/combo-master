@@ -3,3 +3,21 @@ dist
 .wrangler
 traffic-report.html
 exports
+
+# 圖片預設不進 git，只放行網站建置要用的位置，見 docs/adr/0009
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.bmp
+*.ico
+*.avif
+*.tif
+*.tiff
+*.psd
+!/public/**
+!/src/cardLayout/portraits/**
+!/move-card-frames/**
+!/equipment-card-frames/**

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { gameFaceFor, imageFor } from '../src/cardLayout/gameFaces';
+import { gameFaceFor, gameFaces, imageFor } from '../src/cardLayout/gameFaces';
 import { cardTable } from '../src/data/cardTableData';
 import { ALL_CARDS } from '../src/data/cards';
 import { isExCardId } from '../src/data/exCards';
@@ -39,12 +39,13 @@ describe('效果卡的卡圖', () => {
   });
 });
 
-it('每張原有成品卡面都可由卡表找到分層插畫和卡框', () => {
-  const paths = Object.keys(import.meta.glob('../src/ui/{move,equipment}-card-faces/*.webp', { query: '?url' }));
+it('每張分層卡面都可由卡表找到插畫和卡框', () => {
+  const portraits = Object.keys(import.meta.glob('../src/cardLayout/portraits/*.webp', { query: '?url' }))
+    .map((path) => path.split('/').at(-1)!.replace(/\.webp$/, ''));
   const cards = new Map(ALL_CARDS.map((card) => [card.id, card]));
-  expect(paths.length).toBeGreaterThan(0);
-  for (const path of paths) {
-    const uid = path.split('/').at(-1)!.replace(/\.webp$/, '');
+  expect(portraits.length).toBeGreaterThan(0);
+  // 取兩份清單的聯集：只有插畫沒有卡面設定，或只有卡面設定沒有插畫，都要抓得到
+  for (const uid of new Set([...portraits, ...Object.keys(gameFaces.cards)])) {
     const card = cards.get(cardTable.uids[uid]);
     const face = card && gameFaceFor(card.id);
     if (!card || !face) throw new Error(uid + ' 缺少分層卡面');
