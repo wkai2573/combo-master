@@ -53,14 +53,12 @@ function fieldLabel(field: Field, prefix: string) {
   return prefix === 'C' && field === 'expReq' ? '覺醒經驗' : fieldLabels[field];
 }
 
-function FieldTable<Row extends { uid: string }>({ label, prefix, fields, rows, getValue, children }: {
-  label: string; prefix: string; fields: readonly Field[]; rows: Row[];
+type FieldRows<Row> = { label: string; prefix: string; fields: readonly Field[]; rows: Row[] };
+
+function FilteredRows<Row extends { uid: string }>({ label, prefix, fields, rows, getValue, children }: FieldRows<Row> & {
   getValue: (row: Row, field: Field) => Value;
-  children: (row: Row, index: number, visibleRows: Row[], sorted: boolean) => ReactNode;
+  children: (rows: Row[], state: { filtered: boolean; sorted: boolean }) => ReactNode;
 }) {
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const tableRef = useRef<HTMLTableElement>(null);
-  const [canScroll, setCanScroll] = useState(false);
   const [filters, setFilters] = useState<Partial<Record<SheetField, string[]>>>({});
   const [sortField, setSortField] = useState<SheetField | ''>('');
   const [descending, setDescending] = useState(false);
@@ -94,26 +92,9 @@ function FieldTable<Row extends { uid: string }>({ label, prefix, fields, rows, 
     });
   }
 
-  useEffect(() => {
-    const sheet = sheetRef.current;
-    const table = tableRef.current;
-    if (!sheet || !table) return;
-    const update = () => setCanScroll(sheet.scrollWidth > sheet.clientWidth);
-    const observer = new ResizeObserver(update);
-    observer.observe(sheet);
-    observer.observe(table);
-    update();
-    return () => observer.disconnect();
-  }, []);
-
-  function scrollColumns(direction: number) {
-    const sheet = sheetRef.current;
-    if (sheet) sheet.scrollBy({ left: direction * sheet.clientWidth * 0.7 });
-  }
-
   return (
     <>
-      <div className="ct-filters ct-sheet-filters" role="group" aria-label={`${label}篩選與排序`}>
+      <div className="ct-filters ct-field-filters" role="group" aria-label={`${label}篩選與排序`}>
         {availableFilters.map((field) => {
           const selected = filters[field] ?? [];
           return <details key={field}>
@@ -133,7 +114,7 @@ function FieldTable<Row extends { uid: string }>({ label, prefix, fields, rows, 
             </div>
           </details>;
         })}
-        <label>排序 <select value={sortField} onChange={(event) => setSortField(event.target.value as SheetField | '')}>
+        <label>排序 <select aria-label="排序" value={sortField} onChange={(event) => setSortField(event.target.value as SheetField | '')}>
           <option value="">卡表順序</option>
           {availableSorts.map((field) => <option key={field} value={field}>{columnLabel(field)}</option>)}
         </select></label>
@@ -144,6 +125,37 @@ function FieldTable<Row extends { uid: string }>({ label, prefix, fields, rows, 
         {activeFilters.length > 0 && <button type="button" onClick={() => setFilters({})}>清除篩選</button>}
         <span role="status">{visibleRows.length} 筆</span>
       </div>
+      {children(visibleRows, { filtered: activeFilters.length > 0, sorted: Boolean(sortField) })}
+    </>
+  );
+}
+
+function FieldTable<Row>({ label, prefix, fields, rows, children }: FieldRows<Row> & {
+  children: (row: Row, index: number) => ReactNode;
+}) {
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const [canScroll, setCanScroll] = useState(false);
+
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    const table = tableRef.current;
+    if (!sheet || !table) return;
+    const update = () => setCanScroll(sheet.scrollWidth > sheet.clientWidth);
+    const observer = new ResizeObserver(update);
+    observer.observe(sheet);
+    observer.observe(table);
+    update();
+    return () => observer.disconnect();
+  }, []);
+
+  function scrollColumns(direction: number) {
+    const sheet = sheetRef.current;
+    if (sheet) sheet.scrollBy({ left: direction * sheet.clientWidth * 0.7 });
+  }
+
+  return (
+    <>
       {canScroll && (
         <div className="ct-sheet-scroll" role="group" aria-label={`${label}橫向捲動`}>
           <button type="button" onClick={() => scrollColumns(-1)}>← 向左捲動</button>
@@ -158,8 +170,8 @@ function FieldTable<Row extends { uid: string }>({ label, prefix, fields, rows, 
             <th scope="col">操作</th>
           </tr></thead>
           <tbody>
-            {visibleRows.map((row, index) => children(row, index, visibleRows, Boolean(sortField)))}
-            {visibleRows.length === 0 && <tr><td colSpan={fields.length + 2}>找不到符合條件的資料。</td></tr>}
+            {rows.map(children)}
+            {rows.length === 0 && <tr><td colSpan={fields.length + 2}>找不到符合條件的資料。</td></tr>}
           </tbody>
         </table>
       </div>
@@ -379,6 +391,7 @@ export function CardTablePage() {
       <button data-nodrag className="ct-open" onClick={() => setSelection(entryKey(entry))} aria-label={`${entry.uid} ${entry.card.name} 詳細資料`}>{entry.uid}{entry.added ? ' · 新增草稿' : ''}</button>
     </div>
   );
+  const cardPrefix = isEx ? 'X' : 'A';
   const sheetCardFields: readonly Field[] = isEx ? exFields
     : ['kind', 'name', 'cls', 'traits', 'atk', 'def', 'combo', 'expReq', 'slot', 'duration', 'text'];
   const sortableCardIds = sortableCards.map(({ base }) => base.id);
@@ -513,7 +526,6 @@ export function CardTablePage() {
           </>}
           <input type="search" aria-label="搜尋名稱、效果或特徵" placeholder="搜尋名稱／效果／特徵"
             value={query} onChange={(e) => setQuery(e.target.value)} />
-          {!textView && <span role="status">{matchingCards.length} 張</span>}
           <div className="ct-view" role="group" aria-label="卡片顯示方式">
             <button type="button" aria-pressed={!textView} onClick={() => setTextView(false)}>卡面</button>
             <button type="button" aria-pressed={textView} onClick={() => setTextView(true)}>表格</button>
@@ -521,95 +533,101 @@ export function CardTablePage() {
         </div>
         {orderControls(cardList)}
         {!isEx && orderControls('added')}
-        {textView ? (
-          <FieldTable key={tab} label={`${tab}表格`} prefix={isEx ? 'X' : 'A'} fields={sheetCardFields}
-            rows={matchingCards} getValue={(entry, field) => cardFieldVisible(entry, field)
-              ? recordValue(entry.uid, entry.card, field, entry.added) : null}>
-            {(entry, index, rows, sorted) => (
-              <tr key={entryKey(entry)} className={entry.added || selection === entryKey(entry) ? 'ct-sheet-marked' : undefined}>
-                <th scope="row">{entry.uid}{entry.added && <small>草稿</small>}</th>
-                {sheetCardFields.map((field) => <td key={field}>
-                  {cardFieldVisible(entry, field) ? renderCardField(entry, field, true) : '—'}
-                </td>)}
-                <td className="ct-row-actions">
-                  {rowOrderControls(cardList, rows, index, entry.uid, sortableCardIds, sorted, ({ base }) => base.id)}
-                  <button type="button" aria-label={`刪除 ${entry.uid}`}
-                    onClick={() => deleteRow(entry.uid, entry.base.id, entry.added, cardList)}>刪除</button>
-                </td>
-              </tr>
-            )}
-          </FieldTable>
-        ) : <div className={selected ? 'ct-layout ct-with-detail' : 'ct-layout'}>
-          {filtering ? (
+        <FilteredRows key={tab} label={tab} prefix={cardPrefix} fields={sheetCardFields}
+          rows={matchingCards} getValue={(entry, field) => cardFieldVisible(entry, field)
+            ? recordValue(entry.uid, entry.card, field, entry.added) : null}>
+          {(rows, { filtered, sorted }) => textView ? (
+            <FieldTable label={`${tab}表格`} prefix={cardPrefix} fields={sheetCardFields} rows={rows}>
+              {(entry, index) => (
+                <tr key={entryKey(entry)} className={entry.added || selection === entryKey(entry) ? 'ct-sheet-marked' : undefined}>
+                  <th scope="row">{entry.uid}{entry.added && <small>草稿</small>}</th>
+                  {sheetCardFields.map((field) => <td key={field}>
+                    {cardFieldVisible(entry, field) ? renderCardField(entry, field, true) : '—'}
+                  </td>)}
+                  <td className="ct-row-actions">
+                    {rowOrderControls(cardList, rows, index, entry.uid, sortableCardIds, sorted, ({ base }) => base.id)}
+                    <button type="button" aria-label={`刪除 ${entry.uid}`}
+                      onClick={() => deleteRow(entry.uid, entry.base.id, entry.added, cardList)}>刪除</button>
+                  </td>
+                </tr>
+              )}
+            </FieldTable>
+          ) : <div className={selected ? 'ct-layout ct-with-detail' : 'ct-layout'}>
             <div>
-              {matchingCards.length > 0 ? <div className="ct-grid">{matchingCards.map(renderCard)}</div> : <p>找不到符合條件的卡片。</p>}
+              {rows.length === 0 ? <p>找不到符合條件的卡片。</p> : filtering || filtered || sorted
+                ? <div className="ct-grid">{rows.map(renderCard)}</div>
+                : <SortableList className="ct-grid ct-sortable" items={rows} getKey={(entry) => entry.base.id} renderItem={renderCard}
+                  onReorder={(order) => changeField(cardList, 'order', orderOf(cardTable, cardList), order)} />}
             </div>
-          ) : <div>
-            <SortableList className="ct-grid ct-sortable" items={sortableCards} getKey={(entry) => entry.base.id} renderItem={renderCard}
-              onReorder={(order) => changeField(cardList, 'order', orderOf(cardTable, cardList), order)} />
+            {selected && (
+              <section className="ct-detail" aria-label={`${selected.uid} 詳細資料`} key={entryKey(selected)}>
+                <div className="ct-detail-actions">
+                  <strong>{selected.uid}</strong>
+                  <button onClick={() => deleteRow(selected.uid, selected.base.id, selected.added, cardList)}>刪除卡片</button>
+                  <button onClick={() => setSelection(undefined)}>關閉詳細資料</button>
+                </div>
+                <InspectPanel id={selected.card.id} card={selected.card} />
+                {(isEx ? exFields : cardFields).filter((field) => cardFieldVisible(selected, field))
+                  .map((field) => renderCardField(selected, field))}
+              </section>
+            )}
           </div>}
-          {selected && (
-            <section className="ct-detail" aria-label={`${selected.uid} 詳細資料`} key={entryKey(selected)}>
-              <div className="ct-detail-actions">
-                <strong>{selected.uid}</strong>
-                <button onClick={() => deleteRow(selected.uid, selected.base.id, selected.added, cardList)}>刪除卡片</button>
-                <button onClick={() => setSelection(undefined)}>關閉詳細資料</button>
-              </div>
-              <InspectPanel id={selected.card.id} card={selected.card} />
-              {(isEx ? exFields : cardFields).filter((field) => cardFieldVisible(selected, field))
-                .map((field) => renderCardField(selected, field))}
-            </section>
-          )}
-        </div>}
+        </FilteredRows>
         </>
       )}
       {isCharacter && <>
         {orderControls('characters')}
-        <FieldTable label="角色表格" prefix="C" fields={addedCharacterFields}
+        <FilteredRows label="角色表格" prefix="C" fields={addedCharacterFields}
           rows={characters} getValue={({ uid, character, added }, field) => recordValue(uid, character, field, added)}>
-        {({ uid, character, added }, index, rows, sorted) => {
-        const recordKey = (added ? 'draft:' : 'base:') + uid;
-        const editableText = added || addedCharacterIds.has(character.id);
-        const editCharacter = added ? (field: Field, value: Value) => updateDraft({
-          ...draft, additions: draft.additions.map((entry) => entry.uid === uid ? { uid, character: { ...character, [field]: value } } : entry),
-        }) : undefined;
-        return (
-          <tr key={recordKey} className={added ? 'ct-sheet-marked' : undefined}>
-            <th scope="row">{uid}{added && <small>草稿</small>}</th>
-            {characterFields.map((field) => <td key={field}>
-              {renderRecordField(uid, character, field, editCharacter, added)}
-              {field === 'cls' && draft.edits.some((edit) => edit.uid === uid && edit.field === 'cls')
-                && <small role="status">更改職業會改變可使用的專用卡。</small>}
-            </td>)}
-            {(['text', 'awakenText'] as const).map((field) => <td key={field} className="ct-sheet-copy">
-              {editableText ? renderRecordField(uid, character, field, editCharacter, added) : <KeywordText text={character[field]} />}
-            </td>)}
-            <td className="ct-row-actions">
-              {rowOrderControls('characters', rows, index, uid, characterIds, sorted, (row) => row.character.id)}
-              <button type="button" aria-label={`刪除 ${uid}`}
-                onClick={() => deleteRow(uid, character.id, added, 'characters')}>刪除</button>
-            </td>
-          </tr>
-        );
-      }}</FieldTable></>}
+          {(rows, { sorted }) => <FieldTable label="角色表格" prefix="C" fields={addedCharacterFields} rows={rows}>
+            {({ uid, character, added }, index) => {
+              const recordKey = (added ? 'draft:' : 'base:') + uid;
+              const editableText = added || addedCharacterIds.has(character.id);
+              const editCharacter = added ? (field: Field, value: Value) => updateDraft({
+                ...draft, additions: draft.additions.map((entry) => entry.uid === uid ? { uid, character: { ...character, [field]: value } } : entry),
+              }) : undefined;
+              return (
+                <tr key={recordKey} className={added ? 'ct-sheet-marked' : undefined}>
+                  <th scope="row">{uid}{added && <small>草稿</small>}</th>
+                  {characterFields.map((field) => <td key={field}>
+                    {renderRecordField(uid, character, field, editCharacter, added)}
+                    {field === 'cls' && draft.edits.some((edit) => edit.uid === uid && edit.field === 'cls')
+                      && <small role="status">更改職業會改變可使用的專用卡。</small>}
+                  </td>)}
+                  {(['text', 'awakenText'] as const).map((field) => <td key={field} className="ct-sheet-copy">
+                    {editableText ? renderRecordField(uid, character, field, editCharacter, added) : <KeywordText text={character[field]} />}
+                  </td>)}
+                  <td className="ct-row-actions">
+                    {rowOrderControls('characters', rows, index, uid, characterIds, sorted, (row) => row.character.id)}
+                    <button type="button" aria-label={`刪除 ${uid}`}
+                      onClick={() => deleteRow(uid, character.id, added, 'characters')}>刪除</button>
+                  </td>
+                </tr>
+              );
+            }}
+          </FieldTable>}
+        </FilteredRows>
+      </>}
       {tab === '關鍵字' && <>
         {orderControls('keywords')}
-        <FieldTable label="關鍵字表格" prefix="K" fields={keywordFields}
+        <FilteredRows label="關鍵字表格" prefix="K" fields={keywordFields}
           rows={keywords} getValue={({ uid, keyword, added }, field) => recordValue(uid, keyword, field, added)}>
-          {(entry, index, rows, sorted) => {
-            const { uid, keyword, added } = entry;
-            return <tr key={keywordKey(entry)} className={added ? 'ct-sheet-marked' : undefined}>
-              <th scope="row">{uid}{added && <small>草稿</small>}</th>
-              {keywordFields.map((field) => <td key={field}>{renderRecordField(uid, keyword, field,
-                (changedField, value) => editKeyword(uid, keyword, added, changedField, value), added)}</td>)}
-              <td className="ct-row-actions">
-                {rowOrderControls('keywords', rows, index, uid, keywordNames, sorted, (row) => row.keyword.name)}
-                <button type="button" aria-label={`刪除 ${uid}`}
-                  onClick={() => deleteRow(uid, keyword.name, added, 'keywords')}>刪除</button>
-              </td>
-            </tr>;
-          }}
-        </FieldTable>
+          {(rows, { sorted }) => <FieldTable label="關鍵字表格" prefix="K" fields={keywordFields} rows={rows}>
+            {(entry, index) => {
+              const { uid, keyword, added } = entry;
+              return <tr key={keywordKey(entry)} className={added ? 'ct-sheet-marked' : undefined}>
+                <th scope="row">{uid}{added && <small>草稿</small>}</th>
+                {keywordFields.map((field) => <td key={field}>{renderRecordField(uid, keyword, field,
+                  (changedField, value) => editKeyword(uid, keyword, added, changedField, value), added)}</td>)}
+                <td className="ct-row-actions">
+                  {rowOrderControls('keywords', rows, index, uid, keywordNames, sorted, (row) => row.keyword.name)}
+                  <button type="button" aria-label={`刪除 ${uid}`}
+                    onClick={() => deleteRow(uid, keyword.name, added, 'keywords')}>刪除</button>
+                </td>
+              </tr>;
+            }}
+          </FieldTable>}
+        </FilteredRows>
       </>}
       </>}
       <KeywordTooltip />

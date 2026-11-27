@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.76.5',
+    date: '2026-11-27',
+    items: [{ type: 'change', text: '卡表的卡面與表格共用篩選、排序和筆數，切換檢視時會保留篩選與排序設定。' }],
+  },
+  {
     version: '0.76.4',
     date: '2026-11-27',
     items: [{ type: 'change', text: '88 張招式和 8 張裝備全面採用分層卡面，卡名、數值與效果會依卡表同步排版。' }],
