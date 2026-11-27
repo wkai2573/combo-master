@@ -36,6 +36,16 @@ jobs:
       - name: Build
         run: bun run build
 
+      # 戰績伺服器先上線並通過唯讀檢查，才發布遊戲（見 docs/adr/0005-global-cloud-records.md）
+      - name: Deploy records server
+        run: bun run server:deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Check records server
+        run: bun run server:check
+
       - name: Checkout hub repo
         uses: actions/checkout@v4
         with:

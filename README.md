@@ -8,7 +8,7 @@ https://game.tempura.page/combo-master/
 
 分頁標題、首頁與對戰畫面都會顯示版本（例如 `v0.2.0`；首頁另有 commit 代碼與建置時間，`+` 表示有未提交的變更），用來確認看到的是不是新版。版本號在 `package.json`，每次更新時調整。
 
-推送到 `main` 後，GitHub Actions 會自動跑測試、建置並發布至 Hub Worker 子路徑（設定在 `.github/workflows/deploy.yml`）。
+推送到 `main` 後，GitHub Actions 會依序跑測試、建置、部署戰績伺服器並檢查，最後發布至 Hub Worker 子路徑（設定在 `.github/workflows/deploy.yml`）。
 
 ## 戰鬥流程圖
 
@@ -175,7 +175,12 @@ Ex 卡的名稱須以 `Ex-` 開頭，卡文須包含對應區域的離場規則�
 - 前端的戰績倉庫、補傳佇列與上傳在 `src/stats/`。上傳失敗的戰績存在本機佇列，下次啟動與每次對局結束後補傳；伺服器網址在 `src/stats/config.ts`：正式建置預設連線，本機開發與測試預設不連線（免得測試對局污染全站統計），要連時用環境變數 `VITE_RECORDS_API` 指定（設成空字串是關閉）；沒有網址時對局不受影響，戰績頁會說明雲端目前不可用。
 - 測試：`tests/server.test.ts` 用 Node 內建的 SQLite 跑真正的資料表與 SQL，`tests/cloudRecords.test.ts` 涵蓋前端的倉庫、佇列與前後端串接。
 - 本機試跑：`bun run server:db:local` 建立本機資料庫，`bun run server:dev` 在 http://127.0.0.1:8787 啟動伺服器；前端用 `VITE_RECORDS_API=http://127.0.0.1:8787 bun run dev` 連它。
-- 部署（需要一個免費的 Cloudflare 帳號，不用信用卡）：
+- 部署：推送到 `main` 時由 `.github/workflows/deploy.yml` 部署伺服器，每次推送都部署。接著跑 `bun run server:check`，通過才發布遊戲。部署或檢查任一步失敗，遊戲也不會發布。
+  - GitHub 的 repository secrets 要有 `CLOUDFLARE_API_TOKEN` 與 `CLOUDFLARE_ACCOUNT_ID`。token 在 Cloudflare 後台建立，範本選「Edit Cloudflare Workers」，帳號 ID 可用 `bunx wrangler@4 whoami` 查。用 `gh secret set <名稱>` 設定，依提示貼上值。
+  - 資料庫遷移不會自動執行。有新的遷移時，推送前先手動對遠端資料庫跑完。
+  - 本機也能用 `bun run server:deploy` 部署。下次推送會以倉庫裡的內容覆蓋它，所以改動要 commit 並推送。
+- 線上檢查：`bun run server:check` 只讀不寫。它從 hub 的網址跟著轉址找到玩家實際開遊戲的網域，用這個來源確認 `/versions` 讀得到，`/records` 與 `/events` 的預檢會放行。它只在推送時自動執行；戰績頁連不上，或網站換網域時，手動跑一次。程式在 `scripts/check-records-server.ts`。
+- 建立新的伺服器（需要一個免費的 Cloudflare 帳號，不用信用卡）：
   1. `bunx wrangler@4 login`，瀏覽器跳出授權頁時按允許。
   2. `bunx wrangler@4 d1 create combo-master-records`，把回報的 `database_id` 填進 `server/wrangler.toml`。
   3. `bun run server:db` 建立遠端資料表，`bun run server:deploy` 部署，記下回報的 `*.workers.dev` 網址，填進 `src/stats/config.ts` 的 `PRODUCTION_RECORDS_API` 後重新建置。目前部署在 `https://combo-master-records.ouo1.workers.dev`。
@@ -192,12 +197,11 @@ Ex 卡的名稱須以 `Ex-` 開頭，卡文須包含對應區域的離場規則�
 - 伺服器的 `POST /events`（`server/src/handler.ts`）：事件寫成一列，心跳只更新造訪那一列的可見時間（只增不減，也不會超過造訪到現在實際經過的時間）。限流：單一裝置 10 分鐘最多新增 30 筆、全站每分鐘最多 300 筆；心跳不新增資料所以不計入，但同一次造訪兩次心跳至少隔 10 秒，太密的忽略。和戰績一樣，只靠來源標頭、格式驗證與限流擋濫用，任何人都能偽造資料。
 - 沒有對外讀取的路徑，資料只有站長能讀：`bun run stats` 用 wrangler 查遠端資料庫，產生儀表板網頁（專案根目錄的 `traffic-report.html`，不進版本控制）並用瀏覽器開啟，內容是總覽、每日（台北時間）圖表、進站到玩完的漏斗、依版本與依對戰類型的表格；教學另外依課程每課一列，顯示開始數、完成數、完成率，舊的沒有課程欄位的教學事件歸第 1 課，不算進玩過與玩完的漏斗；`--text` 改在終端機印文字摘要，`--local` 讀本機試跑用的資料庫。儀表板在 `scripts/trafficDashboard.ts`，是不載入任何外部資源的單一網頁。停留時間是心跳回報的可見時間，切走分頁掛著的時間不算，誤差約 30 秒；人以所有事件的裝置代號去重，所以造訪被限流沒記到、但有開打的裝置也算一個人。
 - 資料全部保留，不自動清除。要整理資料請直接在 Cloudflare 後台或用 `wrangler d1 execute` 操作。
-- 資料庫結構的變更放在 `server/migrations/`，編號依序，**一定要照編號順序執行**；`schema.sql` 永遠是最新結構，新建的資料庫只要它。已上線的資料庫要先跑遷移，再部署伺服器。目前有兩個：`0001-events-allow-tutorial.sql`：流量事件的對戰類型多了教學，SQLite 不能直接改欄位限制，所以重建 events 資料表並搬資料；`0002-events-add-lesson.sql`：events 多一個可空的課程欄位 `lesson`，只有教學事件會填，舊的教學事件課程是空的，報表歸為第 1 課，第二次執行會報欄位已存在，資料不受影響。0002 一定要在 0001 之後：0001 重建資料表時只搬它認得的欄位，順序顛倒會把課程欄位丟掉。還沒遷移過的資料庫用 `bun run server:db:migrate` 一次依序跑完兩個；已經跑過 0001 的資料庫只跑 0002（`bun run server:db:migrate:0002`），不要重跑 0001，否則會把 `lesson` 欄位連資料一起丟掉。本機試跑用 `bun run server:db:migrate:local`。順序反過來、或遊戲先推到 `main` 的話，教學的開始與完成事件會被伺服器或資料庫擋下，不影響遊戲，但那段時間的教學統計會缺，所以先遷移、再部署伺服器，最後才推遊戲。遷移檔裡有重跑與中途失敗的說明。
+- 資料庫結構的變更放在 `server/migrations/`，編號依序，**一定要照編號順序執行**；`schema.sql` 永遠是最新結構，新建的資料庫只要它。已上線的資料庫要先跑遷移，再推送。目前有兩個：`0001-events-allow-tutorial.sql`：流量事件的對戰類型多了教學，SQLite 不能直接改欄位限制，所以重建 events 資料表並搬資料；`0002-events-add-lesson.sql`：events 多一個可空的課程欄位 `lesson`，只有教學事件會填，舊的教學事件課程是空的，報表歸為第 1 課，第二次執行會報欄位已存在，資料不受影響。0002 一定要在 0001 之後：0001 重建資料表時只搬它認得的欄位，順序顛倒會把課程欄位丟掉。還沒遷移過的資料庫用 `bun run server:db:migrate` 一次依序跑完兩個；已經跑過 0001 的資料庫只跑 0002（`bun run server:db:migrate:0002`），不要重跑 0001，否則會把 `lesson` 欄位連資料一起丟掉。本機試跑用 `bun run server:db:migrate:local`。沒先遷移就推送的話，教學的開始與完成事件會被資料庫擋下，不影響遊戲，但那段時間的教學統計會缺。遷移檔裡有重跑與中途失敗的說明。
 - 第一次上線，照這個順序：
   1. 建立遠端資料表：`bun run server:db`（可重複執行，不會動到既有的戰績）。
-  2. 部署伺服器：`bun run server:deploy`。
+  2. 推送到 `main`，等 GitHub Actions 部署完。
   3. 驗證：`curl -X POST -H "Origin: https://game.tempura.page" -H "content-type: text/plain" -d '{"name":"visit","visitId":"verify-0001","deviceId":"verify-0001","version":"0.41.0"}' https://combo-master-records.ouo1.workers.dev/events` 回 `{"ok":true,"duplicate":false}` 就通了；再跑 `bun run stats` 會看到這一筆（驗證用的資料可以用 `wrangler d1 execute` 刪掉）。
-  4. 再把遊戲推到 `main`。順序反過來的話，新版遊戲送事件會被舊伺服器回 404，統計會缺那段時間的資料，但不影響遊戲。
 
 ## 問卷回饋
 
@@ -205,12 +209,8 @@ Ex 卡的名稱須以 `Ex-` 開頭，卡文須包含對應區域的離場規則�
 
 - 目的網址設定在 `server/wrangler.toml` 的 `FEEDBACK_URL`（必須是 https，否則伺服器回 503 不轉址）。轉址的程式在 `server/src/handler.ts` 的 `feedback`，不收查詢字串，所以不會被拿來轉到別的網站。
 - 本機開發（沒有伺服器網址）時按鈕直接連 `src/stats/config.ts` 的 `FEEDBACK_FALLBACK_URL`；換問卷後它不改也不影響正式站。
-- 第一次上線，照這個順序：
-  1. 先部署伺服器：`bun run server:deploy`（還沒登入過就先 `bunx wrangler@4 login`，瀏覽器跳出授權頁時按允許）。
-  2. 驗證：`curl -I https://combo-master-records.ouo1.workers.dev/feedback`，要看到 `302` 和 `location:` 是你的問卷網址。
-  3. 再把遊戲推到 `main`，等 GitHub Actions 部署完，按鈕就會出現。順序反過來的話，按鈕會短暫連到還沒有 `/feedback` 的舊伺服器。
-- 之後要換問卷或改導向：只改 `server/wrangler.toml` 的 `FEEDBACK_URL`，執行 `bun run server:deploy`，再用上面的 curl 驗證。不需要動遊戲，也不需要重新建置。
-- 要臨時關掉問卷導向：把 `FEEDBACK_URL` 改成空字串再部署，按鈕會顯示伺服器的 503 訊息。
+- 要換問卷或改導向：只改 `server/wrangler.toml` 的 `FEEDBACK_URL`，commit 後推送到 `main`。部署完用 `curl -I https://combo-master-records.ouo1.workers.dev/feedback` 驗證，要看到 `302`，而且 `location:` 是你的問卷網址。不需要改遊戲程式。
+- 要臨時關掉問卷導向：把 `FEEDBACK_URL` 改成空字串再推送，按鈕會顯示伺服器的 503 訊息。
 
 ## 結構
 
