@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.76.3',
+    date: '2026-11-27',
+    items: [{ type: 'change', text: '分層卡面的怒氣費用以紅色火焰底搭配白字顯示。' }],
+  },
+  {
     version: '0.76.2',
     date: '2026-11-27',
     items: [{ type: 'fix', text: '分層卡面的卡名對齊卡名框中心，關鍵字底框依筆畫上下置中。' }],

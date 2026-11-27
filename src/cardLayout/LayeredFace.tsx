@@ -58,7 +58,6 @@ function TextDrawing({ layer, layout }: { layer: FaceTextLayer; layout: FaceText
         {rows.flatMap((row, rowIndex) => row.runs.map((run, index) => {
           const custom = run.custom;
           const image = custom?.style === 'image' ? custom.image : undefined;
-          const expense = run.style === 'cover' || run.style === 'rage';
           return (
             <span className={'lf-run lf-' + run.style} key={rowIndex + ':' + index} style={{
               left: unit(row.x + run.x), top: unit(row.baseline), width: unit(run.width),
@@ -71,7 +70,7 @@ function TextDrawing({ layer, layout }: { layer: FaceTextLayer; layout: FaceText
                   borderRadius: unit(0.08 * size),
                 }}>
                   {image && <img src={image} alt="" draggable={false} />}
-                  {expense && <span className="lf-cost-disc" style={{ width: unit(Math.max(size * 0.97, run.mark.width - size * 0.14)) }} />}
+                  {run.style === 'cover' && <span className="lf-cost-disc" style={{ width: unit(Math.max(size * 0.97, run.mark.width - size * 0.14)) }} />}
                 </span>
               )}
               {(!image || custom?.showText) && <span className="lf-run-text" style={{

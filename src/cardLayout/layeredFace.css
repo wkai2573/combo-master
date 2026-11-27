@@ -24,11 +24,13 @@
 }
 .layered-face .lf-timing .lf-mark { background: #9cdef4; }
 .layered-face .lf-condition .lf-mark { background: #b7e79c; }
-.layered-face :is(.lf-cover, .lf-rage) { color: #070707; }
+.layered-face .lf-cover { color: #070707; }
+.layered-face .lf-rage { color: #fff; }
 .layered-face .lf-cover .lf-mark { background: #101010; }
 .layered-face .lf-rage .lf-mark {
   background: #d62b28;
-  clip-path: polygon(4% 100%, 0 48%, 19% 15%, 30% 34%, 52% 0, 63% 37%, 84% 12%, 100% 57%, 95% 100%);
+  clip-path: polygon(11% 100%, 4% 90%, 0 72%, 2% 49%, 10% 21%, 16% 6%, 27% 15%, 46% 0,
+    57% 12%, 72% 3%, 82% 13%, 91% 9%, 97% 31%, 100% 64%, 95% 88%, 89% 100%);
 }
 .layered-face .lf-cost-disc { height: 88%; background: #fff; border-radius: 999px; }
 
