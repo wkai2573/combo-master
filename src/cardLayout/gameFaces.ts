@@ -9,6 +9,7 @@ export const gameFaces = parseFaceLibrary(initial);
 const portraits = import.meta.glob<string>('../../assets/portraits/*.webp', { query: '?url', import: 'default', eager: true });
 const moveFrames = import.meta.glob<string>('../../assets/frames/move/*.webp', { query: '?url', import: 'default', eager: true });
 const equipmentFrames = import.meta.glob<string>('../../assets/frames/equipment/*.webp', { query: '?url', import: 'default', eager: true });
+const exFrames = import.meta.glob<string>('../../assets/frames/ex/*.webp', { query: '?url', import: 'default', eager: true });
 const uidById = new Map(Object.entries(cardTable.uids)
   .filter(([uid]) => /^[AEBX]/.test(uid)).map(([uid, id]) => [id, uid]));
 
@@ -25,6 +26,8 @@ export function imageFor(layer: FaceImageLayer, uid: string, card: CardData, con
   if (typeof upload === 'string') return upload;
   if (layer.source === 'art') return portraits['../../assets/portraits/' + uid + '.webp'];
   if (layer.source === 'frame') {
+    if (content.template === 'ex-move') return exFrames['../../assets/frames/ex/move.webp'];
+    if (content.template === 'ex-buff') return exFrames['../../assets/frames/ex/buff.webp'];
     const slug = classSlug[card.cls];
     if (card.kind === 'equip' && card.slot) return equipmentFrames['../../assets/frames/equipment/' + slug + '-' + slots[card.slot] + '.webp'];
     if (card.kind === 'move') return moveFrames['../../assets/frames/move/' + slug + '-' + frameName[card.cls] + '.webp'];

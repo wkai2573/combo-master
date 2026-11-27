@@ -289,6 +289,24 @@
     },
     "E8": {
       "template": "equipment"
+    },
+    "X1": {
+      "template": "ex-move"
+    },
+    "X2": {
+      "template": "ex-move"
+    },
+    "X3": {
+      "template": "ex-move"
+    },
+    "X4": {
+      "template": "ex-buff"
+    },
+    "X5": {
+      "template": "ex-buff"
+    },
+    "X6": {
+      "template": "ex-buff"
     }
   }
 }

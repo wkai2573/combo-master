@@ -122,16 +122,26 @@ const traits: FaceTextLayer = {
   background: { coverage: 'text', color: '#fff4dd', opacity: 1, paddingX: 7, paddingY: 5 },
 };
 
+const moveStats = [
+  fitted('atk', { x: 145, y: 87, width: 110, height: 116 }),
+  fitted('combo', { x: 503, y: 111, width: 254, height: 216 }),
+  fitted('def', { x: 1005, y: 87, width: 110, height: 116 }),
+];
+
 export const facePresets: FaceTemplate[] = [
   {
-    id: 'move', name: '招式', keywords: [], layers: [art, frame,
-      fitted('atk', { x: 145, y: 87, width: 110, height: 116 }),
-      fitted('combo', { x: 503, y: 111, width: 254, height: 216 }),
-      fitted('def', { x: 1005, y: 87, width: 110, height: 116 }), effect, title, traits],
+    id: 'move', name: '招式', keywords: [], layers: [art, frame, ...moveStats, effect, title, traits],
   },
   {
     id: 'equipment', name: '裝備', keywords: [], layers: [art, frame,
       fitted('expReq', { x: 145, y: 87, width: 110, height: 116 }), effect, title],
+  },
+  {
+    id: 'ex-move', name: 'Ex 招式', keywords: [], layers: [art, frame, ...moveStats, effect, title, traits],
+  },
+  {
+    id: 'ex-buff', name: 'Ex 增益', keywords: [], layers: [art, frame,
+      fitted('duration', { x: 1005, y: 87, width: 110, height: 116 }), effect, title, traits],
   },
 ];
 
