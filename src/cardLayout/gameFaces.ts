@@ -6,9 +6,9 @@ import { templateFor, type FaceCard, type FaceImageLayer } from './model';
 
 export const gameFaces = parseFaceLibrary(initial);
 
-const portraits = import.meta.glob<string>('./portraits/*.webp', { query: '?url', import: 'default', eager: true });
-const moveFrames = import.meta.glob<string>('../../move-card-frames/*.png', { query: '?url', import: 'default', eager: true });
-const equipmentFrames = import.meta.glob<string>('../../equipment-card-frames/*.png', { query: '?url', import: 'default', eager: true });
+const portraits = import.meta.glob<string>('../../assets/portraits/*.webp', { query: '?url', import: 'default', eager: true });
+const moveFrames = import.meta.glob<string>('../../assets/frames/move/*.png', { query: '?url', import: 'default', eager: true });
+const equipmentFrames = import.meta.glob<string>('../../assets/frames/equipment/*.png', { query: '?url', import: 'default', eager: true });
 const uidById = new Map(Object.entries(cardTable.uids)
   .filter(([uid]) => /^[AEBX]/.test(uid)).map(([uid, id]) => [id, uid]));
 
@@ -23,11 +23,11 @@ const slots: Record<EquipSlot, string> = { 武器: 'weapon', 防具: 'armor', �
 export function imageFor(layer: FaceImageLayer, uid: string, card: CardData, content: FaceCard): string | undefined {
   const upload = content.images?.[layer.id];
   if (typeof upload === 'string') return upload;
-  if (layer.source === 'art') return portraits['./portraits/' + uid + '.webp'];
+  if (layer.source === 'art') return portraits['../../assets/portraits/' + uid + '.webp'];
   if (layer.source === 'frame') {
     const slug = classSlug[card.cls];
-    if (card.kind === 'equip' && card.slot) return equipmentFrames['../../equipment-card-frames/' + slug + '-' + slots[card.slot] + '.png'];
-    if (card.kind === 'move') return moveFrames['../../move-card-frames/' + slug + '-' + frameName[card.cls] + '.png'];
+    if (card.kind === 'equip' && card.slot) return equipmentFrames['../../assets/frames/equipment/' + slug + '-' + slots[card.slot] + '.png'];
+    if (card.kind === 'move') return moveFrames['../../assets/frames/move/' + slug + '-' + frameName[card.cls] + '.png'];
   }
 }
 

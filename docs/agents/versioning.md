@@ -35,7 +35,7 @@
 1. **檔案範圍**：版本號儲存於 `package.json` 的 `version` 欄位，直接編輯它即可；套件管理用 bun，`bun.lock` 不記錄專案自己的版本號，所以不用跟著更新。
 2. **隨功能一併提交**：版本更動應包含在該次功能的 Git commit 之中（同一個 commit），不另外建立單獨的 bump commit。
 3. **更新日誌隨版本一起**：玩家看得到的變化，在同一個 commit 於 `src/data/changelog.ts` 補一筆，用玩家的語言寫（不寫模組名稱與重構細節）。日誌版本會因純重構升版而跳號，這是預期的；`tests/changelog.test.ts` 只檢查格式、排序與不超過目前版本。
-4. **不建立 Git Tag**：專案不另外打 Git Tag，版本由 `package.json` 與 `vite.config.ts` 自動注入的 commit hash 組合辨識。
+4. **遊戲版本不建立 Git Tag**：遊戲版本由 `package.json` 與 `vite.config.ts` 自動注入的 commit hash 組合辨識。只有資產發布使用 `assets-` 開頭的 tag，由 `bun run assets:publish` 建立，和遊戲版本號無關。
 
 ---
 

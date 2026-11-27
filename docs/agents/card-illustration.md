@@ -4,7 +4,7 @@
 
 ## 無框插畫
 
-交付直式 **1162 × 1395、8-bit sRGB PNG**。插畫滿版，主體集中在畫面中段偏上，下方留較安靜的背景。卡框、卡名、數值和效果文字由卡面合成處理。招式無框插畫存於 `portrait-card-art/`，按職業、共用與白板分目錄，檔名使用 `A編號-卡名.png`。
+交付直式 **1162 × 1395、8-bit sRGB PNG**。插畫滿版，主體集中在畫面中段偏上，下方留較安靜的背景。卡框、卡名、數值和效果文字由卡面合成處理。無框插畫存於 `assets/originals/`，按職業、共用與白板分目錄，招式檔名使用 `A編號-卡名.png`。網站使用的插畫放在 `assets/portraits/`，招式與裝備成品卡面放在 `assets/finished/`。目錄的版本控制與發布方式見 [README 的資產章節](../../README.md#資產)。
 
 ## 效果區排版
 
@@ -18,8 +18,8 @@
 - 名詞用同一個 **`#FF7D1F`** 橘色六角形配白字，例如「元素」與「+X+Y」。
 - 使用時機用黑字，文字下半部襯淺藍色。
 - 使用條件用黑字，文字下半部襯淺綠色。
-- 費用標記、關鍵字與同一行正文依共用效果版式對齊基線。以本機成品 `finished-move-cards/A39-戒備打擊.png` 為參考。
-- 效果區底色使用 **40% 透明度（60% 不透明度）**，合成後對照核定成品確認底圖透出的程度和文字可讀性。半透明底色以本機成品 `finished-move-cards/A40-復仇之嚎.png` 為參考。
+- 費用標記、關鍵字與同一行正文依共用效果版式對齊基線。以本機成品 `assets/finished/move/A39-戒備打擊.png` 為參考。
+- 效果區底色使用 **40% 透明度（60% 不透明度）**，合成後對照核定成品確認底圖透出的程度和文字可讀性。半透明底色以本機成品 `assets/finished/move/A40-復仇之嚎.png` 為參考。
 
 ## 光線與色彩
 
@@ -27,12 +27,12 @@
 - 保留各物件原有的色相，降低霓虹般的黃綠、青藍、紫紅與魔法光效。背景多用淺石色、奶油色、柔藍和灰綠，主體可以稍濃以維持焦點。避免灰霧、褐色濾鏡和過曝白斑。
 - 重調既有插畫時保留構圖、角色姿勢、表情、物件與招式辨識特徵，優先調整光線和色彩。新圖沿用清楚的線稿、柔和賽璐珞上色與 Q 版奇幻風格。
 
-核定參考圖可直接用於後續繪製或調色。`portrait-card-art/` 與成品卡面目錄的圖片只存在製作者的本機，不進 git，下列連結在 GitHub 與新 clone 的專案中無法開啟，理由見 [ADR 0009](../adr/0009-only-runtime-images-in-git.md)。
+核定參考圖可直接用於後續繪製或調色。`assets/originals/` 與 `assets/finished/` 不進 git，下列連結在 GitHub 上無法開啟；新 clone 的專案先執行 `bun run assets:download` 取得圖片。
 
-- [A53 二連矢](../../portrait-card-art/archer-card-art/A53-二連矢.png)示範戶外日光與柔和的綠色。
-- [A68 生命藥水](../../portrait-card-art/common-card-art/A68-生命藥水.png)示範明亮背景與仍具辨識度的紅色主體。
-- [A69 職業專精書](../../portrait-card-art/common-card-art/A69-職業專精書.png)示範室內補光、暖白高光與柔和的紫、青色。
-- [A11 紅心2](../../portrait-card-art/vanilla-card-art/A11-紅心2.png)示範白板卡的日光與寶箱配色。
+- [A53 二連矢](../../assets/originals/archer-card-art/A53-二連矢.png)示範戶外日光與柔和的綠色。
+- [A68 生命藥水](../../assets/originals/common-card-art/A68-生命藥水.png)示範明亮背景與仍具辨識度的紅色主體。
+- [A69 職業專精書](../../assets/originals/common-card-art/A69-職業專精書.png)示範室內補光、暖白高光與柔和的紫、青色。
+- [A11 紅心2](../../assets/originals/vanilla-card-art/A11-紅心2.png)示範白板卡的日光與寶箱配色。
 
 ## 數值參考
 
@@ -47,7 +47,7 @@
 | 白板招式，36 張範圍 | 64–65% | 67% |
 
 ```powershell
-magick 'portrait-card-art/common-card-art/A68-生命藥水.png' -scale 116x139 -colorspace HSL -format "S=%[fx:mean.g] L=%[fx:mean.b]" info:
+magick 'assets/originals/common-card-art/A68-生命藥水.png' -scale 116x139 -colorspace HSL -format "S=%[fx:mean.g] L=%[fx:mean.b]" info:
 ```
 
 ## 白板招式

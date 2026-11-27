@@ -40,7 +40,7 @@ describe('效果卡的卡圖', () => {
 });
 
 it('每張分層卡面都可由卡表找到插畫和卡框', () => {
-  const portraits = Object.keys(import.meta.glob('../src/cardLayout/portraits/*.webp', { query: '?url' }))
+  const portraits = Object.keys(import.meta.glob('../assets/portraits/*.webp', { query: '?url' }))
     .map((path) => path.split('/').at(-1)!.replace(/\.webp$/, ''));
   const cards = new Map(ALL_CARDS.map((card) => [card.id, card]));
   expect(portraits.length).toBeGreaterThan(0);

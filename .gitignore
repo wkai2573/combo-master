@@ -4,6 +4,10 @@ dist
 traffic-report.html
 exports
 
+# 無框原圖與成品卡面只留在本機，用 bun run assets:publish 發布
+/assets/originals/
+/assets/finished/
+
 # 圖片預設不進 git，只放行網站建置要用的位置，見 docs/adr/0009
 *.png
 *.jpg
@@ -18,6 +22,5 @@ exports
 *.tiff
 *.psd
 !/public/**
-!/src/cardLayout/portraits/**
-!/move-card-frames/**
-!/equipment-card-frames/**
+!/assets/portraits/**
+!/assets/frames/**

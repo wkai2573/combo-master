@@ -29,7 +29,103 @@ bun run sim 40     # 機器人壓測：每種角色組合各打 40 局，檢查�
 bun run presets    # 列出各角色預設牌組的連擊值分佈與平均攻守
 bun run data       # 修改 docs/連擊大師.xlsx 後，重新產生 src/data/generated/*.json
 bun run build      # 型別檢查＋打包
+bun run assets:pack      # 把 assets/ 打包到 exports/，不上傳
+bun run assets:publish   # 打包並發布到 GitHub Releases
+bun run assets:download  # 從 GitHub Releases 還原 assets/
 ```
+
+## 資產
+
+圖片資產集中在 `assets/`。只有網站建置要用的部分進 git，其他只存在本機，靠 GitHub Releases 的資產包保存和分享。取捨見 `docs/adr/0009-only-runtime-images-in-git.md`。
+
+| 目錄 | 內容 | 進 git |
+|---|---|---|
+| `assets/portraits/` | 網站插畫，檔名是卡片永久編號的 webp | 是 |
+| `assets/frames/move/` | 招式卡框 | 是 |
+| `assets/frames/equipment/` | 裝備卡框 | 是 |
+| `assets/originals/` | 無框原圖，依職業、共用與白板分目錄 | 否 |
+| `assets/finished/move/` | 招式成品卡面 | 否 |
+| `assets/finished/equipment/` | 裝備成品卡面 | 否 |
+
+`public/` 是 Vite 的靜態檔目錄，放分享連結的縮圖，不算在資產包內。
+
+`.gitignore` 預設忽略所有圖片格式，只放行 `public/`、`assets/portraits/` 與 `assets/frames/`。新增其他網站要用的圖片位置時，要在 `.gitignore` 放行。沒放行的圖不會進 git，建置也不會報錯，線上站只會缺圖。
+
+### 資產包
+
+**GitHub Releases 是公開的，任何人都能下載資產包，包括無框原圖。** 不能公開的檔案不要放進 `assets/`。
+
+一個資產包是整個 `assets/` 的完整快照，包含進 git 和不進 git 的部分。每個 Release 有兩個檔案：
+
+- `combo-master-assets.zip`：zip 內的路徑以 `assets/` 開頭。
+- `assets-manifest.json`：每個檔案的 SHA-256 清單。
+
+Release 的 tag 用發布當天的本地日期，格式是 `assets-YYYY-MM-DD`，同一天第二次起是 `assets-YYYY-MM-DD.2`、`.3`。舊的 Release 全部保留。
+
+`publish` 和 `download` 需要安裝 [GitHub CLI](https://cli.github.com/) 並用 `gh auth login` 登入。發布還需要這個 repo 的寫入權限。
+
+#### 打包
+
+```
+bun run assets:pack
+```
+
+在 `exports/` 產生上述兩個檔案，不上傳。`exports/` 不進 git。系統自動產生的 `.DS_Store`、`Thumbs.db` 和 `desktop.ini` 不會打包。
+
+#### 發布新版資產
+
+1. 修改 `assets/` 的內容。
+2. 若改到進 git 的圖片或程式，先 commit。需要升版時依 `docs/agents/versioning.md` 處理。
+3. 推送到 `origin/main`。推送會部署正式站。只改了本機原圖或成品圖時沒有東西要推，直接做下一步。
+4. 執行：
+
+```
+bun run assets:publish
+```
+
+指令在下列情況會停下來，不上傳任何東西：
+
+| 情況 | 處理方式 |
+|---|---|
+| 有尚未 commit 的修改 | 先 commit |
+| 目前的 commit 還沒推到 `origin/main` | 先推送，指令不會代為推送 |
+| `assets/` 沒有任何檔案 | 先用 `download` 還原 |
+| 內容和最新一版完全相同 | 不需要發布 |
+| 本機缺少最新一版裡的檔案 | 還沒還原就先執行 `download`。確定要移除或改名時，加 `--allow-removal` |
+| zip 達到單檔 2 GiB 上限 | 要先改指令決定分檔方式 |
+
+確定要讓新版不再包含某些檔案時：
+
+```
+bun run assets:publish --allow-removal
+```
+
+上傳中斷時重新執行即可。若 Releases 頁面留下草稿，可以手動刪除，指令判斷版本時不看草稿。
+
+#### 在新電腦上還原
+
+```
+git clone https://github.com/wkai2573/combo-master.git
+cd combo-master
+bun install
+bun run assets:download
+```
+
+指定版本，或用資產包覆蓋本機內容：
+
+```
+bun run assets:download assets-2026-11-27
+bun run assets:download --force
+bun run assets:download assets-2026-11-27 --force
+```
+
+- 不指定 tag 時抓最新一版。
+- 預設只補本機缺少的檔案。內容不同的檔案保留本機版本，指令會列出清單。
+- 加 `--force` 才用資產包覆蓋內容不同的檔案。覆蓋掉的本機版本無法復原。
+- 任何情況都不刪除本機檔案，包括資產包裡沒有的檔案。
+- 覆蓋到 `assets/portraits/` 或 `assets/frames/` 時，`git status` 會顯示差異。用較舊的資產包覆蓋前先確認。
+
+沒有 GitHub CLI 時，也可以到 [Releases 頁面](https://github.com/wkai2573/combo-master/releases) 下載 zip，在專案根目錄解壓縮。手動解壓縮會直接覆蓋同名檔案。
 
 ## 卡表網頁與差異檔
 
@@ -121,3 +217,5 @@ Ex 卡的名稱須以 `Ex-` 開頭，卡文須包含對應區域的離場規則�
 - `src/stats/`：戰績。`records.ts` 把對局結果轉成戰績，`summary.ts` 是統計純函式，`cloud.ts` 的戰績倉庫上傳與取得全站戰績，`outbox.ts` 是補傳佇列，`upload.ts` 是上傳器，`analytics.ts` 是匿名流量統計（見「流量統計」）。
 - `server/`：戰績伺服器（Cloudflare Workers 加 D1），見上一節。
 - `src/ui/`：畫面。
+- `assets/`：圖片資產，見「資產」。
+- `scripts/`：資料產生、匯入與資產打包等指令。
