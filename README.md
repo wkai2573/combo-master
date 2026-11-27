@@ -4,7 +4,7 @@
 
 ## 線上玩
 
-https://hub.ouo1.workers.dev/combo-master/
+https://game.tempura.page/combo-master/
 
 分頁標題、首頁與對戰畫面都會顯示版本（例如 `v0.2.0`；首頁另有 commit 代碼與建置時間，`+` 表示有未提交的變更），用來確認看到的是不是新版。版本號在 `package.json`，每次更新時調整。
 
@@ -179,7 +179,7 @@ Ex 卡的名稱須以 `Ex-` 開頭，卡文須包含對應區域的離場規則�
   1. `bunx wrangler@4 login`，瀏覽器跳出授權頁時按允許。
   2. `bunx wrangler@4 d1 create combo-master-records`，把回報的 `database_id` 填進 `server/wrangler.toml`。
   3. `bun run server:db` 建立遠端資料表，`bun run server:deploy` 部署，記下回報的 `*.workers.dev` 網址，填進 `src/stats/config.ts` 的 `PRODUCTION_RECORDS_API` 後重新建置。目前部署在 `https://combo-master-records.ouo1.workers.dev`。
-  4. 驗證：`curl -H "Origin: https://wkai2573.github.io" <網址>/versions` 回 `{"versions":[]}` 就通了。
+  4. 驗證：`curl -H "Origin: https://game.tempura.page" <網址>/versions` 回 `{"versions":[]}` 就通了。
 - 允許的來源在 `server/src/handler.ts` 的 `ALLOWED_ORIGINS`（本站與本機開發網址）。要刪除或整理資料請直接在 Cloudflare 後台或用 `wrangler d1 execute` 操作，網站沒有這類介面。
 - 新增角色時，`server/src/characters.ts` 要一起改，測試會提醒。
 
@@ -196,7 +196,7 @@ Ex 卡的名稱須以 `Ex-` 開頭，卡文須包含對應區域的離場規則�
 - 第一次上線，照這個順序：
   1. 建立遠端資料表：`bun run server:db`（可重複執行，不會動到既有的戰績）。
   2. 部署伺服器：`bun run server:deploy`。
-  3. 驗證：`curl -X POST -H "Origin: https://wkai2573.github.io" -H "content-type: text/plain" -d '{"name":"visit","visitId":"verify-0001","deviceId":"verify-0001","version":"0.41.0"}' https://combo-master-records.ouo1.workers.dev/events` 回 `{"ok":true,"duplicate":false}` 就通了；再跑 `bun run stats` 會看到這一筆（驗證用的資料可以用 `wrangler d1 execute` 刪掉）。
+  3. 驗證：`curl -X POST -H "Origin: https://game.tempura.page" -H "content-type: text/plain" -d '{"name":"visit","visitId":"verify-0001","deviceId":"verify-0001","version":"0.41.0"}' https://combo-master-records.ouo1.workers.dev/events` 回 `{"ok":true,"duplicate":false}` 就通了；再跑 `bun run stats` 會看到這一筆（驗證用的資料可以用 `wrangler d1 execute` 刪掉）。
   4. 再把遊戲推到 `main`。順序反過來的話，新版遊戲送事件會被舊伺服器回 404，統計會缺那段時間的資料，但不影響遊戲。
 
 ## 問卷回饋

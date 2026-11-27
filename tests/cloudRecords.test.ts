@@ -36,7 +36,7 @@ function sqliteD1(): D1Like {
 }
 const serverFetch = (repo = d1Repo(sqliteD1())): typeof fetch => async (input, init) => {
   const headers = new Headers(init?.headers);
-  headers.set('origin', 'https://wkai2573.github.io');
+  headers.set('origin', 'https://game.tempura.page');
   return handle(new Request(String(input), { ...init, headers }), repo);
 };
 

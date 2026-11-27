@@ -6,7 +6,7 @@ import { EVENT_DEVICE_MAX, EVENT_DEVICE_WINDOW_MS, EVENT_GLOBAL_MAX, EVENT_GLOBA
 import type { Repo } from '../server/src/repo';
 import { sqliteD1 } from './sqliteD1';
 
-const ORIGIN = 'https://wkai2573.github.io';
+const ORIGIN = 'https://game.tempura.page';
 const NOW = 1_800_000_000_000;
 
 const visit = (over: Record<string, unknown> = {}) => ({ name: 'visit', visitId: 'visit-0001', deviceId: 'device-0001', version: '0.41.0', ...over });

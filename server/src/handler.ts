@@ -5,7 +5,6 @@ import { validateNewEvent, validateNewRecord, VERSION_PATTERN } from './validate
 export const ALLOWED_ORIGINS: readonly string[] = [
   'https://hub.ouo1.workers.dev',
   'https://game.tempura.page',
-  'https://wkai2573.github.io',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:4173',

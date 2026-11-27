@@ -6,7 +6,7 @@ import { ALLOWED_ORIGINS, DEVICE_MAX, DEVICE_WINDOW_MS, GLOBAL_MAX, handle } fro
 import type { Repo } from '../server/src/repo';
 import { sqliteD1 } from './sqliteD1';
 
-const ORIGIN = 'https://wkai2573.github.io';
+const ORIGIN = 'https://game.tempura.page';
 const NOW = 1_800_000_000_000;
 
 const body = (over: Record<string, unknown> = {}) => ({
