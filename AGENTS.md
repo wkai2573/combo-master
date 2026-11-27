@@ -30,7 +30,7 @@
 
 ## 資產
 
-圖片資產一律放在 `assets/`，只有 `assets/portraits/` 與 `assets/frames/` 進 git。目錄用途與打包、發布、還原指令見 README 的「資產」章節。`bun run assets:publish` 會公開上傳資產包，依使用者指示執行。
+圖片資產一律放在 `assets/`，只有 `assets/portraits/` 與 `assets/frames/` 進 git。目錄用途與打包、發布、還原指令見 README 的「資產」章節。`bun run assets:publish` 會公開上傳資產包並刪除超出保留數量的舊版，依使用者指示執行。
 
 ## 卡牌插畫與卡面
 

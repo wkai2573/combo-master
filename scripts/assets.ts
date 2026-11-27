@@ -43,6 +43,9 @@ const releases: Releases = {
     execFileSync('gh', ['release', 'create', tag, ...files, '--target', sha, '--title', tag, '--notes', notes],
       { cwd: root, stdio: 'inherit' });
   },
+  remove: (tag) => {
+    run('gh', ['release', 'delete', tag, '--yes', '--cleanup-tag']);
+  },
 };
 
 function today(): string {

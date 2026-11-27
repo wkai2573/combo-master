@@ -6,7 +6,7 @@ status: accepted
 
 無框原圖、成品卡面與各種製作過程的圖片反覆更新，讓打包後的 repo 膨脹到約 2 GB。現在圖片資產集中在 `assets/`，只有網站建置要用的 `assets/portraits/` 與 `assets/frames/` 進 git，`assets/originals/` 與 `assets/finished/` 只留本機。`public/` 的靜態檔同樣進 git。`.gitignore` 預設忽略圖片格式，再逐一放行上述位置。
 
-整個 `assets/` 用指令打包成快照，發布到這個公開 repo 的 GitHub Releases，作為本機檔案的遠端保存與下載來源。指令用法見 README 的「資產」章節。
+整個 `assets/` 用指令打包成快照，發布到這個公開 repo 的 GitHub Releases，作為本機檔案的遠端保存與下載來源。每版都是完整快照，只保留最新 3 版，發布成功後自動刪除更舊的版本；資產包用來保存目前的資產和回退最近幾次修改，不當作長期的版本歷史。指令用法見 README 的「資產」章節。
 
 既有歷史中的其他圖片已用改寫歷史的方式清除；放行位置裡的舊版本也一併清除，只保留清理當下的版本。
 

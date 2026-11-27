@@ -60,7 +60,9 @@ bun run assets:download  # 從 GitHub Releases 還原 assets/
 - `combo-master-assets.zip`：zip 內的路徑以 `assets/` 開頭。
 - `assets-manifest.json`：每個檔案的 SHA-256 清單。
 
-Release 的 tag 用發布當天的本地日期，格式是 `assets-YYYY-MM-DD`，同一天第二次起是 `assets-YYYY-MM-DD.2`、`.3`。舊的 Release 全部保留。
+Release 的 tag 用發布當天的本地日期，格式是 `assets-YYYY-MM-DD`，同一天第二次起是 `assets-YYYY-MM-DD.2`、`.3`。每次發布都建立新版，不覆蓋既有版本。
+
+**只保留最新 3 版。** 新版上傳成功後，`publish` 會自動刪除更舊的 `assets-` Release 和它的 tag，不會另外詢問，刪除後無法復原。其他 tag 的 Release 和草稿不受影響。上傳失敗時不刪任何版本；個別舊版刪除失敗時，新版仍算發布成功，指令會列出失敗的版本，下次發布時再試。要長期保存某一版，先下載它的 zip 另外存放。
 
 `publish` 和 `download` 需要安裝 [GitHub CLI](https://cli.github.com/) 並用 `gh auth login` 登入。發布還需要這個 repo 的寫入權限。
 
@@ -93,6 +95,8 @@ bun run assets:publish
 | 內容和最新一版完全相同 | 不需要發布 |
 | 本機缺少最新一版裡的檔案 | 還沒還原就先執行 `download`。確定要移除或改名時，加 `--allow-removal` |
 | zip 達到單檔 2 GiB 上限 | 要先改指令決定分檔方式 |
+
+移除掉的檔案只在還保留的舊版裡找得到。移除它們的那一版發布後，再發布 2 次新版，含有這些檔案的版本就全部刪除了。
 
 確定要讓新版不再包含某些檔案時：
 

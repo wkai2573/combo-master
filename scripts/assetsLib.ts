@@ -10,6 +10,8 @@ export const ZIP_NAME = 'combo-master-assets.zip';
 export const MANIFEST_NAME = 'assets-manifest.json';
 /** GitHub Release 的單一檔案必須小於 2 GiB */
 export const MAX_RELEASE_FILE = 2 * 1024 ** 3;
+/** 發布後保留的資產版本數 */
+export const KEEP_RELEASES = 3;
 
 const SYSTEM_FILES = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini']);
 const TAG = /^assets-(\d{4}-\d{2}-\d{2})(?:\.(\d+))?$/;
@@ -29,6 +31,8 @@ export interface Releases {
   listTags(): string[];
   download(tag: string, name: string): Uint8Array;
   create(tag: string, sha: string, files: string[], notes: string): void;
+  /** 刪除 Release 和它的 tag */
+  remove(tag: string): void;
 }
 
 type Log = (message: string) => void;
@@ -73,8 +77,23 @@ function compareTags(a: string, b: string): number {
   return dayA.localeCompare(dayB) || Number(numberA) - Number(numberB);
 }
 
+/** 只挑出資產版本的 tag，由舊到新 */
+const assetTags = (tags: string[]) => tags.filter((tag) => TAG.test(tag)).sort(compareTags);
+
 export function latestTag(tags: string[]): string | undefined {
-  return tags.filter((tag) => TAG.test(tag)).sort(compareTags).at(-1);
+  return assetTags(tags).at(-1);
+}
+
+/** 在新版上傳成功後呼叫。刪不掉的不影響這次發布，下次發布時仍在清單裡，會再試一次 */
+function pruneReleases(releases: Releases, tags: string[], log: Log) {
+  for (const tag of assetTags(tags).slice(0, -KEEP_RELEASES)) {
+    try {
+      releases.remove(tag);
+      log('已刪除舊版 ' + tag);
+    } catch (error) {
+      log('舊版 ' + tag + ' 刪除失敗，下次發布時再試：' + (error instanceof Error ? error.message : error));
+    }
+  }
 }
 
 export function nextTag(tags: string[], day: string): string {
@@ -146,6 +165,7 @@ export function publish({ root, repo, releases, day, allowRemoval, maxSize = MAX
   log('上傳 ' + tag + '：' + result.count + ' 個檔案，' + megabytes(result.size));
   releases.create(tag, head, [result.zipPath, result.manifestPath],
     '資產包：' + result.count + ' 個檔案，' + megabytes(result.size) + '。\n\n還原方式：`bun run assets:download ' + tag + '`');
+  pruneReleases(releases, [...tags, tag], log);
   return tag;
 }
 

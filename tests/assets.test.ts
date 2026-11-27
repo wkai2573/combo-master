@@ -39,6 +39,9 @@ function fakeReleases() {
       created.push(tag);
       store.set(tag, new Map(files.map((file) => [basename(file), readFileSync(file)])));
     },
+    remove: (tag) => {
+      store.delete(tag);
+    },
   };
   return { releases, store, created, downloaded };
 }
@@ -106,6 +109,53 @@ describe('發布', () => {
     expect(fake.created).toHaveLength(1);
     publish({ ...options, allowRemoval: true });
     expect(fake.created).toHaveLength(2);
+  });
+
+  /** 每次改一張圖後發布，回傳發布用的參數 */
+  function publishVersions(fake: ReturnType<typeof fakeReleases>, count: number, releases = fake.releases, messages: string[] = []) {
+    const root = project(sample);
+    const options = { root, repo: clean, releases, day, log: (message: string) => { messages.push(message); } };
+    for (let version = 1; version <= count; version++) {
+      writeFileSync(join(root, 'assets/portraits/A1.webp'), '第 ' + version + ' 版');
+      publish(options);
+    }
+  }
+
+  it('只保留最新三版，不動其他 tag 的 Release', () => {
+    const fake = fakeReleases();
+    fake.store.set('v1.0.0', new Map());
+    fake.store.set('assets-2026-01-05', new Map([[MANIFEST_NAME, new TextEncoder().encode('{"files":{}}')]]));
+    publishVersions(fake, 4);
+    expect([...fake.store.keys()].sort()).toEqual(
+      ['assets-2026-11-27.2', 'assets-2026-11-27.3', 'assets-2026-11-27.4', 'v1.0.0']);
+  });
+
+  it('舊版刪除失敗時，新版仍算發布成功，下次發布再清', () => {
+    const fake = fakeReleases();
+    const messages: string[] = [];
+    let broken = true;
+    const releases: Releases = {
+      ...fake.releases,
+      remove: (tag) => {
+        if (broken) throw new Error('網路中斷');
+        fake.releases.remove(tag);
+      },
+    };
+    publishVersions(fake, 4, releases, messages);
+    expect(fake.store.size).toBe(4);
+    expect(messages.join('\n')).toContain('刪除失敗');
+    broken = false;
+    publish({ root: project({ ...sample, 'assets/portraits/A1.webp': '第 5 版' }), repo: clean, releases, day, log });
+    expect(fake.store.size).toBe(3);
+  });
+
+  it('發布沒成功時不刪任何舊版', () => {
+    const fake = fakeReleases();
+    publishVersions(fake, 3);
+    const releases: Releases = { ...fake.releases, create: () => { throw new Error('上傳中斷'); } };
+    const root = project({ ...sample, 'assets/portraits/A1.webp': '上傳失敗的版本' });
+    expect(() => publish({ root, repo: clean, releases, day, log })).toThrow('上傳中斷');
+    expect(fake.store.size).toBe(3);
   });
 
   it('超過單檔上限或沒有任何資產時不上傳', () => {
