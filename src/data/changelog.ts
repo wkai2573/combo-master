@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.79.1',
+    date: '2026-11-28',
+    items: [
+      { type: 'fix', text: '寬螢幕展開經驗區時，戰鬥區、提示欄與手牌維持原位。我方經驗大卡可在區內捲動。' },
+    ],
+  },
+  {
     version: '0.79.0',
     date: '2026-11-28',
     items: [

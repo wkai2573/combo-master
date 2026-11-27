@@ -87,6 +87,7 @@ function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optK
     if (!expanded || !el) return;
     const scrollHorizontally = (event: WheelEvent) => {
       if (event.ctrlKey || event.shiftKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+      if (el.scrollHeight > el.clientHeight) return;
       const max = el.scrollWidth - el.clientWidth;
       if (max <= 0 || (event.deltaY < 0 ? el.scrollLeft <= 0 : el.scrollLeft >= max - 0.5)) return;
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? el.clientWidth : 1;
