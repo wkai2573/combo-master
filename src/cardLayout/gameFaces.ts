@@ -7,8 +7,8 @@ import { templateFor, type FaceCard, type FaceImageLayer } from './model';
 export const gameFaces = parseFaceLibrary(initial);
 
 const portraits = import.meta.glob<string>('../../assets/portraits/*.webp', { query: '?url', import: 'default', eager: true });
-const moveFrames = import.meta.glob<string>('../../assets/frames/move/*.png', { query: '?url', import: 'default', eager: true });
-const equipmentFrames = import.meta.glob<string>('../../assets/frames/equipment/*.png', { query: '?url', import: 'default', eager: true });
+const moveFrames = import.meta.glob<string>('../../assets/frames/move/*.webp', { query: '?url', import: 'default', eager: true });
+const equipmentFrames = import.meta.glob<string>('../../assets/frames/equipment/*.webp', { query: '?url', import: 'default', eager: true });
 const uidById = new Map(Object.entries(cardTable.uids)
   .filter(([uid]) => /^[AEBX]/.test(uid)).map(([uid, id]) => [id, uid]));
 
@@ -26,8 +26,8 @@ export function imageFor(layer: FaceImageLayer, uid: string, card: CardData, con
   if (layer.source === 'art') return portraits['../../assets/portraits/' + uid + '.webp'];
   if (layer.source === 'frame') {
     const slug = classSlug[card.cls];
-    if (card.kind === 'equip' && card.slot) return equipmentFrames['../../assets/frames/equipment/' + slug + '-' + slots[card.slot] + '.png'];
-    if (card.kind === 'move') return moveFrames['../../assets/frames/move/' + slug + '-' + frameName[card.cls] + '.png'];
+    if (card.kind === 'equip' && card.slot) return equipmentFrames['../../assets/frames/equipment/' + slug + '-' + slots[card.slot] + '.webp'];
+    if (card.kind === 'move') return moveFrames['../../assets/frames/move/' + slug + '-' + frameName[card.cls] + '.webp'];
   }
 }
 
