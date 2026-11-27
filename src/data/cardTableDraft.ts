@@ -1,4 +1,4 @@
-import { generatedCards, generatedCharacters, readTableCards, readTableCharacters, sortByOrder, type CardTableData, type UidPrefix } from './cardTableData';
+import { characterDefaults, generatedCards, generatedCharacters, readTableCards, readTableCharacters, sortByOrder, type CardTableData, type UidPrefix } from './cardTableData';
 import { isCardEnabled } from './enabledCards';
 import { checkExLeaveRule, EX_LEAVE_RULES, isExCardId, type ExZone } from './exCards';
 import type { Keyword } from './keywords';
@@ -350,13 +350,9 @@ export function applyDiff(
         if (changed.text !== undefined || changed.awakenText !== undefined) notes.push(`請確認角色效果的程式實作：${uid} ${before.name}`);
         continue;
       }
-      const original = generatedCharacters.find(({ id }) => id === before.id)!;
+      const original = characterDefaults(generatedCharacters.find(({ id }) => id === before.id)!);
       const override = { ...table.chars[before.id] };
       for (const { field, value } of edits) {
-        if (field === 'text' || field === 'awakenText') {
-          notes.push(`基準角色的效果文字由程式維護（未套用）：${uid} ${before.name}`);
-          continue;
-        }
         if (equalValue(cardValue(original, field), value)) delete override[field as keyof typeof override];
         else Object.assign(override, { [field]: value });
       }

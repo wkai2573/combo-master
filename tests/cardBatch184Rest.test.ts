@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { totalAtk } from '../src/engine/combat';
+import { totalAtk, totalDef } from '../src/engine/combat';
 import { query } from '../src/engine/effects';
 import { Z } from '../src/engine/ops';
-import { 捕熊陷阱狀態, 煉金印記狀態 } from '../src/engine/sources/merchant';
-import { atkOf, names, pick, scenario, title } from './helpers';
+import { viewFor } from '../src/engine/view';
+import { 煉金印記狀態 } from '../src/engine/sources/merchant';
+import { names, pick, scenario, title } from './helpers';
 
 const filler = Array(20).fill('黑桃2') as string[];
 const log = (g: ReturnType<typeof scenario>) => g.state.log.join('\n');
@@ -25,13 +26,15 @@ describe('我方出招時、對方出招時：新增的觸發窗口時機', () =
     const g = scenario({
       chars: ['勇者', '商人'], first: 1,
       p0: { moves: ['威嚇戰吼'], rage: Array(9).fill('黑桃1'), hand: [] },
-      p1: { hand: ['煉金印記'], exp: ['黑桃3', '黑桃4', '黑桃5'], deck: Array(5).fill('黑桃2') },
+      p1: { hand: ['煉金印記'], exp: ['黑桃3', '~黑桃4', '~黑桃5'], deck: Array(5).fill('黑桃2') },
       singlePhase: true,
     });
-    // 煉金印記是玩家 1 自己的「我方出招時」：先問他；對方的威嚇戰吼還沒處理
-    expect(title(g)).toContain('煉金印記');
-    expect(count(g, '怒氣區多於對方手牌')).toBe(0);
-    pick(g, '不發動');
+    expect(exp(g, 1, 3)).toEqual(['黑桃3', '黑桃4', '~黑桃5']);
+    const messages = g.state.log;
+    const stampIndex = messages.findIndex((line) => line.includes('【煉金印記】') && line.includes('翻開 1 張'));
+    const roarIndex = messages.findIndex((line) => line.includes('怒氣區多於對方手牌'));
+    expect(stampIndex).toBeGreaterThanOrEqual(0);
+    expect(roarIndex).toBeGreaterThan(stampIndex);
     expect(count(g, '怒氣區多於對方手牌')).toBe(1);
     expect(names(g, 1, 'discard')).toEqual(['黑桃2']);
   });
@@ -129,7 +132,7 @@ describe('威嚇戰吼：對方出招時，我方怒氣區卡片數 > 對方手�
   });
 });
 
-describe('捕熊陷阱：表側經驗被蓋成裏側時，我方總攻擊在本回合結束前增加 3', () => {
+describe('捕熊陷阱：表側經驗被蓋成裏側時，我方本回合 +1+1', () => {
   /** 玩家 0（商人）手上只有作假帳，打出後付蓋 1，蓋的是經驗區最前面的表側卡 */
   const trap = (expZone: string[]) =>
     scenario({
@@ -139,11 +142,11 @@ describe('捕熊陷阱：表側經驗被蓋成裏側時，我方總攻擊在本�
       singlePhase: true,
     });
 
-  it('被蓋成裏側時總攻擊 +3', () => {
+  it('被蓋成裏側時總攻防各加 1', () => {
     const g = trap(['捕熊陷阱', '黑桃3', '黑桃4']);
     pick(g, '發動'); // 作假帳蓋 1，蓋到捕熊陷阱
-    expect(query(g, 0, 'flatAtk')).toBe(3);
-    expect(totalAtk(g, 0)).toBe(atkOf('作假帳') + 3);
+    expect(totalAtk(g, 0)).toBe(4);
+    expect(totalDef(g, 0)).toBe(5);
     expect(log(g)).toContain('【捕熊陷阱】');
   });
 
@@ -151,15 +154,17 @@ describe('捕熊陷阱：表側經驗被蓋成裏側時，我方總攻擊在本�
     const g = trap(['黑桃3', '捕熊陷阱', '黑桃4']);
     pick(g, '發動'); // 蓋的是黑桃3
     expect(query(g, 0, 'flatAtk')).toBe(0);
+    expect(query(g, 0, 'flatDef')).toBe(0);
   });
 
   it('已經是裏側的捕熊陷阱不會再觸發', () => {
     const g = trap(['~捕熊陷阱', '黑桃3', '黑桃4']);
     pick(g, '發動');
     expect(query(g, 0, 'flatAtk')).toBe(0);
+    expect(query(g, 0, 'flatDef')).toBe(0);
   });
 
-  it('同時蓋到兩張各自加 3', () => {
+  it('同時蓋到兩張各自 +1+1', () => {
     const g = scenario({
       chars: ['法師', '刺客'], first: 0,
       p0: { hand: ['冰茅'], exp: ['捕熊陷阱', '捕熊陷阱', '黑桃3', '黑桃4', '黑桃5'] },
@@ -167,23 +172,25 @@ describe('捕熊陷阱：表側經驗被蓋成裏側時，我方總攻擊在本�
       singlePhase: true,
     });
     pick(g, '發動'); // 蓋 4：兩張捕熊陷阱與黑桃3、黑桃4；兩張同名強制效果併成一個選項，自動結算
-    expect(query(g, 0, 'flatAtk')).toBe(6);
+    expect(query(g, 0, 'flatAtk')).toBe(2);
+    expect(query(g, 0, 'flatDef')).toBe(2);
   });
 
   it('加成只在這回合，下回合消失', () => {
     const g = scenario({
-      chars: ['商人', '刺客'], first: 0,
+      chars: ['商人', '勇者'], first: 0,
       p0: { hand: ['作假帳', '黑桃1'], exp: ['捕熊陷阱', '黑桃3', '黑桃4'], deck: filler },
       p1: { hand: ['黑桃9'], deck: filler },
       phase: '先手',
     });
     pick(g, '作假帳');
     pick(g, '發動');
-    expect(捕熊陷阱狀態.read(g, 0).atk).toBe(3);
+    expect(query(g, 0, 'flatAtk')).toBe(1);
+    expect(query(g, 0, 'flatDef')).toBe(1);
     toNextTurn(g);
     expect(g.state.turn).toBe(2);
-    expect(捕熊陷阱狀態.read(g, 0).atk).toBe(0);
     expect(query(g, 0, 'flatAtk')).toBe(0);
+    expect(query(g, 0, 'flatDef')).toBe(0);
   });
 });
 
@@ -230,77 +237,54 @@ describe('作假帳：付蓋 1，將 1 張表側經驗放到經驗區最前方',
   });
 });
 
-describe('煉金印記：先手步驟打出後，本回合我方每打出 1 張招式都可以將 1 張表側經驗放到最前方', () => {
+describe('煉金印記：先手步驟打出後，本回合我方每打出 1 張招式就翻開第一張裏側經驗', () => {
   const stamp = (extra: { p0hand?: string[]; p1hand?: string[]; exp?: string[]; singlePhase?: boolean } = {}) =>
     scenario({
       chars: ['商人', '刺客'], first: 0,
-      p0: { hand: ['煉金印記', ...(extra.p0hand ?? ['黑桃4'])], exp: extra.exp ?? ['黑桃3', '黑桃4', '黑桃5'], deck: filler },
+      p0: { hand: ['煉金印記', ...(extra.p0hand ?? ['黑桃4'])], exp: extra.exp ?? ['黑桃3', '~黑桃4', '黑桃5', '~黑桃6'], deck: filler },
       p1: { hand: extra.p1hand ?? ['黑桃5'], deck: filler },
       ...(extra.singlePhase === false ? { phase: '先手' as const } : { singlePhase: true }),
     });
 
-  it('打出它的那一刻就能發動 1 次（含它自己）', () => {
+  it('打出時自動翻開第一張裏側經驗，保持牌序並只公開已翻開的牌', () => {
     const g = stamp();
     pick(g, '煉金印記');
-    expect(title(g)).toContain('煉金印記');
-    pick(g, '發動');
-    pick(g, '黑桃5');
-    expect(exp(g, 0, 3)).toEqual(['黑桃5', '黑桃3', '黑桃4']);
+    expect(exp(g, 0, 4)).toEqual(['黑桃3', '黑桃4', '黑桃5', '~黑桃6']);
+    expect(viewFor(g, 1).players[0].exp.map(({ id }) => id)).toEqual(['黑桃3', '黑桃4', '黑桃5', null]);
+    expect(g.pending?.player).toBe(1);
   });
 
-  it('之後每打出 1 張招式再發動 1 次', () => {
+  it('對方出招不翻牌，我方再次出招時才翻開下一張', () => {
     const g = stamp();
     pick(g, '煉金印記');
-    pick(g, '發動');
-    pick(g, '黑桃5'); // 經驗區 [黑桃5, 黑桃3, 黑桃4]
-    pick(g, '黑桃5'); // 玩家 1 反擊打出黑桃5
-    pick(g, '黑桃4'); // 玩家 0 打出黑桃4（範圍 3~5 內）
-    expect(title(g)).toContain('煉金印記');
-    pick(g, '發動');
-    pick(g, '黑桃4');
-    expect(exp(g, 0, 3)).toEqual(['黑桃4', '黑桃5', '黑桃3']);
-    expect(count(g, '放到經驗區最前方')).toBe(2);
-  });
-
-  it('可以選擇不發動，經驗區不變，下次打出仍可發動', () => {
-    const g = stamp();
-    pick(g, '煉金印記');
-    pick(g, '不發動');
-    expect(exp(g, 0, 3)).toEqual(['黑桃3', '黑桃4', '黑桃5']);
-    pick(g, '黑桃5');
-    pick(g, '黑桃4');
-    expect(title(g)).toContain('煉金印記');
-  });
-
-  it('對方出招不算：只有我方打出招式才問', () => {
-    const g = stamp({ p0hand: [] });
-    pick(g, '不發動'); // 煉金印記自己
-    pick(g, '黑桃5'); // 玩家 1 出招，玩家 0 沒有手牌，自動收招
-    expect(g.pending).toBeNull();
+    pick(g, '黑桃5'); // 對方出招
+    expect(exp(g, 0, 4)).toEqual(['黑桃3', '黑桃4', '黑桃5', '~黑桃6']);
+    pick(g, '黑桃4'); // 我方再次出招
+    expect(exp(g, 0, 4)).toEqual(['黑桃3', '黑桃4', '黑桃5', '黑桃6']);
   });
 
   it('只在先手步驟打出才啟用；反擊步驟打出不啟用', () => {
     const g = scenario({
       chars: ['刺客', '商人'], first: 0,
       p0: { hand: ['黑桃5'] },
-      p1: { hand: ['煉金印記', '黑桃4'], exp: ['黑桃3', '黑桃4', '黑桃5'], deck: filler },
+      p1: { hand: ['煉金印記', '黑桃4'], exp: ['黑桃3', '~黑桃4', '~黑桃5'], deck: filler },
       singlePhase: true,
     });
     pick(g, '煉金印記'); // 反擊步驟打出
     expect(煉金印記狀態.read(g, 1).armed).toBe(false);
-    expect(g.pending?.title ?? '').not.toContain('煉金印記');
+    expect(exp(g, 1, 3)).toEqual(['黑桃3', '~黑桃4', '~黑桃5']);
   });
 
-  it('表側經驗只有最前方 1 張、沒有可換位置的卡時不問', () => {
-    const g = stamp({ exp: ['黑桃3'] });
+  it('沒有裏側經驗時直接繼續', () => {
+    const g = stamp({ exp: ['黑桃3', '黑桃4'] });
     pick(g, '煉金印記');
-    expect(title(g)).not.toContain('煉金印記');
+    expect(g.pending?.player).toBe(1);
+    expect(exp(g, 0, 2)).toEqual(['黑桃3', '黑桃4']);
   });
 
   it('下一回合不再作用', () => {
     const g = stamp({ singlePhase: false });
     pick(g, '煉金印記');
-    pick(g, '不發動');
     expect(煉金印記狀態.read(g, 0).armed).toBe(true);
     toNextTurn(g);
     expect(g.state.turn).toBe(2);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cardTable, readTableCards, readTableCharacters } from '../src/data/cardTableData';
-import { applyDiff, blankMoveAdditions, blankMoveMessage, emptyDraft, makeDiff, nextCardUid, nextUid, orderOf, realignDraft, type Draft } from '../src/data/cardTableDraft';
+import { applyDiff, blankMoveAdditions, blankMoveMessage, emptyDraft, makeDiff, nextCardUid, nextUid, orderOf, parseDiff, realignDraft, type Draft } from '../src/data/cardTableDraft';
+import { getCharacter } from '../src/data/cards';
 import { EX_LEAVE_RULES } from '../src/data/exCards';
 
 const card = readTableCards(cardTable).find((c) => c.id === '黑桃1')!;
@@ -10,6 +11,20 @@ const diffOf = (partial: Partial<Draft>) => makeDiff(cardTable, { ...emptyDraft(
 const newCard = { ...card, id: '測試新卡', name: '測試新卡', text: '提案效果。' };
 
 describe('卡表草稿', () => {
+  it.each(['text', 'awakenText'] as const)('基準角色可獨立匯出、重新載入與匯入 %s', (field) => {
+    const id = cardTable.uids.C1;
+    const character = getCharacter(id);
+    const edit = { uid: 'C1', field, base: character[field], value: '新角色文案' };
+    const draft = parseDiff(JSON.parse(JSON.stringify(diffOf({ edits: [edit] }))));
+    expect(realignDraft(cardTable, draft).draft.edits).toEqual([edit]);
+    const { table } = applyDiff(cardTable, draft);
+    expect(readTableCharacters(table).find((entry) => entry.id === id)).toEqual({ ...character, [field]: edit.value });
+    expect(realignDraft(table, draft).draft.edits).toEqual([]);
+    const restore = { ...edit, base: edit.value, value: edit.base };
+    const restored = applyDiff(table, makeDiff(table, { ...emptyDraft(), edits: [restore] }, '0.78.0')).table;
+    expect(restored.chars[id]).toEqual(cardTable.chars[id]);
+  });
+
   it('新增角色可匯出與匯入，保留角色編號並清除已匯入草稿', () => {
     const uid = nextUid(cardTable, 'C', []);
     const character = {

@@ -21,6 +21,16 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.79.0',
+    date: '2026-11-28',
+    items: [
+      { type: 'add', text: '卡表角色分頁可分別編輯基準角色的效果與覺醒效果，支援草稿與差異檔。' },
+      { type: 'change', text: '勇者與後人的生命值各調為 55，作假帳攻擊調為 3。' },
+      { type: 'change', text: '捕熊陷阱被蓋為裏側時，本回合獲得 +1+1。煉金印記啟用後，我方每次打出招式就翻開第一張裏側經驗。' },
+      { type: 'change', text: '精簡財富管理與即時停損的卡文，將「裏側」歸入書寫規範。' },
+    ],
+  },
+  {
     version: '0.78.0',
     date: '2026-11-28',
     items: [

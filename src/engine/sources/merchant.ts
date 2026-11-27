@@ -215,17 +215,20 @@ export const Ex貸款 = coverReaction(
   'Ex-貸款',
 );
 
-/** 捕熊陷阱這回合給的總攻擊加成 */
-export const 捕熊陷阱狀態 = slot('捕熊陷阱', () => ({ atk: 0 }));
+/** 捕熊陷阱這回合給的攻防加成 */
+const 捕熊陷阱狀態 = slot('捕熊陷阱', () => ({ bonus: 0 }));
 
-// 捕熊陷阱（商人）：[經] 當此卡被蓋為裏側時，我方 +3+0。蓋反應，強制，觸發方式同低價買進。
+// 捕熊陷阱（商人）：[經] 當此卡被蓋為裏側時，我方本回合 +1+1。
 // 加成持續到本回合結束，存在狀態槽；之後它翻回表側或離開經驗區都不影響已拿到的加成，也不會再觸發
 export const 捕熊陷阱 = {
-  ...coverReaction('捕熊陷阱', '我方 +3+0（本回合）', (g, p) => {
-    捕熊陷阱狀態.of(g, p).atk += 3;
-    log(g, `【捕熊陷阱】${pname(g, p)} 本回合 +3+0`);
+  ...coverReaction('捕熊陷阱', '我方 +1+1（本回合）', (g, p) => {
+    捕熊陷阱狀態.of(g, p).bonus++;
+    log(g, `【捕熊陷阱】${pname(g, p)} 本回合 +1+1`);
   }, {}, '捕熊陷阱'),
-  ask: { flatAtk: lasting((c: { g: GameCtx; p: PlayerId }) => 捕熊陷阱狀態.read(c.g, c.p).atk) },
+  ask: {
+    flatAtk: lasting((c: { g: GameCtx; p: PlayerId }) => 捕熊陷阱狀態.read(c.g, c.p).bonus),
+    flatDef: lasting((c: { g: GameCtx; p: PlayerId }) => 捕熊陷阱狀態.read(c.g, c.p).bonus),
+  },
 } satisfies EffectSource;
 
 // 作假帳（商人）：[發_蓋1] 將 1 張表側經驗放到最前方
@@ -249,24 +252,29 @@ export const 作假帳 = defineSource({
 /** 煉金印記這回合是否已啟用 */
 export const 煉金印記狀態 = slot('煉金印記', () => ({ armed: false }));
 
-// 煉金印記（商人）：[先] 當我方打出招式時，可以將 1 張表側經驗放到最前方
-// 先手步驟打出後，本回合我方每打出 1 張招式（含它自己這一次）都可以發動，每次可選發。
+// 煉金印記（商人）：[先] 本回合當我方打出招式時，翻開第一張裏側經驗（含打出此卡）。
 // 啟用之後和這張卡還在不在戰鬥區無關，回合開始由狀態槽清空
 export const 煉金印記 = defineSource({
   id: '煉金印記',
   at: 'moves',
   on: {
-    onOpen: (c) => c.effect({ label: '【煉金印記】這回合我方打出招式時，可以將 1 張表側經驗放到最前方', mandatory: true, mark: false }, () => {
+    onOpen: (c) => c.effect({ label: '【煉金印記】本回合我方打出招式時，翻開第一張裏側經驗', mandatory: true, mark: false }, () => {
       煉金印記狀態.of(c.g, c.p).armed = true;
-      log(c.g, '【煉金印記】這回合我方每打出 1 張招式，可以將 1 張表側經驗放到最前方');
+      log(c.g, '【煉金印記】本回合我方打出招式時，翻開第一張裏側經驗');
     }),
     onMyPlay: lasting((c) => c.effect(
       {
-        label: '【煉金印記】將 1 張表側經驗放到最前方',
-        confirm: '【煉金印記】要將 1 張表側經驗放到最前方嗎？',
-        when: () => 煉金印記狀態.read(c.g, c.p).armed && frontCandidates(c.g, c.p).length > 0,
+        label: '【煉金印記】翻開第一張裏側經驗',
+        mandatory: true,
+        when: () => 煉金印記狀態.read(c.g, c.p).armed && Z(c.g, c.p, 'exp').some((card) => card.covered),
       },
-      () => moveToFront(c.g, c.p, '煉金印記'),
+      () => {
+        const card = Z(c.g, c.p, 'exp').find((entry) => entry.covered);
+        if (!card) return;
+        card.covered = false;
+        c.g.touched++;
+        log(c.g, `【煉金印記】${pname(c.g, c.p)} 翻開 1 張裏側經驗`);
+      },
     )),
   },
 });

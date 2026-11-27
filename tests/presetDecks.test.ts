@@ -43,11 +43,12 @@ describe('預設牌組的組成', () => {
     expect(potions).toBe(['勇者', '後人', '商人', '遊俠'].includes(id) ? 1 : 2);
   });
 
-  it.each(PRESET_CHARACTER_IDS)('%s：除了指定的效果卡與裝備，其餘都是白板卡，共 50 張', (id) => {
+  it.each(PRESET_CHARACTER_IDS)('%s：除了指定的效果卡與裝備，其餘名額由白板卡補滿', (id) => {
     const deck = presetDeck(id);
-    expect(deck).toHaveLength(50);
+    const size = id === '勇者' || id === '後人' ? 55 : 50;
+    expect(deck).toHaveLength(size);
     const fixed = MOVES[id].length * 3 + 3 /* 裝備 */ + (id === '後人' ? 4 : 0) + (['勇者', '後人', '商人', '遊俠'].includes(id) ? 1 : 2);
-    expect(whites(deck)).toHaveLength(50 - fixed);
+    expect(whites(deck)).toHaveLength(size - fixed);
   });
 
   it.each(PRESET_CHARACTER_IDS)('%s：連擊值 1~9 的招式張數盡量平均（每個 3~7 張）', (id) => {

@@ -13,7 +13,7 @@ import type { Keyword } from '../data/keywords';
 import { TUTORIAL_CHARACTERS } from '../data/tutorialCharacters';
 import type { CardData, CardKind, CharacterData } from '../data/types';
 import { CardFace, InspectPanel } from '../ui/components/CardFace';
-import { KeywordText, KeywordTooltip } from '../ui/components/KeywordText';
+import { KeywordTooltip } from '../ui/components/KeywordText';
 import { SortableList } from '../ui/components/SortableList';
 import { APP_VERSION } from '../version';
 import { CardComposer } from './CardComposer';
@@ -408,7 +408,6 @@ export function CardTablePage() {
       original={edit?.base} reset={() => editField(entry, field, cardValue(entry.base, field))}
       onChange={(value) => editField(entry, field, value)} compact={compact} />;
   }
-  const addedCharacterIds = new Set((cardTable.addedCharacters ?? []).map(({ id }) => id));
   const characters = sortByOrder([
     ...ALL_CHARACTERS.map((character) => ({ uid: uidById.get('C:' + character.id)!, character, added: false })),
     ...draft.additions.flatMap((entry) => 'character' in entry ? [{ ...entry, added: true }] : []),
@@ -582,7 +581,6 @@ export function CardTablePage() {
           {(rows, { sorted }) => <FieldTable label="角色表格" prefix="C" fields={addedCharacterFields} rows={rows}>
             {({ uid, character, added }, index) => {
               const recordKey = (added ? 'draft:' : 'base:') + uid;
-              const editableText = added || addedCharacterIds.has(character.id);
               const editCharacter = added ? (field: Field, value: Value) => updateDraft({
                 ...draft, additions: draft.additions.map((entry) => entry.uid === uid ? { uid, character: { ...character, [field]: value } } : entry),
               }) : undefined;
@@ -595,7 +593,7 @@ export function CardTablePage() {
                       && <small role="status">更改職業會改變可使用的專用卡。</small>}
                   </td>)}
                   {(['text', 'awakenText'] as const).map((field) => <td key={field} className="ct-sheet-copy">
-                    {editableText ? renderRecordField(uid, character, field, editCharacter, added) : <KeywordText text={character[field]} />}
+                    {renderRecordField(uid, character, field, editCharacter, added)}
                   </td>)}
                   <td className="ct-row-actions">
                     {rowOrderControls('characters', rows, index, uid, characterIds, sorted, (row) => row.character.id)}

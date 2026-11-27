@@ -6,8 +6,22 @@ import { ENABLED_EFFECT_CARDS, isCardEnabled, isVanilla } from '../src/data/enab
 import { presetDeck, PRESET_CHARACTER_IDS } from '../src/data/presetDecks';
 import tableJson from '../src/data/cardTable.json';
 import { validateDeck } from '../src/deck/validate';
+import { scenario } from './helpers';
 
 describe('卡表資料', () => {
+  it('卡表匯入的八筆差異在遊戲資料與開局生效', () => {
+    const card = (uid: 'A52' | 'A63' | 'A79' | 'A86' | 'A87') => getCard(tableJson.uids[uid]);
+    expect(tableJson.keywords.find(({ name }) => name === tableJson.uids.K28)?.group).toBe('書寫規範');
+    expect(card('A52').text).toBe('[發_蓋4]：雙方立即收招。');
+    expect(card('A63').text).toContain('當此卡被蓋為裏側時，捨棄此卡，然後選擇 2 張經驗放回牌組底。');
+    expect(card('A79').text).toContain('本回合 +1+1');
+    expect(card('A86').atk).toBe(3);
+    expect(card('A87').text).toContain('翻開第 1 張我方裏側經驗');
+    const game = scenario({ chars: [tableJson.uids.C1, tableJson.uids.C7], fullGame: true });
+    expect(game.state.players.map(({ zones }) => zones.deck.length)).toEqual([50, 50]);
+    expect(game.state.players.map(({ zones }) => zones.hand.length)).toEqual([5, 5]);
+  });
+
   it('卡片數量：36 張花色招式（xlsx）；其餘都是卡表新增的新卡與裝備', () => {
     expect(ALL_CARDS.filter((c) => isVanilla(c))).toHaveLength(36);
     expect(ALL_CARDS.filter((c) => c.kind === 'equip').length).toBeGreaterThanOrEqual(5);
@@ -96,7 +110,7 @@ describe('預設牌組', () => {
     const deck = presetDeck(id);
     const r = validateDeck(id, deck);
     expect(r.errors).toEqual([]);
-    expect(deck).toHaveLength(50);
+    expect(deck).toHaveLength(id === tableJson.uids.C1 || id === tableJson.uids.C7 ? 55 : 50);
   });
 
   it.each(PRESET_CHARACTER_IDS)('%s 的預設牌組涵蓋連擊值 1~9', (id) => {

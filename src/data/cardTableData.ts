@@ -25,6 +25,10 @@ export const cardTable = tableJson as CardTableData;
 export const generatedCards = cardsJson as CardData[];
 export const generatedCharacters = charsJson as CharacterData[];
 
+export function characterDefaults(character: CharacterData): CharacterData {
+  return { ...character, ...characterText[character.id] };
+}
+
 export function sortByOrder<T>(items: T[], order: string[], key: (item: T) => string): T[] {
   const rank = new Map(order.map((id, index) => [id, index]));
   return [...items].sort((a, b) => (rank.get(key(a)) ?? order.length) - (rank.get(key(b)) ?? order.length));
@@ -33,9 +37,8 @@ export function sortByOrder<T>(items: T[], order: string[], key: (item: T) => st
 export function readTableCharacters(table: CardTableData): CharacterData[] {
   const removed = new Set(table.removedCharacters?.map(({ id }) => id));
   const characters = [...generatedCharacters, ...(table.addedCharacters ?? [])].filter(({ id }) => !removed.has(id)).map((character) => ({
-    ...character,
+    ...characterDefaults(character),
     ...table.chars[character.id],
-    ...characterText[character.id],
     id: character.id,
   }));
   return sortByOrder(characters, table.order?.characters ?? [], ({ id }) => id);
