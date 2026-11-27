@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.76.1',
+    date: '2026-11-27',
+    items: [{ type: 'fix', text: '分層卡面的效果區底色調整為 40% 透明度。' }],
+  },
+  {
     version: '0.76.0',
     date: '2026-11-27',
     items: [

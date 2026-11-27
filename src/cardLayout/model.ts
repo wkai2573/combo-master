@@ -91,7 +91,7 @@ export function defaultTextLayer(name: string, field: TextField = 'custom'): Fac
 }
 
 export function defaultTextBackground(): TextBackground {
-  return { coverage: 'lines', color: '#fff4dd', opacity: 0.7, paddingX: 12, paddingY: 10 };
+  return { coverage: 'lines', color: '#fff4dd', opacity: 0.6, paddingX: 12, paddingY: 10 };
 }
 
 const art: FaceImageLayer = {

@@ -1,10 +1,19 @@
 import { expect, test } from 'vitest';
-import { defaultTextLayer } from '../src/cardLayout/model';
+import { defaultTextLayer, facePresets } from '../src/cardLayout/model';
 import { layoutFaceText } from '../src/cardLayout/textLayout';
 
 const measure = (text: string, size: number) => ({
   width: [...text].length * size, left: 0, right: [...text].length * size,
   ascent: size * 0.8, descent: size * 0.1, fontAscent: size * 0.9, fontDescent: size * 0.2,
+});
+
+test.each(facePresets)('$name 範本依共用規格設定字級與效果底色', ({ layers }) => {
+  expect(layers.find((layer) => layer.id === 'text')).toMatchObject({
+    font: 'Noto Sans TC', size: 70, weight: 700, background: { opacity: 0.6 },
+  });
+  expect(layers.find((layer) => layer.id === 'name')).toMatchObject({
+    font: 'Noto Sans TC', weight: 700, flow: 'fit', align: 'center',
+  });
 });
 
 test('往上新增行數時固定底緣，先排滿上面的行', () => {
