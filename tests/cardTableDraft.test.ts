@@ -280,6 +280,33 @@ describe('角色、關鍵字與 Ex 卡', () => {
     expect(applyDiff(cardTable, diffOf({ edits })).table.exCards[0]).toMatchObject({ atk: 6, def: 5, combo: 3 });
   });
 
+  it('Ex 卡可選類型，匯入時保留所有欄位值供切換類型後繼續編輯', () => {
+    const equipment = { uid: exUid, card: { ...ex, kind: 'equip' as const, atk: 8, def: 4, combo: 2, expReq: 3, slot: '飾品' as const } };
+    const equipped = applyDiff(cardTable, diffOf({ additions: [equipment] })).table.exCards.at(-1)!;
+    expect(equipped).toMatchObject({ kind: 'equip', atk: 8, def: 4, combo: 2, expReq: 3, slot: '飾品' });
+    expect(realignDraft({ ...cardTable, exCards: [...cardTable.exCards, equipped] }, { ...emptyDraft(), additions: [equipment] }).draft).toEqual(emptyDraft());
+
+    const buff = { uid: nextUid({ ...cardTable, uidSeq: { ...cardTable.uidSeq, X: cardTable.uidSeq.X + 1 } }, 'X', []),
+      card: { ...ex, kind: 'buff' as const, atk: 8, def: 4, combo: 2, expReq: 5, duration: 3 } };
+    const buffed = applyDiff(cardTable, diffOf({ additions: [buff] })).table.exCards.at(-1)!;
+    expect(buffed).toMatchObject({ kind: 'buff', atk: 8, def: 4, combo: 2, expReq: 5, duration: 3 });
+
+    const source = cardTable.exCards[0];
+    const sourceUid = Object.keys(cardTable.uids).find((uid) => cardTable.uids[uid] === source.id)!;
+    const edits = [
+      { uid: sourceUid, field: 'kind' as const, base: source.kind, value: 'equip' as const },
+      { uid: sourceUid, field: 'expReq' as const, base: source.expReq, value: 4 },
+      { uid: sourceUid, field: 'slot' as const, base: source.slot ?? null, value: '飾品' as const },
+    ];
+    expect(applyDiff(cardTable, diffOf({ edits })).table.exCards[0]).toMatchObject({ kind: 'equip', atk: source.atk, def: source.def, combo: source.combo, expReq: 4, slot: '飾品' });
+
+    const timed = cardTable.exCards.find((entry) => entry.duration !== undefined)!;
+    const timedUid = Object.keys(cardTable.uids).find((uid) => cardTable.uids[uid] === timed.id)!;
+    const result = applyDiff(cardTable, diffOf({ edits: [{ uid: timedUid, field: 'kind', base: timed.kind, value: 'buff' }] }));
+    expect(result.table.exCards.find((entry) => entry.id === timed.id)?.duration).toBe(timed.duration);
+    expect(result.notes).not.toContainEqual(expect.stringContaining('缺少「持續回合：N。」'));
+  });
+
   it('驗證 Ex 卡名稱、離場區域與增益回合', () => {
     const add = (name: string, text: string) => diffOf({ additions: [{ uid: exUid, card: { ...ex, name, text } }] });
     expect(() => applyDiff(cardTable, add('無前綴', ex.text))).toThrow('Ex-');

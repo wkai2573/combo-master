@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.84.0',
+    date: '2026-11-28',
+    items: [
+      { type: 'change', text: 'EX 卡可選擇招式、裝備或增益類型，並依類型編輯適用欄位。' },
+    ],
+  },
+  {
     version: '0.83.0',
     date: '2026-11-28',
     items: [

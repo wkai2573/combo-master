@@ -100,7 +100,7 @@ export function CardFace({ id, card, size = 'md', fullFace = true, showExStats =
   const isMove = c.kind === 'move';
   const isEx = isExCardId(c.id);
   // 放在增益區、依持續回合計時的 Ex 卡沒有攻守連擊，卡頭改寫持續回合
-  const timedEx = isExCardId(c.id) && c.duration !== undefined;
+  const timedEx = isExCardId(c.id) && c.duration !== undefined && (!showExStats || c.kind === 'buff');
   return (
     <div
       className={cls.join(' ')}
@@ -117,7 +117,7 @@ export function CardFace({ id, card, size = 'md', fullFace = true, showExStats =
       {!showFullFace && (
         <>
           <div className="hd">
-            {showExStats && isEx || isMove && !timedEx ? (
+            {isMove && (!timedEx || showExStats && isEx) ? (
               <>
                 <span className="a" title="攻擊力">{c.atk}</span>
                 <span className="c" title="連擊值">{c.combo}</span>

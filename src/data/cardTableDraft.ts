@@ -31,7 +31,7 @@ const prefixes = { move: 'A', equip: 'E', buff: 'B' } as const;
 const cardUid = /^[AEB][1-9]\d*$/;
 const uidPattern = /^[ABECKX][1-9]\d*$/;
 export const cardFields = ['name', 'kind', 'cls', 'traits', 'atk', 'def', 'combo', 'expReq', 'slot', 'duration', 'text'] as const;
-export const exFields = ['name', 'traits', 'atk', 'def', 'combo', 'text'] as const;
+export const exFields = ['name', 'kind', 'traits', 'atk', 'def', 'combo', 'expReq', 'slot', 'duration', 'text'] as const;
 export const keywordFields = ['name', 'group', 'desc'] as const;
 export const characterFields = ['name', 'cls', 'hp', 'expReq'] as const;
 export const addedCharacterFields = [...characterFields, 'text', 'awakenText'] as const;
@@ -284,16 +284,16 @@ function checkReferences(table: CardTableData, extraTexts: string[]) {
 }
 
 function prepareEx(card: CardData, notes: string[], options: ImportOptions): CardData {
-  const { id, name, traits, text, atk = 0, def = 0, combo = 0 } = card;
+  const { id, name, text } = card;
   const leave = checkExLeaveRule(text, options.exZone?.(id));
   if (leave) throw new Error(`Ex 卡${leave}：${name}`);
   if (!options.hasEffect?.(id)) notes.push(`Ex 卡尚未實作效果：${name}`);
-  const result: CardData = { id, name, traits, text, kind: 'move', cls: '共用', atk, def, combo, expReq: 0 };
+  const result: CardData = { ...card, cls: '共用' };
   const duration = /持續回合：(\d+)/.exec(text)?.[1];
   if (duration) {
     const turns = Number(duration);
     if (!Number.isSafeInteger(turns) || turns < 1) throw new Error(`Ex 卡持續回合不符：${name}`);
-    result.duration = turns;
+    if (!Object.hasOwn(card, 'duration')) result.duration = turns;
   }
   else if (text.includes(EX_LEAVE_RULES.buff)) notes.push(`Ex 卡缺少「持續回合：N。」，不會到期：${name}`);
   return result;
