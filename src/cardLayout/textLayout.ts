@@ -21,6 +21,7 @@ interface Run extends Part {
   textX: number;
   textSize: number;
   fontOffset: number;
+  mark?: FaceRect;
 }
 
 interface Row {
@@ -147,8 +148,8 @@ function measureRow(parts: Part[], size: number, measure: Measure): Row {
   let x = 0;
   let left = Infinity;
   let right = -Infinity;
-  let ascent = 0;
-  let descent = 0;
+  let ascent = -Infinity;
+  let descent = -Infinity;
   const runs = combined.map((part): Run => {
     const expense = part.style === 'cover' || part.style === 'rage';
     const box = !isInline(part.style);
@@ -157,30 +158,41 @@ function measureRow(parts: Part[], size: number, measure: Measure): Row {
     const textSize = expense ? size * 0.86 : size;
     const metrics = measure(showText ? part.text : '', textSize);
     const padding = part.style === 'noun' || part.style === 'action' ? 0.26 : 0.13;
+    const inkWidth = metrics.left + metrics.right;
     const inner = Math.max(
-      metrics.width + (box && showText ? textSize * padding * 2 : 0),
+      box && showText ? Math.max(metrics.width, inkWidth) + textSize * padding * 2 : metrics.width,
       expense ? size * 1.11 : 0,
       image ? size * part.custom!.imageWidth : 0,
     );
     const gap = box ? size * 0.055 : 0;
-    const textX = gap + (inner - metrics.width) / 2;
+    const textX = box ? gap + (inner - inkWidth) / 2 + metrics.left : 0;
+    let mark: FaceRect | undefined;
     if (box) {
-      left = Math.min(left, x + gap);
-      right = Math.max(right, x + gap + inner);
-      ascent = Math.max(ascent, size * 0.86, metrics.ascent);
-      descent = Math.max(descent, size * 0.24, metrics.descent);
-    } else {
-      left = Math.min(left, x - metrics.left);
-      right = Math.max(right, x + metrics.right);
+      const ink = showText ? metrics : measure('國', size);
+      const height = Math.max(size * 1.1, ink.ascent + ink.descent + size * 0.16);
+      mark = { x: gap, y: (ink.descent - ink.ascent - height) / 2, width: inner, height };
+    } else if (part.style !== 'plain') {
+      mark = { x: 0, y: -0.34 * size, width: inner, height: 0.55 * size };
+    }
+    if (showText && metrics.ascent + metrics.descent > 0) {
+      left = Math.min(left, x + textX - metrics.left);
+      right = Math.max(right, x + textX + metrics.right);
       ascent = Math.max(ascent, metrics.ascent);
       descent = Math.max(descent, metrics.descent);
     }
+    if (mark) {
+      left = Math.min(left, x + mark.x);
+      right = Math.max(right, x + mark.x + mark.width);
+      ascent = Math.max(ascent, -mark.y);
+      descent = Math.max(descent, mark.y + mark.height);
+    }
     const width = inner + gap * 2;
-    const run = { ...part, x, width, textX, textSize, fontOffset: (metrics.fontAscent - metrics.fontDescent) / 2 };
+    const run = { ...part, x, width, textX, textSize, mark, fontOffset: (metrics.fontAscent - metrics.fontDescent) / 2 };
     x += width;
     return run;
   });
-  return { runs, width: x, left: runs.length ? left : 0, right: runs.length ? right : 0, ascent, descent };
+  if (!Number.isFinite(left)) return { runs, width: x, left: 0, right: 0, ascent: 0, descent: 0 };
+  return { runs, width: x, left, right, ascent, descent };
 }
 
 const rowWidth = (row: Row) => Math.max(row.width, row.right) - Math.min(0, row.left);
@@ -230,7 +242,8 @@ export function layoutFaceText(layer: FaceTextLayer, value: string, rules: Keywo
   let layout: Row[];
   if (fit) {
     const nominal = measureRow(paragraphs[0], 100, cached);
-    const scale = Math.min(width / Math.max(1, nominal.right - nominal.left), height / Math.max(1, nominal.ascent + nominal.descent));
+    const fitHeight = Math.min(height, layer.fitInkHeight ?? height);
+    const scale = Math.min(width / Math.max(1, nominal.right - nominal.left), fitHeight / Math.max(1, nominal.ascent + nominal.descent));
     size = 99.5 * scale;
     layout = [measureRow(paragraphs[0], size, cached)];
   } else {
@@ -240,7 +253,9 @@ export function layoutFaceText(layer: FaceTextLayer, value: string, rules: Keywo
   const pitch = size * 1.35;
   const guide = cached('國', size);
   const baselineOffset = (pitch + guide.ascent - guide.descent) / 2;
-  const blockTop = layer.flow === 'up' ? height - layout.length * pitch : 0;
+  const blockTop = layer.flow === 'up'
+    ? height - Math.max(...layout.map((row, i) => i * pitch + baselineOffset + row.descent))
+    : 0;
   const rows = layout.map((row, i) => {
     const left = fit ? row.left : Math.min(0, row.left);
     const right = fit ? row.right : Math.max(row.width, row.right);

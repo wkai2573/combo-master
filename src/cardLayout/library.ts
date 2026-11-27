@@ -30,6 +30,7 @@ function validLayer(layer: unknown) {
   return layer.kind === 'text' && typeof layer.field === 'string' && Object.hasOwn(textFields, layer.field) &&
     label(layer.font) && number(layer.size, 1, FACE_HEIGHT) && number(layer.weight, 100, 900) && color(layer.color) &&
     pick(layer.align, 'left', 'center', 'right') && pick(layer.flow, 'up', 'down', 'fit') &&
+    (layer.fitInkHeight === undefined || number(layer.fitInkHeight, 1, FACE_HEIGHT)) &&
     typeof layer.keywords === 'boolean' && (layer.background === undefined || validBackground(layer.background));
 }
 

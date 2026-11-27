@@ -59,22 +59,19 @@ function TextDrawing({ layer, layout }: { layer: FaceTextLayer; layout: FaceText
           const custom = run.custom;
           const image = custom?.style === 'image' ? custom.image : undefined;
           const expense = run.style === 'cover' || run.style === 'rage';
-          const highlight = run.style === 'timing' || run.style === 'condition';
-          const gap = run.style === 'plain' || highlight ? 0 : size * 0.055;
           return (
             <span className={'lf-run lf-' + run.style} key={rowIndex + ':' + index} style={{
               left: unit(row.x + run.x), top: unit(row.baseline), width: unit(run.width),
               color: custom?.color,
             }}>
-              {run.style !== 'plain' && (
+              {run.mark && (
                 <span className="lf-mark" style={{
-                  left: unit(gap), right: unit(gap), top: unit((highlight ? -0.34 : -0.86) * size),
-                  height: unit((highlight ? 0.55 : 1.1) * size),
+                  ...rectStyle(run.mark),
                   backgroundColor: image ? 'transparent' : custom?.fill,
                   borderRadius: unit(0.08 * size),
                 }}>
                   {image && <img src={image} alt="" draggable={false} />}
-                  {expense && <span className="lf-cost-disc" style={{ width: unit(Math.max(size * 0.97, run.width - 2 * gap - size * 0.14)) }} />}
+                  {expense && <span className="lf-cost-disc" style={{ width: unit(Math.max(size * 0.97, run.mark.width - size * 0.14)) }} />}
                 </span>
               )}
               {(!image || custom?.showText) && <span className="lf-run-text" style={{

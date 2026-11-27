@@ -48,6 +48,7 @@ export interface FaceTextLayer extends Layer {
   color: string;
   align: 'left' | 'center' | 'right';
   flow: 'up' | 'down' | 'fit';
+  fitInkHeight?: number;
   keywords: boolean;
   background?: TextBackground;
 }
@@ -111,7 +112,11 @@ const effect: FaceTextLayer = {
   ...defaultTextLayer(textFields.text, 'text'), rect: { x: 117, y: 545, width: 1026, height: 743 },
   flow: 'up', keywords: true, background: defaultTextBackground(),
 };
-const title = fitted('name', { x: 263, y: 1401, width: 734, height: 186 });
+const title: FaceTextLayer = {
+  ...fitted('name', { x: 244, y: 1311, width: 773, height: 350 }),
+  // 卡名框這段寬度內的黑色區域高 200 px，上下各留 7 px。
+  fitInkHeight: 186,
+};
 const traits: FaceTextLayer = {
   ...fitted('traits', { x: 795, y: 1610, width: 204, height: 38 }), align: 'right', color: '#211b17',
   background: { coverage: 'text', color: '#fff4dd', opacity: 1, paddingX: 7, paddingY: 5 },

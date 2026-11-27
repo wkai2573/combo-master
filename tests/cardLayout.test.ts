@@ -13,6 +13,7 @@ test.each(facePresets)('$name 範本依共用規格設定字級與效果底色',
   });
   expect(layers.find((layer) => layer.id === 'name')).toMatchObject({
     font: 'Noto Sans TC', weight: 700, flow: 'fit', align: 'center',
+    rect: { x: 244, y: 1311, width: 773, height: 350 },
   });
 });
 
@@ -34,6 +35,14 @@ test('單行適配在卡名變長時縮小字級，並保留原來整段文字',
   expect(long.overflow).toBe(false);
 });
 
+test('短卡名仍完整留在黑色卡名區內', () => {
+  const title = facePresets[0].layers.find((layer) => layer.id === 'name');
+  if (title?.kind !== 'text') throw new Error('範本缺少卡名圖層');
+  const { rows: [row] } = layoutFaceText(title, '電弧', [], measure);
+  expect(title.rect.y + row.baseline - row.ascent).toBeGreaterThan(1386);
+  expect(title.rect.y + row.baseline + row.descent).toBeLessThan(1586);
+});
+
 test('費用、追擊判定和帶數值的動作保有完整底框', () => {
   const layer = { ...defaultTextLayer('效果', 'text'), keywords: true };
   const layout = layoutFaceText(layer, '[蓋2]：當我方追擊判定成功時，抽 1。', [], measure);
@@ -46,4 +55,20 @@ test('費用、追擊判定和帶數值的動作保有完整底框', () => {
     ['抽1', 'action'],
     ['。', 'plain'],
   ]);
+});
+
+test('關鍵字底框以筆畫上下中心對齊，且和正文共用基線', () => {
+  const layer = { ...defaultTextLayer('效果', 'text'), keywords: true };
+  const metrics = (text: string, size: number) => ({
+    ...measure(text, size), ascent: text === '頂' ? 0.9 * size : 0.7 * size, descent: text === '頂' ? 0.04 * size : 0,
+  });
+  const layout = layoutFaceText(layer, '[頂]：+1+2。', [], metrics);
+  expect(layout.rows).toHaveLength(1);
+  for (const run of layout.rows[0].runs.slice(0, 2)) {
+    const { ascent, descent } = metrics(run.text, run.textSize);
+    expect(run.mark).toBeDefined();
+    const { y, height } = run.mark!;
+    expect(-ascent - y).toBeGreaterThan(0);
+    expect(-ascent - y).toBeCloseTo(y + height - descent);
+  }
 });
