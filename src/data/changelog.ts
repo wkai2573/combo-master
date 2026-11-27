@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.83.0',
+    date: '2026-11-28',
+    items: [
+      { type: 'change', text: 'EX 卡表比照卡片頁提供卡面、表格、新增、篩選、搜尋與排序；EX 卡可編輯並顯示攻擊、防禦與連擊值。' },
+    ],
+  },
+  {
     version: '0.82.1',
     date: '2026-11-28',
     items: [

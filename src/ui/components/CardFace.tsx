@@ -26,6 +26,8 @@ export interface CardFaceProps {
   size?: 'sm' | 'md';
   /** 有成品卡圖時顯示完整卡面 */
   fullFace?: boolean;
+  /** 卡表預覽 EX 卡新增的數值欄位 */
+  showExStats?: boolean;
   selected?: boolean;
   glow?: boolean;
   dim?: boolean;
@@ -72,7 +74,7 @@ export function expEffectActive(c: Pick<CardView, 'id' | 'covered'>): boolean {
   return c.id !== null && !c.covered && hasExpEffect(c.id);
 }
 
-export function CardFace({ id, card, size = 'md', fullFace = true, selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, uid, counterDelta, deltaKey, onClick, inert }: CardFaceProps) {
+export function CardFace({ id, card, size = 'md', fullFace = true, showExStats = false, selected, glow, dim, pursuit, fresh, short, expEffect, covered, counters, badge, uid, counterDelta, deltaKey, onClick, inert }: CardFaceProps) {
   const inspect = useContext(InspectContext);
   const pin = useContext(PinContext);
   const cls = ['card', size];
@@ -96,6 +98,7 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
   const hasBadge = badge !== undefined;
   if (showFullFace) cls.push('full-face');
   const isMove = c.kind === 'move';
+  const isEx = isExCardId(c.id);
   // 放在增益區、依持續回合計時的 Ex 卡沒有攻守連擊，卡頭改寫持續回合
   const timedEx = isExCardId(c.id) && c.duration !== undefined;
   return (
@@ -114,7 +117,7 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
       {!showFullFace && (
         <>
           <div className="hd">
-            {isMove && !timedEx ? (
+            {showExStats && isEx || isMove && !timedEx ? (
               <>
                 <span className="a" title="攻擊力">{c.atk}</span>
                 <span className="c" title="連擊值">{c.combo}</span>

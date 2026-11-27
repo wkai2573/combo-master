@@ -249,7 +249,7 @@ describe('角色、關鍵字與 Ex 卡', () => {
   it('Ex 卡新增、改名及刪除保留內部 id 與發號進度', () => {
     const draft = { ...emptyDraft(), additions: [{ uid: exUid, card: ex }] };
     const { table, notes } = applyDiff(cardTable, diffOf(draft));
-    expect(table.exCards.at(-1)).toMatchObject({ id: ex.id, kind: 'move', cls: '共用', atk: 0, def: 0, combo: 0 });
+    expect(table.exCards.at(-1)).toMatchObject({ id: ex.id, kind: 'move', cls: '共用', atk: ex.atk, def: ex.def, combo: ex.combo });
     expect(notes).toContainEqual(expect.stringContaining('尚未實作效果'));
     expect(realignDraft(table, draft).draft).toEqual(emptyDraft());
     const rename = makeDiff(table, { ...emptyDraft(), edits: [{ uid: exUid, field: 'name', base: ex.name, value: 'Ex-新名稱' }] }, '0.65.0');
@@ -262,6 +262,22 @@ describe('角色、關鍵字與 Ex 卡', () => {
     expect(removed.uids[exUid]).toBeUndefined();
     expect(nextUid(removed, 'X', [])).not.toBe(exUid);
     expect(() => applyDiff(table, { ...diffOf({}), additions: [{ uid: nextUid(table, 'X', []), card: ex }] })).toThrow('內部 id 重複');
+  });
+
+  it('Ex 卡可編輯攻擊、防禦與連擊值，並在新增草稿套用後保留非預設數值', () => {
+    const addition = { uid: exUid, card: { ...ex, atk: 4, def: 3, combo: 2 } };
+    const { table } = applyDiff(cardTable, diffOf({ additions: [addition] }));
+    expect(table.exCards.at(-1)).toMatchObject({ atk: 4, def: 3, combo: 2 });
+    expect(realignDraft(table, { ...emptyDraft(), additions: [addition] }).draft).toEqual(emptyDraft());
+
+    const source = cardTable.exCards[0];
+    const sourceUid = Object.keys(cardTable.uids).find((uid) => cardTable.uids[uid] === source.id)!;
+    const edits = [
+      { uid: sourceUid, field: 'atk' as const, base: source.atk, value: 6 },
+      { uid: sourceUid, field: 'def' as const, base: source.def, value: 5 },
+      { uid: sourceUid, field: 'combo' as const, base: source.combo, value: 3 },
+    ];
+    expect(applyDiff(cardTable, diffOf({ edits })).table.exCards[0]).toMatchObject({ atk: 6, def: 5, combo: 3 });
   });
 
   it('驗證 Ex 卡名稱、離場區域與增益回合', () => {

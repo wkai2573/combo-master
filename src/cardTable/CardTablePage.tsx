@@ -23,7 +23,7 @@ const tabs = ['卡片', '角色', '關鍵字', 'Ex 卡'] as const;
 const uidById = new Map(Object.entries(cardTable.uids).map(([uid, id]) => [uid[0] + ':' + id, uid]));
 const cardUids = new Map(Object.entries(cardTable.uids).filter(([uid]) => /^[AEBX]/.test(uid)).map(([uid, id]) => [id, uid]));
 const numberFields: Field[] = ['atk', 'def', 'combo', 'expReq', 'duration', 'hp'];
-const filterFields: Field[] = ['kind', 'cls', 'traits', 'slot', 'group'];
+const filterFields: Field[] = ['kind', 'cls', 'traits', 'slot', 'group', 'combo'];
 type SheetField = Field | 'uid';
 type Value = Edit['value'];
 type LocalDraft = { draft: Draft; issued: string[]; invalidated: Edit[] };
@@ -59,10 +59,21 @@ function FilteredRows<Row extends { uid: string }>({ label, prefix, fields, rows
   getValue: (row: Row, field: Field) => Value;
   children: (rows: Row[], state: { filtered: boolean; sorted: boolean }) => ReactNode;
 }) {
-  const [filters, setFilters] = useState<Partial<Record<SheetField, string[]>>>({});
-  const [sortField, setSortField] = useState<SheetField | ''>('');
-  const [descending, setDescending] = useState(false);
-  const availableFilters: SheetField[] = ['uid', ...fields.filter((field) => filterFields.includes(field))];
+  const viewKey = `combo-master:card-table-view:${label}`;
+  const [savedView] = useState(() => {
+    try {
+      const saved = localStorage.getItem(viewKey);
+      return saved ? JSON.parse(saved) as { filters?: Partial<Record<SheetField, string[]>>; sortField?: SheetField | ''; descending?: boolean } : {};
+    } catch { return {}; }
+  });
+  const [filters, setFilters] = useState<Partial<Record<SheetField, string[]>>>(savedView.filters ?? {});
+  const [sortField, setSortField] = useState<SheetField | ''>(savedView.sortField ?? '');
+  const [descending, setDescending] = useState(savedView.descending ?? false);
+  useEffect(() => {
+    const view = { filters, sortField, descending };
+    try { localStorage.setItem(viewKey, JSON.stringify(view)); } catch { /* 設定只存在記憶體也可繼續使用 */ }
+  }, [viewKey, filters, sortField, descending]);
+  const availableFilters: SheetField[] = ['uid', ...fields.filter((field) => filterFields.includes(field) || field === 'combo')];
   const availableSorts: SheetField[] = ['uid', ...fields.filter((field) => numberFields.includes(field))];
   const columnLabel = (field: SheetField) => field === 'uid' ? '編號' : fieldLabel(field, prefix);
   const valueOf = (row: Row, field: SheetField) => field === 'uid' ? row.uid : getValue(row, field);
@@ -225,13 +236,15 @@ export function CardTablePage() {
   const [tab, setTab] = useState<(typeof tabs)[number]>('卡片');
   const [composing, setComposing] = useState(false);
   const [selection, setSelection] = useState<string>();
-  const [textView, setTextView] = useState(false);
+  const [cardTextView, setCardTextView] = useState(false);
   const [name, setName] = useState('');
   const [kind, setKind] = useState<CardKind>('move');
   const [filterKind, setFilterKind] = useState<'all' | CardKind>('all');
   const [combo, setCombo] = useState(0);
   const [scope, setScope] = useState<CardScope>('all');
   const [query, setQuery] = useState('');
+  const [exFilters, setExFilters] = useState({ combo: 0, attack: '', defense: '', traits: '', query: '' });
+  const [exView, setExView] = useState(false);
   const [message, setMessage] = useState('');
   const [storageFailed, setStorageFailed] = useState(false);
   const [exportTried, setExportTried] = useState(false);
@@ -328,7 +341,7 @@ export function CardTablePage() {
     const card: CardData = { id, name: id, kind, cls: '共用', traits: [], atk: 0, def: 0, combo: kind === 'move' ? 1 : 0, expReq: 0, text: '' };
     if (kind === 'equip') card.slot = '武器';
     const addition = isKeyword ? { uid, keyword: { name: id, group: '名詞', desc: '' } } : {
-      uid, card: isEx ? { ...card, kind: 'move' as const, combo: 0, slot: undefined, text: EX_LEAVE_RULES.exp } : card,
+      uid, card: isEx ? { ...card, kind: 'move' as const, combo: 0, slot: undefined, atk: 0, def: 0, text: EX_LEAVE_RULES.exp } : card,
     };
     setLocal({ ...local, issued: [...local.issued, uid], draft: { ...draft, additions: [...draft.additions, addition] } });
     setName('');
@@ -381,13 +394,21 @@ export function CardTablePage() {
   const addedIds = new Set(legacyOrder ? orderOf(cardTable, 'added') : []);
   const sortableCards = sortByOrder(visibleCards, draftOrder(cardList) ?? (legacyOrder
     ? [...orderOf(cardTable, 'cards').filter((id) => !addedIds.has(id)), ...legacyOrder] : []), (entry) => entry.base.id);
-  const search = query.trim();
-  const filtering = Boolean(search) || (!isEx && (filterKind !== 'all' || combo !== 0 || scope !== 'all'));
-  const matchingCards = filtering ? sortableCards.filter(({ card }) =>
-    matchesCard(card, isEx ? 'all' : filterKind, isEx ? 0 : combo, isEx ? 'all' : scope, search)) : sortableCards;
+  const search = (isEx ? exFilters.query : query).trim();
+  const filtering = Boolean(search) || (isEx
+    ? exFilters.combo !== 0 || exFilters.attack !== '' || exFilters.defense !== '' || exFilters.traits !== ''
+    : filterKind !== 'all' || combo !== 0 || scope !== 'all');
+  const matchingCards = filtering ? sortableCards.filter(({ card }) => {
+    if (!matchesCard(card, isEx ? 'all' : filterKind, isEx ? 0 : combo, isEx ? 'all' : scope, search)) return false;
+    if (!isEx) return true;
+    return (exFilters.combo === 0 || card.combo === exFilters.combo)
+      && (exFilters.attack === '' || String(card.atk) === exFilters.attack)
+      && (exFilters.defense === '' || String(card.def) === exFilters.defense)
+      && (exFilters.traits === '' || card.traits.includes(exFilters.traits));
+  }) : sortableCards;
   const renderCard = (entry: (typeof cards)[number]) => (
     <div key={entryKey(entry)} className={entry.edits.length || entry.added ? 'ct-changed' : undefined}>
-      <CardFace id={entry.card.id} card={entry.card} selected={selection === entryKey(entry)} onClick={() => setSelection(entryKey(entry))} />
+      <CardFace id={entry.card.id} card={entry.card} showExStats={isEx} selected={selection === entryKey(entry)} onClick={() => setSelection(entryKey(entry))} />
       <button data-nodrag className="ct-open" onClick={() => setSelection(entryKey(entry))} aria-label={`${entry.uid} ${entry.card.name} 詳細資料`}>{entry.uid}{entry.added ? ' · 新增草稿' : ''}</button>
     </div>
   );
@@ -397,6 +418,7 @@ export function CardTablePage() {
   const sortableCardIds = sortableCards.map(({ base }) => base.id);
   const cardFieldVisible = (entry: (typeof cards)[number], field: Field) => {
     if (entry.edits.some((edit) => edit.field === field)) return true;
+    if (isEx && ['atk', 'def', 'combo'].includes(field)) return true;
     if (['atk', 'def', 'combo'].includes(field)) return entry.card.kind === 'move';
     if (field === 'slot') return entry.card.kind === 'equip';
     if (field === 'duration') return entry.card.kind === 'buff';
@@ -507,8 +529,25 @@ export function CardTablePage() {
       )}
       {(tab === '卡片' || tab === 'Ex 卡') && (
         <>
-        <div className="ct-filters" role="group" aria-label="卡片篩選">
-          {!isEx && <>
+        <div className="ct-filters" role="group" aria-label={`${tab}篩選`}>
+          {isEx ? <>
+            <select aria-label="Ex 卡連擊值" value={exFilters.combo} onChange={(e) => setExFilters({ ...exFilters, combo: Number(e.target.value) })}>
+              <option value={0}>全部連擊值</option>
+              {Array.from({ length: 9 }, (_, i) => <option key={i + 1} value={i + 1}>連擊值 {i + 1}</option>)}
+            </select>
+            <select aria-label="Ex 卡攻擊力" value={exFilters.attack} onChange={(e) => setExFilters({ ...exFilters, attack: e.target.value })}>
+              <option value="">全部攻擊力</option>
+              {[...new Set(sortableCards.map(({ card }) => card.atk))].sort((a, b) => a - b).map((value) => <option key={value} value={value}>攻擊力 {value}</option>)}
+            </select>
+            <select aria-label="Ex 卡防禦力" value={exFilters.defense} onChange={(e) => setExFilters({ ...exFilters, defense: e.target.value })}>
+              <option value="">全部防禦力</option>
+              {[...new Set(sortableCards.map(({ card }) => card.def))].sort((a, b) => a - b).map((value) => <option key={value} value={value}>防禦力 {value}</option>)}
+            </select>
+            <select aria-label="Ex 卡特徵" value={exFilters.traits} onChange={(e) => setExFilters({ ...exFilters, traits: e.target.value })}>
+              <option value="">全部特徵</option>
+              {[...new Set(sortableCards.flatMap(({ card }) => card.traits))].sort((a, b) => a.localeCompare(b, 'zh-Hant')).map((trait) => <option key={trait} value={trait}>{trait}</option>)}
+            </select>
+          </> : <>
             <select aria-label="卡片類型" value={filterKind} onChange={(e) => setFilterKind(e.target.value as 'all' | CardKind)}>
               <option value="all">全部類型</option>
               {Object.entries(kinds).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -524,10 +563,11 @@ export function CardTablePage() {
             </select>
           </>}
           <input type="search" aria-label="搜尋名稱、效果或特徵" placeholder="搜尋名稱／效果／特徵"
-            value={query} onChange={(e) => setQuery(e.target.value)} />
-          <div className="ct-view" role="group" aria-label="卡片顯示方式">
-            <button type="button" aria-pressed={!textView} onClick={() => setTextView(false)}>卡面</button>
-            <button type="button" aria-pressed={textView} onClick={() => setTextView(true)}>表格</button>
+            value={isEx ? exFilters.query : query} onChange={(e) => isEx
+              ? setExFilters({ ...exFilters, query: e.target.value }) : setQuery(e.target.value)} />
+          <div className="ct-view" role="group" aria-label={`${tab}顯示方式`}>
+            <button type="button" aria-pressed={!(isEx ? exView : cardTextView)} onClick={() => isEx ? setExView(false) : setCardTextView(false)}>卡面</button>
+            <button type="button" aria-pressed={isEx ? exView : cardTextView} onClick={() => isEx ? setExView(true) : setCardTextView(true)}>表格</button>
           </div>
         </div>
         {orderControls(cardList)}
@@ -535,7 +575,7 @@ export function CardTablePage() {
         <FilteredRows key={tab} label={tab} prefix={cardPrefix} fields={sheetCardFields}
           rows={matchingCards} getValue={(entry, field) => cardFieldVisible(entry, field)
             ? recordValue(entry.uid, entry.card, field, entry.added) : null}>
-          {(rows, { filtered, sorted }) => textView ? (
+          {(rows, { filtered, sorted }) => (isEx ? exView : cardTextView) ? (
             <FieldTable label={`${tab}表格`} prefix={cardPrefix} fields={sheetCardFields} rows={rows}>
               {(entry, index) => (
                 <tr key={entryKey(entry)} className={entry.added || selection === entryKey(entry) ? 'ct-sheet-marked' : undefined}>

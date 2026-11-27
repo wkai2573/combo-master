@@ -31,7 +31,7 @@ const prefixes = { move: 'A', equip: 'E', buff: 'B' } as const;
 const cardUid = /^[AEB][1-9]\d*$/;
 const uidPattern = /^[ABECKX][1-9]\d*$/;
 export const cardFields = ['name', 'kind', 'cls', 'traits', 'atk', 'def', 'combo', 'expReq', 'slot', 'duration', 'text'] as const;
-export const exFields = ['name', 'traits', 'text'] as const;
+export const exFields = ['name', 'traits', 'atk', 'def', 'combo', 'text'] as const;
 export const keywordFields = ['name', 'group', 'desc'] as const;
 export const characterFields = ['name', 'cls', 'hp', 'expReq'] as const;
 export const addedCharacterFields = [...characterFields, 'text', 'awakenText'] as const;
@@ -284,11 +284,11 @@ function checkReferences(table: CardTableData, extraTexts: string[]) {
 }
 
 function prepareEx(card: CardData, notes: string[], options: ImportOptions): CardData {
-  const { id, name, traits, text } = card;
+  const { id, name, traits, text, atk = 0, def = 0, combo = 0 } = card;
   const leave = checkExLeaveRule(text, options.exZone?.(id));
   if (leave) throw new Error(`Ex 卡${leave}：${name}`);
   if (!options.hasEffect?.(id)) notes.push(`Ex 卡尚未實作效果：${name}`);
-  const result: CardData = { id, name, traits, text, kind: 'move', cls: '共用', atk: 0, def: 0, combo: 0, expReq: 0 };
+  const result: CardData = { id, name, traits, text, kind: 'move', cls: '共用', atk, def, combo, expReq: 0 };
   const duration = /持續回合：(\d+)/.exec(text)?.[1];
   if (duration) {
     const turns = Number(duration);
