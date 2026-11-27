@@ -2,10 +2,292 @@
   "formatVersion": 1,
   "templates": [],
   "cards": {
+    "A1": {
+      "template": "move"
+    },
+    "A2": {
+      "template": "move"
+    },
+    "A3": {
+      "template": "move"
+    },
+    "A4": {
+      "template": "move"
+    },
+    "A5": {
+      "template": "move"
+    },
+    "A6": {
+      "template": "move"
+    },
+    "A7": {
+      "template": "move"
+    },
+    "A8": {
+      "template": "move"
+    },
+    "A9": {
+      "template": "move"
+    },
+    "A10": {
+      "template": "move"
+    },
+    "A11": {
+      "template": "move"
+    },
+    "A12": {
+      "template": "move"
+    },
+    "A13": {
+      "template": "move"
+    },
+    "A14": {
+      "template": "move"
+    },
+    "A15": {
+      "template": "move"
+    },
+    "A16": {
+      "template": "move"
+    },
+    "A17": {
+      "template": "move"
+    },
+    "A18": {
+      "template": "move"
+    },
+    "A19": {
+      "template": "move"
+    },
+    "A20": {
+      "template": "move"
+    },
+    "A21": {
+      "template": "move"
+    },
+    "A22": {
+      "template": "move"
+    },
+    "A23": {
+      "template": "move"
+    },
+    "A24": {
+      "template": "move"
+    },
+    "A25": {
+      "template": "move"
+    },
+    "A26": {
+      "template": "move"
+    },
+    "A27": {
+      "template": "move"
+    },
+    "A28": {
+      "template": "move"
+    },
+    "A29": {
+      "template": "move"
+    },
+    "A30": {
+      "template": "move"
+    },
+    "A31": {
+      "template": "move"
+    },
+    "A32": {
+      "template": "move"
+    },
+    "A33": {
+      "template": "move"
+    },
+    "A34": {
+      "template": "move"
+    },
+    "A35": {
+      "template": "move"
+    },
+    "A36": {
+      "template": "move"
+    },
+    "A37": {
+      "template": "move"
+    },
+    "A38": {
+      "template": "move"
+    },
     "A39": {
       "template": "move"
     },
+    "A40": {
+      "template": "move"
+    },
+    "A41": {
+      "template": "move"
+    },
+    "A42": {
+      "template": "move"
+    },
+    "A43": {
+      "template": "move"
+    },
+    "A44": {
+      "template": "move"
+    },
+    "A45": {
+      "template": "move"
+    },
+    "A46": {
+      "template": "move"
+    },
+    "A47": {
+      "template": "move"
+    },
+    "A48": {
+      "template": "move"
+    },
+    "A49": {
+      "template": "move"
+    },
+    "A50": {
+      "template": "move"
+    },
+    "A51": {
+      "template": "move"
+    },
+    "A52": {
+      "template": "move"
+    },
+    "A53": {
+      "template": "move"
+    },
+    "A54": {
+      "template": "move"
+    },
+    "A55": {
+      "template": "move"
+    },
+    "A56": {
+      "template": "move"
+    },
+    "A57": {
+      "template": "move"
+    },
+    "A58": {
+      "template": "move"
+    },
+    "A59": {
+      "template": "move"
+    },
+    "A60": {
+      "template": "move"
+    },
+    "A61": {
+      "template": "move"
+    },
+    "A63": {
+      "template": "move"
+    },
+    "A64": {
+      "template": "move"
+    },
+    "A65": {
+      "template": "move"
+    },
+    "A68": {
+      "template": "move"
+    },
+    "A69": {
+      "template": "move"
+    },
+    "A70": {
+      "template": "move"
+    },
+    "A71": {
+      "template": "move"
+    },
+    "A72": {
+      "template": "move"
+    },
+    "A73": {
+      "template": "move"
+    },
+    "A74": {
+      "template": "move"
+    },
+    "A75": {
+      "template": "move"
+    },
+    "A76": {
+      "template": "move"
+    },
+    "A77": {
+      "template": "move"
+    },
+    "A78": {
+      "template": "move"
+    },
+    "A79": {
+      "template": "move"
+    },
+    "A80": {
+      "template": "move"
+    },
+    "A81": {
+      "template": "move"
+    },
+    "A82": {
+      "template": "move"
+    },
+    "A83": {
+      "template": "move"
+    },
+    "A84": {
+      "template": "move"
+    },
+    "A85": {
+      "template": "move"
+    },
+    "A86": {
+      "template": "move"
+    },
+    "A87": {
+      "template": "move"
+    },
+    "A88": {
+      "template": "move"
+    },
+    "A89": {
+      "template": "move"
+    },
+    "A90": {
+      "template": "move"
+    },
+    "A91": {
+      "template": "move"
+    },
     "E1": {
+      "template": "equipment"
+    },
+    "E2": {
+      "template": "equipment"
+    },
+    "E3": {
+      "template": "equipment"
+    },
+    "E4": {
+      "template": "equipment"
+    },
+    "E5": {
+      "template": "equipment"
+    },
+    "E6": {
+      "template": "equipment"
+    },
+    "E7": {
+      "template": "equipment"
+    },
+    "E8": {
       "template": "equipment"
     }
   }

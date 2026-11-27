@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type PointerEvent, type ReactNode, type SetStateAction } from 'react';
 import { gameFaces, imageFor } from '../cardLayout/gameFaces';
 import { arrangeFace, LayeredFace } from '../cardLayout/LayeredFace';
-import { isFaceImage, parseFaceLibrary } from '../cardLayout/library';
+import { isFaceImage, mergeFaceLibrary, parseFaceLibrary } from '../cardLayout/library';
 import {
   containRect, defaultTextBackground, defaultTextLayer, FACE_FONT, FACE_HEIGHT, FACE_WIDTH, facePresets,
   templateFor, templatesOf, textFields, type FaceCard, type FaceLayer, type FaceLibrary, type FaceRect,
@@ -268,14 +268,7 @@ function Editor({ cards, initialUid, renderField, library, setLibrary }: Compose
   async function importLibrary(file: File) {
     try {
       const imported = parseFaceLibrary(JSON.parse(await file.text()));
-      setLibrary((current) => {
-        const base = current ?? gameFaces;
-        const importedIds = new Set(imported.templates.map(({ id }) => id));
-        return {
-          ...base, templates: [...base.templates.filter(({ id }) => !importedIds.has(id)), ...imported.templates],
-          cards: { ...base.cards, ...imported.cards },
-        };
-      });
+      setLibrary((current) => mergeFaceLibrary(current ?? gameFaces, imported));
       setNotice('已匯入卡面設定。');
     } catch (error) { setNotice(error instanceof Error ? error.message : '無法匯入卡面設定。'); }
   }
@@ -413,7 +406,7 @@ export function CardComposer(props: ComposerProps) {
   const [storageFailed, setStorageFailed] = useState(false);
   useEffect(() => {
     let active = true;
-    void loadFaceDraft().then((draft) => { if (active) setLibrary(draft ?? gameFaces); })
+    void loadFaceDraft().then((draft) => { if (active) setLibrary(draft ? mergeFaceLibrary(gameFaces, draft) : gameFaces); })
       .catch(() => { if (active) { setStorageFailed(true); setLibrary(gameFaces); } });
     return () => { active = false; };
   }, []);

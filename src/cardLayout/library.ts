@@ -65,3 +65,13 @@ export function parseFaceLibrary(value: unknown): FaceLibrary {
   }
   return value as unknown as FaceLibrary;
 }
+
+export function mergeFaceLibrary(base: FaceLibrary, overrides: FaceLibrary): FaceLibrary {
+  const templates = new Map(base.templates.map((template) => [template.id, template]));
+  for (const template of overrides.templates) templates.set(template.id, template);
+  return {
+    ...base,
+    templates: [...templates.values()],
+    cards: { ...base.cards, ...overrides.cards },
+  };
+}

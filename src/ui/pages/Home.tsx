@@ -10,7 +10,6 @@ import { APP_BUILT_AT, VERSION_LABEL, VERSION_SHORT, VERSION_TITLE } from '../..
 import { ChangelogModal } from '../components/ChangelogModal';
 import { FlowChartModal } from '../components/FlowChartModal';
 import { Modal } from '../components/Modal';
-import { moveCardFaces } from '../moveCardFaces';
 import { gameFaceFor } from '../../cardLayout/gameFaces';
 import { GameLayeredFace } from '../../cardLayout/LayeredFace';
 import { useHomeScale } from '../useHomeScale';
@@ -18,8 +17,7 @@ import type { LobbyMode } from './Lobby';
 
 const CLASS_CARD_FACES = ALL_CARDS.filter(isClassCard).flatMap((card) => {
   const face = gameFaceFor(card.id);
-  const image = moveCardFaces.get(card.id);
-  return face || image ? [{ card, face, image }] : [];
+  return face ? [{ card, face }] : [];
 });
 
 export type Route = 'home' | 'decks' | 'records' | 'tutorial' | LobbyMode;
@@ -49,9 +47,9 @@ export function Home({ go }: { go: (r: Route) => void }) {
     <div className="page home" style={{ '--s': scale } as CSSProperties}>
       <header className="hero">
         <div className="hero-fan" aria-hidden="true">
-          {fan.map(({ card, face, image }, i) => (
+          {fan.map(({ card, face }, i) => (
             <span key={card.id} className="fan-card" style={{ '--i': i - (fan.length - 1) / 2 } as CSSProperties}>
-              {face ? <GameLayeredFace face={face} card={card} /> : <img src={image} alt="" draggable={false} />}
+              <GameLayeredFace face={face} card={card} />
             </span>
           ))}
         </div>

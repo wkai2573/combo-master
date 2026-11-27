@@ -9,8 +9,6 @@ import { CardArt } from './CardArt';
 import { Delta } from './Delta';
 import { CardText } from './CardText';
 import { cardBorderColor, cardColor } from '../cardColor';
-import { moveCardFaces } from '../moveCardFaces';
-import { equipmentCardFace } from '../equipmentCardFaces';
 import { gameFaceFor } from '../../cardLayout/gameFaces';
 import { GameLayeredFace } from '../../cardLayout/LayeredFace';
 
@@ -93,12 +91,10 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
     return <div className={[...cls, 'back'].join(' ')} data-uid={uid} onClick={onClick}>?</div>;
   }
   const c = card ?? getCard(id);
-  const composition = gameFaceFor(id);
-  const layered = fullFace ? composition : undefined;
-  const face = composition ? undefined : moveCardFaces.get(id) ?? (fullFace ? equipmentCardFace(c) : undefined);
-  const showFullFace = fullFace && Boolean(layered || face);
+  const layered = fullFace ? gameFaceFor(id) : undefined;
+  const showFullFace = Boolean(layered);
   const hasBadge = badge !== undefined;
-  if (layered || face) cls.push(showFullFace ? 'full-face' : 'finished-face');
+  if (showFullFace) cls.push('full-face');
   const isMove = c.kind === 'move';
   // 放在增益區、依持續回合計時的 Ex 卡沒有攻守連擊，卡頭改寫持續回合
   const timedEx = isExCardId(c.id) && c.duration !== undefined;
@@ -115,7 +111,6 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
       onMouseEnter={() => inspect(id, expEffect)}
     >
       {layered && <div className="layered-slot"><GameLayeredFace face={layered} card={c} /></div>}
-      {face && <img className="face-image" src={face} alt={showFullFace && !hasBadge ? c.name : ''} draggable={false} />}
       {!showFullFace && (
         <>
           <div className="hd">
@@ -138,7 +133,7 @@ export function CardFace({ id, card, size = 'md', fullFace = true, selected, glo
               </>
             )}
           </div>
-          {!face && <CardArt id={id} card={card} />}
+          <CardArt id={id} card={card} />
         </>
       )}
       <div className="face-footer">
@@ -178,7 +173,6 @@ export function InspectPanel({ id, card, fullFace = true, expActive, pinned, onU
   }
   const c = card ?? getCard(id);
   const layered = fullFace ? gameFaceFor(id) : undefined;
-  const face = fullFace && !layered ? moveCardFaces.get(id) ?? equipmentCardFace(c) : undefined;
   const previewWidth = `min(${FACE_PREVIEW_WIDTH * faceScale}px, ${100 * faceScale / MAX_FACE_SCALE}%)`;
   const kws = keywordsIn(c.text);
   return (
@@ -189,7 +183,7 @@ export function InspectPanel({ id, card, fullFace = true, expActive, pinned, onU
           <button onClick={onUnpin}>取消固定</button>
         </div>
       )}
-      {layered || face ? (
+      {layered ? (
         <>
           <div className="row face-zoom" role="group" aria-label="卡圖縮放">
             <button type="button" disabled={faceScale === MIN_FACE_SCALE}
@@ -198,8 +192,7 @@ export function InspectPanel({ id, card, fullFace = true, expActive, pinned, onU
             <button type="button" disabled={faceScale === MAX_FACE_SCALE}
               onClick={() => setFaceScale((scale) => Math.min(MAX_FACE_SCALE, scale + FACE_SCALE_STEP))}>放大</button>
           </div>
-          {layered ? <GameLayeredFace face={layered} card={c} className="full-face-preview" style={{ width: previewWidth }} />
-            : <img className="full-face-preview" src={face} alt="" width={504} height={704} draggable={false} style={{ width: previewWidth }} />}
+          <GameLayeredFace face={layered} card={c} className="full-face-preview" style={{ width: previewWidth }} />
         </>
       ) : (
         <div className="bigart">

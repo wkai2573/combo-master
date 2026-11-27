@@ -175,18 +175,8 @@ h1, h2, h3 { margin: 0 0 8px; }
 .card .nm.with-badge { display: flex; align-items: center; gap: 4px; }
 .card .with-badge .card-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .card .face-footer { display: contents; }
-.card .face-image {
-  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
-}
 .card.full-face { border: 0; background: none; }
-.card.full-face .face-image { position: static; flex: 1; min-height: 0; height: auto; object-fit: contain; }
 .card.full-face .nm { border-radius: 0 0 8px 8px; }
-.card.finished-face .hd { position: relative; }
-/* 用即時卡片資料蓋住成品圖下方的效果文字與卡名。 */
-.card.finished-face .face-footer {
-  position: absolute; inset: 68% 0 0; display: flex; flex-direction: column;
-  justify-content: flex-end; background: color-mix(in srgb, var(--cc, #666) 24%, #10131c);
-}
 /* 窗口選項滑過時，亮起對應的那張卡 */
 .card.hint { outline: 3px solid var(--accent); outline-offset: 1px; box-shadow: 0 0 14px 3px var(--accent); z-index: 3; }
 .card.pursuit { outline: 2px solid #fff; outline-offset: -2px; }
@@ -365,7 +355,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 .poolitem .ctl button { padding: 0 8px; }
 .poolitem .copy-count { display: inline-block; min-width: 1.25em; padding: 0 3px; border-radius: 3px; background: #f8c341; color: #000; text-align: center; }
 .poolitem .card.dim { opacity: 1; }
-.poolitem .card.dim :is(.hd, .art, .ef, .face-image) { opacity: 0.35; }
+.poolitem .card.dim :is(.hd, .art, .ef) { opacity: 0.35; }
 .deckcol { display: flex; flex-direction: column; gap: 8px; }
 .deckcol > * { flex-shrink: 0; }
 .decklist { max-height: 46vh; overflow-y: auto; display: grid; gap: 2px; }
@@ -443,7 +433,6 @@ h1, h2, h3 { margin: 0 0 8px; }
 }
 .inspect .bigart .art { height: 100%; background: none; border: 0; }
 .inspect .bigart svg { display: block; width: 100%; height: 100%; }
-.inspect .face-preview { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
 .inspect .face-zoom { justify-content: center; margin-bottom: 6px; }
 .inspect .face-zoom output { min-width: 5ch; text-align: center; font-variant-numeric: tabular-nums; }
 .inspect .full-face-preview { display: block; height: auto; margin: 0 auto 8px; }

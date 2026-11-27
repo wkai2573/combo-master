@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { parseFaceLibrary } from '../src/cardLayout/library';
+import { mergeFaceLibrary, parseFaceLibrary } from '../src/cardLayout/library';
 import { cardTable } from '../src/data/cardTableData';
 
 const source = process.argv[2];
@@ -17,9 +17,11 @@ try {
   if (unknown.length) throw new Error('卡表找不到 ' + unknown.join('、') + '。請先匯入卡表差異檔並確認永久編號。');
 
   const destination = fileURLToPath(new URL('../src/cardLayout/game-faces.json', import.meta.url));
+  const currentText = await readFile(destination, 'utf8');
+  const current = parseFaceLibrary(JSON.parse(currentText));
   const temp = destination + '.' + randomUUID() + '.tmp';
-  const data = JSON.stringify(library, null, 2) + '\n';
-  if ((await readFile(destination, 'utf8')) !== data) {
+  const data = JSON.stringify(mergeFaceLibrary(current, library), null, 2) + '\n';
+  if (currentText !== data) {
     try {
       await writeFile(temp, data, { flag: 'wx' });
       await rename(temp, destination);

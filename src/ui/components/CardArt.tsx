@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { getCard } from '../../data/cards';
 import type { CardData } from '../../data/types';
 import { CARD_ART, hasOwnArt } from './cardArtGlyphs';
-import { moveCardFaces } from '../moveCardFaces';
 import { gameFaceFor, imageFor } from '../../cardLayout/gameFaces';
 
 /**
@@ -44,11 +43,10 @@ export function CardArt({ id, card }: { id: string; card?: CardData }) {
   const layered = gameFaceFor(id);
   const artLayer = layered?.template.layers.find((layer) => layer.kind === 'image' && layer.source === 'art' && !layer.hidden);
   const portrait = layered && artLayer?.kind === 'image' && imageFor(artLayer, layered.uid, card ?? getCard(id), layered.content);
-  const face = layered ? undefined : moveCardFaces.get(id);
   return (
     <div className="art">
-      {portrait ? <img className="portrait-preview" src={portrait} alt="" draggable={false} /> : face ? (
-        <img className="face-preview" src={face} alt="" draggable={false} />
+      {portrait ? (
+        <img className="portrait-preview" src={portrait} alt="" draggable={false} />
       ) : (
         <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
           {glyphFor(id, card)}

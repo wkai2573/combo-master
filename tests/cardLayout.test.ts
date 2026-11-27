@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
-import { defaultTextLayer, facePresets } from '../src/cardLayout/model';
+import { mergeFaceLibrary } from '../src/cardLayout/library';
+import { defaultTextLayer, facePresets, type FaceLibrary } from '../src/cardLayout/model';
 import { layoutFaceText } from '../src/cardLayout/textLayout';
 
 const measure = (text: string, size: number) => ({
@@ -71,4 +72,17 @@ test('關鍵字底框以筆畫上下中心對齊，且和正文共用基線', ()
     expect(-ascent - y).toBeGreaterThan(0);
     expect(-ascent - y).toBeCloseTo(y + height - descent);
   }
+});
+
+test('讀取較早的卡面草稿時保留自訂範本與本次新增的卡面', () => {
+  const base: FaceLibrary = {
+    formatVersion: 1, templates: [], cards: { A39: { template: 'move' }, A40: { template: 'move' } },
+  };
+  const draft: FaceLibrary = {
+    formatVersion: 1, templates: [{ ...facePresets[0], id: 'custom', name: '自訂招式' }],
+    cards: { A39: { template: 'custom' } },
+  };
+  expect(mergeFaceLibrary(base, draft)).toEqual({
+    ...draft, cards: { A39: { template: 'custom' }, A40: { template: 'move' } },
+  });
 });

@@ -21,6 +21,11 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.76.4',
+    date: '2026-11-27',
+    items: [{ type: 'change', text: '88 張招式和 8 張裝備全面採用分層卡面，卡名、數值與效果會依卡表同步排版。' }],
+  },
+  {
     version: '0.76.3',
     date: '2026-11-27',
     items: [{ type: 'change', text: '分層卡面的怒氣費用以紅色火焰底搭配白字顯示。' }],

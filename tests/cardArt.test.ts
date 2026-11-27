@@ -1,5 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { gameFaceFor, imageFor } from '../src/cardLayout/gameFaces';
+import { cardTable } from '../src/data/cardTableData';
 import { ALL_CARDS } from '../src/data/cards';
 import { isExCardId } from '../src/data/exCards';
 import { isCardEnabled, isVanilla } from '../src/data/enabledCards';
@@ -35,4 +37,21 @@ describe('效果卡的卡圖', () => {
   it('卡圖不是空的', () => {
     for (const c of needArt) expect(renderToStaticMarkup(CARD_ART[c.id]).length, c.name).toBeGreaterThan(80);
   });
+});
+
+it('每張原有成品卡面都可由卡表找到分層插畫和卡框', () => {
+  const paths = Object.keys(import.meta.glob('../src/ui/{move,equipment}-card-faces/*.webp', { query: '?url' }));
+  const cards = new Map(ALL_CARDS.map((card) => [card.id, card]));
+  expect(paths.length).toBeGreaterThan(0);
+  for (const path of paths) {
+    const uid = path.split('/').at(-1)!.replace(/\.webp$/, '');
+    const card = cards.get(cardTable.uids[uid]);
+    const face = card && gameFaceFor(card.id);
+    if (!card || !face) throw new Error(uid + ' 缺少分層卡面');
+    expect(face.uid).toBe(uid);
+    const images = face.template.layers.filter((layer) => layer.kind === 'image');
+    for (const layer of images) {
+      if (!layer.hidden && layer.source !== 'upload') expect(imageFor(layer, uid, card, face.content), uid).toBeTruthy();
+    }
+  }
 });
