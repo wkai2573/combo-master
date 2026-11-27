@@ -507,7 +507,7 @@ h1, h2, h3 { margin: 0 0 8px; }
 @keyframes endIn { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
 
 /* ───────── 寬螢幕版（寬 ≥ 1200 且高 ≥ 800）：整頁不捲動 ─────────
-   對手面板｜說明、戰鬥區、紀錄｜提示欄｜我方面板。只有紀錄欄自己會捲動。
+   對手面板｜紀錄、戰鬥區、說明｜提示欄｜我方面板。
    玩家面板是一橫列：角色資訊｜牌組、怒氣、棄牌、經驗區｜手牌。 */
 .battle.wide {
   --mdw: 112px; --mdh: 156px;
@@ -532,6 +532,10 @@ h1, h2, h3 { margin: 0 0 8px; }
 }
 .battle.wide .opponent-board:hover .opponent-detail,
 .battle.wide .opponent-board:has(:focus-visible) .opponent-detail { visibility: visible; }
+.battle.wide .opponent-board:has(.expcards.expanded) .opponent-summary { display: none; }
+.battle.wide .opponent-detail:has(.expcards.expanded) { position: static; visibility: visible; box-shadow: none; }
+.battle.wide .board:has(.opponent-board .expcards.expanded) { grid-template-rows: auto minmax(250px, 1fr) minmax(220px, 1fr); }
+.battle.wide .board:has(.lower-board .expcards.expanded) { grid-template-rows: auto minmax(250px, 1fr) auto; }
 .battle.wide .lower-board {
   display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 6px; container-type: size;
 }
@@ -545,6 +549,16 @@ h1, h2, h3 { margin: 0 0 8px; }
 .battle.wide .midrow > * { min-height: 0; }
 .battle.wide .sidecol { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
 .battle.wide .sidecol .inspect { flex: 1; min-height: 0; overflow-y: auto; border-bottom: 0; }
+.battle.wide .sidecol .inspect.side-zoom {
+  display: grid; grid-template: auto minmax(0, 1fr) / minmax(0, 1fr) auto; column-gap: 8px;
+  padding: 0 8px 0 10px; overflow: hidden;
+}
+.side-zoom .pinbar { grid-area: 1 / 1 / 2 / -1; margin: 8px 0 0; }
+.side-zoom .inspect-content { grid-area: 2 / 1; overflow-y: auto; padding: 8px 0; }
+.inspect.side-zoom .face-zoom {
+  grid-area: 2 / 2; align-self: center; flex-direction: column; flex-wrap: nowrap;
+  margin: 0;
+}
 .battle.wide .sidecol .inspect .bigart { height: 72px; }
 .battle.wide .combatarea { display: flex; flex-direction: column; padding: 6px 10px; overflow: hidden auto; }
 .battle.wide .combatarea .cols { flex: 1; min-height: 0; align-items: stretch; gap: 16px; }
@@ -573,6 +587,14 @@ h1, h2, h3 { margin: 0 0 8px; }
 
 /* ───────── 經驗區：高度固定，單列、兩列矮卡、水平重疊 ───────── */
 .expcards { position: relative; height: 106px; }
+.exphead { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.exphead button { padding: 1px 5px; font-size: 11px; }
+.expcards.expanded {
+  display: grid; grid-template-columns: repeat(var(--cols), var(--exp-card-w));
+  --exp-card-w: 112px;
+  height: auto; gap: 8px; padding: 6px; overflow-x: auto; scrollbar-width: thin;
+}
+.battle.wide .expcards.expanded .card.md { width: var(--exp-card-w); height: 156px; }
 .expcards.one { display: flex; gap: 6px; align-items: flex-start; }
 .expcards.two, .expcards.overlap { display: grid; grid-auto-flow: row; grid-template-columns: repeat(var(--cols), var(--step)); grid-template-rows: 50px 50px; row-gap: 6px; }
 .expcards .expslot { position: relative; min-width: 0; }

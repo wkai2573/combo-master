@@ -165,7 +165,7 @@ export function Battle({ session, onExit, onPractice, onLesson }: {
   const result = pres.playing || v.winner === null || tut ? null : v.winner === 'draw' ? 'draw' : v.winner === me ? 'win' : 'lose';
   const outcomeOf = (p: PlayerId) => (v.winner === null ? undefined : v.winner === 'draw' ? 'draw' : v.winner === p ? 'win' : 'lose');
   const shown = overlays.pinned ?? inspect;
-  const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={overlays.pinned !== null} onUnpin={overlays.unpin} />;
+  const inspectPanel = <InspectPanel id={shown?.id ?? null} expActive={shown?.exp} pinned={overlays.pinned !== null} onUnpin={overlays.unpin} sideZoom />;
   const OpponentPanel = tut ? PlayerBoard : OpponentBoard;
   const oppBoard = <OpponentPanel v={v} p={opp} prompt={null} selected={[]} onPick={noop} onZone={openZone} hit={pres.hits[opp]} changes={changes} fxKey={fxKey} outcome={outcomeOf(opp)} shuffling={fx?.type === 'shuffle'} />;
   const myBoard = <PlayerBoard v={v} p={me} prompt={prompt} selected={selected} onPick={toggle} drag={drag} onZone={openZone} hit={pres.hits[me]} changes={changes} fxKey={fxKey} outcome={outcomeOf(me)} shuffling={fx?.type === 'shuffle'} />;
@@ -262,9 +262,9 @@ export function Battle({ session, onExit, onPractice, onLesson }: {
             <div className={`board${pres.playing ? ' playing' : ''}`}>
               {oppBoard}
               <div className="midrow">
-                <div className="sidecol">{inspectPanel}</div>
-                {combat}
                 <div className="sidecol"><LogPanel lines={v.log} /></div>
+                {combat}
+                <div className="sidecol">{inspectPanel}</div>
               </div>
               <div className="lower-board">
                 {promptBarOf(handUids)}

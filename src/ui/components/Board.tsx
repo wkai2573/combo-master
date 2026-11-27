@@ -66,10 +66,11 @@ export function Pile({ p, zone, label, count, top, delta, k, shuffling, countTex
   );
 }
 
-/** 經驗區：高度固定。一列放得下是完整小卡，放不下分兩列矮卡，再放不下就水平重疊；滑過矮卡會展開成完整小卡 */
+/** 收合時以小卡顯示，展開時沿用原本的列分配並放大卡圖。 */
 function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optKeys: Set<string>; selected: string[]; onPick: (key: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   // 繪製前就量好寬度，第一幀就是對的版面
   useLayoutEffect(() => {
     const el = ref.current;
@@ -80,7 +81,21 @@ function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optK
     return () => ro.disconnect();
   }, []);
   const layout = expLayout(cards.length, width);
-  const short = layout.mode !== 'one';
+  const short = !expanded && layout.mode !== 'one';
+  useEffect(() => {
+    const el = ref.current;
+    if (!expanded || !el) return;
+    const scrollHorizontally = (event: WheelEvent) => {
+      if (event.ctrlKey || event.shiftKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+      const max = el.scrollWidth - el.clientWidth;
+      if (max <= 0 || (event.deltaY < 0 ? el.scrollLeft <= 0 : el.scrollLeft >= max - 0.5)) return;
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? el.clientWidth : 1;
+      event.preventDefault();
+      el.scrollLeft += event.deltaY * unit;
+    };
+    el.addEventListener('wheel', scrollHorizontally, { passive: false });
+    return () => el.removeEventListener('wheel', scrollHorizontally);
+  }, [expanded]);
   // 觸控沒有滑過：點矮卡先展開成完整小卡，同一張再點一下才送出（不是選項的卡再點就收起）
   const coarse = useCoarsePointer();
   const [open, setOpen] = useState<number | null>(null);
@@ -95,21 +110,33 @@ function ExpZone({ cards, optKeys, selected, onPick }: { cards: CardView[]; optK
     if (r.submit) onPick(`c${c.uid}`);
   };
   return (
-    <div
-      ref={ref} className={`expcards ${layout.mode}`}
-      style={short ? { ['--step' as string]: `${layout.step}px`, ['--cols' as string]: layout.cols } : undefined}
-    >
-      {cards.map((c, i) => (
-        <div key={c.uid} className={`expslot${short ? (i < layout.firstRow ? ' r1' : ' r2') : ''}${open === c.uid ? ' open' : ''}`}>
-          <CardFace
-            uid={c.uid} id={c.id} size="sm" short={short} expEffect={expEffectActive(c)} covered={c.covered}
-            glow={optKeys.has(`c${c.uid}`)} selected={selected.includes(`c${c.uid}`)}
-            onClick={coarse && short ? tapShort(c) : optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
-          />
-        </div>
-      ))}
-      {cards.length === 0 && <span className="muted">（空）</span>}
-    </div>
+    <>
+      <div className="exphead">
+        <div className="zonelabel">經驗區（左側為最前方）</div>
+        {cards.length > 0 && (
+          <button type="button" aria-expanded={expanded} onClick={() => {
+            if (ref.current) ref.current.scrollLeft = 0;
+            setOpen(null);
+            setExpanded(!expanded);
+          }}>{expanded ? '收合經驗區' : '展開經驗區'}</button>
+        )}
+      </div>
+      <div
+        ref={ref} className={`expcards ${expanded && cards.length > 0 ? 'expanded' : layout.mode}`}
+        style={short || expanded ? { ['--step' as string]: `${layout.step}px`, ['--cols' as string]: layout.cols } : undefined}
+      >
+        {cards.map((c, i) => (
+          <div key={c.uid} className={`expslot${short ? (i < layout.firstRow ? ' r1' : ' r2') : ''}${open === c.uid ? ' open' : ''}`}>
+            <CardFace
+              uid={c.uid} id={c.id} size={expanded ? 'md' : 'sm'} short={short} expEffect={expEffectActive(c)} covered={c.covered}
+              glow={optKeys.has(`c${c.uid}`)} selected={selected.includes(`c${c.uid}`)}
+              onClick={coarse && short ? tapShort(c) : optKeys.has(`c${c.uid}`) ? () => onPick(`c${c.uid}`) : undefined}
+            />
+          </div>
+        ))}
+        {cards.length === 0 && <span className="muted">（空）</span>}
+      </div>
+    </>
   );
 }
 
@@ -309,7 +336,6 @@ export function PlayerBoard({ v, p, prompt, selected, onPick, onZone, drag, hit,
           <Pile p={p} zone="discard" label="棄牌" count={pv.discard.length} top={pv.discard[pv.discard.length - 1]} onClick={(a) => onZone(p, 'discard', a)} />
         </div>
         <div className="expzone" ref={expRef} data-dropzone={mine ? 'exp' : undefined} data-exp-zone={p}>
-          <div className="zonelabel">經驗區（左側為最前方）</div>
           <ExpZone cards={pv.exp} optKeys={optKeys} selected={selected} onPick={onPick} />
         </div>
       </div>

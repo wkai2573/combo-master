@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.78.0',
+    date: '2026-11-28',
+    items: [
+      { type: 'change', text: '寬螢幕戰鬥畫面將紀錄移到左側、卡片預覽移到右側，縮放按鈕固定在預覽右側。' },
+      { type: 'add', text: '寬螢幕的雙方經驗區可各自展開大卡圖，沿用原本的排列，超出寬度時可左右捲動。' },
+    ],
+  },
+  {
     version: '0.77.0',
     date: '2026-11-27',
     items: [

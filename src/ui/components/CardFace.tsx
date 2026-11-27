@@ -160,7 +160,7 @@ const FACE_SCALE_STEP = 0.25;
 const FACE_PREVIEW_WIDTH = 184;
 
 /** 側欄的卡片完整說明：放大的卡圖、數值、效果，並列出文字裡關鍵字的說明 */
-export function InspectPanel({ id, card, fullFace = true, expActive, pinned, onUnpin }: { id: string | null; card?: CardData; fullFace?: boolean; expActive?: boolean; pinned?: boolean; onUnpin?: () => void }) {
+export function InspectPanel({ id, card, fullFace = true, expActive, pinned, onUnpin, sideZoom }: { id: string | null; card?: CardData; fullFace?: boolean; expActive?: boolean; pinned?: boolean; onUnpin?: () => void; sideZoom?: boolean }) {
   const [faceScale, setFaceScale] = useState(1);
   if (!id) {
     return (
@@ -175,50 +175,54 @@ export function InspectPanel({ id, card, fullFace = true, expActive, pinned, onU
   const layered = fullFace ? gameFaceFor(id) : undefined;
   const previewWidth = `min(${FACE_PREVIEW_WIDTH * faceScale}px, ${100 * faceScale / MAX_FACE_SCALE}%)`;
   const kws = keywordsIn(c.text);
+  const zoomIn = <button type="button" disabled={faceScale === MAX_FACE_SCALE}
+    onClick={() => setFaceScale((scale) => Math.min(MAX_FACE_SCALE, scale + FACE_SCALE_STEP))}>放大</button>;
+  const zoomOut = <button type="button" disabled={faceScale === MIN_FACE_SCALE}
+    onClick={() => setFaceScale((scale) => Math.max(MIN_FACE_SCALE, scale - FACE_SCALE_STEP))}>縮小</button>;
   return (
-    <div className="inspect" style={{ ['--cc' as string]: cardColor(c), ['--cb' as string]: cardBorderColor(c) }}>
+    <div className={`inspect${layered && sideZoom ? ' side-zoom' : ''}`} style={{ ['--cc' as string]: cardColor(c), ['--cb' as string]: cardBorderColor(c) }}>
       {pinned && (
         <div className="pinbar">
           <span>已固定這張的說明</span>
           <button onClick={onUnpin}>取消固定</button>
         </div>
       )}
-      {layered ? (
-        <>
-          <div className="row face-zoom" role="group" aria-label="卡圖縮放">
-            <button type="button" disabled={faceScale === MIN_FACE_SCALE}
-              onClick={() => setFaceScale((scale) => Math.max(MIN_FACE_SCALE, scale - FACE_SCALE_STEP))}>縮小</button>
-            <output className="muted">{faceScale * 100}%</output>
-            <button type="button" disabled={faceScale === MAX_FACE_SCALE}
-              onClick={() => setFaceScale((scale) => Math.min(MAX_FACE_SCALE, scale + FACE_SCALE_STEP))}>放大</button>
-          </div>
+      {layered && (
+        <div className="row face-zoom" role="group" aria-label="卡圖縮放">
+          {sideZoom ? zoomIn : zoomOut}
+          <output className="muted">{faceScale * 100}%</output>
+          {sideZoom ? zoomOut : zoomIn}
+        </div>
+      )}
+      <div className="inspect-content">
+        {layered ? (
           <GameLayeredFace face={layered} card={c} className="full-face-preview" style={{ width: previewWidth }} />
-        </>
-      ) : (
-        <div className="bigart">
-          <CardArt id={id} card={card} />
+        ) : (
+          <div className="bigart">
+            <CardArt id={id} card={card} />
+          </div>
+        )}
+        <div className="nm">{c.name}</div>
+        <div className="muted">{c.cls}・{kindLabel(c)}</div>
+        <div className="st">
+          {c.kind === 'move' && !(isExCardId(c.id) && c.duration !== undefined)
+            ? `攻擊 ${c.atk}　防禦 ${c.def}　連擊值 ${c.combo}`
+            : c.kind === 'move'
+            ? `持續回合 ${c.duration}`
+            : `經驗需求 ${c.expReq}${c.kind === 'buff' ? `　持續時間 ${c.duration}` : ''}`}
         </div>
-      )}
-      <div className="nm">{c.name}</div>
-      <div className="muted">{c.cls}・{kindLabel(c)}</div>
-      <div className="st">
-        {c.kind === 'move' && !(isExCardId(c.id) && c.duration !== undefined)
-          ? `攻擊 ${c.atk}　防禦 ${c.def}　連擊值 ${c.combo}`
-          : c.kind === 'move'
-          ? `持續回合 ${c.duration}`
-          : `經驗需求 ${c.expReq}${c.kind === 'buff' ? `　持續時間 ${c.duration}` : ''}`}
+        {expActive && <div className="expnote">經驗效果：生效中</div>}
+        <div className="tx">{c.text ? <CardText text={c.text} /> : '（無效果）'}</div>
+        {kws.length > 0 && (
+          <div className="kwlist">
+            {kws.map((k) => (
+              <div key={k.name}>
+                <b>{k.name}</b>：{k.desc}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-      {expActive && <div className="expnote">經驗效果：生效中</div>}
-      <div className="tx">{c.text ? <CardText text={c.text} /> : '（無效果）'}</div>
-      {kws.length > 0 && (
-        <div className="kwlist">
-          {kws.map((k) => (
-            <div key={k.name}>
-              <b>{k.name}</b>：{k.desc}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
