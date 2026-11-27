@@ -149,7 +149,7 @@ export const 公開資訊 = coverReaction(
 // 財富管理（商人）：
 //   [發] 將牌組上方 3 張卡以裏側放入經驗區（不足 3 張時全放入；放在經驗區最後方）
 //   [經] 當此卡被蓋為裏側時，必須捨棄此卡，然後選擇 2 張經驗放回牌組底（先進棄牌區、雙方都看得到，選不到自己；表側裏側都可以選；
-//   不足 2 張全放回；Ex 卡離開經驗區就移除遊戲，不會進牌組）。做法比照公開資訊的「蓋反應時捨棄自己」
+//   不足 2 張全放回；Ex 卡離開場上就移除遊戲，不會進牌組）。做法比照公開資訊的「蓋反應時捨棄自己」
 export const 財富管理 = coverReaction(
   '財富管理',
   '捨棄此卡，然後選擇 2 張經驗放回牌組底',
@@ -160,7 +160,7 @@ export const 財富管理 = coverReaction(
     }
     const back = yield* chooseCards(g, p, '【財富管理】選擇 2 張經驗放回牌組底', Z(g, p, 'exp'), 2, 2);
     for (const card of back) move(g, card, 'deck', 'bottom');
-    // Ex 卡離開經驗區是移除遊戲，不會進牌組，紀錄要分開寫
+    // Ex 卡離開場上是移除遊戲，不會進牌組，紀錄要分開寫
     const removed = back.filter((card) => isExCardId(card.id)).length;
     log(g, `【財富管理】${pname(g, p)} 將 ${back.length - removed} 張經驗放回牌組底${removed > 0 ? `，${removed} 張 Ex 卡移除遊戲` : ''}`);
   },

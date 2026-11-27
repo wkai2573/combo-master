@@ -87,7 +87,7 @@ describe('財富管理', () => {
     expect(Z(one, 0, 'deck').length).toBe(oneDeck + 1 + 1);
   });
 
-  it('Ex 卡被放回時離開經驗區直接移除遊戲，不進牌組也不進棄牌區', () => {
+  it('Ex 卡被放回時離開場上直接移除遊戲，不進牌組也不進棄牌區', () => {
     const ex = covered(['財富管理', 'Ex-流血', '黑桃3', '黑桃6']);
     const exDeck = Z(ex, 0, 'deck').length;
     pick(ex, '發動');

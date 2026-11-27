@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { checkExLeaveRule, isExCardId } from '../src/data/exCards';
-import { exZoneOf } from '../src/engine/effects';
+import { isExCardId } from '../src/data/exCards';
 import { ALL_CARDS, ALL_CHARACTERS } from '../src/data/cards';
 import { checkCardText, checkWording, lineBoxes, parseCardLine, parseCardText } from '../src/data/cardText';
 import { isCardEnabled } from '../src/data/enabledCards';
-import { keywordsIn } from '../src/data/keywords';
+import { KEYWORDS, keywordsIn } from '../src/data/keywords';
 
 describe('卡片文字句型：切成各段', () => {
   it('規範範例一：費用、時機、條件、效果各自切開，接起來等於原文', () => {
@@ -110,13 +109,10 @@ describe('全部卡片與角色文字都符合撰寫規範', () => {
     expect(problems).toEqual([]);
   });
 
-  it('每張 Ex 卡都寫了通則，且寫的是實作登記的所在區域（經驗區或增益區）', () => {
-    const problems: string[] = [];
-    for (const c of ALL_CARDS.filter((c) => isExCardId(c.id))) {
-      const e = checkExLeaveRule(c.text, exZoneOf(c.id));
-      if (e) problems.push(`${c.name}：${e}`);
-    }
-    expect(problems).toEqual([]);
+  it('Ex 卡離場通則集中寫在 Ex-卡名關鍵字說明', () => {
+    const rule = KEYWORDS.find(({ name }) => name === 'Ex-卡名')?.desc;
+    expect(rule).toContain('當離開場上時移除遊戲。');
+    expect(ALL_CARDS.filter((c) => isExCardId(c.id)).every((c) => !c.text.includes('當此卡離開'))).toBe(true);
   });
 
   it('角色文字不套用句型，只檢查用語', () => {

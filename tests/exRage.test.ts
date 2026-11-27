@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getCard } from '../src/data/cards';
 import { ENABLED_EFFECT_CARDS } from '../src/data/enabledCards';
-import { EX_LEAVE_RULES } from '../src/data/exCards';
 import { presetDeck } from '../src/data/presetDecks';
 import { totalAtk } from '../src/engine/combat';
 import { exZoneOf, hasEffect, hasExpEffect } from '../src/engine/effects';
@@ -17,7 +16,6 @@ describe('狂怒與 Ex-狂怒：卡表資料與登記', () => {
     expect(getCard('狂怒')).toMatchObject({ cls: '盜賊', kind: 'move', atk: 3, def: 4, combo: 5, traits: ['攻擊', '充能'] });
     expect(ENABLED_EFFECT_CARDS).toContain('狂怒');
     expect(getCard('Ex-狂怒')).toMatchObject({ traits: ['充能'], duration: 2 });
-    expect(getCard('Ex-狂怒').text).toContain(EX_LEAVE_RULES.buff);
   });
 
   it('效果來源都有登記：狂怒在招式卡疊，Ex-狂怒在增益區（不是經驗效果）', () => {

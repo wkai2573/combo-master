@@ -21,6 +21,13 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.85.0',
+    date: '2026-11-28',
+    items: [
+      { type: 'change', text: 'Ex-中毒、Ex-流血、Ex-貸款、Ex-狂怒、Ex-玄武與 Ex-白虎離開場上時都會移除遊戲；狂怒、玄武與白虎改列為增益卡。' },
+    ],
+  },
+  {
     version: '0.84.0',
     date: '2026-11-28',
     items: [

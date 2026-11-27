@@ -1,6 +1,6 @@
 import { characterDefaults, generatedCards, generatedCharacters, readTableCards, readTableCharacters, sortByOrder, type CardTableData, type UidPrefix } from './cardTableData';
 import { isCardEnabled } from './enabledCards';
-import { checkExLeaveRule, EX_LEAVE_RULES, isExCardId, type ExZone } from './exCards';
+import { isExCardId } from './exCards';
 import type { Keyword } from './keywords';
 import { TUTORIAL_CHARACTERS } from './tutorialCharacters';
 import type { CardData, CardKind, CharacterData } from './types';
@@ -285,8 +285,6 @@ function checkReferences(table: CardTableData, extraTexts: string[]) {
 
 function prepareEx(card: CardData, notes: string[], options: ImportOptions): CardData {
   const { id, name, text } = card;
-  const leave = checkExLeaveRule(text, options.exZone?.(id));
-  if (leave) throw new Error(`Ex 卡${leave}：${name}`);
   if (!options.hasEffect?.(id)) notes.push(`Ex 卡尚未實作效果：${name}`);
   const result: CardData = { ...card, cls: '共用' };
   const duration = /持續回合：(\d+)/.exec(text)?.[1];
@@ -295,13 +293,12 @@ function prepareEx(card: CardData, notes: string[], options: ImportOptions): Car
     if (!Number.isSafeInteger(turns) || turns < 1) throw new Error(`Ex 卡持續回合不符：${name}`);
     if (!Object.hasOwn(card, 'duration')) result.duration = turns;
   }
-  else if (text.includes(EX_LEAVE_RULES.buff)) notes.push(`Ex 卡缺少「持續回合：N。」，不會到期：${name}`);
+  else if (result.kind === 'buff' && result.duration === undefined) notes.push(`增益類 Ex 卡缺少持續回合，不會到期：${name}`);
   return result;
 }
 
 type ImportOptions = {
   hasEffect?: (id: string) => boolean;
-  exZone?: (id: string) => ExZone | undefined;
   characterTexts?: string[];
 };
 
@@ -504,5 +501,9 @@ export function applyDiff(
       a[0].localeCompare(b[0]) || Number(a.slice(1)) - Number(b.slice(1))));
   }
   checkReferences(table, options.characterTexts ?? []);
+  const exKeyword = table.keywords.find(({ name }) => name === 'Ex-卡名');
+  if (!exKeyword?.desc.includes('當離開場上時移除遊戲。')) {
+    throw new Error('Ex-卡名關鍵字說明須包含「當離開場上時移除遊戲。」');
+  }
   return { table, notes };
 }

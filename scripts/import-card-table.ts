@@ -2,7 +2,7 @@ import { closeSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } 
 import { fileURLToPath } from 'node:url';
 import { applyDiff } from '../src/data/cardTableDraft';
 import type { CardTableData } from '../src/data/cardTableData';
-import { exZoneOf, hasEffect } from '../src/engine/effects';
+import { hasEffect } from '../src/engine/effects';
 
 const output = fileURLToPath(new URL('../src/data/cardTable.json', import.meta.url));
 const source = process.argv[2];
@@ -15,7 +15,7 @@ const lock = openSync(lockPath, 'wx');
 try {
   const before = readFileSync(output, 'utf8');
   const baseline = JSON.parse(before) as CardTableData;
-  const { table, notes } = applyDiff(baseline, input, { hasEffect, exZone: exZoneOf });
+  const { table, notes } = applyDiff(baseline, input, { hasEffect });
   if (JSON.stringify(table) !== JSON.stringify(baseline)) {
     writeFileSync(pending, JSON.stringify(table, null, 2) + '\n', { flag: 'wx' });
     renameSync(pending, output);

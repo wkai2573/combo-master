@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { cardTable, readTableCards, readTableCharacters } from '../src/data/cardTableData';
 import { applyDiff, blankMoveAdditions, blankMoveMessage, emptyDraft, makeDiff, nextCardUid, nextUid, orderOf, parseDiff, realignDraft, type Draft } from '../src/data/cardTableDraft';
 import { getCharacter } from '../src/data/cards';
-import { EX_LEAVE_RULES } from '../src/data/exCards';
+import type { CardData } from '../src/data/types';
 
 const card = readTableCards(cardTable).find((c) => c.id === '黑桃1')!;
 const uid = Object.keys(cardTable.uids).find((key) => cardTable.uids[key] === card.id)!;
@@ -200,7 +200,7 @@ describe('角色、關鍵字與 Ex 卡', () => {
   const keyword = { name: '試驗標記', group: '名詞', desc: '效果說明。' };
   const keywordUid = nextUid(cardTable, 'K', []);
   const exUid = nextUid(cardTable, 'X', []);
-  const ex = { ...newCard, id: 'Ex-測試', name: 'Ex-測試', traits: ['毒'], text: EX_LEAVE_RULES.exp };
+  const ex = { ...newCard, id: 'Ex-測試', name: 'Ex-測試', traits: ['毒'], text: '' };
 
   it('角色改名、生命值與職業只寫入覆蓋值，保留內部 id 並提醒專用卡', () => {
     const edits: Draft['edits'] = [
@@ -307,13 +307,28 @@ describe('角色、關鍵字與 Ex 卡', () => {
     expect(result.notes).not.toContainEqual(expect.stringContaining('缺少「持續回合：N。」'));
   });
 
-  it('驗證 Ex 卡名稱、離場區域與增益回合', () => {
-    const add = (name: string, text: string) => diffOf({ additions: [{ uid: exUid, card: { ...ex, name, text } }] });
+  it('驗證 Ex 卡名稱與增益回合；離場通則集中於 Ex-卡名', () => {
+    const add = (name: string, text: string, kind: CardData['kind'] = 'move') =>
+      diffOf({ additions: [{ uid: exUid, card: { ...ex, name, text, kind } }] });
     expect(() => applyDiff(cardTable, add('無前綴', ex.text))).toThrow('Ex-');
-    expect(() => applyDiff(cardTable, add(ex.name, '無離場規則。'))).toThrow('缺少');
-    expect(() => applyDiff(cardTable, add(ex.name, ex.text), { exZone: () => 'buff' })).toThrow(EX_LEAVE_RULES.buff);
-    expect(applyDiff(cardTable, add(ex.name, `持續回合：3。\n${EX_LEAVE_RULES.buff}`)).table.exCards.at(-1)?.duration).toBe(3);
-    expect(applyDiff(cardTable, add(ex.name, EX_LEAVE_RULES.buff)).notes).toContainEqual(expect.stringContaining('不會到期'));
+    expect(applyDiff(cardTable, add(ex.name, '一般效果文字。')).table.exCards.at(-1)?.text).toBe('一般效果文字。');
+    expect(applyDiff(cardTable, add(ex.name, '持續回合：3。', 'buff')).table.exCards.at(-1)?.duration).toBe(3);
+    expect(applyDiff(cardTable, add(ex.name, '', 'buff')).notes).toContainEqual(expect.stringContaining('不會到期'));
+    const rage = cardTable.exCards.find(({ id }) => id === 'Ex-狂怒')!;
+    const rageUid = Object.keys(cardTable.uids).find((uid) => cardTable.uids[uid] === rage.id)!;
+    const edited = applyDiff(cardTable, diffOf({ edits: [
+      { uid: rageUid, field: 'kind', base: rage.kind, value: 'buff' },
+      { uid: rageUid, field: 'text', base: rage.text, value: '當我方增益區放置 [Ex-狂怒] 時，此卡上的持續時間指示物全部移除。' },
+    ] }));
+    expect(edited.table.exCards.find(({ id }) => id === rage.id)).toMatchObject({ kind: 'buff', duration: 2 });
+  });
+
+  it('Ex-卡名關鍵字必須保留場上離場通則', () => {
+    const rule = cardTable.keywords.find(({ name }) => name === 'Ex-卡名')!;
+    const ruleUid = Object.keys(cardTable.uids).find((uid) => cardTable.uids[uid] === rule.name)!;
+    expect(() => applyDiff(cardTable, diffOf({ edits: [{
+      uid: ruleUid, field: 'desc', base: rule.desc, value: '臨時額外卡，效果由其他卡片效果生成。',
+    }] }))).toThrow('Ex-卡名關鍵字說明須包含');
   });
 
   it('檢查卡、角色與 Ex 卡的引用，拒絕刪除並列出引用者', () => {

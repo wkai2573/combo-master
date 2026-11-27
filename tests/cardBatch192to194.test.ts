@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getCard } from '../src/data/cards';
 import { ENABLED_EFFECT_CARDS } from '../src/data/enabledCards';
-import { EX_LEAVE_RULES } from '../src/data/exCards';
 import { presetDeck } from '../src/data/presetDecks';
 import { totalAtk, totalDef } from '../src/engine/combat';
 import { exZoneOf, hasEffect, query } from '../src/engine/effects';
@@ -37,12 +36,11 @@ describe('卡表資料與登記（聖獸白虎、聖獸玄武、Ex-白虎、Ex-�
     }
   });
 
-  it('Ex-白虎與 Ex-玄武：持續回合 7，效果來源登記常駐位置為增益區，文字寫離開增益區', () => {
+  it('Ex-白虎與 Ex-玄武：持續回合 7，效果來源登記常駐位置為增益區', () => {
     for (const id of ['Ex-白虎', 'Ex-玄武']) {
       expect(getCard(id).duration).toBe(7);
       expect(hasEffect(id)).toBe(true);
       expect(exZoneOf(id)).toBe('buff');
-      expect(getCard(id).text).toContain(EX_LEAVE_RULES.buff);
     }
   });
 
@@ -112,14 +110,14 @@ describe('Ex-白虎、Ex-玄武：持續回合 7，每張各自提供加成', ()
     expect(query(g, 1, 'flatDef')).toBe(0);
   });
 
-  it('離開增益區就移除遊戲，不進其他區域，加成跟著消失', () => {
+  it('離開場上才移除遊戲；移入經驗區仍保留，但不再加成', () => {
     const g = scenario({ chars: ['法師', '勇者'], first: 0, p0: { buff: ['Ex-白虎', 'Ex-玄武'], hand: [] }, p1: { hand: [] }, singlePhase: true });
     const [tiger, tortoise] = Z(g, 0, 'buff');
     move(g, tiger, 'discard');
     move(g, tortoise, 'exp');
     expect(ids(g, 0, 'buff')).toEqual([]);
     expect(ids(g, 0, 'discard')).toEqual([]);
-    expect(ids(g, 0, 'exp')).toEqual([]);
+    expect(ids(g, 0, 'exp')).toEqual(['Ex-玄武']);
     expect(query(g, 0, 'flatAtk')).toBe(0);
     expect(query(g, 0, 'flatDef')).toBe(0);
   });

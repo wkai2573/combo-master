@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getCard } from '../src/data/cards';
 import { ENABLED_EFFECT_CARDS } from '../src/data/enabledCards';
-import { EX_LEAVE_RULES } from '../src/data/exCards';
 import { presetDeck } from '../src/data/presetDecks';
 import { pay } from '../src/engine/cost';
 import { exZoneOf, hasEffect, hasExpEffect } from '../src/engine/effects';
@@ -16,7 +15,6 @@ describe('強力過件與 Ex-貸款：卡表資料與登記', () => {
     expect(getCard('強力過件')).toMatchObject({ cls: '商人', kind: 'move', atk: 2, def: 2, combo: 7, traits: ['變化'] });
     expect(ENABLED_EFFECT_CARDS).toContain('強力過件');
     expect(getCard('Ex-貸款')).toMatchObject({ traits: ['減益'] });
-    expect(getCard('Ex-貸款').text).toContain(EX_LEAVE_RULES.exp);
   });
 
   it('效果來源都有登記：強力過件在招式卡疊，Ex-貸款在經驗區（經驗效果）', () => {
@@ -163,7 +161,7 @@ describe('Ex-貸款 [經]：被蓋為裏側時，我方直擊1，對方回復1',
     expect(Z(g, 1, 'rage')).toHaveLength(0);
   });
 
-  it('離開經驗區直接移除遊戲，不進棄牌區', () => {
+  it('離開場上直接移除遊戲，不進棄牌區', () => {
     const g = scenario({ p0: { exp: ['Ex-貸款', '黑桃3'] } });
     discard(g, Z(g, 0, 'exp')[0]);
     expect(names(g, 0, 'exp')).toEqual(['黑桃3']);

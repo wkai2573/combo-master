@@ -8,7 +8,7 @@ import {
   orderOf, parseDiff, previewCard, realignDraft, slots, sortByOrder,
   type Draft, type Edit, type Field, type OrderList,
 } from '../data/cardTableDraft';
-import { EX_LEAVE_RULES, isExCardId } from '../data/exCards';
+import { isExCardId } from '../data/exCards';
 import type { Keyword } from '../data/keywords';
 import { TUTORIAL_CHARACTERS } from '../data/tutorialCharacters';
 import type { CardData, CardKind, CharacterData } from '../data/types';
@@ -344,7 +344,7 @@ export function CardTablePage() {
     const card: CardData = { id, name: id, kind: recordKind, cls: '共用', traits: [], atk: 0, def: 0, combo: recordKind === 'move' ? 1 : 0, expReq: 0, text: '' };
     if (recordKind === 'equip') card.slot = '武器';
     const addition = isKeyword ? { uid, keyword: { name: id, group: '名詞', desc: '' } } : {
-      uid, card: isEx ? { ...card, text: EX_LEAVE_RULES.exp } : card,
+      uid, card,
     };
     setLocal({ ...local, issued: [...local.issued, uid], draft: { ...draft, additions: [...draft.additions, addition] } });
     setName('');

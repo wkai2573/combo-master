@@ -57,6 +57,7 @@ export type Gen<T = void> = Generator<Request, T, string[]>;
 
 export const P = (g: GameCtx, p: PlayerId): PlayerState => g.state.players[p];
 export const Z = (g: GameCtx, p: PlayerId, z: ZoneName): CardInst[] => g.state.players[p].zones[z];
+const EX_FIELD_ZONES: ReadonlySet<ZoneName> = new Set(['exp', 'buff', 'moves', 'stunt', 'pursuit']);
 
 /** 戰鬥區＝依序包含招式卡疊、特技卡疊、追擊卡疊（各自由底到頂）。卡效果提到「戰鬥區」時用它；規則本身只看招式卡疊的地方直接用 Z(g, p, 'moves') */
 export const combatZone = (g: GameCtx, p: PlayerId): CardInst[] => [...Z(g, p, 'moves'), ...Z(g, p, 'stunt'), ...Z(g, p, 'pursuit')];
@@ -108,8 +109,8 @@ export function removeFromGame(g: GameCtx, card: CardInst): void {
 
 /** 將卡移到持有主的指定區域。pos='top' 為該區域的「最上方」，'bottom' 為「最下方」。 */
 export function move(g: GameCtx, card: CardInst, to: ZoneName, pos: 'top' | 'bottom' = 'bottom'): void {
-  // Ex 卡（臨時額外卡）離開所在的經驗區或增益區時移除遊戲
-  if (isExCardId(card.id) && (card.zone === 'exp' || card.zone === 'buff') && to !== card.zone) return removeFromGame(g, card);
+  // Ex 卡離開場上區域（經驗、增益或戰鬥區）時移除遊戲
+  if (isExCardId(card.id) && EX_FIELD_ZONES.has(card.zone) && !EX_FIELD_ZONES.has(to)) return removeFromGame(g, card);
   g.touched++;
   const from = Z(g, card.owner, card.zone);
   const i = from.indexOf(card);
