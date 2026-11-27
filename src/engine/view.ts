@@ -1,4 +1,4 @@
-import { resolveCombatStats } from './combat';
+import { breakCapacityStatus, resolveCombatStats } from './combat';
 import type { Game } from './game';
 import { faceVisibleTo } from './visibility';
 import type { CardInst, FrameFx, GameState, PlayerId, Request, Phase, ZoneName } from './types';
@@ -12,7 +12,7 @@ export interface CardView {
 }
 
 export interface PlayerView {
-  breaksRemaining?: number;
+  breakCapacity?: { used: number; limit: number };
   charId: string;
   deckCount: number;
   hand: CardView[];
@@ -99,9 +99,10 @@ function playerView(game: Game, p: PlayerId, viewer: PlayerId): PlayerView {
   const z = s.players[p].zones;
   const list = (name: ZoneName) => z[name].map((c) => (faceVisibleTo(c, viewer) ? show(c) : hide(c)));
   const stats = resolveCombatStats(game, p);
+  const { used, limit } = breakCapacityStatus(game, p);
   return {
     charId: s.players[p].charId,
-    breaksRemaining: s.flags.breaksRemaining[p],
+    breakCapacity: { used, limit },
     deckCount: z.deck.length,
     hand: list('hand'),
     discard: list('discard'),

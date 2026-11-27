@@ -44,9 +44,9 @@ export const LESSONS: TutorialLesson[] = [
     no: 2,
     group: '基礎',
     title: '特技出招',
-    blurb: '捨棄同連擊值的手牌，消耗破格打出特技',
+    blurb: '捨棄同連擊值的手牌，打出占用破格容量的特技',
     minutes: 2,
-    summary: '你已經學會在反擊步驟捨棄一張手牌，消耗 1 次破格，把同原始連擊值的招式打入特技區。',
+    summary: '你已經學會在反擊步驟捨棄一張手牌，把同原始連擊值的招式打入特技區，占用 1 點破格容量。',
     chapter: STUNT,
   },
   {

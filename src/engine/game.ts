@@ -22,7 +22,7 @@ const ZONES: ZoneName[] = ['deck', 'hand', 'discard', 'rage', 'exp', 'moves', 's
 
 function emptyFlags(): TurnFlags {
   return {
-    played: [0, 0], breaksRemaining: [1, 1], opened: false, pursuitSuccess: [0, 0], damageTaken: [0, 0], damagePending: [0, 0],
+    played: [0, 0], breakCapacity: [1, 1], opened: false, pursuitSuccess: [0, 0], damageTaken: [0, 0], damagePending: [0, 0],
   };
 }
 

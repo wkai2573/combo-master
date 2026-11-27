@@ -13,7 +13,7 @@ export const STUNT: TutorialChapter = {
   hands: [[opening, cost, stunt], [reply, '梅花6']],
   decks: [repeat('方塊4', 10), repeat('梅花7', 10)],
   steps: [
-    { kind: 'explain', text: `這一課要練習特技出招。反擊步驟中，你的招式卡疊已有招式，而且還有破格次數，就能用兩張原始連擊值相同的手牌出特技。${NEXT}` },
+    { kind: 'explain', text: `這一課要練習特技出招。反擊步驟中，你的招式卡疊已有招式，而且還有至少 1 點破格容量可供占用，就能用兩張原始連擊值相同的手牌出特技。${NEXT}` },
     { kind: 'play', card: opening, text: '由你先攻。點擊黑桃5，或拖曳到戰鬥區。' },
     { kind: 'opponent-play', card: reply },
     {
@@ -31,7 +31,7 @@ export const STUNT: TutorialChapter = {
     },
     {
       kind: 'explain',
-      text: '這次特技出招消耗了 1 次破格。每回合預設只有 1 次，重複連擊值出招也會用掉同一個次數。\n點擊畫面結束這一課。',
+      text: '這張特技占用 1 點破格容量。每回合的基礎上限是 1 點，招式區每種連擊值從第二張起，每張也占用 1 點。\n點擊畫面結束這一課。',
     },
   ],
 };

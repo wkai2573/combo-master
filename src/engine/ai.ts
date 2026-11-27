@@ -256,8 +256,11 @@ export function chooseCounterMove(req: Request, myView: PlayerView, oppView: Pla
   const moveOptions = req.options.filter((o) => o.key !== 'pass' && o.cardId);
   if (moveOptions.length === 0) return ['pass'];
 
-  const myTop = myView.moves.at(-1)?.id;
-  const myLastCombo = myTop ? getCard(myTop).combo : null;
+  const myCombos = new Set(myView.moves.flatMap((card) => card.id ? [getCard(card.id).combo] : []));
+  const { used, limit } = myView.breakCapacity ?? {
+    used: myView.moves.length - myCombos.size + myView.stunt.length,
+    limit: 1,
+  };
   const oppLastCombo =
     oppView.moves.length > 0 && oppView.moves[oppView.moves.length - 1].id
       ? getCard(oppView.moves[oppView.moves.length - 1].id!).combo
@@ -277,7 +280,7 @@ export function chooseCounterMove(req: Request, myView: PlayerView, oppView: Pla
 
   for (const opt of moveOptions) {
     const candCard = getCard(opt.cardId!);
-    const breaksAfterMove = (myView.breaksRemaining ?? 1) - Number(candCard.combo === myLastCombo);
+    const usedAfterMove = used + Number(myCombos.has(candCard.combo));
     const minRange = oppLastCombo !== null ? Math.min(candCard.combo, oppLastCombo) : 1;
     const maxRange = oppLastCombo !== null ? Math.max(candCard.combo, oppLastCombo) : 9;
 
@@ -285,7 +288,8 @@ export function chooseCounterMove(req: Request, myView: PlayerView, oppView: Pla
     const chainable = remainingHandMoves.filter((h) => {
       if (h.uid === opt.uid || !h.id) return false;
       const c = getCard(h.id);
-      return c.combo >= minRange && c.combo <= maxRange && (c.combo !== candCard.combo || breaksAfterMove > 0);
+      const repeats = c.combo === candCard.combo || myCombos.has(c.combo);
+      return c.combo >= minRange && c.combo <= maxRange && usedAfterMove + Number(repeats) <= limit;
     });
 
     // 估算連擊攻擊力（取攻擊力最高的前 3 張）

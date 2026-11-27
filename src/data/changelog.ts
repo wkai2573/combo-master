@@ -21,6 +21,14 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.77.0',
+    date: '2026-11-27',
+    items: [
+      { type: 'change', text: '破格改為破格容量。招式區每種連擊值從第二張起與特技區每張招式各占用 1 點容量，卡片移動時即時重算。' },
+      { type: 'add', text: '雙方戰鬥區顯示各自的破格容量占用量和上限。' },
+    ],
+  },
+  {
     version: '0.76.5',
     date: '2026-11-27',
     items: [{ type: 'change', text: '卡表的卡面與表格共用篩選、排序和筆數，切換檢視時會保留篩選與排序設定。' }],

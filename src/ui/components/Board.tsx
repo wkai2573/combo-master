@@ -386,7 +386,15 @@ function StackColumn({ pv, label, mine, fx, delta, k, phone, showStunt, onOpen }
   const pursuitStack = !phone && pile('pursuit', '追擊', pv.pursuit, 0);
   return (
     <div className={`col ${mine ? 'mine' : 'opp'}`}>
-      <h4>{label}</h4>
+      <div className="combat-heading">
+        <h4>{label}</h4>
+        {pv.breakCapacity && (
+          <div className="break-capacity">
+            <span>破格容量 {pv.breakCapacity.used}／{pv.breakCapacity.limit}</span>
+            <small>（已占用／上限）</small>
+          </div>
+        )}
+      </div>
       <div className="combatpiles">
         {mine ? <>{movesStack}{stuntStack}{pursuitStack}</> : <>{pursuitStack}{stuntStack}{movesStack}</>}
       </div>

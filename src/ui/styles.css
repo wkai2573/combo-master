@@ -245,6 +245,9 @@ h1, h2, h3 { margin: 0 0 8px; }
 .combatarea .col.mine { --from: 110px; }
 .combatarea .col.opp { --from: -110px; }
 .combatarea .mid { align-self: center; text-align: center; min-width: 190px; max-width: 240px; }
+.combat-heading { text-align: center; }
+.break-capacity { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; column-gap: 4px; font-size: 12px; line-height: 1.2; }
+.break-capacity small { font-size: 10px; }
 .combatpiles { display: flex; gap: 10px; align-items: stretch; justify-content: center; width: 100%; }
 .pilewrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .pilesub { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 1px; }

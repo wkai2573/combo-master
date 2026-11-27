@@ -127,7 +127,7 @@ describe('第 2 課：特技出招', () => {
     expect(player.stunt.map((card) => card.id)).toEqual(['梅花9']);
     expect(player.moves.map((card) => card.id)).toEqual(['黑桃5']);
     expect(opponent.moves.map((card) => card.id)).toEqual(['黑桃6']);
-    expect(driveToEnd(s).join('\n')).toContain('消耗了 1 次破格');
+    expect(driveToEnd(s).join('\n')).toContain('占用 1 點破格容量');
     expect(isLessonDone(2)).toBe(true);
     expect(progress(s).ending?.next).toEqual({ kind: 'lesson', no: 3, label: '下一課' });
   });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { playables, pursuitCount, resolveCombatStats, totalAtk, totalDef } from '../src/engine/combat';
-import { draw, Z } from '../src/engine/ops';
+import { discard, draw, Z } from '../src/engine/ops';
 import { optionalPay } from '../src/engine/cost';
 import { atkOf, defOf, names, pick, scenario, setZones } from './helpers';
 import { 伏擊狀態 } from '../src/engine/sources/thief';
@@ -35,17 +35,18 @@ describe('出招與範圍內', () => {
     expect(g.state.log.some((l) => l.includes('起手'))).toBe(false);
   });
 
-  it('破格用完後不能重複疊頂連擊值，仍可重用疊底的連擊值', () => {
+  it('破格容量計入非相鄰的重複連擊值，移牌後立即釋放', () => {
     const g = scenario({
-      p0: { hand: ['紅心3', '方塊5', '梅花4', '黑桃9'], moves: ['黑桃8', '黑桃5', '梅花5', '黑桃3'] },
-      p1: { hand: [], moves: ['紅心5'] },
+      first: 1,
+      p0: { hand: ['紅心3', '方塊5', '梅花4', '黑桃9'], moves: ['黑桃5', '黑桃8', '梅花5', '黑桃3'] },
+      p1: { hand: ['黑桃1', '黑桃2'], moves: ['紅心5'] },
     });
+    expect(playables(g, 0).map((c) => c.id)).toEqual(['梅花4']);
+    discard(g, Z(g, 0, 'moves')[2]);
     expect(playables(g, 0).map((c) => c.id)).toEqual(['紅心3', '方塊5', '梅花4']);
-    g.state.flags.breaksRemaining[0] = 0;
-    expect(playables(g, 0).map((c) => c.id)).toEqual(['方塊5', '梅花4']);
   });
 
-  it('重複疊頂連擊值用完破格後，不能再重複或特技出招', () => {
+  it('重複連擊值占滿破格容量後，不能再重複或特技出招', () => {
     const g = scenario({
       p0: { hand: ['黑桃5', '梅花5', '紅心5', '方塊5', '黑桃7'] },
       p1: { hand: ['黑桃9', '紅心9', '黑桃8'] },

@@ -25,28 +25,33 @@ export function inRange(g: GameCtx, p: PlayerId, c: CardInst): boolean {
 /** p 目前可以打出的招式（手牌）；opening 為先手步驟，只能在先手步驟出招的卡只有這時才算 */
 export function playables(g: GameCtx, p: PlayerId, opening = false): CardInst[] {
   const cands = Z(g, p, 'hand').filter((c) => data(c).kind === 'move');
+  const { combos, used, limit } = breakCapacityStatus(g, p);
   return cands.filter((c) => {
     const rules = moveRules(c.id);
     if (rules.openingOnly && !opening) return false;
     if (rules.playCover > 0 && !canPay(g, p, { cover: rules.playCover })) return false;
-    return inRange(g, p, c) && (g.state.flags.breaksRemaining[p] > 0 || !repeatsTopCombo(g, p, c));
+    return inRange(g, p, c) && used + Number(combos.has(data(c).combo)) <= limit;
   });
 }
 
-function repeatsTopCombo(g: GameCtx, p: PlayerId, card: CardInst): boolean {
-  const top = Z(g, p, 'moves').at(-1);
-  return top !== undefined && data(top).combo === data(card).combo;
+export function breakCapacityStatus(g: GameCtx, p: PlayerId) {
+  const moves = Z(g, p, 'moves');
+  const combos = new Set(moves.map((card) => data(card).combo));
+  return {
+    combos,
+    used: moves.length - combos.size + Z(g, p, 'stunt').length,
+    limit: g.state.flags.breakCapacity[p],
+  };
 }
 
-/** 破格+X：增加我方本回合可用的破格次數 */
-export function addBreaks(g: GameCtx, p: PlayerId, count: number): void {
-  g.state.flags.breaksRemaining[p] += count;
+/** 破格容量+X：增加我方本回合的破格容量上限 */
+export function addBreakCapacity(g: GameCtx, p: PlayerId, count: number): void {
+  g.state.flags.breakCapacity[p] += count;
 }
 
 // ───────────────────────── 出招 ─────────────────────────
 
 export function* playMove(g: GameCtx, p: PlayerId, card: CardInst, opening: boolean, zone: 'moves' | 'stunt' = 'moves'): Gen {
-  if (zone === 'stunt' || repeatsTopCombo(g, p, card)) g.state.flags.breaksRemaining[p]--;
   move(g, card, zone, 'top');
   g.state.flags.played[p]++;
   const action = zone === 'stunt' ? '特技出招' : opening ? '先手出招' : '出招';
@@ -397,7 +402,8 @@ export function* returnStep(g: GameCtx): Gen {
 
 function stuntCosts(g: GameCtx, p: PlayerId, card: CardInst): CardInst[] {
   if (g.state.phase !== '反擊' || Z(g, p, 'moves').length === 0) return [];
-  if (g.state.flags.breaksRemaining[p] <= 0) return [];
+  const { used, limit } = breakCapacityStatus(g, p);
+  if (used + 1 > limit) return [];
   const hand = Z(g, p, 'hand');
   const printed = data(card);
   if (!hand.includes(card) || printed.kind !== 'move') return [];
