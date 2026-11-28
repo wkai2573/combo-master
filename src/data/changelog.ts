@@ -21,6 +21,12 @@ export const CHANGE_TYPE_LABEL: Record<ChangeType, string> = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.86.0',
+    date: '2026-11-28',
+    items: [
+      { type: 'add', text: '新增卡片時可選擇職業，並保存到匯出差異檔。' },
+    ],
+  },  {
     version: '0.85.0',
     date: '2026-11-28',
     items: [
@@ -1350,3 +1356,4 @@ export const CHANGELOG: ChangelogEntry[] = [
     items: [{ type: 'add', text: '作弊模式（單機）：可加入手牌、移除手牌、調整牌堆順序' }],
   },
 ];
+

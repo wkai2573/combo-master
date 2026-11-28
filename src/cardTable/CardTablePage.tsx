@@ -239,6 +239,7 @@ export function CardTablePage() {
   const [cardTextView, setCardTextView] = useState(false);
   const [name, setName] = useState('');
   const [kind, setKind] = useState<CardKind>('move');
+  const [newCardClass, setNewCardClass] = useState<(typeof classes)[number]>('共用');
   const [exKind, setExKind] = useState<CardKind>('move');
   const [filterKind, setFilterKind] = useState<'all' | CardKind>('all');
   const [exFilterKind, setExFilterKind] = useState<'all' | CardKind>('all');
@@ -341,7 +342,7 @@ export function CardTablePage() {
     }
     const uid = prefix ? nextUid(cardTable, prefix, local.issued) : nextCardUid(cardTable, kind, local.issued);
     const recordKind = isEx ? exKind : kind;
-    const card: CardData = { id, name: id, kind: recordKind, cls: '共用', traits: [], atk: 0, def: 0, combo: recordKind === 'move' ? 1 : 0, expReq: 0, text: '' };
+    const card: CardData = { id, name: id, kind: recordKind, cls: isEx ? '共用' : newCardClass, traits: [], atk: 0, def: 0, combo: recordKind === 'move' ? 1 : 0, expReq: 0, text: '' };
     if (recordKind === 'equip') card.slot = '武器';
     const addition = isKeyword ? { uid, keyword: { name: id, group: '名詞', desc: '' } } : {
       uid, card,
@@ -533,6 +534,10 @@ export function CardTablePage() {
         {(tab === '卡片' || isEx) && <label>類型 <select value={isEx ? exKind : kind} onChange={(e) => isEx
           ? setExKind(e.target.value as CardKind) : setKind(e.target.value as CardKind)}>
           {Object.entries(kinds).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select></label>}
+        {tab === '卡片' && <label>職業 <select aria-label="新卡職業" value={newCardClass}
+          onChange={(e) => setNewCardClass(e.target.value as (typeof classes)[number])}>
+          {classes.map((cls) => <option key={cls} value={cls}>{cls}</option>)}
         </select></label>}
         <button>新增{tab}</button>
         {message && <span role="alert">{message}</span>}
